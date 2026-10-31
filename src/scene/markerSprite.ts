@@ -10,7 +10,7 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { wakeScene } from './renderOnDemand'
-import { CanvasTexture, PerspectiveCamera, SRGBColorSpace, Vector3 } from 'three'
+import { CanvasTexture, Color, PerspectiveCamera, SRGBColorSpace, Vector3 } from 'three'
 import type { Camera, Sprite, SpriteMaterial } from 'three'
 import type { LocalFrame, TerrainEngine, Track } from '../core/types'
 import { CAMERA_FOV_DEG } from '../flyover/cameraSettings'
@@ -486,6 +486,48 @@ export function setMarkerLight(light: MarkerLight): void {
 }
 
 /**
+ * Radius (world metres) of the ball of a marker at `position`: the constant on-screen size, times `size`. MARKER_SCREEN_FACTOR is
+ * for the default field of view: a narrower or wider lens (« Focale », the camera stands farther or closer for it) scales it,
+ * so the marker keeps its size on the screen.
+ */
+export function markerRadius(camera: Camera, position: Vector3, size: number): number {
+  const lens = 'fov' in camera ? Math.tan(((camera as PerspectiveCamera).fov * Math.PI) / 360) / Math.tan((CAMERA_FOV_DEG * Math.PI) / 360) : 1
+  return Math.max(1, camera.position.distanceTo(position) * MARKER_SCREEN_FACTOR * lens) * size
+}
+
+/** Track length looked at on each side of the marker to tell which way a 3D model faces (metres). */
+export const MODEL_WINDOW_M = 30
+/** A 3D model is this many marker balls tall on screen (the lead marker and the ghost racers). */
+export const MODEL_BALLS = 7
+/** Phase of a model that does not move (a marker that is not animated). */
+export const MODEL_REST_PHASE = 0.6
+const modelBehind = new Vector3()
+
+/**
+ * The way the track runs at `distanceM` in the scene (a unit vector, its slope included at the `exaggeration` of the relief),
+ * from the points MODEL_WINDOW_M behind and ahead of the marker at `at`; zero where the track has no run (a path of one point).
+ */
+export function trackDirection(path: TrackPath, distanceM: number, at: Vector3, frame: LocalFrame, exaggeration: number, target = new Vector3()): Vector3 {
+  const centre = Math.min(path.lengthM, Math.max(0, distanceM))
+  const here = samplePath(path, centre)
+  const behind = samplePath(path, Math.max(0, centre - MODEL_WINDOW_M))
+  const ahead = samplePath(path, Math.min(path.lengthM, centre + MODEL_WINDOW_M))
+  const { height } = frame.toLonLat(at)
+  const heightOf = (p: { ele?: number }) => height + ((p.ele ?? here.ele ?? 0) - (here.ele ?? 0)) * exaggeration
+  frame.toLocal(ahead.lon, ahead.lat, heightOf(ahead), target)
+  frame.toLocal(behind.lon, behind.lat, heightOf(behind), modelBehind)
+  return target.sub(modelBehind).normalize()
+}
+
+const litScratch = new Color()
+
+/** `hex` as the flat colour of a 3D model: divided by the exposure (`gain`) and tinted by the light of the scene, like the sprites. */
+export function litColor(hex: string, gain: number, target = new Color()): Color {
+  litScratch.setRGB(gain * markerLight.r, gain * markerLight.g, gain * markerLight.b)
+  return target.set(hex).multiply(litScratch)
+}
+
+/**
  * Put `sprite` at `position` with the texture of `look` at film time `timeS`, at the constant on-screen size times
  * `marker.size`, its colours divided by the exposure (`gain`) like the track lines and tinted by the light of the scene.
  * The track point is the anchor of the texture: the centre of the badge, the tip of a pin or the foot of the stick.
@@ -517,10 +559,7 @@ export function placeMarker(
   material.rotation = facing * (slope - bounce.tilt)
   if (material.map !== texture) material.map = texture
   material.color.setRGB(gain * markerLight.r, gain * markerLight.g, gain * markerLight.b)
-  // MARKER_SCREEN_FACTOR is for the default field of view: a narrower or wider lens (« Focale », the camera stands farther
-  // or closer for it) scales it, so the marker keeps its size on the screen
-  const lens = 'fov' in camera ? Math.tan(((camera as PerspectiveCamera).fov * Math.PI) / 360) / Math.tan((CAMERA_FOV_DEG * Math.PI) / 360) : 1
-  const radius = Math.max(1, camera.position.distanceTo(position) * MARKER_SCREEN_FACTOR * lens) * look.marker.size
+  const radius = markerRadius(camera, position, look.marker.size)
   // world size of a texture pixel: a ball is PX_PER_BALL pixels across
   const pixel = (2 * radius) / PX_PER_BALL
   sprite.position.copy(position)

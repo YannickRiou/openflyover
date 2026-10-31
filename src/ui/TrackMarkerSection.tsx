@@ -408,6 +408,12 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
       {figurine && (
         <Checkbox checked={marker.animated} onChange={(on) => updateMarker({ animated: on })}>{t('marker.section.animate')}</Checkbox>
       )}
+      {/* every figure has a 3D model: it faces along the track and moves with the film, and is animated from the start */}
+      {figurine && (
+        <Checkbox checked={marker.model3d} onChange={(on) => updateMarker(on ? { model3d: true, animated: true } : { model3d: false })}>
+          {t('marker.section.model3d')}
+        </Checkbox>
+      )}
       {marker.kind === 'image' && <MarkerImageField marker={marker} update={updateMarker} />}
       {marker.kind === 'boule' && (
         <MarkerColorRow

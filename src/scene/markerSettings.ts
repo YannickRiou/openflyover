@@ -134,6 +134,8 @@ export interface MarkerSettings {
   size: number
   /** a 'figurine' marker bounces and sways as it walks at the marker's pace (`figureMotion`) */
   animated: boolean
+  /** a 'figurine' that has a 3D model (`markerModels.ts`) is drawn as that model, facing along the track; the others keep their pictogram */
+  model3d: boolean
   /**
    * '#rrggbb' of the ball and of the ring of a figure or picture badge, '' = the colour of the track. The lead
    * marker's only: the racers keep the colour of their own track.
@@ -164,6 +166,7 @@ export const DEFAULT_MARKER: MarkerSettings = {
   image: '',
   size: 1,
   animated: false,
+  model3d: false,
   color: '#FFFFFF',
   ballStyle: 'plat',
   figureColor: '#1C2A33',
@@ -202,6 +205,8 @@ export type FigureClock = Pick<FilmClock, 'progressAtTime' | 'totalTime'>
 interface FigureTable {
   steps: Float64Array
   strength: Float64Array
+  /** steps taken while the marker moves: stands still with it (the pedals of a 3D model) */
+  rolled: Float64Array
 }
 
 const figureTables = new WeakMap<FigureClock, FigureTable>()
@@ -240,10 +245,26 @@ function figureTable(clock: FigureClock): FigureTable {
   const strength = easedOver(pace.map((v) => smoothstep(FIGURE_STILL_PACE, FIGURE_FULL_PACE, v)))
   const cadence = easedOver(pace.map((v) => Math.min(FIGURE_STEPS_MAX, Math.max(FIGURE_STEPS_MIN, FIGURE_STEPS_PER_S * v ** FIGURE_PACE_EXPONENT))))
   const steps = new Float64Array(count)
-  for (let i = 1; i < count; i++) steps[i] = steps[i - 1] + cadence[i] * FIGURE_TABLE_STEP_S
-  const table = { steps, strength }
+  const rolled = new Float64Array(count)
+  for (let i = 1; i < count; i++) {
+    steps[i] = steps[i - 1] + cadence[i] * FIGURE_TABLE_STEP_S
+    rolled[i] = rolled[i - 1] + cadence[i] * strength[i] * FIGURE_TABLE_STEP_S
+  }
+  const table = { steps, strength, rolled }
   figureTables.set(clock, table)
   return table
+}
+
+/**
+ * Phase of the pedals of a 3D model at film time `timeS`: a turn (2π) every two steps of the walk, advancing only while the
+ * marker moves, so the pedals stop with it. A function of the film clock and the time alone, like `figureMotion`.
+ */
+export function figureStride(clock: FigureClock, timeS: number): number {
+  const { rolled } = figureTable(clock)
+  const x = Math.min(Math.max(timeS / FIGURE_TABLE_STEP_S, 0), rolled.length - 1)
+  const i = Math.floor(x)
+  const j = Math.min(i + 1, rolled.length - 1)
+  return Math.PI * (rolled[i] + (rolled[j] - rolled[i]) * (x - i))
 }
 
 /**
@@ -389,6 +410,7 @@ export function isValidMarker(marker: MarkerSettings): boolean {
     oneOf(MARKER_BALL_STYLES, marker.ballStyle) &&
     isTrackOrHexColor(marker.figureColor) &&
     oneOf(MARKER_SHAPES, marker.shape) &&
+    typeof marker.model3d === 'boolean' &&
     oneOf(MARKER_LABEL_MODES, marker.label) &&
     marker.labelText.length <= MARKER_LABEL_MAX_CHARS
   )

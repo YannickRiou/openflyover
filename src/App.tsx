@@ -18,6 +18,9 @@ import { OpenChoiceDialog } from './ui/OpenChoiceDialog'
 import { EmptyState } from './ui/EmptyState'
 import { GradingPanel } from './ui/GradingPanel'
 import { HelpDialog } from './ui/HelpDialog'
+import { Tour } from './ui/Tour'
+import { SettingsSearch } from './ui/SettingsSearch'
+import { revealSection } from './ui/searchSections'
 import { Icon } from './ui/icons'
 import type { IconName } from './ui/icons'
 import { LandmarkPanel } from './ui/LandmarkPanel'
@@ -273,6 +276,7 @@ export default function App() {
   const [dockMounted, setDockMounted] = useState(false)
   if ((shell.dockOpen || exportBusy) && !dockMounted) setDockMounted(true)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const dockOpen = useRef(shell.dockOpen)
   const collapsedRef = useRef(shell.collapsed)
   const tabList = useRef<HTMLDivElement>(null)
@@ -422,6 +426,8 @@ export default function App() {
         e.stopPropagation()
       } else if (action === 'help') {
         setHelpOpen(true)
+      } else if (action === 'search') {
+        if (!isExporting()) setSearchOpen(true)
       } else if (action === 'save') {
         if (!isExporting()) saveProject()
       } else if (action === 'save-as') {
@@ -635,6 +641,18 @@ export default function App() {
 
       <StatusBar />
       <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <Tour />
+      <SettingsSearch
+        open={searchOpen}
+        tabs={tabs}
+        onClose={() => setSearchOpen(false)}
+        onPick={({ tab, title }) => {
+          setSearchOpen(false)
+          dispatch({ type: 'select-tab', tab, narrow: isNarrow() })
+          // the tab is drawn (the event is discrete: React has committed it) before the next frame: then the section opens
+          requestAnimationFrame(() => revealSection(title))
+        }}
+      />
       <DiagnosticDialog />
       <OpenChoiceDialog />
       <SeekShortcuts />

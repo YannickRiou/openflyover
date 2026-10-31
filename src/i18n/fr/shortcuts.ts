@@ -45,6 +45,7 @@ export default {
   'label.safe-zones': 'Afficher ou masquer les zones de sécurité du format (aperçu seulement)',
   'label.toggle-panel': 'Replier ou déplier le panneau',
   'label.help': 'Afficher les raccourcis',
+  'label.search': 'Rechercher un réglage',
   'label.close': 'Fermer la fenêtre, puis le tiroir d’export, puis la sélection',
   title: 'Raccourcis clavier',
   drop: "Glissez vos traces GPX ou FIT, ou un projet, n'importe où dans la fenêtre. Les raccourcis ne marchent pas pendant la saisie d'un texte.",

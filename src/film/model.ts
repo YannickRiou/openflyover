@@ -154,11 +154,14 @@ export function situationTiming(shot: Pick<FilmShot, 'durationS' | 'holdS'>): { 
 export const DIP_DURATION_RANGE = { min: 0.3, max: 2, step: 0.1 } as const
 export const DIP_DEFAULT_S = 1
 
-export const STOP_CAMERAS = ['film', 'orbite', 'large', 'fixe'] as const
+export const STOP_CAMERAS = ['film', 'orbite', 'large', 'fixe', 'panorama'] as const
+/** Length given to a stop switched to 'panorama' while it was shorter (seconds): a full turn needs time to be read. */
+export const PANORAMA_STOP_S = 12
 /**
  * Camera during a stop. 'film': the flight camera goes on (the marker holds, so does the camera, but the orbit and
  * cinema styles keep moving); 'orbite': the camera turns around the stop and comes back; 'large': it pulls back and
- * up and comes back; 'fixe': the framing holds, the motion of the orbit and cinema styles too.
+ * up and comes back; 'fixe': the framing holds, the motion of the orbit and cinema styles too; 'panorama': the camera
+ * makes one full turn around the stop (the names of the peaks in sight are those of the labels).
  */
 export type StopCamera = (typeof STOP_CAMERAS)[number]
 export const STOP_CAMERA_LABELS: Record<StopCamera, string> = {
@@ -166,6 +169,7 @@ export const STOP_CAMERA_LABELS: Record<StopCamera, string> = {
   get orbite() { return t('film.stopCamera.orbite') },
   get large() { return t('film.stopCamera.large') },
   get fixe() { return t('film.stopCamera.fixe') },
+  get panorama() { return t('film.stopCamera.panorama') },
 }
 
 export const STOP_SOURCES = ['climb', 'landmark', 'waypoint', 'manual'] as const

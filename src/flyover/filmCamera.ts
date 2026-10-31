@@ -1,7 +1,7 @@
 /**
  * Camera of the film: the flight camera (`computeCameraView`) during the flight, with the framing of the camera
  * keys (`keyedCamera`), an overview of the whole track for the opening and closing shots, the camera of each stop
- * ('orbite', 'large', 'fixe'). A pure function of the film time, the progress, the settings and the terrain sampler,
+ * ('orbite', 'large', 'fixe', 'panorama'). A pure function of the film time, the progress, the settings and the terrain sampler,
  * like the flight camera: the export renders any frame alone. Shots and transitions: ARCHITECTURE.md "Film and timeline".
  *
  * Overview: target = centre of the track's box, distance = OVERVIEW_DISTANCE_FACTOR x box diagonal (more for a frame
@@ -189,6 +189,12 @@ export function stopOrbitRad(addedS: number, localS: number, lengthS: number): n
   return Math.min(STOP_ORBIT_MAX_DEG, STOP_ORBIT_DEG_PER_S * addedS) * DEG * stopBump(localS, lengthS)
 }
 
+/** Orbit angle (radians) of a 'panorama' stop: one full turn, eased in and out over the window, so the end joins the flight camera. */
+export function stopPanoramaRad(localS: number, lengthS: number): number {
+  if (!(lengthS > 0)) return 0
+  return 2 * Math.PI * smootherstep(clamp(localS / lengthS, 0, 1))
+}
+
 /** Camera of a 'large' stop: farther and higher by `k` (0 = the flight camera, 1 = the widest). */
 export function widenedCamera<T extends Pick<CameraSettings, 'distance' | 'pitchDeg'>>(camera: T, k: number): T {
   return {
@@ -213,12 +219,12 @@ export function heldMotionTimeS(stop: Pick<ClockStop, 'startS' | 'holdStartS' | 
 }
 
 /**
- * True when the view changes with the film time alone (progress unchanged): shots, orbiting or widening stops, every
+ * True when the view changes with the film time alone (progress unchanged): shots, orbiting, turning or widening stops, every
  * stop with a smoothing in time, orbit / cinema, free (its keyframes are timed by the film time).
  */
 export function filmViewMovesWithTime(state: FilmState, camera: CameraSettings): boolean {
   if (state.phase === 'opening' || state.phase === 'closing' || camera.style === 'free') return true
-  if (state.phase === 'stop' && (state.stop?.camera === 'orbite' || state.stop?.camera === 'large' || smoothsInTime(camera))) return true
+  if (state.phase === 'stop' && (state.stop?.camera === 'orbite' || state.stop?.camera === 'large' || state.stop?.camera === 'panorama' || smoothsInTime(camera))) return true
   return movesWithTime(camera.style)
 }
 
@@ -893,7 +899,8 @@ function flownAt(
   const settings = options.camera ?? DEFAULT_CAMERA
   const wide = stop?.camera === 'large' ? stopBump(state.localS, state.lengthS) : 0
   const camera = wide > 0 ? widenedCamera(settings, wide) : settings
-  const orbitRad = stop?.camera === 'orbite' ? stopOrbitRad(stop.addedS, state.localS, state.lengthS) : 0
+  const orbitRad =
+    stop?.camera === 'orbite' ? stopOrbitRad(stop.addedS, state.localS, state.lengthS) : stop?.camera === 'panorama' ? stopPanoramaRad(state.localS, state.lengthS) : 0
   const motionS = stop?.camera === 'fixe' ? heldMotionTimeS(stop, state.timeS) - clock.openingS : state.flightTimeS
   const smoothing = timeSmoothing(clock, state.timeS, motionS, camera)
   const followed = follow?.(progress) ?? null

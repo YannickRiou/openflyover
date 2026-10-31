@@ -47,6 +47,7 @@ const messages: Messages['shortcuts'] = {
   'label.safe-zones': 'Mostrar u ocultar las zonas seguras del formato (solo vista previa)',
   'label.toggle-panel': 'Plegar o desplegar el panel',
   'label.help': 'Mostrar los atajos',
+  'label.search': 'Buscar un ajuste',
   'label.close': 'Cerrar la ventana, luego el cajón de exportación y después la selección',
   title: 'Atajos de teclado',
   drop: 'Arrastra tus tracks GPX o FIT, o un proyecto, a cualquier parte de la ventana. Los atajos no funcionan mientras se escribe un texto.',

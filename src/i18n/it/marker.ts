@@ -78,6 +78,7 @@ const messages: Messages['marker'] = {
   'section.style': 'Stile',
   'section.figurine': 'Figurina',
   'section.animate': 'Anima la figurina (passi e dondolio)',
+  'section.model3d': 'Modello 3D (guarda lungo il percorso, pedala)',
   'section.color': 'Colore',
   'section.figureColor': 'Colore della figurina',
   'section.discColor': 'Colore del disco',

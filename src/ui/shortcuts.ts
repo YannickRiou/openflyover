@@ -51,6 +51,7 @@ export const SHORTCUTS = [
   { id: 'fit', keys: ['F'], get label() { return t('shortcuts.label.fit') }, group: 'view' },
   { id: 'safe-zones', keys: ['G'], get label() { return t('shortcuts.label.safe-zones') }, group: 'view' },
   { id: 'toggle-panel', keys: ['['], get label() { return t('shortcuts.label.toggle-panel') }, group: 'view' },
+  { id: 'search', keys: ['Ctrl+K'], get label() { return t('shortcuts.label.search') }, group: 'view' },
   { id: 'help', keys: ['?'], get label() { return t('shortcuts.label.help') }, group: 'view' },
   { id: 'close', keys: ['Esc'], get label() { return t('shortcuts.label.close') }, group: 'view' },
 ] as const satisfies readonly Shortcut[]
@@ -94,6 +95,7 @@ export type ShortcutAction =
   | 'safe-zones'
   | 'toggle-panel'
   | 'help'
+  | 'search'
   | 'close'
   | 'add-stop'
   | 'add-text'
@@ -164,7 +166,7 @@ export function spacePlays(target: EventTarget | null, focusVisible = (el: Eleme
 }
 
 /**
- * Shortcut of the shell for a key press, null when none: Ctrl/Cmd+S save, Ctrl/Cmd+Shift+S save as, Ctrl/Cmd+O open, Ctrl/Cmd+E export drawer,
+ * Shortcut of the shell for a key press, null when none: Ctrl/Cmd+S save, Ctrl/Cmd+Shift+S save as, Ctrl/Cmd+O open, Ctrl/Cmd+E export drawer, Ctrl/Cmd+K search the settings,
  * F fit the view, G the safe zones, [ fold the panel and ? the help (whatever the modifiers that type them: AltGr, Shift), Escape close,
  * S / T add a stop / a text, I / O set the in / out point of the work area and Shift+X clears it, X cuts the selected text or photo at the playhead, Ctrl/Cmd+D duplicates it, Delete removes the
  * selected block (Shift: the gap closes), Ctrl/Cmd+C and V copy and paste blocks, K plays / pauses, J / L step a frame back / forward (Shift: ten), ← / → seek (Shift: longer; Alt: to the
@@ -185,6 +187,7 @@ export function matchShortcut(e: KeyLike, focus: KeyFocus): ShortcutAction | nul
     if (e.shiftKey) return null
     if (key === 'o') return 'open'
     if (key === 'e') return 'export'
+    if (key === 'k') return 'search'
     if (key === 'd') return 'duplicate'
     if (key === 'c') return 'copy'
     if (key === 'v') return 'paste'

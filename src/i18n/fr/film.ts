@@ -23,6 +23,7 @@ export default {
   'stopCamera.orbite': 'Tour lent',
   'stopCamera.large': 'Vue large',
   'stopCamera.fixe': 'Fixe',
+  'stopCamera.panorama': 'Panorama 360°',
   'junctionKind.coupe': 'Coupe',
   'junctionKind.fondu-noir': 'Fondu au noir',
   'junctionKind.fondu-blanc': 'Fondu au blanc',

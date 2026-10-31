@@ -47,6 +47,7 @@ const messages: Messages['shortcuts'] = {
   'label.safe-zones': 'Sicherheitszonen des Formats ein- oder ausblenden (nur Vorschau)',
   'label.toggle-panel': 'Bereich ein- oder ausklappen',
   'label.help': 'Tastenkürzel anzeigen',
+  'label.search': 'Einstellung suchen',
   'label.close': 'Fenster schließen, dann Exportbereich, dann Auswahl',
   title: 'Tastenkürzel',
   drop: 'GPX- oder FIT-Dateien oder ein Projekt an eine beliebige Stelle im Fenster ziehen. Die Tastenkürzel funktionieren nicht während der Texteingabe.',

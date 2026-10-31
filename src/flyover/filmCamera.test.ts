@@ -48,6 +48,7 @@ import {
   situationFramingOf,
   smootherstep,
   stopOrbitRad,
+  stopPanoramaRad,
   STOP_WIDE_DISTANCE_FACTOR,
   SWEEP_DEG,
   SWEEP_SHARE,
@@ -133,6 +134,22 @@ describe('easing', () => {
     expect(stopOrbitRad(4, 5.5, 5.5)).toBeCloseTo(0, 12)
     expect(stopOrbitRad(4, 2.75, 5.5)).toBeCloseTo((24 * Math.PI) / 180, 12)
     expect(stopOrbitRad(60, 30, 60)).toBeCloseTo((120 * Math.PI) / 180, 12)
+  })
+
+  it('stopPanoramaRad makes one full turn, still at both ends, so the end joins the flight camera', () => {
+    expect(stopPanoramaRad(0, 12)).toBe(0)
+    expect(stopPanoramaRad(12, 12)).toBeCloseTo(2 * Math.PI, 12)
+    expect(stopPanoramaRad(6, 12)).toBeCloseTo(Math.PI, 12)
+    expect(stopPanoramaRad(-3, 12)).toBe(0)
+    expect(stopPanoramaRad(20, 12)).toBeCloseTo(2 * Math.PI, 12)
+    expect(stopPanoramaRad(1, 0)).toBe(0)
+    // never backwards
+    let last = 0
+    for (let s = 0; s <= 12; s += 0.5) {
+      const rad = stopPanoramaRad(s, 12)
+      expect(rad).toBeGreaterThanOrEqual(last)
+      last = rad
+    }
   })
 })
 

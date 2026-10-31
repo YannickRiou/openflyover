@@ -31,6 +31,7 @@ import {
   STAGE_DURATION_RANGE,
   START_HEIGHTS,
   START_HEIGHT_LABELS,
+  PANORAMA_STOP_S,
   STOP_CAMERAS,
   STOP_CAMERA_LABELS,
   STOP_DURATION_RANGE,
@@ -383,6 +384,9 @@ const STOP_CAMERA_HINTS: Record<StopCamera, string> = {
   get fixe() {
     return t('inspector.holdCamera.fixe')
   },
+  get panorama() {
+    return t('inspector.holdCamera.panorama')
+  },
 }
 const LAYOUT_LABELS: Record<MediaLayout, string> = {
   get 'plein-ecran'() {
@@ -722,7 +726,8 @@ export function FilmInspector() {
               value={stop.camera}
               aria-describedby={`${id}-camera-hint`}
               options={STOP_CAMERAS.map((camera) => ({ value: camera, label: STOP_CAMERA_LABELS[camera] }))}
-              onChange={(camera) => set({ camera })}
+              // a full turn needs time: a shorter stop is lengthened to `PANORAMA_STOP_S`
+              onChange={(camera) => set(camera === 'panorama' && stop.durationS < PANORAMA_STOP_S ? { camera, durationS: PANORAMA_STOP_S } : { camera })}
             />
             <p id={`${id}-camera-hint`} className={HINT}>
               {STOP_CAMERA_HINTS[stop.camera]}

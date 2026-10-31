@@ -47,6 +47,7 @@ const messages: Messages['shortcuts'] = {
   'label.safe-zones': 'Show or hide the format safe zones (preview only)',
   'label.toggle-panel': 'Collapse or expand the panel',
   'label.help': 'Show the shortcuts',
+  'label.search': 'Search settings',
   'label.close': 'Close the dialog, then the export drawer, then the selection',
   title: 'Keyboard shortcuts',
   drop: 'Drag your GPX or FIT tracks, or a project, anywhere in the window. Shortcuts do not work while typing in a text field.',

@@ -25,6 +25,7 @@ const messages: Messages['film'] = {
   'stopCamera.orbite': 'Giro lento',
   'stopCamera.large': 'Vista ampia',
   'stopCamera.fixe': 'Fissa',
+  'stopCamera.panorama': 'Panorama 360°',
   'junctionKind.coupe': 'Stacco',
   'junctionKind.fondu-noir': 'Dissolvenza in nero',
   'junctionKind.fondu-blanc': 'Dissolvenza in bianco',

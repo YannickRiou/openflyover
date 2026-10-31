@@ -182,6 +182,7 @@ describe('settings and misc', () => {
         label: 'aucune',
         labelText: '',
         stick: false,
+        model3d: false,
       },
       camera: { style: 'chase', distance: 1, pitchDeg: 30, headingOffsetDeg: 0, smoothing: 1, northUp: false, turnSmoothingM: 0, aimSmoothingS: 0, cameraSmoothingS: 3, endingS: 0, orbitTurns: 1, leadRoomPct: 15, bankDeg: 3, focalMm: 26 },
       flyoverDurationS: 60,

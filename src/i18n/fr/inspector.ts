@@ -85,6 +85,7 @@ export default {
   'holdCamera.orbite': 'La caméra tourne lentement autour du point, puis revient.',
   'holdCamera.large': 'La caméra recule et monte pour une vue large, puis revient.',
   'holdCamera.fixe': 'Le cadrage reste immobile pendant l’arrêt.',
+  'holdCamera.panorama': 'La caméra fait un tour complet autour du point, avec le nom des sommets en vue. Prévoir 10 s ou plus.',
   'layout.plein-ecran': 'Plein écran',
   'layout.carte': 'Carte',
   'field.start': 'Début (s)',

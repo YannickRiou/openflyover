@@ -47,6 +47,7 @@ const messages: Messages['shortcuts'] = {
   'label.safe-zones': 'Mostra o nascondi le aree di sicurezza del formato (solo anteprima)',
   'label.toggle-panel': 'Comprimi o espandi il pannello',
   'label.help': 'Mostra le scorciatoie',
+  'label.search': 'Cerca un’impostazione',
   'label.close': 'Chiudi la finestra, poi il cassetto di esportazione, poi la selezione',
   title: 'Scorciatoie da tastiera',
   drop: 'Trascina le tue tracce GPX o FIT, o un progetto, in qualsiasi punto della finestra. Le scorciatoie non funzionano durante la digitazione di un testo.',
