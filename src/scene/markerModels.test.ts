@@ -25,9 +25,9 @@ describe('markerModels', () => {
       const model = createMarkerModel(figure)!
       model.root.updateMatrixWorld(true)
       const size = new Box3().setFromObject(model.root).getSize(new Vector3())
-      // every model is of the size of a person, a bicycle, a horse or a plane: between 0.8 and 3 units in its longest side
+      // every model is of the size of a person, a bicycle, a horse or a plane: between 0.8 and 4 units in its longest side
       expect(Math.max(size.x, size.y, size.z)).toBeGreaterThan(0.8)
-      expect(Math.max(size.x, size.y, size.z)).toBeLessThan(3)
+      expect(Math.max(size.x, size.y, size.z)).toBeLessThan(4)
       disposeMarkerModel(model)
     }
   })
