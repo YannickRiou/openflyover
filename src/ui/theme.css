@@ -229,6 +229,27 @@
     --safe-top: calc(env(safe-area-inset-top) + 16px);
   }
 }
+
+/*
+ * iOS 26 and later, the app on the home screen: WebKit blurs the top edge of the page (its scroll edge effect) unless a
+ * box fixed to that edge paints one solid colour over it. The top bar is part of the page flow, not fixed to the edge: this
+ * strip is that box, over the room left for the status bar, in the colour of the top bar (`is-ios`: index.html).
+ */
+.status-edge {
+  display: none;
+}
+
+@media (display-mode: standalone) {
+  :root.is-ios .status-edge {
+    display: block;
+    position: fixed;
+    inset: 0 0 auto;
+    height: var(--safe-top);
+    z-index: 100;
+    pointer-events: none;
+    background: var(--color-chrome);
+  }
+}
 }
 
 /*
