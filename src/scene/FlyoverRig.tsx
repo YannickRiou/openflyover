@@ -37,6 +37,8 @@ import {
   litColor,
   markerLook,
   MARKER_DEPTH_PULL_M,
+  MODEL_BALLS,
+  MODEL_REST_PHASE,
   markerRadius,
   pullMarkerForward,
   placeMarker,
@@ -66,10 +68,6 @@ interface DefaultControls {
   removeEventListener?(type: 'start' | 'end' | 'change', listener: () => void): void
 }
 
-/** Height of a 3D model of a marker, in radii of the marker's ball (a figure badge is 4.4: a model is larger, to be read as a figure). */
-const MODEL_BALLS = 7
-/** Pose of a 3D model that is not animated: a quarter turn of the pedals. */
-const MODEL_REST_PHASE = 0.6
 const modelFill = new Color()
 const modelAhead = new Vector3()
 const modelAt = new Vector3()

@@ -497,6 +497,10 @@ export function markerRadius(camera: Camera, position: Vector3, size: number): n
 
 /** Track length looked at on each side of the marker to tell which way a 3D model faces (metres). */
 export const MODEL_WINDOW_M = 30
+/** A 3D model is this many marker balls tall on screen (the lead marker and the ghost racers). */
+export const MODEL_BALLS = 7
+/** Phase of a model that does not move (a marker that is not animated). */
+export const MODEL_REST_PHASE = 0.6
 const modelBehind = new Vector3()
 
 /**
