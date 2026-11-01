@@ -6,6 +6,8 @@
 import { inRange, isRecord, oneOf, withDefaults } from '../core/guards'
 import { isHexColor } from '../overlay/settings'
 import { t } from '../i18n'
+import { TRACK_COLOR_MODES } from '../flyover/trackColor'
+import type { TrackMetric } from '../flyover/trackColor'
 import type { FilmClock } from '../film/clock'
 
 // ---------------------------------------------------------------------------
@@ -80,6 +82,25 @@ export interface TrackTailSettings {
   enabled: boolean
   /** length of the trail behind the marker, along the track (metres) */
   lengthM: number
+}
+
+/**
+ * « Ruban de données » (`settings.trackRibbon`): a translucent wall along the track whose height and colour follow one
+ * recorded quantity (the same as « Colorer selon »: speed, slope, heart rate…), over the value range shared by the tracks.
+ */
+export interface TrackRibbonSettings {
+  enabled: boolean
+  metric: TrackMetric
+  /** height of the wall at the highest value (metres, in the scene) */
+  heightM: number
+}
+
+export const TRACK_RIBBON_HEIGHT_RANGE = { min: 20, max: 1000, step: 10 } as const
+
+export const DEFAULT_TRACK_RIBBON: TrackRibbonSettings = { enabled: false, metric: 'speed', heightM: 250 }
+
+export function isValidTrackRibbon(ribbon: TrackRibbonSettings): boolean {
+  return (TRACK_COLOR_MODES as readonly string[]).includes(ribbon.metric) && ribbon.metric !== ('none' as string) && inRange(ribbon.heightM, TRACK_RIBBON_HEIGHT_RANGE)
 }
 
 export const TRACK_TAIL_LENGTH_RANGE = { min: 100, max: 20_000, step: 100 } as const

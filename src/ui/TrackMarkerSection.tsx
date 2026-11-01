@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { junctionsM } from '../film/markerKeys'
 import { t as translate, useT } from '../i18n'
 import { TRACK_COLOR_MODES, TRACK_METRICS, hasMetric } from '../flyover/trackColor'
+import type { TrackMetric } from '../flyover/trackColor'
 import { playsBilan } from '../flyover/sequence'
 import { OVERLAY_ANCHOR_LABELS } from '../overlay/settings'
 import { getPlatform } from '../platform'
@@ -29,11 +30,12 @@ import {
   TRACK_SMOOTHING_RANGE,
   TRACK_CURTAIN_RANGE,
   TRACK_COMET_INTENSITY_RANGE,
+  TRACK_RIBBON_HEIGHT_RANGE,
   TRACK_COMET_LENGTH_RANGE,
   TRACK_TAIL_LENGTH_RANGE,
   TRACK_WIDTH_RANGE,
 } from '../scene/markerSettings'
-import type { MarkerFigure, MarkerSettings, TrackStyle, TrackTailSettings } from '../scene/markerSettings'
+import type { MarkerFigure, MarkerSettings, TrackRibbonSettings, TrackStyle, TrackTailSettings } from '../scene/markerSettings'
 import type { SettingPath } from '../project/apply'
 import { addJunctionMarkerKeys, useFilmSequence, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
@@ -155,6 +157,8 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   const updateStyle = (patch: Partial<TrackStyle>) => setSetting('trackStyle', { ...style, ...patch })
   const tail = useAppStore((s) => s.settings.trackTail)
   const updateTail = (patch: Partial<TrackTailSettings>) => setSetting('trackTail', { ...tail, ...patch })
+  const ribbon = useAppStore((s) => s.settings.trackRibbon)
+  const updateRibbon = (patch: Partial<TrackRibbonSettings>) => setSetting('trackRibbon', { ...ribbon, ...patch })
   const trackColorBy = useAppStore((s) => s.settings.trackColorBy)
   const legendAnchor = useAppStore((s) => s.settings.trackLegendAnchor)
   const firstTrack = useAppStore((s) => s.tracks[0])
@@ -173,7 +177,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   )
 
   return (
-    <PanelSection title={t('marker.track.title')} keys={['trackColorBy', 'trackLegendAnchor', 'trackStyle', 'trackTail']} hidden={hidden}>
+    <PanelSection title={t('marker.track.title')} keys={['trackColorBy', 'trackLegendAnchor', 'trackStyle', 'trackTail', 'trackRibbon']} hidden={hidden}>
       <h3 className={GROUP}>{t('marker.track.lineGroup')}</h3>
       <div className="flex items-center gap-1">
         <Switch checked={style.drawOn || bilan} disabled={bilan} onChange={(on) => updateStyle({ drawOn: on })}>{t('marker.track.drawOn')}</Switch>
@@ -248,6 +252,36 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
             onChange={(anchor) => setSetting('trackLegendAnchor', anchor)}
           />
         </SettingRow>
+      )}
+      <div className="flex items-center gap-1">
+        <Switch checked={ribbon.enabled} onChange={(enabled) => updateRibbon({ enabled })}>{t('marker.track.ribbon')}</Switch>
+        <InfoTip text={t('marker.track.ribbonTip')} />
+      </div>
+      {ribbon.enabled && (
+        <>
+          <SettingRow label={t('marker.track.ribbonMetric')} value={colorModes.find((m) => m.mode === ribbon.metric)?.label} paths={['trackRibbon.metric']}>
+            <div className="field">
+              <label className="type-label" htmlFor={`${id}-ribbon`}>
+                {t('marker.track.ribbonMetric')}
+              </label>
+              <Select
+                id={`${id}-ribbon`}
+                value={ribbon.metric}
+                options={colorModes.filter(({ mode }) => mode !== 'none').map(({ mode, label, available }) => ({ value: mode as TrackMetric, label, disabled: !available }))}
+                onChange={(metric) => updateRibbon({ metric })}
+              />
+            </div>
+          </SettingRow>
+          <SettingRow label={t('marker.track.ribbonHeight')} value={formatDistance(ribbon.heightM)} paths={['trackRibbon.heightM']}>
+            <RangeField
+              label={t('marker.track.ribbonHeight')}
+              {...TRACK_RIBBON_HEIGHT_RANGE}
+              value={ribbon.heightM}
+              format={formatDistance}
+              onChange={(heightM) => updateRibbon({ heightM })}
+            />
+          </SettingRow>
+        </>
       )}
       <SettingRow label={t('marker.track.smoothing')} value={formatSmoothing(style.smoothingM)} paths={['trackStyle.smoothingM']}>
         <RangeField

@@ -5,6 +5,8 @@ export default {
   version: 'Version {version}',
   'v47.draw.title': 'Tracer un itinéraire sur la carte',
   'v47.draw.text': '« Ajouter » › « Tracer sur la carte… » : cliquez les points de votre sortie. Le tracé suit les sentiers (IGN en France, OpenStreetMap ailleurs), ou reste en ligne droite si vous le choisissez. Un clic de plus, et le film se prépare, sans fichier GPX.',
+  'v47.ribbon.title': 'Un ruban de données en 3D',
+  'v47.ribbon.text': '« Ruban de données » (Trace) dresse un mur translucide le long de la trace. Sa hauteur et sa couleur suivent une mesure : vitesse, pente, altitude, fréquence cardiaque. Le profil se lit dans le paysage.',
   'v47.comet.title': 'Une comète derrière le marqueur',
   'v47.comet.text': 'Avec « Trace qui se dessine », « Comète » ajoute une traînée lumineuse qui suit le marqueur et s’amincit derrière lui, pour un effet de vitesse. La ligne déjà tracée reste visible. Longueur et intensité se règlent.',
   'v47.contours.title': 'Des courbes de niveau en 3D',

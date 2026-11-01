@@ -1408,6 +1408,15 @@ The interface and the texts drawn into the films and posters exist in **French**
   `cutTrackLineSet(set, distance, trailM, cometM)` sets `trailStartM` = marker − `cometM` and `trailFadeM` = `cometM`: the
   width thins out to nothing at the tail. Off, or a track drawn whole: `trailStartM` past every distance (`NO_COMET`), so
   nothing is painted. Independent of « Traînée », which hides the start of the line itself. No dashes on the comet.
+- **Data ribbon** (« Ruban de données », `settings.trackRibbon { enabled, metric, heightM }`, metric of « Colorer selon », 20 m–1 km,
+  default off, speed, 250 m; `isValidTrackRibbon`; `scene/trackRibbon.ts`): a strip per segment, two vertices per densified
+  point: the foot on the draped line (`segment.positions`), the top above it along `buffer.up` by `ribbonHeightM` (the value's
+  share of the range shared by the tracks, `metricRange`, from `RIBBON_MIN_SHARE` of `heightM`). Vertex colours from the
+  metric's colormap, opaque at the top (`RIBBON_TOP_ALPHA`), clearer at the line, clear where the value is unknown. Its
+  material is a curtain's (`createCurtainMaterial`, one per set), so `cutTrackLineSet` cuts it at the marker and by the
+  trail through `trackM` like the curtains of the flights. The values and colours are made once per metric (a new height
+  only calls `drapeRibbon`, as does every drape of the line). Left out: a legend of the ribbon (the legend shown is the
+  line's « Colorer selon »), and a thin line along its top edge.
 - **Markers** (`markerSprite.ts`): one `Sprite` per marker (head: `FlyoverRig`, name `flyover-marker`; race:
   `RaceMarkers`; drawn with the depth test, moved `MARKER_DEPTH_PULL_M` (150 m, half the distance at most) towards the
   camera and shrunk in proportion, `pullMarkerForward`: same place and size on screen, the slope under it never cuts it

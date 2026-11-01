@@ -210,6 +210,7 @@ describe('settings and misc', () => {
       demClean: { enabled: false, seaToZero: false },
       water: { enabled: true, strength: 1 },
       snow: { mode: 'meteo', lineM: 2000 },
+      trackRibbon: { enabled: false, metric: 'speed', heightM: 250 },
       contours: { enabled: false, intervalM: 50, opacity: 0.6, color: '#ffffff' },
       forest: { enabled: true, density: 60 },
       overlay: DEFAULT_OVERLAY,

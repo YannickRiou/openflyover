@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Version {version}',
   'v47.draw.title': 'Draw a route on the map',
   'v47.draw.text': '“Add” › “Draw on the map…”: click the points of your outing. The line follows the paths (IGN in France, OpenStreetMap elsewhere), or stays straight if you choose. One more click and the film is ready to build, with no GPX file.',
+  'v47.ribbon.title': 'A 3D data ribbon',
+  'v47.ribbon.text': '“Data ribbon” (Track) raises a translucent wall along the track. Its height and colour follow one quantity: speed, slope, elevation, heart rate. The profile reads right in the landscape.',
   'v47.comet.title': 'A comet behind the marker',
   'v47.comet.text': 'With “Track drawn as it goes”, “Comet” adds a luminous trail that follows the marker and thins out behind it, a speed effect. The line already drawn stays visible. Length and intensity are adjustable.',
   'v47.contours.title': '3D contour lines',
