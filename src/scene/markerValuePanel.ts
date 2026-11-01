@@ -17,10 +17,10 @@ export function markerValueText(value: MarkerValue, frame: OverlayFrame | null):
 
 /** Canvas of the panel (pixels): a fixed size, so the texture is made once and only redrawn. */
 export const VALUE_CANVAS = { width: 512, height: 128 } as const
-/** Height of the panel in ball diameters of the marker (its width follows the canvas). */
-export const VALUE_PANEL_BALLS = 0.9
+/** Height of the figure's canvas, in ball diameters of the marker (its width follows the canvas). */
+export const VALUE_PANEL_BALLS = 1.4
 /** Gap between the badge and the panel, in ball diameters. */
-export const VALUE_GAP_BALLS = 0.25
+export const VALUE_GAP_BALLS = 0.8
 
 /**
  * What the picture of the panel depends on, besides its text: the overlay's style and overrides (colours, panel, fonts)

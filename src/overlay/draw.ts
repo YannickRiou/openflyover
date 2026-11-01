@@ -801,30 +801,46 @@ function drawCell(p: Painter, m: ReturnType<typeof cellMetrics>, cell: Cell, x: 
 }
 
 /**
- * The panel of « Donnée au-dessus du marqueur » on a `size` canvas: one counter figure on the panel of the overlay's style
- * (its fill, border, radius, shadow, accent bar, fonts and colours, with the user's overrides), or, for a style without
- * panel, on the text backing of that style. `u` is a tenth of the height, so a canvas keeps the same look at any size.
+ * The figure of « Donnée au-dessus du marqueur » on a `size` canvas: one counter figure hanging in the air, no panel, with a
+ * wide soft shadow and a tight one so it reads on snow as on forest. It takes the fonts and the colours of the overlay's style
+ * (the user's overrides included); a style whose text is dark (light panel) gets a white figure. `u` is a tenth of the height.
  */
 export function drawValueTag(ctx: OverlayContext2D, size: OverlaySize, settings: Pick<OverlaySettings, 'style' | 'overrides'>, text: CounterText): void {
   const u = size.height / 10
-  const p: Painter = { ctx, theme: resolveOverlayTheme(settings.style, settings.overrides), u, px: 1, size }
-  const { theme } = p
+  const resolved = resolveOverlayTheme(settings.style, settings.overrides)
+  // no panel, no backing of the style: the shadows are drawn here
+  const theme = { ...resolved, panel: null, textShadow: undefined, textBacking: undefined }
+  const p: Painter = { ctx, theme, u, px: 1, size }
   ctx.clearRect(0, 0, size.width, size.height)
-  const margin = 0.5 * u
-  drawPanel(p, margin, margin, size.width - 2 * margin, size.height - 2 * margin, 'left')
+  const light = (color: string) => {
+    const m = /^#?([0-9a-f]{6})$/i.exec(color.trim())
+    if (!m) return true
+    const n = parseInt(m[1], 16)
+    return 0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255) > 140
+  }
+  const main = settings.overrides?.text || (light(resolved.text) ? resolved.text : '#ffffff')
+  const soft = settings.overrides?.text ? settings.overrides.text : light(resolved.textSoft) ? resolved.textSoft : '#e6e6e6'
   let scale = 1
-  const value = (): TextStyle => ({ family: theme.numberFamily, weight: theme.numberWeight, sizePx: 4.8 * u * scale, color: theme.text })
-  const unit = (): TextStyle => ({ family: theme.bodyFamily, weight: theme.labelWeight, sizePx: 2.2 * u * scale, color: theme.textSoft })
-  const gap = () => 0.5 * u * scale
+  const value = (): TextStyle => ({ family: theme.numberFamily, weight: theme.numberWeight, sizePx: 6.4 * u * scale, color: main })
+  const unit = (): TextStyle => ({ family: theme.bodyFamily, weight: theme.labelWeight, sizePx: 2.8 * u * scale, color: soft })
+  const gap = () => 0.6 * u * scale
   const used = () => measure(p, text.value, value()) + (text.unit ? gap() + measure(p, text.unit, unit()) : 0)
-  // as large as fits, with room for the panel's padding
-  const room = size.width - 2 * margin - 3 * u
+  const room = size.width - 4 * u
   if (used() > room) scale = room / used()
   const valueW = measure(p, text.value, value())
   const left = (size.width - used()) / 2
-  const baseline = size.height / 2 + value().sizePx * 0.36
-  fillText(p, text.value, left, baseline, value(), 'left')
-  if (text.unit) fillText(p, text.unit, left + valueW + gap(), baseline, unit(), 'left')
+  const baseline = 7.2 * u
+  const draw = () => {
+    fillText(p, text.value, left, baseline, value(), 'left')
+    if (text.unit) fillText(p, text.unit, left + valueW + gap(), baseline, unit(), 'left')
+  }
+  for (const [color, blur, dy] of [['rgba(0, 0, 0, 0.7)', 1.6, 0.6], ['rgba(0, 0, 0, 0.9)', 0.35, 0.15]] as const) {
+    ctx.shadowColor = color
+    ctx.shadowBlur = blur * u
+    ctx.shadowOffsetY = dy * u
+    draw()
+  }
+  ctx.shadowColor = 'transparent'
 }
 
 function countersWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number): Widget | null {

@@ -16,7 +16,7 @@ const messages: Messages['news'] = {
   'v47.tilt.title': 'Inclinare la camera a ogni sosta',
   'v47.tilt.text': 'Il pannello di una sosta ha una riga «Inclinazione» (da −40° a +40°). Abbassi la camera verso la traccia o la alzi verso le vette, in un panorama come in una pausa.',
   'v47.value.title': 'Un dato sopra il marcatore',
-  'v47.value.text': '«Dato sopra il marcatore» (Marcatore › Altre opzioni) mostra un valore della grafica, come quota, pendenza o frequenza cardiaca, su un pannello sopra il marcatore. Prende lo stile e i colori della grafica.',
+  'v47.value.text': '«Dato sopra il marcatore» (Marcatore › Altre opzioni) mostra un valore della grafica, come quota, pendenza o frequenza cardiaca, come una grande cifra sospesa sopra il marcatore, con un’ombra morbida. Prende il font e i colori della grafica.',
   'v47.models.title': 'Figure in 3D',
   'v47.models.text': 'Spunta «Modello 3D» nella sezione Marcatore: la figura diventa un piccolo personaggio in volume, dal contorno netto, che cammina, pedala o scivola lungo la traccia. Tutte le diciassette figure lo hanno, anche i corridori fantasma.',
   'v47.summits.title': 'Vette lontane con il nome',

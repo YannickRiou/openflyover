@@ -16,7 +16,7 @@ const messages: Messages['news'] = {
   'v47.tilt.title': 'Inclinar la cámara en cada parada',
   'v47.tilt.text': 'El panel de una parada incluye una fila «Inclinación» (−40° a +40°). Baje la cámara hacia el track o súbala hacia las cumbres, en un panorama como en una pausa.',
   'v47.value.title': 'Un dato sobre el marcador',
-  'v47.value.text': '«Dato sobre el marcador» (Marcador › Más opciones) muestra un valor de los gráficos, como la altitud, la pendiente o la frecuencia cardíaca, en un panel sobre el marcador. Toma el estilo y los colores de los gráficos.',
+  'v47.value.text': '«Dato sobre el marcador» (Marcador › Más opciones) muestra un valor de los gráficos, como la altitud, la pendiente o la frecuencia cardíaca, como una cifra grande suspendida sobre el marcador, con una sombra suave. Toma la fuente y los colores de los gráficos.',
   'v47.models.title': 'Figuras en 3D',
   'v47.models.text': 'Marque «Modelo 3D» en la sección Marcador: la figura pasa a ser un pequeño personaje en volumen, de contorno nítido, que camina, pedalea o se desliza a lo largo del track. Las diecisiete figuras lo tienen, también los corredores fantasma.',
   'v47.summits.title': 'Cimas lejanas con nombre',

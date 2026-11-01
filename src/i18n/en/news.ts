@@ -16,7 +16,7 @@ const messages: Messages['news'] = {
   'v47.tilt.title': 'Tilt the camera at every stop',
   'v47.tilt.text': 'The stop panel gets an “Inclinaison” (tilt) row (−40° to +40°). Lower the camera towards the track, or raise it towards the summits, during a panorama as during a pause.',
   'v47.value.title': 'A figure above the marker',
-  'v47.value.text': '“Figure above the marker” (Marker › More options) shows one overlay figure, such as altitude, slope or heart rate, on a panel above the marker. It takes the style and colours of the overlay.',
+  'v47.value.text': '“Figure above the marker” (Marker › More options) shows one overlay figure, such as altitude, slope or heart rate, as a large figure hanging above the marker, with a soft shadow. It takes the font and colours of the overlay.',
   'v47.models.title': '3D figures',
   'v47.models.text': 'Tick “3D model” in the Marker section: the figure becomes a small character in volume with a clean outline, walking, pedalling or gliding along the track. All seventeen figures have one, ghost racers included.',
   'v47.summits.title': 'Distant summits, named',

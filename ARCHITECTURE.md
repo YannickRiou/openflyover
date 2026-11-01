@@ -3423,10 +3423,10 @@ default 'aucune'; checked by `isValidMarkerValue`; in « Marqueur » › « Plus
 
 - **Text**: `markerValueText` = the overlay's `counterText` at the film's progress (`overlayFilmFrameAt` on the cached overlay
   data of `createOverlayFilmCache`), so the panel reads like the counters (units, estimated times, « Bilan » figures).
-- **Look**: `drawValueTag` (`overlay/draw.ts`) paints the panel with the overlay's own `drawPanel`/`fillText` and its resolved
-  theme (`resolveOverlayTheme`: panel, border, accent bar, fonts, colours, user overrides, and for a style without panel its
-  text backing). `u` = a tenth of the canvas height. The canvas (512 × 128) is redrawn only when the text or `valueLookKey`
-  (style, overrides, fonts loaded) changes.
+- **Look**: `drawValueTag` (`overlay/draw.ts`) paints the figure alone, hanging in the air: no panel, a wide soft shadow and a
+  tight one (two passes of the same text), the fonts and colours of the overlay's resolved theme (`resolveOverlayTheme`, user
+  overrides included); a style whose text is dark gets a white figure. `u` = a tenth of the canvas height. The canvas
+  (512 × 128) is redrawn only when the text or `valueLookKey` (style, overrides, fonts loaded) changes.
 - **Place**: `scene/MarkerValueLabel.tsx` (a `Sprite`, after `FlyoverRig`) stands above `leadMarkerAnchor` (point, ball radius and
   height of the drawing in ball diameters, set by FlyoverRig: 1 for a ball, 2.6 on a stick, `MODEL_BALLS` for a 3D model),
   pulled towards the camera like the marker (`pullMarkerForward`). Colours divided by the exposure, like the marker's.
