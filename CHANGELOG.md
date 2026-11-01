@@ -6,6 +6,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## 4.7.1 (November 2026)
 
 - **Figure above the marker, redone**: « Donnée au-dessus du marqueur » is no longer a panel but a large figure hanging above the marker, with a soft shadow. It is bigger, higher above the marker, and takes the fonts and the colours of the overlay (a white figure when the style's text is dark).
+- **Marker and figure readable on a phone**: on a small view (under about 700 px tall, as a phone's preview) the ball keeps a radius of at least 5 px, and the figure above it grows with it. Larger views and exports are unchanged.
+
 
 ## 4.7.0 (November 2026)
 

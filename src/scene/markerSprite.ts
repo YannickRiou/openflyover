@@ -26,6 +26,13 @@ import type { MarkerLight } from './exposure'
 
 /** Ball radius as a fraction of its distance to the camera, at the default field of view (constant on-screen size, ~7 px at 1000 px). */
 export const MARKER_SCREEN_FACTOR = 0.007
+/** Smallest radius of the ball on the screen (px): on a small view (a phone) the marker and the figure above it stay readable. */
+export const MARKER_MIN_RADIUS_PX = 5
+let viewportHeightPx = 1000
+/** Height of the 3D view (px), set by FlyoverRig each frame: below ~1000 × 0.007 / … the ball would be smaller than `MARKER_MIN_RADIUS_PX`. */
+export function setMarkerViewportHeight(heightPx: number): void {
+  viewportHeightPx = heightPx > 0 ? heightPx : 1000
+}
 /** Diameter of the pictogram and picture badges relative to the ball: room for a readable figure. */
 export const BADGE_SCALE = 2.2
 /** Ink halo of the racers' balls (and contrasting ring of a ringed ball) relative to their coloured disc. */
@@ -492,7 +499,7 @@ export function setMarkerLight(light: MarkerLight): void {
  */
 export function markerRadius(camera: Camera, position: Vector3, size: number): number {
   const lens = 'fov' in camera ? Math.tan(((camera as PerspectiveCamera).fov * Math.PI) / 360) / Math.tan((CAMERA_FOV_DEG * Math.PI) / 360) : 1
-  return Math.max(1, camera.position.distanceTo(position) * MARKER_SCREEN_FACTOR * lens) * size
+  return Math.max(1, camera.position.distanceTo(position) * Math.max(MARKER_SCREEN_FACTOR, MARKER_MIN_RADIUS_PX / viewportHeightPx) * lens) * size
 }
 
 /**

@@ -41,6 +41,7 @@ import {
   MODEL_BALLS,
   MODEL_REST_PHASE,
   markerRadius,
+  setMarkerViewportHeight,
   pullMarkerForward,
   placeMarker,
   releaseMarkerTexture,
@@ -189,6 +190,7 @@ export function FlyoverRig() {
   }, [path, frame, controls, camera])
 
   useFrame(({ camera, size, gl, controls: orbit }, delta) => {
+    setMarkerViewportHeight(size.height)
     const store = useAppStore.getState()
     const { playing, speed } = store.playback
     const { settings } = store
