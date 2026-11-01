@@ -13,6 +13,8 @@ const messages: Messages['news'] = {
   'v47.comet.text': 'Con «Track que se dibuja», «Cometa» añade una estela luminosa que sigue al marcador y se afina detrás de él, un efecto de velocidad. La línea ya trazada sigue visible. La longitud y la intensidad se ajustan.',
   'v47.contours.title': 'Curvas de nivel en 3D',
   'v47.contours.text': '«Curvas de nivel» (pestaña Mapa) traza líneas sobre el relieve en cada escalón de altitud, una de cada cinco más marcada. La equidistancia, la intensidad y el color se ajustan.',
+  'v47.tilt.title': 'Inclinar la cámara en cada parada',
+  'v47.tilt.text': 'El panel de una parada incluye una fila «Inclinación» (−40° a +40°). Baje la cámara hacia el track o súbala hacia las cumbres, en un panorama como en una pausa.',
   'v47.value.title': 'Un dato sobre el marcador',
   'v47.value.text': '«Dato sobre el marcador» (Marcador › Más opciones) muestra un valor de los gráficos, como la altitud, la pendiente o la frecuencia cardíaca, en un panel sobre el marcador. Toma el estilo y los colores de los gráficos.',
   'v47.models.title': 'Figuras en 3D',

@@ -43,6 +43,7 @@ import { cumulativeDistances } from '../geo/lonLat'
 import {
   addTrailCut,
   applyDash,
+  COMET_MAX_STRENGTH,
   COMET_WIDTH_SHARE,
   createCurtainMaterial,
   createGlowMaterial,
@@ -652,7 +653,7 @@ export function applyTrackStyle(sets: Iterable<TrackLineSet>, style: TrackStyle,
     setGlow(set.glowMaterial, style.glowIntensity * TRACK_GLOW_MAX_STRENGTH, Math.min(1, style.width / style.glowWidth))
     // the comet is wider and smooth: the halo of a dashed line is dashed, the comet is not
     set.cometMaterial.linewidth = style.width * COMET_WIDTH_SHARE * renderScale
-    setGlow(set.cometMaterial, style.cometIntensity * TRACK_GLOW_MAX_STRENGTH, 1 / COMET_WIDTH_SHARE)
+    setGlow(set.cometMaterial, style.cometIntensity * COMET_MAX_STRENGTH, 1 / COMET_WIDTH_SHARE)
     for (const material of [set.solidMaterial, set.glowMaterial]) applyDash(material, style, renderScale, pixelSize)
     set.shadowMaterial.uniforms.widthPx.value = style.width * SHADOW_WIDTH_SHARE * renderScale
     for (const segment of set.segments) {

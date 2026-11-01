@@ -42,7 +42,9 @@ export const GLOW_STRENGTH = 0.55
  */
 export const TRACK_GLOW_MAX_STRENGTH = 0.8
 /** Width of the comet (« Comète »), in line widths. */
-export const COMET_WIDTH_SHARE = 6
+export const COMET_WIDTH_SHARE = 12
+/** Strength of the comet at « Intensité » 100 %: above the track glow's, a comet must stand out from the line it follows. */
+export const COMET_MAX_STRENGTH = 1.5
 
 // ---------------------------------------------------------------------------
 // Glow
