@@ -31,7 +31,7 @@
         "img-src": "'self' data: blob: https://tiles.mapterhorn.com https://s3.amazonaws.com https://data.geopf.fr https://wmts.geo.admin.ch https://services.arcgisonline.com https://wayback.maptiles.arcgis.com https://mapsneu.wien.gv.at https://cyberjapandata.gsi.go.jp https://basemap.nationalmap.gov https://*.tile.opentopomap.org",
         "media-src": "'self' blob:",
         "worker-src": "'self' blob:",
-        "connect-src": "'self' ipc: http://ipc.localhost blob: data: https://tiles.mapterhorn.com https://s3.amazonaws.com https://data.geopf.fr https://wmts.geo.admin.ch https://services.arcgisonline.com https://wayback.maptiles.arcgis.com https://mapsneu.wien.gv.at https://cyberjapandata.gsi.go.jp https://basemap.nationalmap.gov https://*.tile.opentopomap.org https://metadata.maptiles.arcgis.com https://s3-us-west-2.amazonaws.com https://archive-api.open-meteo.com https://api.open-meteo.com https://overpass-api.de https://maps.mail.ru https://www.strava.com"
+        "connect-src": "'self' ipc: http://ipc.localhost blob: data: https://tiles.mapterhorn.com https://s3.amazonaws.com https://data.geopf.fr https://wmts.geo.admin.ch https://services.arcgisonline.com https://wayback.maptiles.arcgis.com https://mapsneu.wien.gv.at https://cyberjapandata.gsi.go.jp https://basemap.nationalmap.gov https://*.tile.opentopomap.org https://metadata.maptiles.arcgis.com https://s3-us-west-2.amazonaws.com https://archive-api.open-meteo.com https://api.open-meteo.com https://overpass-api.de https://maps.mail.ru https://www.strava.com https://routing.openstreetmap.de"
       },
       "dangerousDisableAssetCspModification": ["style-src"]
     }

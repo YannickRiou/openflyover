@@ -47,6 +47,7 @@ import { JunctionTransitionFields, StageCardFields } from './JunctionFields'
 import { unsavedChangesText } from './library'
 import { chainLoadedTracks, chooseTracksToImport, removeTrackOrCloseProject } from './projectActions'
 import type { CloseAnswer } from './projectActions'
+import { DrawRouteDialog } from './DrawRouteDialog'
 import { StravaDialog } from './StravaImport'
 import { TrackToolsButton } from './TrackTools'
 import { Button, ColorField, DateField, Menu, Radio, RadioGroup, Select, Slider, Switch, TextField, TimeField, Tip } from './primitives'
@@ -299,6 +300,7 @@ function AddTracksMenu() {
   const t = useT()
   const loading = useAppStore((s) => s.loading)
   const [strava, setStrava] = useState(false)
+  const [draw, setDraw] = useState(false)
 
   return (
     <>
@@ -307,6 +309,7 @@ function AddTracksMenu() {
         items={[
           { id: 'files', label: t('track.add.files'), icon: <Icon name="upload" size={18} />, onSelect: () => void chooseTracksToImport() },
           { id: 'strava', label: t('track.add.strava'), icon: <Icon name="route" size={18} />, onSelect: () => setStrava(true) },
+          { id: 'draw', label: t('track.add.draw'), icon: <Icon name="spline" size={18} />, onSelect: () => setDraw(true) },
         ]}
         trigger={
           <Button size="sm" disabled={loading}>
@@ -316,6 +319,7 @@ function AddTracksMenu() {
         }
       />
       <StravaDialog open={strava} onClose={() => setStrava(false)} />
+      <DrawRouteDialog open={draw} onClose={() => setDraw(false)} />
     </>
   )
 }
