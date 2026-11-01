@@ -11,6 +11,8 @@ const messages: Messages['news'] = {
   'v47.comet.text': 'Con «Traccia che si disegna», «Cometa» aggiunge una scia luminosa che segue il marcatore e si assottiglia dietro di esso, un effetto di velocità. La linea già tracciata resta visibile. Lunghezza e intensità sono regolabili.',
   'v47.contours.title': 'Curve di livello in 3D',
   'v47.contours.text': '«Curve di livello» (scheda Mappa) traccia linee sul rilievo a ogni passo di quota, una su cinque più marcata. Equidistanza, intensità e colore sono regolabili.',
+  'v47.value.title': 'Un dato sopra il marcatore',
+  'v47.value.text': '«Dato sopra il marcatore» (Marcatore › Altre opzioni) mostra un valore della grafica, come quota, pendenza o frequenza cardiaca, su un pannello sopra il marcatore. Prende lo stile e i colori della grafica.',
   'v47.models.title': 'Figure in 3D',
   'v47.models.text': 'Spunta «Modello 3D» nella sezione Marcatore: la figura diventa un piccolo personaggio in volume, dal contorno netto, che cammina, pedala o scivola lungo la traccia. Tutte le diciassette figure lo hanno, anche i corridori fantasma.',
   'v47.summits.title': 'Vette lontane con il nome',

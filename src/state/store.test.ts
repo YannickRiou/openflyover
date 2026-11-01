@@ -211,6 +211,7 @@ describe('settings and misc', () => {
       water: { enabled: true, strength: 1 },
       snow: { mode: 'meteo', lineM: 2000 },
       contours: { enabled: false, intervalM: 50, opacity: 0.6, color: '#ffffff' },
+      markerValue: 'aucune',
       forest: { enabled: true, density: 60 },
       overlay: DEFAULT_OVERLAY,
       video: {

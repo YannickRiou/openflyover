@@ -9,6 +9,8 @@ export default {
   'v47.comet.text': 'Avec « Trace qui se dessine », « Comète » ajoute une traînée lumineuse qui suit le marqueur et s’amincit derrière lui, pour un effet de vitesse. La ligne déjà tracée reste visible. Longueur et intensité se règlent.',
   'v47.contours.title': 'Des courbes de niveau en 3D',
   'v47.contours.text': '« Courbes de niveau » (onglet Carte) trace des lignes sur le relief à chaque palier d’altitude, une sur cinq plus marquée. Équidistance, intensité et couleur se règlent.',
+  'v47.value.title': 'Une valeur au-dessus du marqueur',
+  'v47.value.text': '« Donnée au-dessus du marqueur » (Marqueur › Plus d’options) affiche une valeur de l’habillage, comme l’altitude, la pente ou la fréquence cardiaque, sur un panneau au-dessus du marqueur. Il reprend le style et les couleurs de l’habillage.',
   'v47.models.title': 'Des figurines en 3D',
   'v47.models.text': 'Cochez « Modèle 3D » dans la section Marqueur : la figurine devient un petit personnage en volume, au contour net, qui marche, pédale ou glisse dans le sens de la trace. Les dix-sept figurines existent, coureurs fantômes compris.',
   'v47.summits.title': 'Les sommets au loin, nommés',

@@ -10,6 +10,7 @@ import {
   cardStats,
   counterText,
   drawOverlay,
+  drawValueTag,
   endCardOpacity,
   endCardOpacityOf,
   creditLines,
@@ -27,6 +28,8 @@ import {
   titleCardOpacity,
   titleCardOpacityOf,
 } from './draw'
+import { OVERLAY_THEMES, resolveOverlayTheme } from './themes'
+import type { OverlayStyleId } from './settings'
 import type { DayCard, OverlayContext2D, OverlayExtras, StageCard } from './draw'
 import { MEDIA_DEFAULTS, STAGE_CARD_FIELDS } from '../film/model'
 import type { FilmMedia, FilmText } from '../film/model'
@@ -1631,5 +1634,36 @@ describe('cards placed on the timeline', () => {
     const half = creditsRollProgress(time(58), 0.9, { startS: 52, endS: 62 })
     expect(half).toBeGreaterThan(0)
     expect(half).toBeLessThan(1)
+  })
+})
+
+describe('drawValueTag (the panel above the marker)', () => {
+  const SIZE_TAG = { width: 512, height: 128 }
+  const panelStyle = (Object.keys(OVERLAY_THEMES) as OverlayStyleId[]).find((id) => OVERLAY_THEMES[id].panel)!
+  const bareStyle = (Object.keys(OVERLAY_THEMES) as OverlayStyleId[]).find((id) => !OVERLAY_THEMES[id].panel)
+
+  it('draws the figure and its unit in the colours and the panel of the overlay style', () => {
+    const { ctx, texts, fills } = fakeContext()
+    drawValueTag(ctx, SIZE_TAG, { style: panelStyle, overrides: undefined }, { value: '142', unit: 'bpm' })
+    const theme = resolveOverlayTheme(panelStyle, undefined)
+    expect(texts.map((t) => t.text)).toEqual(['142', 'bpm'])
+    expect(texts[0].color).toBe(theme.text)
+    expect(texts[1].color).toBe(theme.textSoft)
+    expect(fills).toContain(theme.panel!.fill)
+  })
+
+  it('follows the colours chosen for the overlay, and draws no unit for a figure without one', () => {
+    const { ctx, texts } = fakeContext()
+    drawValueTag(ctx, SIZE_TAG, { style: panelStyle, overrides: { text: '#ff0000' } }, { value: '1:05:09', unit: '' })
+    expect(texts.map((t) => t.text)).toEqual(['1:05:09'])
+    expect(texts[0].color).toBe('#ff0000')
+  })
+
+  it('draws no panel for a style without one, and keeps the text inside the canvas', () => {
+    if (!bareStyle) return
+    const { ctx, texts, fills } = fakeContext()
+    drawValueTag(ctx, SIZE_TAG, { style: bareStyle, overrides: undefined }, { value: '12 345 678 901 234', unit: 'km/h' })
+    expect(fills).toHaveLength(0)
+    expect(texts[0].x).toBeGreaterThanOrEqual(0)
   })
 })

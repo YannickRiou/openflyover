@@ -99,6 +99,8 @@ export default {
   'section.edgeColor': 'Couleur du bord',
   'section.label': 'Texte sous le marqueur',
   'section.labelText': "Texte de l'étiquette",
+  'section.value': 'Donnée au-dessus du marqueur',
+  'section.valueTip': 'Un panneau affiche la valeur choisie, au même format que l’habillage, au-dessus du marqueur. Une seule valeur à la fois.',
   'section.otherLabels': 'Les autres marqueurs portent le nom de leur trace.',
   'section.stick': 'Tige et ombre au sol',
   'section.stickTip': 'Le marqueur se dresse sur une tige au-dessus de la trace, son ombre posée au sol.',

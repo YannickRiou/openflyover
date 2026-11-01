@@ -3407,6 +3407,22 @@ exports) gets it from the terrain source of the settings.
   export) reads « Repères et eau » when the water is drawn (`overlayCredits` `water`, `useWaterStore.polygons`: sea polygons and
   lines count with the lakes).
 
+## Figure above the marker (« Donnée au-dessus du marqueur »)
+
+One counter of the overlay on a panel above the lead marker (`settings.markerValue`: 'aucune' or a counter id but 'outings',
+default 'aucune'; checked by `isValidMarkerValue`; in « Marqueur » › « Plus d'options »).
+
+- **Text**: `markerValueText` = the overlay's `counterText` at the film's progress (`overlayFilmFrameAt` on the cached overlay
+  data of `createOverlayFilmCache`), so the panel reads like the counters (units, estimated times, « Bilan » figures).
+- **Look**: `drawValueTag` (`overlay/draw.ts`) paints the panel with the overlay's own `drawPanel`/`fillText` and its resolved
+  theme (`resolveOverlayTheme`: panel, border, accent bar, fonts, colours, user overrides, and for a style without panel its
+  text backing). `u` = a tenth of the canvas height. The canvas (512 × 128) is redrawn only when the text or `valueLookKey`
+  (style, overrides, fonts loaded) changes.
+- **Place**: `scene/MarkerValueLabel.tsx` (a `Sprite`, after `FlyoverRig`) stands above `leadMarkerAnchor` (point, ball radius and
+  height of the drawing in ball diameters, set by FlyoverRig: 1 for a ball, 2.6 on a stick, `MODEL_BALLS` for a 3D model),
+  pulled towards the camera like the marker (`pullMarkerForward`). Colours divided by the exposure, like the marker's.
+- **Left out**: the racers' panels (the lead marker only), and the 3D ribbon of the same figure.
+
 ## Contour lines (« Courbes de niveau »)
 
 Lines on the terrain at every multiple of an altitude step, in « Carte » (`settings.contours { enabled, intervalM, opacity,
