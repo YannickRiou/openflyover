@@ -219,7 +219,9 @@ Esri, Vantor, Earthstar Geographics, and the GIS User Community » ; basemap.at
 Authority of Japan), GSI Tiles » ; USGS The National Map : « USDA, USGS The National
 Map: Orthoimagery » ; OpenTopoMap : « Données : © contributeurs OpenStreetMap, SRTM |
 Rendu : © OpenTopoMap (CC BY-SA) » ; Open-Meteo : « Données météo : Open-Meteo.com (CC
-BY 4.0) » ; OpenStreetMap (Overpass API) : « © contributeurs OpenStreetMap (ODbL) ».
+BY 4.0) » ; OpenStreetMap (Overpass API) : « © contributeurs OpenStreetMap (ODbL) » ;
+IGN Géoplateforme, route service : « Sentiers : IGN (BD TOPO) en France, OpenStreetMap
+ailleurs. ».
 
 Les textes complets des licences sont dans le fichier THIRD_PARTY_NOTICES.md, installé à
 côté de l’application.

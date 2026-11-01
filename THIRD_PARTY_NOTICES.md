@@ -285,7 +285,7 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - @react-stately/utils 3.12.1: Apache-2.0
 - @react-three/drei 10.7.9: MIT
 - @react-three/fiber 9.8.2: MIT (no license file in the package; standard text below; author Paul Henschel (https://github.com/drcmda); https://github.com/pmndrs/react-three-fiber)
-- @react-three/postprocessing 3.2.1: MIT
+- @react-three/postprocessing 3.2.2: MIT
 - @react-types/color 3.2.0: Apache-2.0
 - @react-types/shared 3.36.1: Apache-2.0
 - @spectrum-icons/ui 3.7.2: Apache-2.0
@@ -339,7 +339,7 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - loose-envify 1.4.0: MIT
 - loose-envify/node_modules/js-tokens 4.0.0: MIT
 - maath 0.10.8: MIT (no license file in the package; standard text below)
-- mediabunny 1.62.0: MPL-2.0
+- mediabunny 1.62.1: MPL-2.0
 - meshline 3.3.1: MIT
 - meshoptimizer 1.1.1: MIT
 - n8ao 2.0.1: ISC
@@ -391,7 +391,7 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - webgl-constants 1.1.1: MIT
 - webgl-sdf-generator 1.1.1: MIT
 - which 2.0.2: ISC
-- zustand 5.0.15: MIT
+- zustand 5.0.16: MIT
 
 ### License texts of the npm packages
 
@@ -1141,7 +1141,7 @@ Apache License
    limitations under the License.
 ```
 
-#### @react-three/drei 10.7.9, @react-three/postprocessing 3.2.1
+#### @react-three/drei 10.7.9, @react-three/postprocessing 3.2.2
 
 ```text
 MIT License
@@ -1252,7 +1252,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-#### tunnel-rat/node_modules/zustand 4.5.7, zustand 5.0.15
+#### tunnel-rat/node_modules/zustand 4.5.7, zustand 5.0.16
 
 ```text
 MIT License
@@ -2534,7 +2534,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-#### mediabunny 1.62.0
+#### mediabunny 1.62.1
 
 ```text
 Mozilla Public License Version 2.0
@@ -4465,8 +4465,8 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - tao-macros 0.1.4: MIT OR Apache-2.0
 - tar 0.4.46: MIT OR Apache-2.0
 - target-lexicon 0.12.16: Apache-2.0 WITH LLVM-exception
-- tauri 2.12.4: Apache-2.0 OR MIT
-- tauri-build 2.7.3: Apache-2.0 OR MIT
+- tauri 2.12.5: Apache-2.0 OR MIT
+- tauri-build 2.7.4: Apache-2.0 OR MIT
 - tauri-codegen 2.7.4: Apache-2.0 OR MIT
 - tauri-macros 2.7.4: Apache-2.0 OR MIT
 - tauri-plugin 2.7.1: Apache-2.0 OR MIT

@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## 4.7.0 (November 2026)
 
+- **Dependencies of the app updated**, security fixes included: the list is in the commits since 4.6.4.
 - **A figure above the marker**: « Donnée au-dessus du marqueur » (« Marqueur » › « Plus d'options ») shows one counter of the overlay (altitude, slope, speed, pace, heart rate, power, temperature, time, clock, distance, D+) on a panel above the lead marker. The panel takes the style, the colours, the panel and the fonts of the overlay, with the user's overrides. One figure at a time; none when the track does not record it. Off by default; the preview and the export draw the same panel.
 - **3D data ribbon along the track**: « Ruban de données » (section « Trace ») raises a translucent wall along the track whose height and colour follow one recorded quantity (speed, slope, elevation, vertical speed, heart rate, cadence, power or temperature), on the value range shared by the tracks, with « Hauteur du ruban » (20 m to 1 km). It is cut at the marker with « Trace qui se dessine », like the line. The legend follows its quantity while the line is not coloured. Off by default.
 - **Tilt of a stop**: the stop panel gets an « Inclinaison » row (−40° to +40°, 0 = the film camera's pitch). A negative value drops the camera towards the horizon, to be sure of seeing the summits (handy in a « Panorama 360° »); it is held through the turn and eases in and out.
