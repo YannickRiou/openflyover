@@ -46,7 +46,7 @@ remembered on the device. The documentation is in English; the [user guide](docs
 
 | Area | Features |
 |---|---|
-| Import | GPX and FIT, several tracks at once, or Strava activities; heart rate, cadence, power and temperature when present; distance, elevation gain / loss (D+ / D−), duration, elevations |
+| Import | GPX and FIT, several tracks at once, Strava activities, or a route drawn on the map along the paths (IGN in France, OpenStreetMap elsewhere); heart rate, cadence, power and temperature when present; distance, elevation gain / loss (D+ / D−), duration, elevations |
 | Terrain and imagery | Mapterhorn or AWS Terrain Tiles terrain; IGN orthophotos in France and swisstopo in Switzerland, chosen automatically; Esri World Imagery elsewhere, with national aerial photos to pick by hand (Austria, Japan, United States); topographic maps; terrain exaggeration; OpenStreetMap lakes and rivers rendered as water that reflects the sky and the sun, with ripples |
 | Flyover | six camera styles (chase, sway, orbit, top-down view, cinematic shot, free: keyframes only), thirteen presets, duration from 15 s to 10 min, camera smoothing, opening and closing shots (including one that dives from the highlighted region onto the track), clickable elevation profile |
 | Pacing | stops (automatic ones at passes and nearby summits, or your own) and speed sections you set on the timeline |
@@ -57,7 +57,7 @@ remembered on the device. The documentation is in English; the [user guide](docs
 | Planned outing | for a route without times (Komoot, Visorando, IGNrando…): date, start time, activity and pace give the estimated passing time at each point, the sun and the weather forecast of the day |
 | Points of interest | your own places ("Picnic", "Paul's chalet"), placed with a right-click on the terrain or at the marker, with an icon (hut, bivouac, summit…), shown like landmarks in the view and in the movie |
 | Track | colored by speed, slope, elevation, heart rate, cadence, power or temperature; width, dashes or dots, glow, track that draws itself as the marker passes; smoothing of GPS jitter |
-| Marker | ball, figurine (hiker, mountaineer, runner, trail runner, cyclist, e-bike, bikepacking, mountain bike, skier, ski touring, swimmer, kayak, rider, paraglider, motorbike, car, light aircraft) facing the direction of travel, or your photo in a circle; adjustable size |
+| Marker | ball, figurine (hiker, mountaineer, runner, trail runner, cyclist, e-bike, bikepacking, mountain bike, skier, ski touring, swimmer, kayak, rider, paraglider, motorbike, car, light aircraft) facing the direction of travel, flat or as a small 3D character, or your photo in a circle; adjustable size |
 | Ghost race | several tracks replayed together, with a live leaderboard |
 | Stages | several tracks flown one after the other, each stage with its own color, name, figures, sun and weather |
 | Chaining | several tracks (one per day, or one outing recorded in two files) merged into a single route, flown over in one go |

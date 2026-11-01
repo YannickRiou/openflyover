@@ -3,6 +3,15 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.7.0 (November 2026)
+
+- **Draw a route on the map**: « + Ajouter » › « Tracer sur la carte… » opens a map where each click lays a point. The line between two points follows the paths (IGN Géoplateforme, BD TOPO, for walkers in France; OpenStreetMap through the FOSSGIS routing servers elsewhere and for bikes), or runs straight (« Ligne droite »). A leg that no service can route stays a straight line, and the window says so. « Créer la trace » imports the line as a GPX route without times: its elevation is read from the terrain and « Sortie prévue » takes it from there. The desktop application allows `routing.openstreetmap.de` (`connect-src`).
+- **3D figures for the marker**: « Modèle 3D » in « Marqueur » replaces the flat figurine with a small character in volume (flat colours, clean outline, joints that bend): the seventeen figures, also for the ghost racers. Off by default.
+- **Distant summits at a « Panorama » stop**: the camera that turns round now names the summits within 25 km (OpenStreetMap, highest first, at most 40, with their height) and keeps them out of the way of the landmarks of the track.
+- **Search for a setting**: Ctrl+K (Cmd+K on a Mac) opens a search over the sections of the panels; the matching section opens.
+- **A guided tour on the first launch**: a few bubbles show where to import, set the look and export; it can be stopped at any time and « Revoir la visite guidée » in the help starts it again.
+- **iOS, application installed on the home screen**: a fixed band the colour of the top bar paints the status-bar area, which ends the blur at the top of the screen on iOS 26 and 27.
+
 ## 4.6.4 (October 2026)
 
 - **The app installed on an iPhone keeps its top bar clear of the status bar's shadow**: on iOS 27 a coloured shadow of the status bar spills over the top of an app opened from the home screen. Upright, the top bar now leaves 16 px more above it, in its own colour, so the shadow falls on that band and not on the project name and the buttons. A Safari tab, landscape and other phones are unchanged.
