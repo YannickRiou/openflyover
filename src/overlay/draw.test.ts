@@ -687,6 +687,17 @@ describe('legend of the track colouring', () => {
     expect(render(TITLED, { trackLegend: null })).toEqual([])
   })
 
+  it('stacks a second legend (the data ribbon\'s) with the first at the same anchor', () => {
+    const speed = trackLegend([sampleTrack], 'speed')!
+    const anchor = 'top-right' as const
+    const texts = render(TITLED, { trackLegend: { ...legend, anchor }, ribbonLegend: { ...speed, anchor } })
+    const first = texts.find((t) => t.text === legend.label)!
+    const second = texts.find((t) => t.text === speed.label)!
+    expect(first).toBeDefined()
+    expect(second).toBeDefined()
+    expect(Math.abs(first.y - second.y)).toBeGreaterThan(SIZE.height * 0.03)
+  })
+
   it('sits at the chosen anchor inside the safe area, and stacks with the widgets of that anchor', () => {
     for (const anchor of ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const) {
       const at = title(render(TITLED, { trackLegend: { ...legend, anchor } }))!
