@@ -1,7 +1,7 @@
 /**
  * « Ruban de données »: a translucent wall along each track whose height and colour follow one recorded quantity
  * (`settings.trackRibbon`). One strip per segment, two vertices per densified point: the bottom on the draped line, the
- * top above it by the value's share of `heightM`. It reuses the curtain material of the flights (`createCurtainMaterial`:
+ * top above it by the value's share of `heightM`, and a thin, bright strip along that top edge (a third vertex under it). It reuses the curtain material of the flights (`createCurtainMaterial`:
  * vertex colours with alpha, cut at the marker and by the trail through the `trackM` attribute), so the draw-on shows it
  * as it shows the line. The values and colours are made once per metric; the heights and the drape follow the settings
  * and the terrain. Three.js only, no React.
@@ -17,6 +17,10 @@ export const RIBBON_TOP_ALPHA = 0.85
 export const RIBBON_FOOT_ALPHA = 0.3
 /** Share of `heightM` the lowest value stands at: the wall never vanishes where the value is low. */
 export const RIBBON_MIN_SHARE = 0.04
+/** The edge line along the top of the wall: its thickness, as a share of `heightM` (at least `RIBBON_EDGE_MIN_M`), and how far its colour goes towards white. */
+export const RIBBON_EDGE_SHARE = 0.05
+export const RIBBON_EDGE_MIN_M = 2
+export const RIBBON_EDGE_LIGHTEN = 0.45
 
 /** What a segment keeps of its ribbon. */
 export interface RibbonLayer {
@@ -46,12 +50,15 @@ export const ribbonHeightM = (fraction: number, heightM: number) =>
 function createRibbonMesh(set: TrackLineSet, segment: SegmentLines): Mesh {
   const count = segment.points.length
   const index: number[] = []
-  for (let k = 0; k < count - 1; k++) index.push(2 * k, 2 * k + 1, 2 * k + 2, 2 * k + 1, 2 * k + 3, 2 * k + 2)
-  const trackM = new Float32Array(count * 2)
-  for (let k = 0; k < count; k++) trackM.fill(segment.dist[k], 2 * k, 2 * k + 2)
+  // per point: the foot (3k), the bottom of the edge strip (3k + 1), the top (3k + 2); the wall between the first two, the edge between the last two
+  for (let k = 0; k < count - 1; k++) {
+    for (const [a, b] of [[0, 1], [1, 2]]) index.push(3 * k + a, 3 * k + b, 3 * k + 3 + a, 3 * k + b, 3 * k + 3 + b, 3 * k + 3 + a)
+  }
+  const trackM = new Float32Array(count * 3)
+  for (let k = 0; k < count; k++) trackM.fill(segment.dist[k], 3 * k, 3 * k + 3)
   const geometry = new BufferGeometry()
-  geometry.setAttribute('position', new BufferAttribute(new Float32Array(count * 6), 3))
-  geometry.setAttribute('color', new BufferAttribute(new Float32Array(count * 8), 4))
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(count * 9), 3))
+  geometry.setAttribute('color', new BufferAttribute(new Float32Array(count * 12), 4))
   geometry.setAttribute('trackM', new BufferAttribute(trackM, 1))
   geometry.setIndex(index)
   const mesh = new Mesh(geometry, set.ribbonMaterial)
@@ -70,15 +77,17 @@ export function drapeRibbon(segment: SegmentLines): void {
   const { up } = buffer
   for (let k = 0; k < layer.fractions.length; k++) {
     const h = ribbonHeightM(layer.fractions[k], layer.heightM)
+    const edge = Math.min(h, Math.max(RIBBON_EDGE_MIN_M, RIBBON_EDGE_SHARE * layer.heightM))
     const o = k * 3
-    position.setXYZ(2 * k, positions[o], positions[o + 1], positions[o + 2])
-    position.setXYZ(2 * k + 1, positions[o] + up[o] * h, positions[o + 1] + up[o + 1] * h, positions[o + 2] + up[o + 2] * h)
+    position.setXYZ(3 * k, positions[o], positions[o + 1], positions[o + 2])
+    position.setXYZ(3 * k + 1, positions[o] + up[o] * (h - edge), positions[o + 1] + up[o + 1] * (h - edge), positions[o + 2] + up[o + 2] * (h - edge))
+    position.setXYZ(3 * k + 2, positions[o] + up[o] * h, positions[o + 1] + up[o + 1] * h, positions[o + 2] + up[o + 2] * h)
   }
   position.needsUpdate = true
   layer.mesh.geometry.computeBoundingSphere()
 }
 
-/** Colour the wall by `metric` over `range`: the colormap of the metric, opaque at the top edge, fading towards the line; clear where the value is unknown. */
+/** Colour the wall by `metric` over `range`: the colormap of the metric, opaque at the top, fading towards the line, with a lighter opaque edge strip; clear where the value is unknown. */
 function colorRibbon(layer: RibbonLayer, perPoint: Float64Array, range: ValueRange | null): void {
   const colors = colorizeValues(perPoint, range ?? { min: 0, max: 0 }, TRACK_METRICS[layer.metric].colormap)
   const attribute = layer.mesh.geometry.getAttribute('color') as BufferAttribute
@@ -86,8 +95,16 @@ function colorRibbon(layer: RibbonLayer, perPoint: Float64Array, range: ValueRan
   for (let k = 0; k < perPoint.length; k++) {
     linear.setRGB(colors[k * 3], colors[k * 3 + 1], colors[k * 3 + 2], SRGBColorSpace)
     const known = !Number.isNaN(perPoint[k])
-    attribute.setXYZW(2 * k, linear.r, linear.g, linear.b, known ? RIBBON_FOOT_ALPHA : 0)
-    attribute.setXYZW(2 * k + 1, linear.r, linear.g, linear.b, known ? RIBBON_TOP_ALPHA : 0)
+    attribute.setXYZW(3 * k, linear.r, linear.g, linear.b, known ? RIBBON_FOOT_ALPHA : 0)
+    attribute.setXYZW(3 * k + 1, linear.r, linear.g, linear.b, known ? RIBBON_TOP_ALPHA : 0)
+    // the edge: the same colour lightened, opaque
+    attribute.setXYZW(
+      3 * k + 2,
+      linear.r + (1 - linear.r) * RIBBON_EDGE_LIGHTEN,
+      linear.g + (1 - linear.g) * RIBBON_EDGE_LIGHTEN,
+      linear.b + (1 - linear.b) * RIBBON_EDGE_LIGHTEN,
+      known ? 1 : 0,
+    )
   }
   attribute.needsUpdate = true
 }

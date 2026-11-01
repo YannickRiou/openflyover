@@ -50,16 +50,16 @@ function leaderboardAt(progress: number): LeaderboardRow[] | undefined {
   return leaderboardRows(raceAt(race, progress), tracks)
 }
 
-/** Last legend of the track colouring: its values are worked out again only when the tracks, the quantity or the language change. */
-let legendCache: { tracks: readonly Track[]; colorBy: TrackColorBy; language: string; legend: TrackLegend | null } | null = null
+/** Legends already made (one per quantity): their values are worked out again only when the tracks or the language change. */
+let legendCache: { tracks: readonly Track[]; language: string; byQuantity: Map<TrackColorBy, TrackLegend | null> } | null = null
 
-/** Legend of the track colouring and its place, while a colouring is on. */
+/** Legend of a quantity of the track colouring (the line's, or the data ribbon's) and its place; none for « none ». */
 function trackLegendOf(tracks: readonly Track[], colorBy: TrackColorBy, anchor: OverlayAnchor): OverlayTrackLegend | null {
   const language = getLanguage()
-  if (!legendCache || legendCache.tracks !== tracks || legendCache.colorBy !== colorBy || legendCache.language !== language) {
-    legendCache = { tracks, colorBy, language, legend: trackLegend(tracks, colorBy) }
-  }
-  return legendCache.legend && { ...legendCache.legend, anchor }
+  if (!legendCache || legendCache.tracks !== tracks || legendCache.language !== language) legendCache = { tracks, language, byQuantity: new Map() }
+  if (!legendCache.byQuantity.has(colorBy)) legendCache.byQuantity.set(colorBy, trackLegend(tracks, colorBy))
+  const legend = legendCache.byQuantity.get(colorBy)
+  return legend ? { ...legend, anchor } : null
 }
 
 let dayMemo: { track: Track; series: WeatherSeries | null; figures: DayFigures[] } | null = null
@@ -127,8 +127,12 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
   return {
     time,
     leaderboard: leaderboardAt(progress),
-    // the legend follows the colouring of the line, else the quantity of the data ribbon
+    // the legend of the line's colouring; the data ribbon's comes first when the line is not coloured, else second when it shows another quantity
     trackLegend: trackLegendOf(tracks, settings.trackColorBy !== 'none' ? settings.trackColorBy : settings.trackRibbon.enabled ? settings.trackRibbon.metric : 'none', settings.trackLegendAnchor),
+    ribbonLegend:
+      settings.trackRibbon.enabled && settings.trackColorBy !== 'none' && settings.trackRibbon.metric !== settings.trackColorBy
+        ? trackLegendOf(tracks, settings.trackRibbon.metric, settings.trackLegendAnchor)
+        : null,
     // a « Bilan »: the date of the outing being drawn, with the film's own texts
     texts: stamp ? [...settings.film.texts, stamp] : settings.film.texts,
     media: settings.film.media,

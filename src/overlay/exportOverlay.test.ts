@@ -88,6 +88,23 @@ describe('createOverlayDrawer', () => {
     drawer.dispose()
   })
 
+  it('adds the ribbon legend as a second one when the line shows another quantity', () => {
+    useAppStore.getState().addTracks([track])
+    const drawer = createOverlayDrawer()
+    const last = () => vi.mocked(drawOverlay).mock.lastCall?.[5]
+    const { settings, setSetting } = useAppStore.getState()
+    setSetting('trackColorBy', 'elevation')
+    setSetting('trackRibbon', { ...settings.trackRibbon, enabled: true, metric: 'elevation' })
+    drawer.draw(ctx, at(0.5), 1920, 1080)
+    expect(last()?.trackLegend).not.toBeNull()
+    expect(last()?.ribbonLegend).toBeNull()
+    setSetting('trackRibbon', { ...useAppStore.getState().settings.trackRibbon, metric: 'speed' })
+    drawer.draw(ctx, at(0.5), 1920, 1080)
+    expect(last()?.ribbonLegend?.label).toBeDefined()
+    expect(last()?.ribbonLegend?.label).not.toBe(last()?.trackLegend?.label)
+    drawer.dispose()
+  })
+
   it('« À la suite »: each stage’s own figures, its card and the dip of its cut', () => {
     const other = buildTrack({ name: 'u', source: 'gpx', segments: [{ points: points.map((p) => ({ ...p, lat: p.lat + 0.01 })) }] })
     useAppStore.getState().addTracks([track, other])

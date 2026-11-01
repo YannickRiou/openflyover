@@ -1409,14 +1409,16 @@ The interface and the texts drawn into the films and posters exist in **French**
   width thins out to nothing at the tail. Off, or a track drawn whole: `trailStartM` past every distance (`NO_COMET`), so
   nothing is painted. Independent of « Traînée », which hides the start of the line itself. No dashes on the comet.
 - **Data ribbon** (« Ruban de données », `settings.trackRibbon { enabled, metric, heightM }`, metric of « Colorer selon », 20 m–1 km,
-  default off, speed, 250 m; `isValidTrackRibbon`; `scene/trackRibbon.ts`): a strip per segment, two vertices per densified
+  default off, speed, 250 m; `isValidTrackRibbon`; `scene/trackRibbon.ts`): a strip per segment, three vertices per densified
   point: the foot on the draped line (`segment.positions`), the top above it along `buffer.up` by `ribbonHeightM` (the value's
   share of the range shared by the tracks, `metricRange`, from `RIBBON_MIN_SHARE` of `heightM`). Vertex colours from the
   metric's colormap, opaque at the top (`RIBBON_TOP_ALPHA`), clearer at the line, clear where the value is unknown. Its
   material is a curtain's (`createCurtainMaterial`, one per set), so `cutTrackLineSet` cuts it at the marker and by the
   trail through `trackM` like the curtains of the flights. The values and colours are made once per metric (a new height
   only calls `drapeRibbon`, as does every drape of the line). The legend of the track colouring (`trackLegendOf`) follows the ribbon's metric while the line is not coloured.
-  Left out: a thin line along its top edge, and a second legend when the line and the ribbon show different quantities.
+  A third vertex per point under the top makes a thin, lighter and opaque strip along the top edge (`RIBBON_EDGE_SHARE`,
+  `RIBBON_EDGE_MIN_M`, `RIBBON_EDGE_LIGHTEN`) that reads the profile. When the line is coloured by another quantity, the ribbon's legend
+  is a second one (`extras.ribbonLegend`), stacked at the same anchor (`legendCache` keeps one legend per quantity).
 - **Markers** (`markerSprite.ts`): one `Sprite` per marker (head: `FlyoverRig`, name `flyover-marker`; race:
   `RaceMarkers`; drawn with the depth test, moved `MARKER_DEPTH_PULL_M` (150 m, half the distance at most) towards the
   camera and shrunk in proportion, `pullMarkerForward`: same place and size on screen, the slope under it never cuts it

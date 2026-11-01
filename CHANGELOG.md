@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **Data ribbon**: a thin, lighter line runs along the top edge of the wall, and a second legend (stacked with the first) shows the ribbon's quantity when the line is coloured by another one.
+
 ## 4.7.2 (November 2026)
 
 - **« Modèle 3D » label**: the checkbox no longer says that the figure pedals (« face à la trace, il pédale »): the model is every figure, walking, skiing or pedalling. It now reads « Modèle 3D (dans le sens de la trace) ».
