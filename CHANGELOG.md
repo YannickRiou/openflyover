@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 4.7.2 (November 2026)
 
 - **« Modèle 3D » label**: the checkbox no longer says that the figure pedals (« face à la trace, il pédale »): the model is every figure, walking, skiing or pedalling. It now reads « Modèle 3D (dans le sens de la trace) ».
 - **Colour labels of a figure on a badge**: « Couleur du disque » and « Couleur du bord » become « Couleur du badge » and « Couleur du bord du badge » (the badge is a disc, a pin or a rounded square).
