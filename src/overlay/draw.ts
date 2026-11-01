@@ -811,18 +811,31 @@ export function drawValueTag(ctx: OverlayContext2D, size: OverlaySize, settings:
   const { theme } = p
   ctx.clearRect(0, 0, size.width, size.height)
   const margin = 0.5 * u
-  drawPanel(p, margin, margin, size.width - 2 * margin, size.height - 2 * margin, 'left')
+  // the panel on top, a pointer under it towards the marker (the canvas ends on its tip)
+  const bodyH = 7.4 * u
+  drawPanel(p, margin, margin, size.width - 2 * margin, bodyH, 'left')
+  if (theme.panel) {
+    ctx.save()
+    ctx.fillStyle = theme.panel.fill
+    ctx.beginPath()
+    ctx.moveTo(size.width / 2 - 1.6 * u, margin + bodyH - 0.1 * u)
+    ctx.lineTo(size.width / 2 + 1.6 * u, margin + bodyH - 0.1 * u)
+    ctx.lineTo(size.width / 2, size.height - 0.2 * u)
+    ctx.closePath()
+    ctx.fill()
+    ctx.restore()
+  }
   let scale = 1
-  const value = (): TextStyle => ({ family: theme.numberFamily, weight: theme.numberWeight, sizePx: 4.8 * u * scale, color: theme.text })
-  const unit = (): TextStyle => ({ family: theme.bodyFamily, weight: theme.labelWeight, sizePx: 2.2 * u * scale, color: theme.textSoft })
-  const gap = () => 0.5 * u * scale
+  const value = (): TextStyle => ({ family: theme.numberFamily, weight: theme.numberWeight, sizePx: 5.4 * u * scale, color: theme.text })
+  const unit = (): TextStyle => ({ family: theme.bodyFamily, weight: theme.labelWeight, sizePx: 2.6 * u * scale, color: theme.textSoft })
+  const gap = () => 0.6 * u * scale
   const used = () => measure(p, text.value, value()) + (text.unit ? gap() + measure(p, text.unit, unit()) : 0)
   // as large as fits, with room for the panel's padding
   const room = size.width - 2 * margin - 3 * u
   if (used() > room) scale = room / used()
   const valueW = measure(p, text.value, value())
   const left = (size.width - used()) / 2
-  const baseline = size.height / 2 + value().sizePx * 0.36
+  const baseline = margin + bodyH / 2 + value().sizePx * 0.36
   fillText(p, text.value, left, baseline, value(), 'left')
   if (text.unit) fillText(p, text.unit, left + valueW + gap(), baseline, unit(), 'left')
 }
