@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **Marker and figure readable on a phone**: on a small view (under about 700 px tall, as a phone's preview) the ball keeps a radius of at least 5 px, and the figure above it grows with it. Larger views and exports are unchanged.
+
 ## 4.7.0 (November 2026)
 
 - **Dependencies of the app updated**, security fixes included: the list is in the commits since 4.6.4.

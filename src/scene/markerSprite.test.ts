@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { PerspectiveCamera, Sprite, Vector3 } from 'three'
 import type { SpriteMaterial } from 'three'
 import { createLocalFrame } from '../geo/ellipsoid'
-import { focalDolly, fovDegOf } from '../flyover/cameraSettings'
+import { CAMERA_FOV_DEG, focalDolly, fovDegOf } from '../flyover/cameraSettings'
 import { buildTrackPath, samplePath } from '../flyover/path'
 import type { Track } from '../core/types'
 import { DEFAULT_MARKER, FIGURE_TURN_S } from './markerSettings'
@@ -18,6 +18,10 @@ import {
   leadMarkerColors,
   markerBadge,
   markerLook,
+  markerRadius,
+  MARKER_MIN_RADIUS_PX,
+  MARKER_SCREEN_FACTOR,
+  setMarkerViewportHeight,
   MARKER_DEPTH_PULL_M,
   pullMarkerForward,
   placeMarker,
@@ -82,6 +86,20 @@ describe('markerBadge', () => {
     expect(layout.anchorY).toBe(layout.footY)
     expect(layout.label?.top).toBeGreaterThan(layout.anchorY)
     expect(layout.width).toBeGreaterThanOrEqual(200)
+  })
+})
+
+describe('markerRadius on a small view', () => {
+  const camera = new PerspectiveCamera(CAMERA_FOV_DEG, 1, 1, 100000)
+  camera.position.set(0, 0, 1000)
+  const target = new Vector3()
+
+  it('keeps the usual size on a tall view and at least `MARKER_MIN_RADIUS_PX` on a small one', () => {
+    setMarkerViewportHeight(1080)
+    expect(markerRadius(camera, target, 1)).toBeCloseTo(1000 * MARKER_SCREEN_FACTOR, 5)
+    setMarkerViewportHeight(300)
+    expect(markerRadius(camera, target, 1)).toBeCloseTo((1000 * MARKER_MIN_RADIUS_PX) / 300, 5)
+    setMarkerViewportHeight(1000)
   })
 })
 
