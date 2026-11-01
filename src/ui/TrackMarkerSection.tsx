@@ -244,7 +244,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
           {trackColorBy === 'verticalSpeed' && <p className="type-hint">{t('marker.track.verticalSpeedHint')}</p>}
         </div>
       </SettingRow>
-      {trackColorBy !== 'none' && (
+      {(trackColorBy !== 'none' || ribbon.enabled) && (
         <SettingRow label={t('marker.track.legendAnchor')} value={OVERLAY_ANCHOR_LABELS[legendAnchor]} paths={['trackLegendAnchor']}>
           <AnchorPicker
             label={t('marker.track.legendAnchor')}

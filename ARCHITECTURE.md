@@ -1415,8 +1415,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   metric's colormap, opaque at the top (`RIBBON_TOP_ALPHA`), clearer at the line, clear where the value is unknown. Its
   material is a curtain's (`createCurtainMaterial`, one per set), so `cutTrackLineSet` cuts it at the marker and by the
   trail through `trackM` like the curtains of the flights. The values and colours are made once per metric (a new height
-  only calls `drapeRibbon`, as does every drape of the line). Left out: a legend of the ribbon (the legend shown is the
-  line's « Colorer selon »), and a thin line along its top edge.
+  only calls `drapeRibbon`, as does every drape of the line). The legend of the track colouring (`trackLegendOf`) follows the ribbon's metric while the line is not coloured.
+  Left out: a thin line along its top edge, and a second legend when the line and the ribbon show different quantities.
 - **Markers** (`markerSprite.ts`): one `Sprite` per marker (head: `FlyoverRig`, name `flyover-marker`; race:
   `RaceMarkers`; drawn with the depth test, moved `MARKER_DEPTH_PULL_M` (150 m, half the distance at most) towards the
   camera and shrunk in proportion, `pullMarkerForward`: same place and size on screen, the slope under it never cuts it
