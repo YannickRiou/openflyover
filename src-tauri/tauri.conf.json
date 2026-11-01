@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "OpenFlyover",
-  "version": "4.6.4",
+  "version": "4.7.0",
   "identifier": "io.github.yannickriou.openflyover",
   "build": {
     "beforeDevCommand": "npm run dev -- --strictPort",
