@@ -21,6 +21,16 @@ export interface NewsVersion {
 
 export const WHATS_NEW: readonly NewsVersion[] = [
   {
+    version: '4.7',
+    items: [
+      { icon: 'spline', get title() { return t('news.v47.draw.title') }, get text() { return t('news.v47.draw.text') } },
+      { icon: 'navigation', get title() { return t('news.v47.models.title') }, get text() { return t('news.v47.models.text') } },
+      { icon: 'map-pin', get title() { return t('news.v47.summits.title') }, get text() { return t('news.v47.summits.text') } },
+      { icon: 'sliders-horizontal', get title() { return t('news.v47.search.title') }, get text() { return t('news.v47.search.text') } },
+      { icon: 'circle-help', get title() { return t('news.v47.tour.title') }, get text() { return t('news.v47.tour.text') } },
+    ],
+  },
+  {
     version: '4.6',
     items: [
       { icon: 'moon', get title() { return t('news.v46.nights.title') }, get text() { return t('news.v46.nights.text') } },

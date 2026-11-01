@@ -18,6 +18,8 @@ sources were checked.
 | OpenTopoMap | world topographic map | `tile.opentopomap.org` | "Données : © contributeurs OpenStreetMap, SRTM \| Rendu : © OpenTopoMap (CC BY-SA)" |
 | Open-Meteo | historical weather, forecast for an upcoming outing | `archive-api.open-meteo.com`, `api.open-meteo.com` | "Données météo : Open-Meteo.com (CC BY 4.0)" |
 | OpenStreetMap (Overpass API) | landmarks, water (the sea, lakes, rivers and streams, reflective) | `overpass-api.de`, fallback `maps.mail.ru` | "© contributeurs OpenStreetMap (ODbL)" |
+| IGN Géoplateforme, route service | route drawn by hand along the paths, walkers in France | `data.geopf.fr/navigation/itineraire` (`bdtopo-pgr`, pedestrian) | "Sentiers : IGN (BD TOPO) en France, OpenStreetMap ailleurs." |
+| OpenStreetMap routing (FOSSGIS OSRM) | route drawn by hand along the paths: bikes, and walkers outside the IGN's coverage | `routing.openstreetmap.de/routed-foot`, `routed-bike` | same line; one request per leg and per click (the policy asks for at most one per second) |
 
 The service worker of the website (installable app) caches only the app's own files: it never stores a tile, a weather
 answer, an Overpass answer nor a Strava call, so third-party data is kept only where its terms are checked (offline
