@@ -7,6 +7,7 @@ import type { TerrainEngine, Track, TrackPoint } from '../core/types'
 import { buildSequence } from '../flyover/sequence'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { DEFAULT_TRACK_STYLE, TRACK_CURTAIN_RANGE } from './markerSettings'
+import { RIBBON_MIN_SHARE, applyTrackRibbon } from './trackRibbon'
 import { CURTAIN_TOP_ALPHA, NO_TRAIL, SHADOW_WIDTH_SHARE, TRACK_GLOW_MAX_STRENGTH } from './trackLineStyle'
 import type { TrackLineSet } from './trackLineSet'
 
@@ -780,5 +781,37 @@ describe('flights: curtain, ground shadow, width weights', () => {
     expect(set.segments[0].comet.visible).toBe(true)
     applyTrackStyle([set], { ...DEFAULT_TRACK_STYLE, drawOn: false, comet: true }, 1, 1)
     expect(set.segments[0].comet.visible).toBe(false)
+  })
+
+  it('« Ruban de données »: a wall as high as the value is, cut at the marker like the line, hidden when off', () => {
+    const sets = new Map<string, TrackLineSet>()
+    syncTrackLineSets(new Group(), sets, [makeTrack('a', [segmentA])], frame, 800, 600)
+    const set = sets.get('a')!
+    drapeTrackLineSet(set, null, 1)
+    const on = { enabled: true, metric: 'elevation' as const, heightM: 200 }
+
+    applyTrackRibbon([set], on)
+    const layer = set.segments[0].ribbon!
+    const position = layer.mesh.geometry.getAttribute('position')
+    // two vertices per point: the foot on the line, the top above it by the value's share of the height
+    const points = set.segments[0].points.length
+    expect(position.count).toBe(points * 2)
+    const top = (k: number) => Math.hypot(position.getX(2 * k + 1) - position.getX(2 * k), position.getY(2 * k + 1) - position.getY(2 * k), position.getZ(2 * k + 1) - position.getZ(2 * k))
+    expect(top(0)).toBeCloseTo(200 * RIBBON_MIN_SHARE, 3)
+    expect(top(points - 1)).toBeCloseTo(200, 3)
+    expect(layer.mesh.visible).toBe(true)
+
+    // a new height moves the top edge without recomputing the values
+    const fractions = layer.fractions
+    applyTrackRibbon([set], { ...on, heightM: 100 })
+    expect(set.segments[0].ribbon!.fractions).toBe(fractions)
+    expect(top(points - 1)).toBeCloseTo(100, 3)
+
+    // cut at the marker, like the curtains of the flights
+    cutTrackLineSet(set, 500)
+    expect(set.ribbonMaterial.userData.cut.drawEndM.value).toBe(500)
+
+    applyTrackRibbon([set], { ...on, enabled: false })
+    expect(layer.mesh.visible).toBe(false)
   })
 })

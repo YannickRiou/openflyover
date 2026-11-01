@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Version {version}',
   'v47.draw.title': 'Route auf der Karte zeichnen',
   'v47.draw.text': '„Hinzufügen“ › „Auf der Karte zeichnen…“: Klicken Sie die Punkte Ihrer Tour. Die Linie folgt den Wegen (IGN in Frankreich, sonst OpenStreetMap) oder bleibt gerade, wenn Sie es wählen. Ein weiterer Klick, und der Film wird vorbereitet, ohne GPX-Datei.',
+  'v47.ribbon.title': 'Ein 3D-Datenband',
+  'v47.ribbon.text': '„Datenband“ (Track) zieht eine durchscheinende Wand entlang des Tracks. Höhe und Farbe folgen einer Größe: Tempo, Steigung, Höhe, Herzfrequenz. Das Profil liest sich direkt in der Landschaft.',
   'v47.comet.title': 'Ein Komet hinter dem Marker',
   'v47.comet.text': 'Mit „Track zeichnet sich“ fügt „Komet“ einen leuchtenden Schweif hinzu, der dem Marker folgt und hinter ihm ausläuft: ein Geschwindigkeitseffekt. Die bereits gezeichnete Linie bleibt sichtbar. Länge und Intensität sind einstellbar.',
   'v47.contours.title': 'Höhenlinien in 3D',

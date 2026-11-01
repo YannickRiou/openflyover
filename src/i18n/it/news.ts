@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Versione {version}',
   'v47.draw.title': 'Disegnare un itinerario sulla mappa',
   'v47.draw.text': '«Aggiungi» › «Disegna sulla mappa…»: fai clic sui punti della tua uscita. La linea segue i sentieri (IGN in Francia, OpenStreetMap altrove) o resta retta se lo scegli. Un clic in più e il film è pronto da preparare, senza file GPX.',
+  'v47.ribbon.title': 'Un nastro di dati in 3D',
+  'v47.ribbon.text': '«Nastro di dati» (Traccia) alza un muro traslucido lungo la traccia. Altezza e colore seguono una grandezza: velocità, pendenza, quota, frequenza cardiaca. Il profilo si legge nel paesaggio.',
   'v47.comet.title': 'Una cometa dietro il marcatore',
   'v47.comet.text': 'Con «Traccia che si disegna», «Cometa» aggiunge una scia luminosa che segue il marcatore e si assottiglia dietro di esso, un effetto di velocità. La linea già tracciata resta visibile. Lunghezza e intensità sono regolabili.',
   'v47.contours.title': 'Curve di livello in 3D',

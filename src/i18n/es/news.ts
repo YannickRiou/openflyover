@@ -7,6 +7,8 @@ const messages: Messages['news'] = {
   version: 'Versión {version}',
   'v47.draw.title': 'Dibujar una ruta en el mapa',
   'v47.draw.text': '«Añadir» › «Dibujar en el mapa…»: haga clic en los puntos de su salida. La línea sigue los senderos (IGN en Francia, OpenStreetMap en el resto) o queda recta si lo elige. Un clic más y la película se prepara, sin archivo GPX.',
+  'v47.ribbon.title': 'Una cinta de datos en 3D',
+  'v47.ribbon.text': '«Cinta de datos» (Track) levanta un muro translúcido a lo largo del track. Su altura y su color siguen una magnitud: velocidad, pendiente, altitud, frecuencia cardíaca. El perfil se lee en el paisaje.',
   'v47.comet.title': 'Una cometa detrás del marcador',
   'v47.comet.text': 'Con «Track que se dibuja», «Cometa» añade una estela luminosa que sigue al marcador y se afina detrás de él, un efecto de velocidad. La línea ya trazada sigue visible. La longitud y la intensidad se ajustan.',
   'v47.contours.title': 'Curvas de nivel en 3D',

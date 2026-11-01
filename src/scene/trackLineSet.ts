@@ -37,6 +37,8 @@ import type { Sequence } from '../flyover/sequence'
 import { densify } from '../import/stats'
 import { DEFAULT_TRACK_STYLE, TRACK_CURTAIN_RANGE } from './markerSettings'
 import type { TrackStyle } from './markerSettings'
+import { drapeRibbon } from './trackRibbon'
+import type { RibbonLayer } from './trackRibbon'
 import { cumulativeDistances } from '../geo/lonLat'
 import {
   addTrailCut,
@@ -398,6 +400,8 @@ export interface SegmentLines extends CuttableLine {
   comet: Line2
   /** the flights of the segment, none for a track on the ground */
   flights: FlightPiece[]
+  /** the data ribbon (`trackRibbon.ts`), made when it is first shown */
+  ribbon?: RibbonLayer
 }
 
 export interface TrackLineSet {
@@ -411,6 +415,8 @@ export interface TrackLineSet {
   glowMaterial: LineMaterial
   cometMaterial: LineMaterial
   curtainMaterial: MeshBasicMaterial
+  /** the material of the data ribbons of the set: a curtain's, cut like the line */
+  ribbonMaterial: MeshBasicMaterial
   shadowMaterial: ShaderMaterial
   /** distance the lines are drawn up to (Infinity = whole), NaN when it must be applied again (after a drape) */
   drawnM: number
@@ -453,6 +459,7 @@ export function buildTrackLineSet(
   object.name = `track:${track.id}`
   const materials = createLineMaterials(track.color, width, height)
   const curtainMaterial = createCurtainMaterial()
+  const ribbonMaterial = createCurtainMaterial()
   const shadowMaterial = createShadowMaterial(width, height)
 
   const segments: SegmentLines[] = []
@@ -499,6 +506,7 @@ export function buildTrackLineSet(
     glowMaterial: materials.glow,
     cometMaterial: materials.comet,
     curtainMaterial,
+    ribbonMaterial,
     shadowMaterial,
     drawnM: Number.NaN,
     dim: 1,
@@ -517,8 +525,9 @@ export function disposeTrackLineSet(set: TrackLineSet): void {
       piece.curtain.geometry.dispose()
       piece.shadow.geometry.dispose()
     }
+    segment.ribbon?.mesh.geometry.dispose()
   }
-  for (const material of [...materialsOf(set), set.curtainMaterial, set.shadowMaterial]) material.dispose()
+  for (const material of [...materialsOf(set), set.curtainMaterial, set.ribbonMaterial, set.shadowMaterial]) material.dispose()
 }
 
 /** `trailStartM` of the comet when it is off: past every distance along a track, so nothing is painted. */
@@ -536,6 +545,7 @@ export function drapeTrackLineSet(set: TrackLineSet, engine: TerrainEngine | nul
     segment.shortened = -1
     if (segment.geometry.getAttribute('instanceDistanceStart')) segment.solid.computeLineDistances()
     for (const piece of segment.flights) drapeFlightPiece(segment.buffer, piece, sampler, exaggeration, curtainM)
+    drapeRibbon(segment)
   }
   set.drawnM = Number.NaN
 }
@@ -560,13 +570,15 @@ export function applyExposure(sets: Iterable<TrackLineSet>, exposure: number, gl
     }
     // its vertex colours are white (the track colour is the material's) or the line's
     set.curtainMaterial.color.set(base).multiplyScalar(set.dim / exposure)
+    // the ribbon is always in the colours of its metric
+    set.ribbonMaterial.color.set('#ffffff').multiplyScalar(set.dim / exposure)
   }
 }
 
 /** Draw `set` in `dim` of its colours (1 = as it is), at once: a track already drawn in a « Bilan » is dimmer than the one being drawn. */
 export function dimTrackLineSet(set: TrackLineSet, dim: number): void {
   if (set.dim === dim) return
-  for (const material of [...materialsOf(set), set.curtainMaterial]) material.color.multiplyScalar(dim / set.dim)
+  for (const material of [...materialsOf(set), set.curtainMaterial, set.ribbonMaterial]) material.color.multiplyScalar(dim / set.dim)
   set.dim = dim
 }
 
@@ -672,7 +684,7 @@ export function cutTrackLineSet(set: TrackLineSet, distanceM: number, trailM = I
   if (cometM > 0 && Number.isFinite(distanceM)) setTrailStart(set.cometMaterial, distanceM - cometM, cometM)
   else setTrailStart(set.cometMaterial, NO_COMET, 0)
   // the curtain and the shadow are cut per pixel, up to the marker too
-  for (const material of [set.curtainMaterial, set.shadowMaterial]) setFlightCut(material, startM, fadeM, distanceM)
+  for (const material of [set.curtainMaterial, set.ribbonMaterial, set.shadowMaterial]) setFlightCut(material, startM, fadeM, distanceM)
   if (distanceM === set.drawnM) return
   for (const segment of set.segments) cutLine(segment, distanceM)
   set.drawnM = distanceM

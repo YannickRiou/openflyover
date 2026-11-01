@@ -39,6 +39,7 @@ import {
   syncTrackLineSets,
   type TrackLineSet,
 } from './trackLineSet'
+import { applyTrackRibbon } from './trackRibbon'
 
 // ---------------------------------------------------------------------------
 // Component
@@ -63,6 +64,7 @@ export function TrackLines() {
   const tracks = useAppStore((s) => s.tracks)
   const exaggeration = useAppStore((s) => s.settings.exaggeration)
   const colorBy = useAppStore((s) => s.settings.trackColorBy)
+  const ribbon = useAppStore((s) => s.settings.trackRibbon)
   const smoothingM = useAppStore((s) => s.settings.trackStyle.smoothingM)
   const curtainM = curtainLengthM(useAppStore((s) => s.settings.trackStyle.flightCurtainM))
   const race = useRace()
@@ -147,6 +149,13 @@ export function TrackLines() {
     applyTrackColors(setsRef.current.values(), colorBy)
     exposureRef.current = Number.NaN
   }, [tracks, frame, colorBy, smoothingM])
+
+  // « Ruban de données »: after the build and the colours (same commit); a new height only moves its top edge
+  useEffect(() => {
+    applyTrackRibbon(setsRef.current.values(), ribbon)
+    exposureRef.current = Number.NaN
+    wakeScene()
+  }, [tracks, frame, smoothingM, ribbon])
 
   useFrame(({ gl, camera, size: canvas }) => {
     // the share of the image the video gives them (`exportRenderScale`): the preview shows them as the film will

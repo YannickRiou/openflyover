@@ -130,6 +130,7 @@ describe('engine options from settings', () => {
     demClean: { enabled: false, seaToZero: false },
     water: { enabled: true, strength: 1 },
     snow: { mode: 'meteo' as const, lineM: 2000 },
+    trackRibbon: { enabled: false, metric: 'speed' as const, heightM: 250 },
     contours: { enabled: false, intervalM: 50, opacity: 0.6, color: '#ffffff' },
     markerValue: 'aucune' as const,
     forest: { enabled: true, density: 60 },

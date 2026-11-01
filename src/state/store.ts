@@ -17,8 +17,8 @@ import { DEFAULT_PACING } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
 import { DEFAULT_RACE } from '../flyover/race'
 import type { RaceSettings } from '../flyover/race'
-import { DEFAULT_MARKER, DEFAULT_TRACK_STYLE, DEFAULT_TRACK_TAIL } from '../scene/markerSettings'
-import type { MarkerSettings, TrackStyle, TrackTailSettings } from '../scene/markerSettings'
+import { DEFAULT_MARKER, DEFAULT_TRACK_RIBBON, DEFAULT_TRACK_STYLE, DEFAULT_TRACK_TAIL } from '../scene/markerSettings'
+import type { MarkerSettings, TrackRibbonSettings, TrackStyle, TrackTailSettings } from '../scene/markerSettings'
 import type { TrackColorBy } from '../flyover/trackColor'
 import { centroid } from '../geo/lonLat'
 import type { FileTarget } from '../platform/platform'
@@ -87,6 +87,8 @@ export interface Settings {
   markerValue: MarkerValue
   /** add tail to the tracks: with « trace qui se dessine », only the last metres behind each marker are drawn */
   trackTail: TrackTailSettings
+  /** the wall along the track whose height follows a recorded quantity (see scene/trackRibbon.ts) */
+  trackRibbon: TrackRibbonSettings
   /** flyover camera style and parameters (replaced as a whole, e.g. by a camera preset) */
   camera: CameraSettings
   /** flyover duration at speed x1 (seconds), whatever the track length */
@@ -227,6 +229,7 @@ export const DEFAULT_SETTINGS: Settings = {
   trackLegendAnchor: 'bottom-left',
   trackStyle: DEFAULT_TRACK_STYLE,
   trackTail: DEFAULT_TRACK_TAIL,
+  trackRibbon: DEFAULT_TRACK_RIBBON,
   marker: DEFAULT_MARKER,
   markerValue: DEFAULT_MARKER_VALUE,
   camera: DEFAULT_CAMERA,
