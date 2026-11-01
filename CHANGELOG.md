@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 4.6.5 (November 2026)
+
+- **Dependencies of the app updated**, security fixes included: the list is in the commits since 4.6.4.
+
 ## 4.7.0 (November 2026)
 
 - **A figure above the marker**: « Donnée au-dessus du marqueur » (« Marqueur » › « Plus d'options ») shows one counter of the overlay (altitude, slope, speed, pace, heart rate, power, temperature, time, clock, distance, D+) on a panel above the lead marker. The panel takes the style, the colours, the panel and the fonts of the overlay, with the user's overrides. One figure at a time; none when the track does not record it. Off by default; the preview and the export draw the same panel.
