@@ -26,6 +26,7 @@ export const WHATS_NEW: readonly NewsVersion[] = [
       { icon: 'spline', get title() { return t('news.v47.draw.title') }, get text() { return t('news.v47.draw.text') } },
       { icon: 'sparkles', get title() { return t('news.v47.comet.title') }, get text() { return t('news.v47.comet.text') } },
       { icon: 'layers', get title() { return t('news.v47.contours.title') }, get text() { return t('news.v47.contours.text') } },
+      { icon: 'clapperboard', get title() { return t('news.v47.tilt.title') }, get text() { return t('news.v47.tilt.text') } },
       { icon: 'gauge', get title() { return t('news.v47.value.title') }, get text() { return t('news.v47.value.text') } },
       { icon: 'layers', get title() { return t('news.v47.ribbon.title') }, get text() { return t('news.v47.ribbon.text') } },
       { icon: 'navigation', get title() { return t('news.v47.models.title') }, get text() { return t('news.v47.models.text') } },

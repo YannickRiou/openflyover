@@ -13,6 +13,8 @@ const messages: Messages['news'] = {
   'v47.comet.text': 'With “Track drawn as it goes”, “Comet” adds a luminous trail that follows the marker and thins out behind it, a speed effect. The line already drawn stays visible. Length and intensity are adjustable.',
   'v47.contours.title': '3D contour lines',
   'v47.contours.text': '“Contour lines” (Map tab) draws lines on the relief at every altitude step, every fifth one stronger. Interval, strength and colour are adjustable.',
+  'v47.tilt.title': 'Tilt the camera at every stop',
+  'v47.tilt.text': 'The stop panel gets an “Inclinaison” (tilt) row (−40° to +40°). Lower the camera towards the track, or raise it towards the summits, during a panorama as during a pause.',
   'v47.value.title': 'A figure above the marker',
   'v47.value.text': '“Figure above the marker” (Marker › More options) shows one overlay figure, such as altitude, slope or heart rate, on a panel above the marker. It takes the style and colours of the overlay.',
   'v47.models.title': '3D figures',

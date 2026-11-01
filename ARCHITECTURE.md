@@ -1403,7 +1403,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   and the halo shrinks with its line.
 - **Comet** (« Comète », `trackStyle { comet, cometLengthM, cometIntensity }`, 50 m–2 km, default off and 300 m; shown with the
   draw-on only, not in a « Bilan »): a third `Line2` per segment (`comet`, same geometry as the line and its halo, so it is
-  drawn up to the marker) with its own glow material (`cometMaterial`, `COMET_WIDTH_SHARE` = 6 line widths, the line's edge
+  drawn up to the marker) with its own glow material (`cometMaterial`, `COMET_WIDTH_SHARE` = 12 line widths, strength up to `COMET_MAX_STRENGTH` = 1.5, the line's edge
   as the inner radius so the line keeps its colour) patched by `addTrailCut` (same program key as the halo, own uniforms).
   `cutTrackLineSet(set, distance, trailM, cometM)` sets `trailStartM` = marker − `cometM` and `trailFadeM` = `cometM`: the
   width thins out to nothing at the tail. Off, or a track drawn whole: `trailStartM` past every distance (`NO_COMET`), so
