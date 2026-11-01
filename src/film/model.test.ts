@@ -263,7 +263,7 @@ describe('film model', () => {
     for (const camera of ['film', 'orbite', 'large', 'fixe'] as const) expect(isValidFilm(film({ stops: [stop('stop-1', { camera })] }))).toBe(true)
   })
 
-  it('tilt of a panorama stop: optional, within its range', () => {
+  it('tilt of a stop: optional, within its range', () => {
     const valid = (tiltDeg: number | undefined) => isValidFilm(film({ stops: [stop('stop-1', { camera: 'panorama', tiltDeg })] }))
     for (const tiltDeg of [undefined, 0, -40, 40, -12]) expect(valid(tiltDeg)).toBe(true)
     for (const tiltDeg of [-41, 41, Number.NaN]) expect(valid(tiltDeg)).toBe(false)

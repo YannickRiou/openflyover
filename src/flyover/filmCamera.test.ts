@@ -137,7 +137,7 @@ describe('easing', () => {
     expect(stopOrbitRad(60, 30, 60)).toBeCloseTo((120 * Math.PI) / 180, 12)
   })
 
-  it('stopHoldWeight holds the tilt of a panorama: 0 at both ends, 1 between the first and last fifth', () => {
+  it('stopHoldWeight holds the tilt of a stop: 0 at both ends, 1 between the first and last fifth', () => {
     expect(stopHoldWeight(0, 10)).toBe(0)
     expect(stopHoldWeight(10, 10)).toBe(0)
     expect(stopHoldWeight(2, 10)).toBe(1)

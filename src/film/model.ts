@@ -182,7 +182,7 @@ export interface FilmStop {
   /** time added to the film (seconds at ×1, eases in and out included) */
   durationS: number
   camera: StopCamera
-  /** 'panorama' only: degrees added to the camera's pitch during the turn (negative: nearer the horizon, to see the summits), 0 = the flight camera's */
+  /** degrees added to the camera's pitch during the stop (negative: nearer the horizon, to see the summits), 0 = the flight camera's */
   tiltDeg?: number
   label?: string
   /** what the stop was made for: climb index, OSM id, waypoint index */
@@ -557,7 +557,7 @@ export interface Film {
 
 /** Slider ranges (also the validity ranges of a loaded project), seconds. */
 export const SHOT_DURATION_RANGE = { min: 0.5, max: 30, step: 0.5 } as const
-/** « Inclinaison » of a panorama stop (degrees added to the pitch of the camera). */
+/** « Inclinaison » of a stop (degrees added to the pitch of the camera). */
 export const STOP_TILT_RANGE = { min: -40, max: 40, step: 1 } as const
 export const STOP_DURATION_RANGE = { min: 0.5, max: 60, step: 0.5 } as const
 export const ITEM_DURATION_RANGE = { min: 0.5, max: 600, step: 0.5 } as const

@@ -905,8 +905,8 @@ function flownAt(
   const settings = options.camera ?? DEFAULT_CAMERA
   const wide = stop?.camera === 'large' ? stopBump(state.localS, state.lengthS) : 0
   const widened = wide > 0 ? widenedCamera(settings, wide) : settings
-  // « Inclinaison » of a panorama stop: held through the turn, eased in and out
-  const tilt = stop?.camera === 'panorama' && stop.tiltDeg ? stop.tiltDeg * stopHoldWeight(state.localS, state.lengthS) : 0
+  // « Inclinaison » of a stop: held through the hold, eased in and out
+  const tilt = stop?.tiltDeg ? stop.tiltDeg * stopHoldWeight(state.localS, state.lengthS) : 0
   const camera = tilt ? { ...widened, pitchDeg: widened.pitchDeg + tilt } : widened
   const orbitRad =
     stop?.camera === 'orbite' ? stopOrbitRad(stop.addedS, state.localS, state.lengthS) : stop?.camera === 'panorama' ? stopPanoramaRad(state.localS, state.lengthS) : 0
