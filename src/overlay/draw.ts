@@ -800,6 +800,33 @@ function drawCell(p: Painter, m: ReturnType<typeof cellMetrics>, cell: Cell, x: 
   if (cell.unit) fillText(p, cell.unit, left + valueW + m.unitGap, y + m.valueBaseline, m.unit, 'left')
 }
 
+/**
+ * The panel of « Donnée au-dessus du marqueur » on a `size` canvas: one counter figure on the panel of the overlay's style
+ * (its fill, border, radius, shadow, accent bar, fonts and colours, with the user's overrides), or, for a style without
+ * panel, on the text backing of that style. `u` is a tenth of the height, so a canvas keeps the same look at any size.
+ */
+export function drawValueTag(ctx: OverlayContext2D, size: OverlaySize, settings: Pick<OverlaySettings, 'style' | 'overrides'>, text: CounterText): void {
+  const u = size.height / 10
+  const p: Painter = { ctx, theme: resolveOverlayTheme(settings.style, settings.overrides), u, px: 1, size }
+  const { theme } = p
+  ctx.clearRect(0, 0, size.width, size.height)
+  const margin = 0.5 * u
+  drawPanel(p, margin, margin, size.width - 2 * margin, size.height - 2 * margin, 'left')
+  let scale = 1
+  const value = (): TextStyle => ({ family: theme.numberFamily, weight: theme.numberWeight, sizePx: 4.8 * u * scale, color: theme.text })
+  const unit = (): TextStyle => ({ family: theme.bodyFamily, weight: theme.labelWeight, sizePx: 2.2 * u * scale, color: theme.textSoft })
+  const gap = () => 0.5 * u * scale
+  const used = () => measure(p, text.value, value()) + (text.unit ? gap() + measure(p, text.unit, unit()) : 0)
+  // as large as fits, with room for the panel's padding
+  const room = size.width - 2 * margin - 3 * u
+  if (used() > room) scale = room / used()
+  const valueW = measure(p, text.value, value())
+  const left = (size.width - used()) / 2
+  const baseline = size.height / 2 + value().sizePx * 0.36
+  fillText(p, text.value, left, baseline, value(), 'left')
+  if (text.unit) fillText(p, text.unit, left + valueW + gap(), baseline, unit(), 'left')
+}
+
 function countersWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number): Widget | null {
   const { counters } = settings
   const m = cellMetrics(p, counters.size)

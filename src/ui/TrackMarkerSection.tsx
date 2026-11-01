@@ -7,6 +7,7 @@ import { playsBilan } from '../flyover/sequence'
 import { OVERLAY_ANCHOR_LABELS } from '../overlay/settings'
 import { getPlatform } from '../platform'
 import { fileToAvatarDataUrl } from '../scene/markerBadge'
+import { MARKER_VALUE_IDS } from '../scene/markerValue'
 import { FIGURE_GRID, MARKER_FIGURE_PATHS } from '../scene/markerFigures'
 import {
   figureOfActivity,
@@ -390,6 +391,8 @@ function MarkerColorRow({
 export function MarkerSection({ hidden }: { hidden: boolean }) {
   const t = useT()
   const marker = useAppStore((s) => s.settings.marker)
+  const markerValue = useAppStore((s) => s.settings.markerValue)
+  const id = useId()
   const setSetting = useAppStore((s) => s.setSetting)
   const firstTrack = useAppStore((s) => s.tracks[0])
   const racing = useAppStore((s) => s.tracks.length > 1 && s.settings.race.enabled)
@@ -404,7 +407,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
   const alone = figurine && marker.shape === 'contour'
 
   return (
-    <PanelSection title={t('marker.section.title')} keys={['marker']} hidden={hidden}>
+    <PanelSection title={t('marker.section.title')} keys={['marker', 'markerValue']} hidden={hidden}>
       {/* from the first marker key on, the keys give the marker its look */}
       {markerKeyCount > 0 && <p className="type-hint">{t('marker.section.keyed', { count: markerKeyCount })}</p>}
       <ChipChoice
@@ -535,6 +538,18 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
             />
           )}
           {marker.label !== 'aucune' && racing && <p className="type-hint">{t('marker.section.otherLabels')}</p>}
+          <div className="field">
+            <label className="type-label" htmlFor={`${id}-value`}>
+              {t('marker.section.value')}
+            </label>
+            <Select
+              id={`${id}-value`}
+              value={markerValue}
+              options={[{ value: 'aucune', label: t('marker.labelMode.aucune') }, ...MARKER_VALUE_IDS.map((value) => ({ value, label: t(`overlay.counter.${value}`) }))]}
+              onChange={(value) => setSetting('markerValue', value)}
+            />
+            <p className="type-hint">{t('marker.section.valueTip')}</p>
+          </div>
         </div>
       </details>
     </PanelSection>

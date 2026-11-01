@@ -11,6 +11,8 @@ const messages: Messages['news'] = {
   'v47.comet.text': 'With “Track drawn as it goes”, “Comet” adds a luminous trail that follows the marker and thins out behind it, a speed effect. The line already drawn stays visible. Length and intensity are adjustable.',
   'v47.contours.title': '3D contour lines',
   'v47.contours.text': '“Contour lines” (Map tab) draws lines on the relief at every altitude step, every fifth one stronger. Interval, strength and colour are adjustable.',
+  'v47.value.title': 'A figure above the marker',
+  'v47.value.text': '“Figure above the marker” (Marker › More options) shows one overlay figure, such as altitude, slope or heart rate, on a panel above the marker. It takes the style and colours of the overlay.',
   'v47.models.title': '3D figures',
   'v47.models.text': 'Tick “3D model” in the Marker section: the figure becomes a small character in volume with a clean outline, walking, pedalling or gliding along the track. All seventeen figures have one, ghost racers included.',
   'v47.summits.title': 'Distant summits, named',

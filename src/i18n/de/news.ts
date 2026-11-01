@@ -11,6 +11,8 @@ const messages: Messages['news'] = {
   'v47.comet.text': 'Mit „Track zeichnet sich“ fügt „Komet“ einen leuchtenden Schweif hinzu, der dem Marker folgt und hinter ihm ausläuft: ein Geschwindigkeitseffekt. Die bereits gezeichnete Linie bleibt sichtbar. Länge und Intensität sind einstellbar.',
   'v47.contours.title': 'Höhenlinien in 3D',
   'v47.contours.text': '„Höhenlinien“ (Tab Karte) zeichnet Linien auf das Gelände bei jeder Höhenstufe, jede fünfte stärker. Äquidistanz, Stärke und Farbe sind einstellbar.',
+  'v47.value.title': 'Ein Wert über dem Marker',
+  'v47.value.text': '„Wert über dem Marker“ (Marker › Weitere Optionen) zeigt einen Wert des Overlays, etwa Höhe, Steigung oder Herzfrequenz, auf einem Schild über dem Marker. Es übernimmt Stil und Farben des Overlays.',
   'v47.models.title': 'Figuren in 3D',
   'v47.models.text': 'Haken Sie „3D-Modell“ im Abschnitt Marker an: Die Figur wird zu einem kleinen Charakter mit klarer Kontur, der entlang des Tracks geht, fährt oder gleitet. Alle siebzehn Figuren gibt es so, auch bei mehreren gleichzeitig abgespielten Tracks.',
   'v47.summits.title': 'Ferne Gipfel mit Namen',
