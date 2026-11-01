@@ -35,6 +35,7 @@ import {
   STOP_CAMERAS,
   STOP_CAMERA_LABELS,
   STOP_DURATION_RANGE,
+  STOP_TILT_RANGE,
   SYNC_OFFSET_RANGE,
   shotDipColor,
   situationTiming,
@@ -733,6 +734,8 @@ export function FilmInspector() {
               {STOP_CAMERA_HINTS[stop.camera]}
             </p>
           </div>
+          {range('tilt', t('inspector.hold.tilt'), stop.tiltDeg ?? 0, STOP_TILT_RANGE, formatDegrees, (tiltDeg) => set({ tiltDeg }))}
+          <p className={HINT}>{t('inspector.hold.tiltTip')}</p>
           <p className={HINT}>
             {t('inspector.hold.info', { at: formatDistance(stop.atM), length: formatDistance(lengthM), start: formatFilmTime(stop.startS), end: formatFilmTime(stop.endS) })}
             {film.autoStops && t('inspector.hold.auto')}

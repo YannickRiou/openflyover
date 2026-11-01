@@ -43,6 +43,7 @@ import {
   type SelectionParams,
   type TileFailureCause,
 } from './quadtree'
+import { applyContours } from './contourShader'
 import { applySnow } from './snowShader'
 import { buildTileUrl } from './sources'
 import type { TileJob, TileResult } from './tileJob'
@@ -304,6 +305,7 @@ export function createTerrainEngine(
       side: FrontSide,
     })
     applySnow(material)
+    applyContours(material)
     return material
   }
 

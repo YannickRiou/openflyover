@@ -28,6 +28,8 @@ import {
   TRACK_GLOW_WIDTH_RANGE,
   TRACK_SMOOTHING_RANGE,
   TRACK_CURTAIN_RANGE,
+  TRACK_COMET_INTENSITY_RANGE,
+  TRACK_COMET_LENGTH_RANGE,
   TRACK_TAIL_LENGTH_RANGE,
   TRACK_WIDTH_RANGE,
 } from '../scene/markerSettings'
@@ -194,6 +196,32 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
                 onChange={(lengthM) => updateTail({ lengthM })}
               />
             </SettingRow>
+          )}
+          <div className="flex items-center gap-1">
+            <Switch checked={style.comet} onChange={(comet) => updateStyle({ comet })}>{t('marker.track.comet')}</Switch>
+            <InfoTip text={t('marker.track.cometTip')} />
+          </div>
+          {style.comet && (
+            <>
+              <SettingRow label={t('marker.track.cometLength')} value={formatDistance(style.cometLengthM)} paths={['trackStyle.cometLengthM']}>
+                <RangeField
+                  label={t('marker.track.cometLength')}
+                  {...TRACK_COMET_LENGTH_RANGE}
+                  value={style.cometLengthM}
+                  format={formatDistance}
+                  onChange={(cometLengthM) => updateStyle({ cometLengthM })}
+                />
+              </SettingRow>
+              <SettingRow label={t('marker.track.cometIntensity')} value={formatPercent(style.cometIntensity)} paths={['trackStyle.cometIntensity']}>
+                <RangeField
+                  label={t('marker.track.cometIntensity')}
+                  {...TRACK_COMET_INTENSITY_RANGE}
+                  value={style.cometIntensity}
+                  format={formatPercent}
+                  onChange={(cometIntensity) => updateStyle({ cometIntensity })}
+                />
+              </SettingRow>
+            </>
           )}
         </>
       )}

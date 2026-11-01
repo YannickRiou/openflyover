@@ -48,6 +48,7 @@ import {
 import { watchTouchGesture } from './touchGesture'
 import { TerrainLayer } from './TerrainLayer'
 import { TrackLines } from './TrackLines'
+import { ContourLayer } from './ContourLayer'
 import { SnowLayer } from './SnowLayer'
 import { ForestLayer } from './ForestLayer'
 import { WaterLayer } from './WaterLayer'
@@ -197,6 +198,7 @@ export function FlyoverCanvas({ className, style }: FlyoverCanvasProps) {
             <GlacierLayer />
             <WaterLayer />
             <SnowLayer />
+            <ContourLayer />
             <ForestLayer />
             <RegionHighlight />
             <FlyoverRig />

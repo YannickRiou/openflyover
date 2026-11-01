@@ -94,10 +94,13 @@ export function TrackLines() {
     const distances = settings.trackStyle.drawOn || bilan ? drawOnDistances(flown, playback.progress, settings.race.enabled ? raceRef.current : null, sequence) : null
     // « Traînée »: only with the draw-on
     const trailM = distances && settings.trackTail.enabled && !bilan ? settings.trackTail.lengthM : Infinity
+    // « Comète »: only with the draw-on, like the trail
+    const { comet, cometLengthM } = settings.trackStyle
+    const cometM = distances && comet && !bilan ? cometLengthM : 0
     flown.forEach((track, i) => {
       const set = setsRef.current.get(track.id)
       if (!set) return
-      cutTrackLineSet(set, distances?.[i] ?? Infinity, trailM)
+      cutTrackLineSet(set, distances?.[i] ?? Infinity, trailM, cometM)
       const stage = sequence?.stages[i]
       dimTrackLineSet(set, bilan && stage && i < flown.length - 1 && (distances?.[i] ?? 0) >= stage.endM - stage.startM ? BILAN_DIM : 1)
     })

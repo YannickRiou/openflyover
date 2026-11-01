@@ -1401,6 +1401,13 @@ The interface and the texts drawn into the films and posters exist in **French**
   trail (`TRAIL_FADE_SHARE`, uniform `trailFadeM`) thins out to nothing: the vertex shader scales the width of each
   piece end (smoothstep), the opacity stays whole (a translucent line would darken at the joints where pieces overlap)
   and the halo shrinks with its line.
+- **Comet** (« Comète », `trackStyle { comet, cometLengthM, cometIntensity }`, 50 m–2 km, default off and 300 m; shown with the
+  draw-on only, not in a « Bilan »): a third `Line2` per segment (`comet`, same geometry as the line and its halo, so it is
+  drawn up to the marker) with its own glow material (`cometMaterial`, `COMET_WIDTH_SHARE` = 6 line widths, the line's edge
+  as the inner radius so the line keeps its colour) patched by `addTrailCut` (same program key as the halo, own uniforms).
+  `cutTrackLineSet(set, distance, trailM, cometM)` sets `trailStartM` = marker − `cometM` and `trailFadeM` = `cometM`: the
+  width thins out to nothing at the tail. Off, or a track drawn whole: `trailStartM` past every distance (`NO_COMET`), so
+  nothing is painted. Independent of « Traînée », which hides the start of the line itself. No dashes on the comet.
 - **Markers** (`markerSprite.ts`): one `Sprite` per marker (head: `FlyoverRig`, name `flyover-marker`; race:
   `RaceMarkers`; drawn with the depth test, moved `MARKER_DEPTH_PULL_M` (150 m, half the distance at most) towards the
   camera and shrunk in proportion, `pullMarkerForward`: same place and size on screen, the slope under it never cuts it
@@ -3399,6 +3406,22 @@ exports) gets it from the terrain source of the settings.
   lakes do); a lake freezes by its DEM level; lines are only the 200 km widest; the sea of two tracks whose corridors overlap is cut into different rectangles for each, so it is drawn twice there (translucent, a little darker), and a river cut differently by two corridors is drawn twice there too (sea cells and river pieces are numbered per corridor and kept; a lake or a riverbank is one shape whatever the corridor and is merged). A film of many stages waits longer: the Overpass policy allows one request at a time, so two requests per stage queue one after the other (a cached stage costs nothing). The "© contributeurs OpenStreetMap" credit (status bar and
   export) reads « Repères et eau » when the water is drawn (`overlayCredits` `water`, `useWaterStore.polygons`: sea polygons and
   lines count with the lakes).
+
+## Contour lines (« Courbes de niveau »)
+
+Lines on the terrain at every multiple of an altitude step, in « Carte » (`settings.contours { enabled, intervalM, opacity,
+color }`, interval 10–500 m, default off, 50 m, 60 %, white; checked by `isValidContours`).
+
+- **Shader** (`src/terrain/contourShader.ts`): `applyContours(material)` wraps the `onBeforeCompile` of the tile material
+  (after `applySnow`, in `terrain/engine.ts`: it reads the snow's `vSnowPos` and `snowExaggeration`) and adds the lines
+  after `<color_fragment>`, so they come after the snow and take the sun, the shadows, the exposure and the grading like the
+  photo. Altitude = scene height ÷ exaggeration + the drop of the curved ground, like the snow: the interval is in real
+  metres. Line = distance in pixels to the nearest multiple (`fwidth`), about 1 px wide (2 px and stronger for every fifth
+  one), faded out where lines come closer than ~3 px (`contourPx` 0.2–0.4). Both patches share one program
+  (`openflyover-terrain-snow-contours`); `contourOpacity` = 0 skips the code, so nothing changes when off.
+- **Uniforms** (`contourUniforms`): set each frame by `scene/ContourLayer.tsx` from the settings, a pure function of them:
+  the export draws what the preview shows.
+- **Left out**: altitude labels on the lines.
 
 ## Snow (« Neige »)
 

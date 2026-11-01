@@ -21,8 +21,9 @@ import { useWeatherStore, weatherSeriesOf } from '../weather/store'
 import { NightSettings } from './NightSettings'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
+import { CONTOUR_INTERVAL_RANGE, CONTOUR_OPACITY_RANGE } from '../terrain/contours'
 import { formatEv, formatNumber, formatPercent } from './format'
-import { Button, Checkbox, DateField, Radio, RadioGroup, Select, Slider, Switch } from './primitives'
+import { Button, Checkbox, ColorField, DateField, Radio, RadioGroup, Select, Slider, Switch } from './primitives'
 
 const ZOOM_OFFSETS: { value: Settings['imageryZoomOffset']; label: string }[] = [
   { value: 0, get label() { return t('offline.level.0') } },
@@ -714,7 +715,48 @@ export function MapSettings() {
 
         <DemCleanControl />
       </PanelSection>
+
+      <ContoursSection />
     </>
+  )
+}
+
+/** « Courbes de niveau »: lines on the terrain at every multiple of an altitude step, every fifth one stronger. */
+function ContoursSection() {
+  const t = useT()
+  const contours = useAppStore((s) => s.settings.contours)
+  const setSetting = useAppStore((s) => s.setSetting)
+  const id = useId()
+  const update = (patch: Partial<typeof contours>) => setSetting('contours', { ...contours, ...patch })
+  return (
+    <PanelSection title={t('light.map.contours')} keys={['contours']}>
+      <div className="flex items-center gap-1">
+        <Switch checked={contours.enabled} onChange={(enabled) => update({ enabled })}>{t('light.map.contours')}</Switch>
+        <InfoTip text={t('light.map.contoursTip')} />
+      </div>
+      {contours.enabled && (
+        <>
+          <RangeField
+            label={t('light.map.contoursInterval')}
+            {...CONTOUR_INTERVAL_RANGE}
+            value={contours.intervalM}
+            format={(v) => `${formatNumber(v)} m`}
+            onChange={(intervalM) => update({ intervalM })}
+          />
+          <RangeField
+            label={t('light.map.contoursOpacity')}
+            {...CONTOUR_OPACITY_RANGE}
+            value={contours.opacity}
+            format={formatPercent}
+            onChange={(opacity) => update({ opacity })}
+          />
+          <div className="field">
+            <label className="type-label" htmlFor={`${id}-contour-color`}>{t('light.map.contoursColor')}</label>
+            <ColorField id={`${id}-contour-color`} label={t('light.map.contoursColor')} value={contours.color} onChange={(color) => update({ color })} />
+          </div>
+        </>
+      )}
+    </PanelSection>
   )
 }
 

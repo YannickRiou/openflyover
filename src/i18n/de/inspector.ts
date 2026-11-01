@@ -123,6 +123,8 @@ const messages: Messages['inspector'] = {
   'hold.label': 'Beschriftung',
   'hold.duration': 'Dauer',
   'hold.camera': 'Kamera während des Stopps',
+  'hold.tilt': 'Neigung',
+  'hold.tiltTip': 'Negativ: Die Kamera senkt sich zum Horizont und zeigt die Gipfel besser. Positiv: steilerer Blick nach unten. 0 behält die Neigung der Filmkamera.',
   'hold.info': 'Bei {at} von {length}, von {start} bis {end}',
   'hold.auto': ' · automatischer Stopp: Bearbeiten fixiert die Stopps',
   'hold.shortened': ' Er dauert {s} im Film: mit „Überflugdauer beibehalten“ nehmen die Stopps höchstens die Hälfte des Überflugs ein.',
