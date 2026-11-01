@@ -105,6 +105,8 @@ const messages: Messages['marker'] = {
   'section.edgeColor': 'Edge colour',
   'section.label': 'Text under the marker',
   'section.labelText': 'Label text',
+  'section.value': 'Figure above the marker',
+  'section.valueTip': 'A panel shows the chosen figure, in the same format as the overlay, above the marker. One figure at a time.',
   'section.otherLabels': 'The other markers carry the name of their track.',
   'section.stick': 'Stick and ground shadow',
   'section.stickTip': 'The marker stands on a stick above the track, its shadow on the ground.',

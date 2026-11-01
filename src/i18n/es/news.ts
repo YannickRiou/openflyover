@@ -13,6 +13,8 @@ const messages: Messages['news'] = {
   'v47.comet.text': 'Con «Track que se dibuja», «Cometa» añade una estela luminosa que sigue al marcador y se afina detrás de él, un efecto de velocidad. La línea ya trazada sigue visible. La longitud y la intensidad se ajustan.',
   'v47.contours.title': 'Curvas de nivel en 3D',
   'v47.contours.text': '«Curvas de nivel» (pestaña Mapa) traza líneas sobre el relieve en cada escalón de altitud, una de cada cinco más marcada. La equidistancia, la intensidad y el color se ajustan.',
+  'v47.value.title': 'Un dato sobre el marcador',
+  'v47.value.text': '«Dato sobre el marcador» (Marcador › Más opciones) muestra un valor de los gráficos, como la altitud, la pendiente o la frecuencia cardíaca, en un panel sobre el marcador. Toma el estilo y los colores de los gráficos.',
   'v47.models.title': 'Figuras en 3D',
   'v47.models.text': 'Marque «Modelo 3D» en la sección Marcador: la figura pasa a ser un pequeño personaje en volumen, de contorno nítido, que camina, pedalea o se desliza a lo largo del track. Las diecisiete figuras lo tienen, también los corredores fantasma.',
   'v47.summits.title': 'Cimas lejanas con nombre',

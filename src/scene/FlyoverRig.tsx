@@ -33,6 +33,7 @@ import { frameDelta, wakeScene } from './renderOnDemand'
 import { trackUnderMarker } from '../flyover/sequence'
 import {
   figureHeading,
+  leadMarkerAnchor,
   leadMarkerColors,
   litColor,
   markerLook,
@@ -123,6 +124,7 @@ export function FlyoverRig() {
     const models = modelsRef.current
     return () => {
       sprites.forEach(releaseMarkerTexture)
+      leadMarkerAnchor.shown = false
       models.forEach(disposeMarkerModel)
       models.clear()
     }
@@ -330,6 +332,11 @@ export function FlyoverRig() {
     // the sprite stays hidden while the model stands in for it
     marker.visible = !modelShown
     if (!modelShown) draw(marker, blend.to, blend.mix)
+    // where the panel of « Donnée au-dessus du marqueur » stands: above a 3D model, above the stick, or above the ball
+    leadMarkerAnchor.shown = true
+    leadMarkerAnchor.position.copy(view.marker)
+    leadMarkerAnchor.radius = markerRadius(camera, view.marker, blend.to.size)
+    leadMarkerAnchor.heightBalls = modelShown ? MODEL_BALLS : blend.to.stick ? 2.6 : 1
   })
 
   // unlit and drawn over the terrain (cut by the relief in front of it): readable on the track colour and on dark forest alike

@@ -105,6 +105,8 @@ const messages: Messages['marker'] = {
   'section.edgeColor': 'Color del borde',
   'section.label': 'Texto bajo el marcador',
   'section.labelText': 'Texto de la etiqueta',
+  'section.value': 'Dato sobre el marcador',
+  'section.valueTip': 'Un panel muestra el valor elegido, con el mismo formato que los gráficos superpuestos, sobre el marcador. Un solo valor a la vez.',
   'section.otherLabels': 'Los demás marcadores llevan el nombre de su track.',
   'section.stick': 'Varilla y sombra en el suelo',
   'section.stickTip': 'El marcador se alza sobre una varilla por encima del track, con su sombra en el suelo.',

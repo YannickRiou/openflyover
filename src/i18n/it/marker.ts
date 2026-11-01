@@ -105,6 +105,8 @@ const messages: Messages['marker'] = {
   'section.edgeColor': 'Colore del bordo',
   'section.label': 'Testo sotto il marcatore',
   'section.labelText': 'Testo dell’etichetta',
+  'section.value': 'Dato sopra il marcatore',
+  'section.valueTip': 'Un pannello mostra il valore scelto, nello stesso formato della grafica sovrapposta, sopra il marcatore. Un solo valore alla volta.',
   'section.otherLabels': 'Gli altri marcatori portano il nome della loro traccia.',
   'section.stick': 'Asta e ombra a terra',
   'section.stickTip': 'Il marcatore si erge su un’asta sopra la traccia, con la sua ombra proiettata a terra.',

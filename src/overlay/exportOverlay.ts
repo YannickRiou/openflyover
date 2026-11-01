@@ -127,7 +127,8 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
   return {
     time,
     leaderboard: leaderboardAt(progress),
-    trackLegend: trackLegendOf(tracks, settings.trackColorBy, settings.trackLegendAnchor),
+    // the legend follows the colouring of the line, else the quantity of the data ribbon
+    trackLegend: trackLegendOf(tracks, settings.trackColorBy !== 'none' ? settings.trackColorBy : settings.trackRibbon.enabled ? settings.trackRibbon.metric : 'none', settings.trackLegendAnchor),
     // a « Bilan »: the date of the outing being drawn, with the film's own texts
     texts: stamp ? [...settings.film.texts, stamp] : settings.film.texts,
     media: settings.film.media,

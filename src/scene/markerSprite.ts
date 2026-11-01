@@ -495,6 +495,12 @@ export function markerRadius(camera: Camera, position: Vector3, size: number): n
   return Math.max(1, camera.position.distanceTo(position) * MARKER_SCREEN_FACTOR * lens) * size
 }
 
+/**
+ * Where the lead marker stands this frame, set by FlyoverRig for MarkerValue: its point (scene), the radius of its ball,
+ * and how high its drawing reaches above the point (ball diameters). `shown` is false when no marker is drawn.
+ */
+export const leadMarkerAnchor = { position: new Vector3(), radius: 1, heightBalls: 1, shown: false }
+
 /** Track length looked at on each side of the marker to tell which way a 3D model faces (metres). */
 export const MODEL_WINDOW_M = 30
 /** A 3D model is this many marker balls tall on screen (the lead marker and the ghost racers). */

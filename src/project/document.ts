@@ -34,6 +34,7 @@ import type { AppState, Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
 import { isImageryDate } from '../terrain/imageryDates'
 import { isValidClouds, withCloudDefaults } from '../weather/sceneClouds'
+import { isValidMarkerValue } from '../scene/markerValue'
 import { isValidContours } from '../terrain/contours'
 import { isValidSnow } from '../weather/snowLine'
 import { PROJECT_EXTENSION } from './file'
@@ -156,6 +157,7 @@ export const SETTING_CHECKS: { [K in keyof Settings]?: (value: Settings[K]) => b
   trackTail: isValidTrackTail,
   trackRibbon: isValidTrackRibbon,
   marker: isValidMarker,
+  markerValue: isValidMarkerValue,
   labels: isValidLabelSettings,
 }
 

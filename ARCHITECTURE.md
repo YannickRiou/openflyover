@@ -1415,8 +1415,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   metric's colormap, opaque at the top (`RIBBON_TOP_ALPHA`), clearer at the line, clear where the value is unknown. Its
   material is a curtain's (`createCurtainMaterial`, one per set), so `cutTrackLineSet` cuts it at the marker and by the
   trail through `trackM` like the curtains of the flights. The values and colours are made once per metric (a new height
-  only calls `drapeRibbon`, as does every drape of the line). Left out: a legend of the ribbon (the legend shown is the
-  line's « Colorer selon »), and a thin line along its top edge.
+  only calls `drapeRibbon`, as does every drape of the line). The legend of the track colouring (`trackLegendOf`) follows the ribbon's metric while the line is not coloured.
+  Left out: a thin line along its top edge, and a second legend when the line and the ribbon show different quantities.
 - **Markers** (`markerSprite.ts`): one `Sprite` per marker (head: `FlyoverRig`, name `flyover-marker`; race:
   `RaceMarkers`; drawn with the depth test, moved `MARKER_DEPTH_PULL_M` (150 m, half the distance at most) towards the
   camera and shrunk in proportion, `pullMarkerForward`: same place and size on screen, the slope under it never cuts it
@@ -3415,6 +3415,22 @@ exports) gets it from the terrain source of the settings.
   lakes do); a lake freezes by its DEM level; lines are only the 200 km widest; the sea of two tracks whose corridors overlap is cut into different rectangles for each, so it is drawn twice there (translucent, a little darker), and a river cut differently by two corridors is drawn twice there too (sea cells and river pieces are numbered per corridor and kept; a lake or a riverbank is one shape whatever the corridor and is merged). A film of many stages waits longer: the Overpass policy allows one request at a time, so two requests per stage queue one after the other (a cached stage costs nothing). The "© contributeurs OpenStreetMap" credit (status bar and
   export) reads « Repères et eau » when the water is drawn (`overlayCredits` `water`, `useWaterStore.polygons`: sea polygons and
   lines count with the lakes).
+
+## Figure above the marker (« Donnée au-dessus du marqueur »)
+
+One counter of the overlay on a panel above the lead marker (`settings.markerValue`: 'aucune' or a counter id but 'outings',
+default 'aucune'; checked by `isValidMarkerValue`; in « Marqueur » › « Plus d'options »).
+
+- **Text**: `markerValueText` = the overlay's `counterText` at the film's progress (`overlayFilmFrameAt` on the cached overlay
+  data of `createOverlayFilmCache`), so the panel reads like the counters (units, estimated times, « Bilan » figures).
+- **Look**: `drawValueTag` (`overlay/draw.ts`) paints the panel with the overlay's own `drawPanel`/`fillText` and its resolved
+  theme (`resolveOverlayTheme`: panel, border, accent bar, fonts, colours, user overrides, and for a style without panel its
+  text backing). `u` = a tenth of the canvas height. The canvas (512 × 128) is redrawn only when the text or `valueLookKey`
+  (style, overrides, fonts loaded) changes.
+- **Place**: `scene/MarkerValueLabel.tsx` (a `Sprite`, after `FlyoverRig`) stands above `leadMarkerAnchor` (point, ball radius and
+  height of the drawing in ball diameters, set by FlyoverRig: 1 for a ball, 2.6 on a stick, `MODEL_BALLS` for a 3D model),
+  pulled towards the camera like the marker (`pullMarkerForward`). Colours divided by the exposure, like the marker's.
+- **Left out**: the racers' panels (the lead marker only), and the 3D ribbon of the same figure.
 
 ## Contour lines (« Courbes de niveau »)
 

@@ -105,6 +105,8 @@ const messages: Messages['marker'] = {
   'section.edgeColor': 'Randfarbe',
   'section.label': 'Text unter dem Marker',
   'section.labelText': 'Text der Beschriftung',
+  'section.value': 'Wert über dem Marker',
+  'section.valueTip': 'Ein Schild zeigt den gewählten Wert im Format des Overlays über dem Marker. Immer nur ein Wert.',
   'section.otherLabels': 'Die anderen Marker tragen den Namen ihres Tracks.',
   'section.stick': 'Stiel und Bodenschatten',
   'section.stickTip': 'Der Marker steht auf einem Stiel über dem Track, sein Schatten liegt am Boden.',

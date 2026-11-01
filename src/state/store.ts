@@ -28,6 +28,7 @@ import { DEFAULT_FOREST } from '../osm/forest'
 import type { ForestSettings } from '../osm/forest'
 import { DEFAULT_WATER } from '../osm/water'
 import type { WaterSettings } from '../osm/water'
+import { DEFAULT_MARKER_VALUE, type MarkerValue } from '../scene/markerValue'
 import { DEFAULT_CONTOURS, type ContourSettings } from '../terrain/contours'
 import { DEFAULT_SNOW, type SnowSettings } from '../weather/snowLine'
 import type { LandmarkSettings } from '../osm/landmarks'
@@ -82,6 +83,8 @@ export interface Settings {
   trackStyle: TrackStyle
   /** progress marker of the flyover (and of the ghost racers): ball, figurine or picture, size */
   marker: MarkerSettings
+  /** the counter shown on a panel above the lead marker (see scene/markerValue.ts), 'aucune' = none */
+  markerValue: MarkerValue
   /** add tail to the tracks: with « trace qui se dessine », only the last metres behind each marker are drawn */
   trackTail: TrackTailSettings
   /** the wall along the track whose height follows a recorded quantity (see scene/trackRibbon.ts) */
@@ -228,6 +231,7 @@ export const DEFAULT_SETTINGS: Settings = {
   trackTail: DEFAULT_TRACK_TAIL,
   trackRibbon: DEFAULT_TRACK_RIBBON,
   marker: DEFAULT_MARKER,
+  markerValue: DEFAULT_MARKER_VALUE,
   camera: DEFAULT_CAMERA,
   flyoverDurationS: DEFAULT_FLYOVER_DURATION_S,
   pacing: DEFAULT_PACING,

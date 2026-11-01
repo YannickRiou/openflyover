@@ -132,6 +132,7 @@ describe('engine options from settings', () => {
     snow: { mode: 'meteo' as const, lineM: 2000 },
     trackRibbon: { enabled: false, metric: 'speed' as const, heightM: 250 },
     contours: { enabled: false, intervalM: 50, opacity: 0.6, color: '#ffffff' },
+    markerValue: 'aucune' as const,
     forest: { enabled: true, density: 60 },
     overlay: DEFAULT_OVERLAY,
     video: { ...DEFAULT_VIDEO_SETTINGS, aspect: '16:9' as const, resolution: '1080p' as const, fps: 30 as const, quality: 'high' as const },

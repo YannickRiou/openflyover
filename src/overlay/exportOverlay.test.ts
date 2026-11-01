@@ -75,6 +75,19 @@ describe('createOverlayDrawer', () => {
     drawer.dispose()
   })
 
+  it('the legend follows the data ribbon while the line is not coloured', () => {
+    useAppStore.getState().addTracks([track])
+    const drawer = createOverlayDrawer()
+    const legend = () => vi.mocked(drawOverlay).mock.lastCall?.[5]?.trackLegend
+    drawer.draw(ctx, at(0.5), 1920, 1080)
+    expect(legend()).toBeNull()
+    const { settings, setSetting } = useAppStore.getState()
+    setSetting('trackRibbon', { ...settings.trackRibbon, enabled: true, metric: 'elevation' })
+    drawer.draw(ctx, at(0.5), 1920, 1080)
+    expect(legend()?.range).toEqual({ min: 1000, max: 1100 })
+    drawer.dispose()
+  })
+
   it('« À la suite »: each stage’s own figures, its card and the dip of its cut', () => {
     const other = buildTrack({ name: 'u', source: 'gpx', segments: [{ points: points.map((p) => ({ ...p, lat: p.lat + 0.01 })) }] })
     useAppStore.getState().addTracks([track, other])
