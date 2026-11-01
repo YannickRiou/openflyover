@@ -195,6 +195,12 @@ export function stopPanoramaRad(localS: number, lengthS: number): number {
   return 2 * Math.PI * smootherstep(clamp(localS / lengthS, 0, 1))
 }
 
+/** 0 → 1 over the first and last fifth of a stop window, 1 between: a tilt that is held, without a jump at either end. */
+export function stopHoldWeight(localS: number, lengthS: number): number {
+  if (!(lengthS > 0)) return 0
+  return smootherstep(clamp(Math.min(localS, lengthS - localS) / (lengthS * 0.2), 0, 1))
+}
+
 /** Camera of a 'large' stop: farther and higher by `k` (0 = the flight camera, 1 = the widest). */
 export function widenedCamera<T extends Pick<CameraSettings, 'distance' | 'pitchDeg'>>(camera: T, k: number): T {
   return {
@@ -898,7 +904,10 @@ function flownAt(
   const stop = state.stop
   const settings = options.camera ?? DEFAULT_CAMERA
   const wide = stop?.camera === 'large' ? stopBump(state.localS, state.lengthS) : 0
-  const camera = wide > 0 ? widenedCamera(settings, wide) : settings
+  const widened = wide > 0 ? widenedCamera(settings, wide) : settings
+  // « Inclinaison » of a panorama stop: held through the turn, eased in and out
+  const tilt = stop?.camera === 'panorama' && stop.tiltDeg ? stop.tiltDeg * stopHoldWeight(state.localS, state.lengthS) : 0
+  const camera = tilt ? { ...widened, pitchDeg: widened.pitchDeg + tilt } : widened
   const orbitRad =
     stop?.camera === 'orbite' ? stopOrbitRad(stop.addedS, state.localS, state.lengthS) : stop?.camera === 'panorama' ? stopPanoramaRad(state.localS, state.lengthS) : 0
   const motionS = stop?.camera === 'fixe' ? heldMotionTimeS(stop, state.timeS) - clock.openingS : state.flightTimeS

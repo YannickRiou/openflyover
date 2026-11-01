@@ -123,6 +123,8 @@ const messages: Messages['inspector'] = {
   'hold.label': 'Label',
   'hold.duration': 'Duration',
   'hold.camera': 'Camera during the hold',
+  'hold.tilt': 'Tilt',
+  'hold.tiltTip': 'Negative: the camera drops towards the horizon and shows the summits better. Positive: a more downward view. 0 keeps the tilt of the film camera.',
   'hold.info': 'At {at} of {length}, from {start} to {end}',
   'hold.auto': ' · automatic hold: editing it freezes the holds',
   'hold.shortened': ' It lasts {s} in the film: with “Keep the flyover duration”, the holds take half of the flyover at most.',

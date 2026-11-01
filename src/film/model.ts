@@ -182,6 +182,8 @@ export interface FilmStop {
   /** time added to the film (seconds at ×1, eases in and out included) */
   durationS: number
   camera: StopCamera
+  /** 'panorama' only: degrees added to the camera's pitch during the turn (negative: nearer the horizon, to see the summits), 0 = the flight camera's */
+  tiltDeg?: number
   label?: string
   /** what the stop was made for: climb index, OSM id, waypoint index */
   source?: { kind: StopSourceKind; ref?: string }
@@ -555,6 +557,8 @@ export interface Film {
 
 /** Slider ranges (also the validity ranges of a loaded project), seconds. */
 export const SHOT_DURATION_RANGE = { min: 0.5, max: 30, step: 0.5 } as const
+/** « Inclinaison » of a panorama stop (degrees added to the pitch of the camera). */
+export const STOP_TILT_RANGE = { min: -40, max: 40, step: 1 } as const
 export const STOP_DURATION_RANGE = { min: 0.5, max: 60, step: 0.5 } as const
 export const ITEM_DURATION_RANGE = { min: 0.5, max: 600, step: 0.5 } as const
 /** Length of a generated stop ('temps-forts') and of a stop added on the timeline (seconds). */
@@ -720,6 +724,7 @@ export function isValidStop(stop: unknown): stop is FilmStop {
     within(stop.durationS, STOP_DURATION_RANGE.min, STOP_DURATION_RANGE.max) &&
     oneOf(STOP_CAMERAS, stop.camera) &&
     optionalString(stop.label) &&
+    (stop.tiltDeg === undefined || within(stop.tiltDeg, STOP_TILT_RANGE.min, STOP_TILT_RANGE.max)) &&
     (source === undefined || (isRecord(source) && oneOf(STOP_SOURCES, source.kind) && optionalString(source.ref)))
   )
 }

@@ -121,6 +121,8 @@ export default {
   'hold.label': 'Libellé',
   'hold.duration': 'Durée',
   'hold.camera': 'Caméra pendant l’arrêt',
+  'hold.tilt': 'Inclinaison',
+  'hold.tiltTip': 'Négative : la caméra descend vers l’horizon et montre mieux les sommets. Positive : vue plus plongeante. 0 garde l’inclinaison de la caméra du film.',
   'hold.info': 'À {at} sur {length}, de {start} à {end}',
   'hold.auto': ' · arrêt automatique : le retoucher fige les arrêts',
   'hold.shortened': ' Il dure {s} dans le film : avec « Garder la durée du survol », les arrêts prennent la moitié du survol au plus.',

@@ -48,6 +48,7 @@ import {
   situationFramingOf,
   smootherstep,
   stopOrbitRad,
+  stopHoldWeight,
   stopPanoramaRad,
   STOP_WIDE_DISTANCE_FACTOR,
   SWEEP_DEG,
@@ -134,6 +135,17 @@ describe('easing', () => {
     expect(stopOrbitRad(4, 5.5, 5.5)).toBeCloseTo(0, 12)
     expect(stopOrbitRad(4, 2.75, 5.5)).toBeCloseTo((24 * Math.PI) / 180, 12)
     expect(stopOrbitRad(60, 30, 60)).toBeCloseTo((120 * Math.PI) / 180, 12)
+  })
+
+  it('stopHoldWeight holds the tilt of a panorama: 0 at both ends, 1 between the first and last fifth', () => {
+    expect(stopHoldWeight(0, 10)).toBe(0)
+    expect(stopHoldWeight(10, 10)).toBe(0)
+    expect(stopHoldWeight(2, 10)).toBe(1)
+    expect(stopHoldWeight(5, 10)).toBe(1)
+    expect(stopHoldWeight(8, 10)).toBe(1)
+    expect(stopHoldWeight(1, 10)).toBeGreaterThan(0)
+    expect(stopHoldWeight(1, 10)).toBeLessThan(1)
+    expect(stopHoldWeight(3, 0)).toBe(0)
   })
 
   it('stopPanoramaRad makes one full turn, still at both ends, so the end joins the flight camera', () => {

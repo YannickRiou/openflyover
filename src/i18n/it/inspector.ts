@@ -123,6 +123,8 @@ const messages: Messages['inspector'] = {
   'hold.label': 'Etichetta',
   'hold.duration': 'Durata',
   'hold.camera': 'Camera durante la sosta',
+  'hold.tilt': 'Inclinazione',
+  'hold.tiltTip': 'Negativa: la camera scende verso l’orizzonte e mostra meglio le cime. Positiva: vista più dall’alto. 0 mantiene l’inclinazione della camera del film.',
   'hold.info': 'A {at} su {length}, da {start} a {end}',
   'hold.auto': ' · sosta automatica: modificarla blocca le soste',
   'hold.shortened': ' Dura {s} nel film: con «Mantieni la durata del sorvolo», le soste occupano al massimo metà del sorvolo.',

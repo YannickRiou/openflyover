@@ -123,6 +123,8 @@ const messages: Messages['inspector'] = {
   'hold.label': 'Etiqueta',
   'hold.duration': 'Duración',
   'hold.camera': 'Cámara durante la parada',
+  'hold.tilt': 'Inclinación',
+  'hold.tiltTip': 'Negativa: la cámara baja hacia el horizonte y muestra mejor las cumbres. Positiva: vista más picada. 0 mantiene la inclinación de la cámara de la película.',
   'hold.info': 'En {at} de {length}, de {start} a {end}',
   'hold.auto': ' · parada automática: al retocarla se congelan las paradas',
   'hold.shortened': ' Dura {s} en la película: con «Mantener la duración del sobrevuelo», las paradas ocupan la mitad del sobrevuelo como máximo.',
