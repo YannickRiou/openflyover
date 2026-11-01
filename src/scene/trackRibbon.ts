@@ -1,7 +1,7 @@
 /**
  * « Ruban de données »: a translucent wall along each track whose height and colour follow one recorded quantity
- * (`settings.trackRibbon`). One strip per segment, two vertices per densified point: the bottom on the draped line, the
- * top above it by the value's share of `heightM`, and a thin, bright strip along that top edge (a third vertex under it). It reuses the curtain material of the flights (`createCurtainMaterial`:
+ * (`settings.trackRibbon`). One strip per segment, three vertices per densified point: the foot on the draped line, the
+ * top above it by the value's share of `heightM`, and under the top the bottom of a thin, bright strip along that edge. It reuses the curtain material of the flights (`createCurtainMaterial`:
  * vertex colours with alpha, cut at the marker and by the trail through the `trackM` attribute), so the draw-on shows it
  * as it shows the line. The values and colours are made once per metric; the heights and the drape follow the settings
  * and the terrain. Three.js only, no React.
