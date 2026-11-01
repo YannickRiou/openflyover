@@ -41,6 +41,8 @@ export const GLOW_STRENGTH = 0.55
  * and the line keeps a clear edge instead of merging with its glow into a wider line.
  */
 export const TRACK_GLOW_MAX_STRENGTH = 0.8
+/** Width of the comet (« Comète »), in line widths. */
+export const COMET_WIDTH_SHARE = 6
 
 // ---------------------------------------------------------------------------
 // Glow

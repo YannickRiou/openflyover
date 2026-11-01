@@ -41,6 +41,7 @@ import { cumulativeDistances } from '../geo/lonLat'
 import {
   addTrailCut,
   applyDash,
+  COMET_WIDTH_SHARE,
   createCurtainMaterial,
   createGlowMaterial,
   createShadowMaterial,
@@ -393,6 +394,8 @@ export interface SegmentLines extends CuttableLine {
   solid: Line2
   /** wider soft halo, shown with `trackStyle.glow` */
   glow: Line2
+  /** luminous trail behind the marker, shown with `trackStyle.comet` */
+  comet: Line2
   /** the flights of the segment, none for a track on the ground */
   flights: FlightPiece[]
 }
@@ -406,6 +409,7 @@ export interface TrackLineSet {
   segments: SegmentLines[]
   solidMaterial: LineMaterial
   glowMaterial: LineMaterial
+  cometMaterial: LineMaterial
   curtainMaterial: MeshBasicMaterial
   shadowMaterial: ShaderMaterial
   /** distance the lines are drawn up to (Infinity = whole), NaN when it must be applied again (after a drape) */
@@ -418,7 +422,7 @@ function createLineMaterials(
   color: string,
   width: number,
   height: number,
-): { solid: LineMaterial; glow: LineMaterial } {
+): { solid: LineMaterial; glow: LineMaterial; comet: LineMaterial } {
   const solid = new LineMaterial({
     color: new Color(color),
     linewidth: LINE_WIDTH_PX,
@@ -431,7 +435,11 @@ function createLineMaterials(
   // each track its own trail: the materials belong to its set
   addTrailCut(solid, 'track-line-trail')
   addTrailCut(glow, 'track-glow-trail')
-  return { solid, glow }
+  // a halo like the glow, cut to the stretch behind the marker (same program, own uniforms)
+  const comet = createGlowMaterial(new Color(color), width, height)
+  comet.transparent = false
+  addTrailCut(comet, 'track-glow-trail')
+  return { solid, glow, comet }
 }
 
 export function buildTrackLineSet(
@@ -472,9 +480,13 @@ export function buildTrackLineSet(
     glow.name = 'track-line-glow'
     glow.renderOrder = 1
     glow.visible = false
-    object.add(solid, glow)
+    const comet = new Line2(geometry, materials.comet)
+    comet.name = 'track-line-comet'
+    comet.renderOrder = 1
+    comet.visible = false
+    object.add(solid, glow, comet)
     for (const piece of flights) object.add(piece.curtain, piece.shadow)
-    segments.push({ index, source, points, buffer, positions, dist, shortened: -1, geometry, solid, glow, flights })
+    segments.push({ index, source, points, buffer, positions, dist, shortened: -1, geometry, solid, glow, comet, flights })
   }
 
   return {
@@ -485,6 +497,7 @@ export function buildTrackLineSet(
     segments,
     solidMaterial: materials.solid,
     glowMaterial: materials.glow,
+    cometMaterial: materials.comet,
     curtainMaterial,
     shadowMaterial,
     drawnM: Number.NaN,
@@ -493,7 +506,7 @@ export function buildTrackLineSet(
 }
 
 function materialsOf(set: TrackLineSet): LineMaterial[] {
-  return [set.solidMaterial, set.glowMaterial]
+  return [set.solidMaterial, set.glowMaterial, set.cometMaterial]
 }
 
 export function disposeTrackLineSet(set: TrackLineSet): void {
@@ -507,6 +520,9 @@ export function disposeTrackLineSet(set: TrackLineSet): void {
   }
   for (const material of [...materialsOf(set), set.curtainMaterial, set.shadowMaterial]) material.dispose()
 }
+
+/** `trailStartM` of the comet when it is off: past every distance along a track, so nothing is painted. */
+const NO_COMET = 1e9
 
 /** `drapeFlightPiece`'s `curtainM` for « Longueur du rideau »: its maximum is « Jusqu'au sol ». */
 export const curtainLengthM = (flightCurtainM: number) => (flightCurtainM >= TRACK_CURTAIN_RANGE.max ? Infinity : flightCurtainM)
@@ -535,11 +551,13 @@ export function applyExposure(sets: Iterable<TrackLineSet>, exposure: number, gl
     const base = set.solidMaterial.vertexColors ? '#ffffff' : set.track.color
     set.solidMaterial.color.set(base).multiplyScalar(set.dim / exposure)
     const glowVertexColors = set.solidMaterial.vertexColors && glowColor === ''
-    if (set.glowMaterial.vertexColors !== glowVertexColors) {
-      set.glowMaterial.vertexColors = glowVertexColors
-      set.glowMaterial.needsUpdate = true
+    for (const material of [set.glowMaterial, set.cometMaterial]) {
+      if (material.vertexColors !== glowVertexColors) {
+        material.vertexColors = glowVertexColors
+        material.needsUpdate = true
+      }
+      material.color.set(glowColor || base).multiplyScalar(set.dim / exposure)
     }
-    set.glowMaterial.color.set(glowColor || base).multiplyScalar(set.dim / exposure)
     // its vertex colours are white (the track colour is the material's) or the line's
     set.curtainMaterial.color.set(base).multiplyScalar(set.dim / exposure)
   }
@@ -620,10 +638,14 @@ export function applyTrackStyle(sets: Iterable<TrackLineSet>, style: TrackStyle,
     set.glowMaterial.linewidth = lineWidthPx(style, renderScale, true)
     // the halo starts at the edge of the line
     setGlow(set.glowMaterial, style.glowIntensity * TRACK_GLOW_MAX_STRENGTH, Math.min(1, style.width / style.glowWidth))
-    for (const material of materialsOf(set)) applyDash(material, style, renderScale, pixelSize)
+    // the comet is wider and smooth: the halo of a dashed line is dashed, the comet is not
+    set.cometMaterial.linewidth = style.width * COMET_WIDTH_SHARE * renderScale
+    setGlow(set.cometMaterial, style.cometIntensity * TRACK_GLOW_MAX_STRENGTH, 1 / COMET_WIDTH_SHARE)
+    for (const material of [set.solidMaterial, set.glowMaterial]) applyDash(material, style, renderScale, pixelSize)
     set.shadowMaterial.uniforms.widthPx.value = style.width * SHADOW_WIDTH_SHARE * renderScale
     for (const segment of set.segments) {
       segment.glow.visible = style.glow
+      segment.comet.visible = style.comet && style.drawOn
       for (const piece of segment.flights) {
         piece.curtain.visible = style.flightCurtain
         piece.shadow.visible = style.flightShadow
@@ -638,14 +660,17 @@ export function applyTrackStyle(sets: Iterable<TrackLineSet>, style: TrackStyle,
 
 /**
  * Draw `set` up to `distanceM` along its track (Infinity = whole), over the last `trailM` metres only (« Traînée »,
- * Infinity = from the start). A track drawn whole stays whole.
+ * Infinity = from the start), and the comet over the last `cometM` metres (0 = none). A track drawn whole stays whole.
  */
-export function cutTrackLineSet(set: TrackLineSet, distanceM: number, trailM = Infinity): void {
+export function cutTrackLineSet(set: TrackLineSet, distanceM: number, trailM = Infinity, cometM = 0): void {
   // set even when the marker has not moved: the trail length may have changed while paused
   const trail = Number.isFinite(distanceM) && Number.isFinite(trailM)
   const startM = trail ? distanceM - trailM : NO_TRAIL
   const fadeM = trail ? trailM * TRAIL_FADE_SHARE : 0
-  for (const material of materialsOf(set)) setTrailStart(material, startM, fadeM)
+  for (const material of [set.solidMaterial, set.glowMaterial]) setTrailStart(material, startM, fadeM)
+  // the comet: the last `cometM` metres behind the marker, thinning out to nothing at its tail (0 or a track drawn whole: nothing)
+  if (cometM > 0 && Number.isFinite(distanceM)) setTrailStart(set.cometMaterial, distanceM - cometM, cometM)
+  else setTrailStart(set.cometMaterial, NO_COMET, 0)
   // the curtain and the shadow are cut per pixel, up to the marker too
   for (const material of [set.curtainMaterial, set.shadowMaterial]) setFlightCut(material, startM, fadeM, distanceM)
   if (distanceM === set.drawnM) return

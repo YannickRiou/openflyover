@@ -172,7 +172,7 @@ function fakeEngine(height: number): TerrainEngine {
 }
 
 describe('syncTrackLineSets', () => {
-  it('builds one solid + one glow Line2 per segment (segments are not joined) (no start / end mesh: Labels pins them)', () => {
+  it('builds one solid + one glow + one comet Line2 per segment (segments are not joined) (no start / end mesh: Labels pins them)', () => {
     const group = new Group()
     const sets = new Map<string, TrackLineSet>()
     const track = makeTrack('a', [segmentA, [{ lon: 6, lat: 45 }], segmentB])
@@ -204,7 +204,7 @@ describe('syncTrackLineSets', () => {
     set.object.traverse((object) => {
       if (object instanceof Line2) expect(object.material.depthTest).toBe(true)
     })
-    expect(set.object.children).toHaveLength(2 * set.segments.length)
+    expect(set.object.children).toHaveLength(3 * set.segments.length)
 
     syncTrackLineSets(group, sets, [], frame, 800, 600)
   })
@@ -757,5 +757,28 @@ describe('flights: curtain, ground shadow, width weights', () => {
     applyResolution([set], 1920, 1080)
     expect(set.shadowMaterial.uniforms.resolution.value.toArray()).toEqual([1920, 1080])
     disposeTrackLineSet(set)
+  })
+
+  it('« Comète »: a halo over the last metres behind the marker, thinning out to its tail, shown only with the draw-on', () => {
+    const sets = new Map<string, TrackLineSet>()
+    syncTrackLineSets(new Group(), sets, [makeTrack('a', [segmentA])], frame, 800, 600)
+    const set = sets.get('a')!
+    drapeTrackLineSet(set, null, 1)
+    const uniforms = () => [set.cometMaterial.uniforms.trailStartM.value, set.cometMaterial.uniforms.trailFadeM.value]
+
+    cutTrackLineSet(set, 500, Infinity, 300)
+    expect(uniforms()).toEqual([200, 300])
+    // the line itself keeps its whole length
+    expect(set.solidMaterial.uniforms.trailStartM.value).toBe(NO_TRAIL)
+    // no comet, or a track drawn whole: nothing painted
+    cutTrackLineSet(set, 500, Infinity, 0)
+    expect(uniforms()[0]).toBeGreaterThan(1e6)
+    cutTrackLineSet(set, Infinity, Infinity, 300)
+    expect(uniforms()[0]).toBeGreaterThan(1e6)
+
+    applyTrackStyle([set], { ...DEFAULT_TRACK_STYLE, drawOn: true, comet: true }, 1, 1)
+    expect(set.segments[0].comet.visible).toBe(true)
+    applyTrackStyle([set], { ...DEFAULT_TRACK_STYLE, drawOn: false, comet: true }, 1, 1)
+    expect(set.segments[0].comet.visible).toBe(false)
   })
 })

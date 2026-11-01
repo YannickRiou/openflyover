@@ -29,6 +29,12 @@ export interface TrackStyle {
   glowColor: string
   /** « trace qui se dessine »: only the part already travelled by the marker is drawn */
   drawOn: boolean
+  /** « Comète » (with `drawOn`): a luminous trail that thins out behind the marker while the line draws itself */
+  comet: boolean
+  /** « Longueur de la comète »: metres of track behind the marker */
+  cometLengthM: number
+  /** « Intensité de la comète », 0..1 */
+  cometIntensity: number
   /** positions averaged over this many metres of track against GPS jitter (`flyover/smooth.ts`), 0 = as recorded */
   smoothingM: number
   /** « Rideau sous le vol »: a translucent wall from a flight down to the relief (only with flights) */
@@ -45,6 +51,8 @@ export const TRACK_SMOOTHING_RANGE = { min: 0, max: 300, step: 10 } as const
 export const TRACK_CURTAIN_RANGE = { min: 20, max: 1000, step: 10 } as const
 export const TRACK_GLOW_INTENSITY_RANGE = { min: 0.1, max: 1, step: 0.05 } as const
 export const TRACK_GLOW_WIDTH_RANGE = { min: 6, max: 64, step: 2 } as const
+export const TRACK_COMET_LENGTH_RANGE = { min: 50, max: 2000, step: 50 } as const
+export const TRACK_COMET_INTENSITY_RANGE = { min: 0.1, max: 1, step: 0.05 } as const
 
 export const DEFAULT_TRACK_STYLE: TrackStyle = {
   width: 4,
@@ -54,6 +62,9 @@ export const DEFAULT_TRACK_STYLE: TrackStyle = {
   glowWidth: 24,
   glowColor: '',
   drawOn: false,
+  comet: false,
+  cometLengthM: 300,
+  cometIntensity: 0.8,
   smoothingM: 0,
   flightCurtain: true,
   flightCurtainM: TRACK_CURTAIN_RANGE.max,
@@ -389,6 +400,8 @@ export function isValidTrackStyle(style: TrackStyle): boolean {
     inRange(style.flightCurtainM, TRACK_CURTAIN_RANGE) &&
     inRange(style.glowIntensity, TRACK_GLOW_INTENSITY_RANGE) &&
     inRange(style.glowWidth, TRACK_GLOW_WIDTH_RANGE) &&
+    inRange(style.cometLengthM, TRACK_COMET_LENGTH_RANGE) &&
+    inRange(style.cometIntensity, TRACK_COMET_INTENSITY_RANGE) &&
     (style.glowColor === '' || isHexColor(style.glowColor))
   )
 }
