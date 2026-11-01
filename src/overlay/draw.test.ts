@@ -28,7 +28,7 @@ import {
   titleCardOpacity,
   titleCardOpacityOf,
 } from './draw'
-import { OVERLAY_THEMES, resolveOverlayTheme } from './themes'
+import { OVERLAY_THEMES } from './themes'
 import type { OverlayStyleId } from './settings'
 import type { DayCard, OverlayContext2D, OverlayExtras, StageCard } from './draw'
 import { MEDIA_DEFAULTS, STAGE_CARD_FIELDS } from '../film/model'
@@ -1637,33 +1637,36 @@ describe('cards placed on the timeline', () => {
   })
 })
 
-describe('drawValueTag (the panel above the marker)', () => {
+describe('drawValueTag (the figure above the marker)', () => {
   const SIZE_TAG = { width: 512, height: 128 }
-  const panelStyle = (Object.keys(OVERLAY_THEMES) as OverlayStyleId[]).find((id) => OVERLAY_THEMES[id].panel)!
-  const bareStyle = (Object.keys(OVERLAY_THEMES) as OverlayStyleId[]).find((id) => !OVERLAY_THEMES[id].panel)
+  const styles = Object.keys(OVERLAY_THEMES) as OverlayStyleId[]
+  const panelStyle = styles.find((id) => OVERLAY_THEMES[id].panel)!
 
-  it('draws the figure and its unit in the colours and the panel of the overlay style', () => {
+  it('draws the figure and its unit with no panel, once for each of its two shadows', () => {
     const { ctx, texts, fills } = fakeContext()
     drawValueTag(ctx, SIZE_TAG, { style: panelStyle, overrides: undefined }, { value: '142', unit: 'bpm' })
-    const theme = resolveOverlayTheme(panelStyle, undefined)
-    expect(texts.map((t) => t.text)).toEqual(['142', 'bpm'])
-    expect(texts[0].color).toBe(theme.text)
-    expect(texts[1].color).toBe(theme.textSoft)
-    expect(fills).toContain(theme.panel!.fill)
+    expect(texts.map((t) => t.text)).toEqual(['142', 'bpm', '142', 'bpm'])
+    expect(fills).toHaveLength(0)
   })
 
-  it('follows the colours chosen for the overlay, and draws no unit for a figure without one', () => {
+  it('reads on any ground: a style with a dark text gets a white figure', () => {
+    for (const style of styles) {
+      const { ctx, texts } = fakeContext()
+      drawValueTag(ctx, SIZE_TAG, { style, overrides: undefined }, { value: '142', unit: '' })
+      expect(texts[0].color).toMatch(/^#[0-9a-f]{6}$/i)
+    }
+  })
+
+  it('follows the colour chosen for the overlay, and draws no unit for a figure without one', () => {
     const { ctx, texts } = fakeContext()
     drawValueTag(ctx, SIZE_TAG, { style: panelStyle, overrides: { text: '#ff0000' } }, { value: '1:05:09', unit: '' })
-    expect(texts.map((t) => t.text)).toEqual(['1:05:09'])
+    expect(texts.map((t) => t.text)).toEqual(['1:05:09', '1:05:09'])
     expect(texts[0].color).toBe('#ff0000')
   })
 
-  it('draws no panel for a style without one, and keeps the text inside the canvas', () => {
-    if (!bareStyle) return
-    const { ctx, texts, fills } = fakeContext()
-    drawValueTag(ctx, SIZE_TAG, { style: bareStyle, overrides: undefined }, { value: '12 345 678 901 234', unit: 'km/h' })
-    expect(fills).toHaveLength(0)
+  it('keeps the figure inside the canvas', () => {
+    const { ctx, texts } = fakeContext()
+    drawValueTag(ctx, SIZE_TAG, { style: styles[0], overrides: undefined }, { value: '12 345 678 901 234', unit: 'km/h' })
     expect(texts[0].x).toBeGreaterThanOrEqual(0)
   })
 })

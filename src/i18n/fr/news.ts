@@ -14,7 +14,7 @@ export default {
   'v47.tilt.title': 'Incliner la caméra à chaque arrêt',
   'v47.tilt.text': 'Le panneau d’un arrêt gagne une ligne « Inclinaison » (−40° à +40°). Baissez la caméra vers la trace, ou relevez-la vers les sommets, pendant un panorama comme pendant une pause.',
   'v47.value.title': 'Une valeur au-dessus du marqueur',
-  'v47.value.text': '« Donnée au-dessus du marqueur » (Marqueur › Plus d’options) affiche une valeur de l’habillage, comme l’altitude, la pente ou la fréquence cardiaque, sur un panneau au-dessus du marqueur. Il reprend le style et les couleurs de l’habillage.',
+  'v47.value.text': '« Donnée au-dessus du marqueur » (Marqueur › Plus d’options) affiche une valeur de l’habillage, comme l’altitude, la pente ou la fréquence cardiaque, en grand chiffre suspendu au-dessus du marqueur, avec une ombre douce. Il reprend la police et les couleurs de l’habillage.',
   'v47.models.title': 'Des figurines en 3D',
   'v47.models.text': 'Cochez « Modèle 3D » dans la section Marqueur : la figurine devient un petit personnage en volume, au contour net, qui marche, pédale ou glisse dans le sens de la trace. Les dix-sept figurines existent, coureurs fantômes compris.',
   'v47.summits.title': 'Les sommets au loin, nommés',
