@@ -167,7 +167,7 @@ describe('settings and misc', () => {
       lens: { shutter: 0, bloom: 0, bloomRadius: 0.6, flare: 0, depthOfField: 0 },
       trackColorBy: 'none',
       trackLegendAnchor: 'bottom-left',
-      trackStyle: { width: 4, dash: 'plein', glow: false, glowIntensity: 0.75, glowWidth: 24, glowColor: '', drawOn: false, smoothingM: 0, flightCurtain: true, flightCurtainM: 1000, flightShadow: true },
+      trackStyle: { width: 4, dash: 'plein', glow: false, glowIntensity: 0.75, glowWidth: 24, glowColor: '', drawOn: false, comet: false, cometLengthM: 300, cometIntensity: 0.8, smoothingM: 0, flightCurtain: true, flightCurtainM: 1000, flightShadow: true },
       trackTail: { enabled: false, lengthM: 1000 },
       marker: {
         kind: 'boule',
@@ -210,6 +210,7 @@ describe('settings and misc', () => {
       demClean: { enabled: false, seaToZero: false },
       water: { enabled: true, strength: 1 },
       snow: { mode: 'meteo', lineM: 2000 },
+      contours: { enabled: false, intervalM: 50, opacity: 0.6, color: '#ffffff' },
       forest: { enabled: true, density: 60 },
       overlay: DEFAULT_OVERLAY,
       video: {

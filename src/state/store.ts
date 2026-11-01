@@ -28,6 +28,7 @@ import { DEFAULT_FOREST } from '../osm/forest'
 import type { ForestSettings } from '../osm/forest'
 import { DEFAULT_WATER } from '../osm/water'
 import type { WaterSettings } from '../osm/water'
+import { DEFAULT_CONTOURS, type ContourSettings } from '../terrain/contours'
 import { DEFAULT_SNOW, type SnowSettings } from '../weather/snowLine'
 import type { LandmarkSettings } from '../osm/landmarks'
 import { DEFAULT_OVERLAY } from '../overlay/settings'
@@ -106,6 +107,8 @@ export interface Settings {
   water: WaterSettings
   /** snow on the terrain above a snow line: from the weather of the day, set by hand or none (see weather/snowLine.ts) */
   snow: SnowSettings
+  /** 3D contour lines on the terrain (see terrain/contourShader.ts) */
+  contours: ContourSettings
   /** trees drawn where OpenStreetMap has forests (Overpass API, network), density in trees per hectare */
   forest: ForestSettings
   /** film overlay (« habillage »): style and widgets, drawn by src/overlay/draw.ts */
@@ -232,6 +235,7 @@ export const DEFAULT_SETTINGS: Settings = {
   clouds: DEFAULT_CLOUDS,
   water: DEFAULT_WATER,
   snow: DEFAULT_SNOW,
+  contours: DEFAULT_CONTOURS,
   forest: DEFAULT_FOREST,
   overlay: DEFAULT_OVERLAY,
   video: DEFAULT_VIDEO_SETTINGS,
