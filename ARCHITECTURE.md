@@ -3418,7 +3418,7 @@ default 'aucune'; checked by `isValidMarkerValue`; in « Marqueur » › « Plus
   theme (`resolveOverlayTheme`: panel, border, accent bar, fonts, colours, user overrides, and for a style without panel its
   text backing). `u` = a tenth of the canvas height. The canvas (512 × 128) is redrawn only when the text or `valueLookKey`
   (style, overrides, fonts loaded) changes.
-- **Place**: `scene/MarkerValue.tsx` (a `Sprite`, after `FlyoverRig`) stands above `leadMarkerAnchor` (point, ball radius and
+- **Place**: `scene/MarkerValueLabel.tsx` (a `Sprite`, after `FlyoverRig`) stands above `leadMarkerAnchor` (point, ball radius and
   height of the drawing in ball diameters, set by FlyoverRig: 1 for a ball, 2.6 on a stick, `MODEL_BALLS` for a 3D model),
   pulled towards the camera like the marker (`pullMarkerForward`). Colours divided by the exposure, like the marker's.
 - **Left out**: the racers' panels (the lead marker only), and the 3D ribbon of the same figure.
