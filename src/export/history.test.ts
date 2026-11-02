@@ -323,6 +323,19 @@ describe('where the time went', () => {
     expect(timingsSummary({ ...EMPTY_TIMINGS, renderMs: 1000, waitMs: 2000, encodeMs: 3000 })).toBe('rendu 1,0 s, tuiles 2,0 s, composition et encodage 3,0 s')
   })
 
+  it('keeps the tile preload, and counts as « autre » what no line counts, so that the lines add up to the total', () => {
+    const e = entryOf({ ...RECORD, wallMs: 90_000, timings: { ...split, preloadMs: 20_000 } })
+    expect(e.preloadMs).toBe(20_000)
+    expect(parseHistory(serialiseHistory([e]))[0]).toEqual(e)
+    // 90 s in all: 20 s of preload, 50 + 3 + 10 s in the lines, 7 s left
+    expect(Object.fromEntries(entryDetails(e).map((r) => [r.label, r.value]))['Répartition']).toBe(
+      "rendu 50,0 s (GPU 21,0 s), 1,4 rendu par image, préchargement des tuiles 20,0 s, tuiles 3,0 s, composition 6,0 s, image vidéo 1,5 s, attente de l'encodeur 2,5 s, autre 7,0 s",
+    )
+    // nothing left over (rounding): no « autre »
+    expect(timingsSummary(split, 63_050)).not.toContain('autre')
+    expect(entryOf({ ...RECORD, timings: split }).preloadMs).toBeUndefined()
+  })
+
   it('tells the wait for the graphics card apart, only where it was measured', () => {
     expect(timingsSummary({ ...split, gpuWaitMs: 4_000 })).toContain('tuiles 3,0 s, attente de la carte graphique 4,0 s, composition 6,0 s')
     expect(timingsSummary({ ...split, gpuWaitMs: 0 })).not.toContain('carte graphique')

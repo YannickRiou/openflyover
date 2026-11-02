@@ -105,6 +105,7 @@ export default {
   'history.timings.videoFrame': 'image vidéo {time}',
   'history.timings.encoderWait': "attente de l'encodeur {time}",
   'history.timings.composeEncode': 'composition et encodage {time}',
+  'history.timings.other': 'autre {time}',
   'history.shadows': 'ombres : {tiles} tuiles ({offTiles} hors champ), {triangles} triangles ({offTriangles} hors champ) par rendu',
   'history.row.output': 'Sortie',
   'history.row.outputOverlay': '{output}, habillage seul',

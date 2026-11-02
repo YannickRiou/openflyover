@@ -107,6 +107,7 @@ const messages: Messages['export'] = {
   'history.timings.videoFrame': 'Videobild {time}',
   'history.timings.encoderWait': 'Warten auf den Encoder {time}',
   'history.timings.composeEncode': 'Komposition und Kodierung {time}',
+  'history.timings.other': 'Sonstiges {time}',
   'history.shadows': 'Schatten: {tiles} Kacheln ({offTiles} außerhalb des Sichtfelds), {triangles} Dreiecke ({offTriangles} außerhalb des Sichtfelds) pro Rendering',
   'history.row.output': 'Ausgabe',
   'history.row.outputOverlay': '{output}, nur Overlay',
