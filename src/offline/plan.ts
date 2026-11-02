@@ -64,6 +64,8 @@ export interface OfflinePlanInput {
 export interface PlannedTile {
   url: string
   sourceId: string
+  /** the tile (of the terrain or the imagery source), set by `planOfflineTiles` */
+  key?: TileKey
 }
 
 export interface OfflinePlan {
@@ -186,16 +188,16 @@ export function planOfflineTiles(input: OfflinePlanInput): OfflinePlan {
   const seen = new Set<string>()
   const terrainByZoom: Record<number, number> = {}
   let estimatedBytes = 0
-  const add = (url: string, sourceId: string) => {
+  const add = (url: string, sourceId: string, key: TileKey) => {
     if (seen.has(url)) return false
     seen.add(url)
-    tiles.push({ url, sourceId })
+    tiles.push({ url, sourceId, key })
     estimatedBytes += offlinePolicy(sourceId).typicalTileBytes
     return true
   }
   let maxTerrainZoom = rootZ
   for (const key of terrainKeys) {
-    add(buildTileUrl(terrain, key), terrain.id)
+    add(buildTileUrl(terrain, key), terrain.id, key)
     terrainByZoom[key.z] = (terrainByZoom[key.z] ?? 0) + 1
     maxTerrainZoom = Math.max(maxTerrainZoom, key.z)
   }
@@ -203,7 +205,7 @@ export function planOfflineTiles(input: OfflinePlanInput): OfflinePlan {
   if (imagery) {
     for (const key of terrainKeys) {
       for (const op of planImagerySubtiles(key, imagery, input.imageryZoomOffset).tiles) {
-        if (add(buildTileUrl(imagery, op.key), imagery.id)) imageryTiles++
+        if (add(buildTileUrl(imagery, op.key), imagery.id, op.key)) imageryTiles++
       }
     }
   }

@@ -274,6 +274,38 @@ describe('runExport', () => {
     }
   })
 
+  it('fetches the tiles of the whole film before its first frame, counts that time apart and reports it as tiles', async () => {
+    const track = buildTrack({
+      name: 'test',
+      source: 'gpx',
+      segments: [{ points: Array.from({ length: 12 }, (_, i) => ({ lon: 6.78, lat: 45.9 - i * 0.009, ele: 1000 })) }],
+    })
+    const { tracks, bounds } = useAppStore.getState()
+    useAppStore.setState({ tracks: [track], bounds: track.bounds })
+    const events: string[] = []
+    const preloadTile = vi.fn(async () => void events.push('preload'))
+    vi.mocked(renderSettledFrame).mockImplementation(async () => {
+      events.push('frame')
+      return 'complete'
+    })
+    const reported: number[] = []
+    const unsubscribe = useExportStore.subscribe((s) => s.tiles && reported.push(s.tiles.done))
+    const engine = { prefetch: () => 0, update: vi.fn(), sampleHeight: () => 0, onChange: () => () => {}, stats: { pendingTiles: 0, pendingVisibleTiles: 0 } }
+    try {
+      await exportFilm(destination(), { engine: () => engine as unknown as TerrainEngine, budget: DESKTOP_BUDGET, preloadTile })
+    } finally {
+      unsubscribe()
+      useAppStore.setState({ tracks, bounds })
+      vi.mocked(renderSettledFrame).mockReset()
+      vi.mocked(renderSettledFrame).mockResolvedValue('complete')
+    }
+    expect(preloadTile.mock.calls.length).toBeGreaterThan(10)
+    expect(events.indexOf('frame')).toBe(preloadTile.mock.calls.length)
+    expect(reported.at(-1)).toBe(preloadTile.mock.calls.length)
+    expect(useExportStore.getState().phase).toBe('done')
+    expect(useExportStore.getState().timings.preloadMs).toBeGreaterThanOrEqual(0)
+  })
+
   it('a computer keeps the wall-time retention (the engine is only reset at the end)', async () => {
     const setRetention = vi.fn()
     await exportFilm(destination(), { engine: () => ({ setRetention }) as unknown as TerrainEngine, budget: DESKTOP_BUDGET })
