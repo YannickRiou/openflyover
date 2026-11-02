@@ -69,9 +69,18 @@ export function phoneInterfaceOver(ratio: number): SafeZoneLayout['covered'] {
   return covered
 }
 
+const VERTICAL_FORMATS: readonly VideoAspect[] = ['9:16', '4:5']
+
+/** The areas the vertical feeds cover over a frame of this size: those of 9:16 and 4:5 (to a few pixels), none for any other. */
+export function phoneInterfaceFor(width: number, height: number): SafeZoneLayout['covered'] {
+  const ratio = width / height
+  const vertical = VIDEO_ASPECTS.some((a) => VERTICAL_FORMATS.includes(a.id) && Math.abs(a.x / a.y - ratio) < 0.01)
+  return vertical ? phoneInterfaceOver(ratio) : []
+}
+
 /** Guides of an output format. */
 export function safeZones(aspect: VideoAspect): SafeZoneLayout {
   const format = VIDEO_ASPECTS.find((a) => a.id === aspect) ?? VIDEO_ASPECTS[0]
-  if (format.id === '9:16' || format.id === '4:5') return { guides: [], covered: phoneInterfaceOver(format.x / format.y) }
+  if (VERTICAL_FORMATS.includes(format.id)) return { guides: [], covered: phoneInterfaceOver(format.x / format.y) }
   return { guides: TV_MARGINS.map((m) => ({ label: m.label, box: inset(m.keep) })), covered: [] }
 }

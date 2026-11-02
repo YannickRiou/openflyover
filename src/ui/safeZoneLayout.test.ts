@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { VIDEO_ASPECTS } from '../export/schedule'
-import { phoneInterfaceOver, safeZones } from './safeZoneLayout'
+import { phoneInterfaceFor, phoneInterfaceOver, safeZones } from './safeZoneLayout'
 import type { FrameBox } from './safeZoneLayout'
 
 const insideFrame = (b: FrameBox) =>
@@ -57,5 +57,14 @@ describe('safeZones', () => {
     const buttons = covered.find((c) => c.label === 'Boutons')!.box
     expect(buttons.width).toBeLessThan(safeZones('9:16').covered.find((c) => c.label === 'Boutons')!.box.width)
     for (const { box } of covered) expect(insideFrame(box)).toBe(true)
+  })
+})
+
+describe('phoneInterfaceFor', () => {
+  it('gives the areas of the vertical formats from the size of a frame, to a few pixels, and none for any other format', () => {
+    expect(phoneInterfaceFor(1080, 1920)).toEqual(safeZones('9:16').covered)
+    expect(phoneInterfaceFor(405, 720)).toEqual(safeZones('9:16').covered)
+    expect(phoneInterfaceFor(1080, 1350)).toEqual(safeZones('4:5').covered)
+    for (const [width, height] of [[1920, 1080], [1080, 1080], [2520, 1080], [1080, 1620]]) expect(phoneInterfaceFor(width, height), `${width} x ${height}`).toEqual([])
   })
 })

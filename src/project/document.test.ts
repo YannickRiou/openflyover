@@ -466,7 +466,7 @@ describe('parseProject errors', () => {
     ['not JSON', () => '{', /pas du JSON valide/],
     ['another JSON', () => ({ type: 'FeatureCollection' }), /pas un projet OpenFlyover/],
     ['an array', () => [], /pas un projet OpenFlyover/],
-    ['a future version', (d) => ({ ...d, version: 8 }), /format v8, plus récent .*\(v7\)/],
+    ['a future version', (d) => ({ ...d, version: 9 }), /format v9, plus récent .*\(v8\)/],
     ['a bad version', (d) => ({ ...d, version: '1' }), /version/],
     ['no tracks', (d) => ({ ...d, tracks: undefined }), /liste des traces/],
     ['a track without id', (d) => ({ ...d, tracks: [{ ...(d.tracks as object[])[0], id: '' }] }), /Trace n°1 : identifiant/],
@@ -582,6 +582,36 @@ describe('migrateProject', () => {
     const own = { autoMode: 'rythme', autoStops: false, stops: [{ id: 'stop-1' }] }
     expect(v6(own)).toEqual(own)
     expect(v6({ autoMode: 'temps-forts', autoStops: true, stops: [] })).toMatchObject({ autoStops: true })
+  })
+
+  it('v8: a free position in pixels becomes a share of the safe area of the project\'s film, in every widget and logo', () => {
+    const at = { x: 172.8, y: -97.2 }
+    const placed = (anchor: string) => ({ enabled: true, anchor, size: 1, offset: at })
+    const overlay = {
+      title: placed('center'), end: placed('center'), counters: placed('top-left'), profile: placed('top-right'), text: placed('bottom-left'),
+      weather: placed('top-left'), minimap: placed('bottom-right'), leaderboard: placed('middle-right'),
+      logos: [placed('bottom-right'), { enabled: true, anchor: 'top-left', size: 1 }],
+    }
+    const v7 = (video: object, o: object = overlay) => (migrateProject({ version: 7, settings: { video, overlay: o } }) as { settings: { overlay: Record<string, { free?: unknown; offset?: unknown }> & { logos: { free?: unknown; offset?: unknown }[] } } }).settings.overlay
+    // 1920 x 1080: the safe area is 1728 x 972
+    const wide = v7({ aspect: '16:9', resolution: '1080p' })
+    for (const key of ['title', 'end', 'counters', 'profile', 'text', 'weather', 'minimap', 'leaderboard'] as const) {
+      expect(wide[key].free, key).toEqual({ x: expect.closeTo(0.1, 12), y: expect.closeTo(-0.1, 12) })
+      expect(wide[key]).not.toHaveProperty('offset')
+    }
+    expect(wide.logos[0].free).toEqual({ x: expect.closeTo(0.1, 12), y: expect.closeTo(-0.1, 12) })
+    // a logo without a free position has none
+    expect(wide.logos[1]).toEqual({ enabled: true, anchor: 'top-left', size: 1 })
+    // the format and the resolution of the project give the pixels the offset was in
+    expect((v7({ aspect: '9:16', resolution: '1080p' }).counters.free as { x: number }).x).toBeCloseTo(172.8 / (1080 * 0.9), 12)
+    expect((v7({ aspect: '16:9', resolution: '4k' }).counters.free as { x: number }).x).toBeCloseTo(172.8 / (3840 * 0.9), 12)
+    // no usable format: the default one; an offset beyond the film is kept at the frame's edge; what is not a number is left to the shape check
+    expect((v7({}).counters.free as { x: number }).x).toBeCloseTo(0.1, 12)
+    expect(v7({ aspect: '16:9', resolution: '1080p' }, { counters: { offset: { x: 1e6, y: -1e6 } } }).counters.free).toEqual({ x: 1, y: -1 })
+    expect(v7({}, { counters: { offset: { x: '1', y: 2 } } }).counters.free).toEqual({ x: '1', y: 2 / 972 })
+    // a project without overlay, or already with shares, is left as it is
+    expect(migrateProject({ version: 7, settings: {} }).settings).toEqual({})
+    expect(v7({}, { counters: { free: { x: 0.3, y: 0.2 } } }).counters).toEqual({ free: { x: 0.3, y: 0.2 } })
   })
 
   it('v4: a stage card keeps only what it changed, so it follows the common card', () => {

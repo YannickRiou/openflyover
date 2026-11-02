@@ -20,7 +20,9 @@ import {
   filmTextOpacity,
   formatElapsed,
   kenBurnsCrop,
+  FIT_SCALE_MIN,
   KEN_BURNS_ZOOM,
+  fitWidgets,
   layoutWidgets,
   overlayTime,
   overlayTimedState,
@@ -34,7 +36,10 @@ import type { OverlayStyleId } from './settings'
 import type { DayCard, OverlayContext2D, OverlayExtras, StageCard } from './draw'
 import { MEDIA_DEFAULTS, STAGE_CARD_FIELDS } from '../film/model'
 import type { FilmMedia, FilmText } from '../film/model'
-import { DEFAULT_LOGO, DEFAULT_OVERLAY, OVERLAY_ANCHORS, OVERLAY_STYLES, STYLE_LAYOUTS, TEXT_BACKINGS, withStyleLayout } from './settings'
+import { DEFAULT_LOGO, DEFAULT_OVERLAY, OFFSET_MAX, OVERLAY_ANCHORS, OVERLAY_STYLES, STYLE_LAYOUTS, TEXT_BACKINGS, inStyleSlot, withStyleLayout, withWidgetOffset } from './settings'
+import type { Rect } from './structures'
+import { migrateProject, sanitizeSettings } from '../project/document'
+import { phoneInterfaceFor } from '../ui/safeZoneLayout'
 
 /** The overlay of a new film with its opening title and closing card switched on (they are off by default). */
 const TITLED = { ...DEFAULT_OVERLAY, title: { ...DEFAULT_OVERLAY.title, enabled: true }, end: { ...DEFAULT_OVERLAY.end, enabled: true } }
@@ -495,23 +500,245 @@ describe('drawOverlay', () => {
     expect(drawn([logo, logo], [image])).toHaveLength(1)
   })
 
-  it('draws the logo at its opacity, at its free position scaled from the exported film', () => {
+  it('draws the logo at its opacity, at its free position as a share of the safe area', () => {
     const image = { image: {} as CanvasImageSource, width: 400, height: 100 }
     const logo = { ...DEFAULT_LOGO, enabled: true, image: 'data:image/png;base64,AAAA', anchor: 'top-left' as const }
-    const drawn = (patch: Partial<OverlaySettings['logos'][number]>, extras: OverlayExtras = {}) => {
+    const drawn = (patch: Partial<OverlaySettings['logos'][number]>, size = SIZE) => {
       const { ctx, images } = fakeContext()
-      drawOverlay(ctx, overlayFrameAt(track, 0.5), enabled({ logos: [{ ...logo, ...patch }] }), SIZE, { logos: [image] }, extras)
+      // alone on the film: nothing for the layout pass to keep it clear of
+      const alone = { ...enabled({ logos: [{ ...logo, ...patch }] }), counters: { ...TITLED.counters, enabled: false }, profile: { ...TITLED.profile, enabled: false }, minimap: { ...TITLED.minimap, enabled: false } }
+      drawOverlay(ctx, overlayFrameAt(track, 0.5), alone, size, { logos: [image] })
       return images[0]
     }
     expect(drawn({}).alpha).toBe(1)
     expect(drawn({ opacity: 0.4 }).alpha).toBeCloseTo(0.4)
     expect(drawn({ opacity: 0 })).toBeUndefined()
-    const left = SIZE.width * SAFE_MARGIN
-    const top = SIZE.height * SAFE_MARGIN
-    // at the corner of the counters, out of their stack
-    expect(drawn({ offset: { x: 100, y: 40 } }).args.slice(0, 2)).toEqual([left + 100, top + 40])
-    // measured in pixels of a 4K film: half as far on this 1080p frame
-    expect(drawn({ offset: { x: 100, y: 40 } }, { exportSize: { width: 3840, height: 2160 } }).args.slice(0, 2)).toEqual([left + 50, top + 20])
+    // at 10 % and 5 % of the safe area from its corner, out of the counters' stack
+    const at = (size: { width: number; height: number }) => [
+      size.width * SAFE_MARGIN + 0.1 * size.width * (1 - 2 * SAFE_MARGIN),
+      size.height * SAFE_MARGIN + 0.05 * size.height * (1 - 2 * SAFE_MARGIN),
+    ]
+    const free = { free: { x: 0.1, y: 0.05 } }
+    expect(drawn(free).args.slice(0, 2)).toEqual(at(SIZE))
+    // the same place in another format of the film, not the same pixels
+    const tall = { width: 1080, height: 1620 }
+    expect(drawn(free, tall).args.slice(0, 2)).toEqual(at(tall))
+  })
+})
+
+describe('fitWidgets', () => {
+  const size = { width: 1000, height: 500 }
+  const area = { x: 50, y: 25, w: 900, h: 450 }
+  const fit = (items: Parameters<typeof fitWidgets>[0], avoid: Parameters<typeof fitWidgets>[4] = []) => fitWidgets(items, size, 10, area, avoid)
+
+  it('leaves widgets that overlap nothing and stay inside where layoutWidgets puts them, at scale 1', () => {
+    const items = [
+      { anchor: 'top-left' as const, width: 100, height: 50 },
+      { anchor: 'top-left' as const, width: 80, height: 30 },
+      { anchor: 'top-right' as const, width: 100, height: 50 },
+      { anchor: 'bottom-right' as const, width: 100, height: 50 },
+      { anchor: 'center' as const, width: 200, height: 100, offset: { x: -40, y: 10 } },
+    ]
+    expect(fit(items)).toEqual(layoutWidgets(items, size, 10, area).map((at) => ({ ...at, scale: 1 })))
+  })
+
+  it('pushes a widget along the edge of its anchor: down from the top, up from the bottom', () => {
+    const wide = (anchor: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right') => ({ anchor, width: 600, height: 50 })
+    expect(fit([wide('top-left'), wide('top-right')])).toEqual([
+      { x: 50, y: 25, scale: 1 },
+      { x: 350, y: 85, scale: 1 },
+    ])
+    expect(fit([wide('bottom-left'), wide('bottom-right')])).toEqual([
+      { x: 50, y: 425, scale: 1 },
+      { x: 350, y: 365, scale: 1 },
+    ])
+  })
+
+  it('pulls a free position back inside the area', () => {
+    const far = { anchor: 'top-left' as const, width: 100, height: 50, offset: { x: 5000, y: -300 } }
+    expect(fit([far])).toEqual([{ x: 850, y: 25, scale: 1 }])
+  })
+
+  it('keeps clear of the boxes to avoid, by the shorter of a move along the edge and a move sideways', () => {
+    const corner = { anchor: 'bottom-right' as const, width: 100, height: 50 }
+    // a narrow column over the corner: beside it, not far above
+    expect(fit([corner], [{ x: 900, y: 300, w: 50, h: 175 }])).toEqual([{ x: 790, y: 425, scale: 1 }])
+    // a wide, low block: above it
+    expect(fit([corner], [{ x: 400, y: 400, w: 550, h: 75 }])).toEqual([{ x: 850, y: 340, scale: 1 }])
+    // a column the whole height of the area: no room above, so to its left
+    expect(fit([corner], [{ x: 900, y: 25, w: 50, h: 450 }])).toEqual([{ x: 790, y: 425, scale: 1 }])
+  })
+
+  it('scales a widget down towards its corner when there is no room left, and one wider than the area as far as it needs', () => {
+    const [top, bottom] = fit([
+      { anchor: 'top-center' as const, width: 200, height: 200 },
+      { anchor: 'bottom-center' as const, width: 200, height: 300 },
+    ])
+    expect(top).toEqual({ x: 400, y: 25, scale: 1 })
+    expect(bottom.scale).toBeCloseTo(0.81, 9)
+    expect(bottom.y + 300 * bottom.scale).toBeCloseTo(475, 9)
+    expect(bottom.y).toBeGreaterThanOrEqual(225)
+    const [tall] = fit([{ anchor: 'top-left' as const, width: 100, height: 1000 }])
+    expect(tall.scale).toBeCloseTo(0.45, 9)
+  })
+
+  it('stops at the smallest scale and leaves the overlap when nothing else is left', () => {
+    const [, second] = fit([
+      { anchor: 'top-center' as const, width: 100, height: 300 },
+      { anchor: 'bottom-center' as const, width: 100, height: 300 },
+    ])
+    expect(second.scale).toBe(FIT_SCALE_MIN)
+  })
+})
+
+describe('layout of the overlay for each format', () => {
+  const image = { image: {} as CanvasImageSource, width: 400, height: 100 }
+  // counters top-left, profile top-right, mini-map bottom-right and a logo, as a 16:9 project has them
+  const project: OverlaySettings = {
+    ...enabled(),
+    title: { ...TITLED.title, enabled: false },
+    end: { ...TITLED.end, enabled: false },
+    minimap: { ...TITLED.minimap, enabled: true },
+    logos: [{ ...DEFAULT_LOGO, enabled: true, image: 'data:image/png;base64,AAAA' }],
+  }
+  const anchors = { counters: 'top-left', profile: 'top-right', minimap: 'bottom-right', logo0: 'bottom-right' } as const
+  const FORMATS = { '16:9': { width: 1920, height: 1080 }, '9:16': { width: 1080, height: 1920 }, '1:1': { width: 1080, height: 1080 }, '4:5': { width: 1080, height: 1350 } }
+  const layout = (settings: OverlaySettings, size: { width: number; height: number }, progress = 0.5) =>
+    drawOverlay(fakeContext().ctx, overlayFrameAt(track, progress), settings, size, { logos: [image] })
+  const overlap = (a: Rect, b: Rect) => a.x < b.x + b.w - 0.01 && a.x + a.w > b.x + 0.01 && a.y < b.y + b.h - 0.01 && a.y + a.h > b.y + 0.01
+
+  it.each(Object.entries(FORMATS))('%s: nothing overlaps, nothing is cut', (_, size) => {
+    const boxes = layout(project, size)
+    expect(boxes.map((b) => b.id)).toEqual(['counters', 'profile', 'minimap', 'logo0'])
+    for (const [i, a] of boxes.entries()) {
+      expect(a.x).toBeGreaterThanOrEqual(size.width * SAFE_MARGIN - 0.01)
+      expect(a.y).toBeGreaterThanOrEqual(size.height * SAFE_MARGIN - 0.01)
+      expect(a.x + a.w).toBeLessThanOrEqual(size.width * (1 - SAFE_MARGIN) + 0.01)
+      expect(a.y + a.h).toBeLessThanOrEqual(size.height * (1 - SAFE_MARGIN) + 0.01)
+      for (const b of boxes.slice(i + 1)) expect(overlap(a, b), `${a.id} / ${b.id}`).toBe(false)
+    }
+  })
+
+  it('16:9: every widget is where the stacks of its anchors put it, as before the layout pass', () => {
+    const size = FORMATS['16:9']
+    const boxes = layout(project, size)
+    const legacy = layoutWidgets(
+      boxes.map((b) => ({ anchor: anchors[b.id as keyof typeof anchors], width: b.w, height: b.h })),
+      size,
+      2 * (size.height / 100),
+    )
+    boxes.forEach((b, i) => {
+      expect(b.x).toBeCloseTo(legacy[i].x, 6)
+      expect(b.y).toBeCloseTo(legacy[i].y, 6)
+    })
+  })
+
+  it.each(['9:16', '4:5'] as const)('%s: nothing sits under the buttons, the caption or the top bar of the platforms', (format) => {
+    const size = FORMATS[format]
+    const zones = phoneInterfaceFor(size.width, size.height).map(({ box }) => ({ x: box.left * size.width, y: box.top * size.height, w: box.width * size.width, h: box.height * size.height }))
+    expect(zones.length).toBeGreaterThan(0)
+    for (const b of layout(project, size)) for (const zone of zones) expect(overlap(b, zone), `${format} ${b.id}`).toBe(false)
+  })
+
+  it('keeps a free position at the same relative place in every format, and inside the frame', () => {
+    const moved = withWidgetOffset(project, 'profile', { x: 0.2, y: 0.5 })
+    const share = (id: string, size: { width: number; height: number }) => {
+      const b = layout(moved, size).find((box) => box.id === id)!
+      return { x: (size.width * (1 - SAFE_MARGIN) - (b.x + b.w)) / (size.width * 0.9), y: (b.y - size.height * SAFE_MARGIN) / (size.height * 0.9) }
+    }
+    expect(share('profile', FORMATS['16:9'])).toEqual({ x: expect.closeTo(0.2, 6), y: expect.closeTo(0.5, 6) })
+    expect(share('profile', FORMATS['1:1'])).toEqual({ x: expect.closeTo(0.2, 6), y: expect.closeTo(0.5, 6) })
+    // the farthest free position stays inside a narrow film
+    const off = withWidgetOffset(project, 'profile', { x: OFFSET_MAX, y: OFFSET_MAX })
+    const [profile] = layout(off, FORMATS['9:16']).filter((b) => b.id === 'profile')
+    expect(profile.x + profile.w).toBeLessThanOrEqual(1080 * (1 - SAFE_MARGIN) + 0.01)
+    expect(profile.y + profile.h).toBeLessThanOrEqual(1920 * (1 - SAFE_MARGIN) + 0.01)
+  })
+
+  it('does not move a widget when another fades in or out: the pass works on every widget of the film', () => {
+    const titled: OverlaySettings = { ...project, title: { ...project.title, enabled: true }, end: { ...project.end, enabled: true } }
+    for (const size of Object.values(FORMATS)) {
+      const live = layout(titled, size, 0.5)
+      // under the opening and the closing card the counters, profile and mini-map are hidden: the logo stays
+      for (const progress of [0.02, 0.97]) {
+        const cards = layout(titled, size, progress)
+        expect(cards.map((b) => b.id)).toContain('logo0')
+        expect(cards.find((b) => b.id === 'logo0')).toEqual(live.find((b) => b.id === 'logo0'))
+      }
+    }
+  })
+
+  it('leaves the slots of a style with a structure of its own to the style, and adapts the other widgets around it', () => {
+    for (const style of ['cinema', 'journal', 'tableau'] as const) {
+      const styled = withStyleLayout(project, style)
+      for (const size of [FORMATS['16:9'], FORMATS['9:16']]) {
+        const ids = layout(styled, size).map((b) => b.id)
+        for (const key of ['counters', 'profile', 'minimap'] as const) expect(ids.includes(key), `${style} ${key}`).toBe(!inStyleSlot(styled, key))
+        expect(ids).toContain('logo0')
+      }
+    }
+  })
+
+  it('keeps the opening card clear of the text and the logos that stay over it', () => {
+    const titled: OverlaySettings = {
+      ...project,
+      title: { ...project.title, enabled: true, anchor: 'bottom-right' },
+      text: { ...project.text, enabled: true, anchor: 'bottom-right', text: 'Merci' },
+    }
+    for (const size of Object.values(FORMATS)) {
+      const boxes = layout(titled, size, 0.02)
+      const card = boxes.find((b) => b.id === 'title')!
+      for (const stays of boxes.filter((b) => b.id === 'text' || b.id === 'logo0')) expect(overlap(card, stays), stays.id).toBe(false)
+    }
+  })
+
+  it('works out the layout once per frame size, not at every frame', () => {
+    let reads = 0
+    const counted = { ...project, counters: new Proxy(project.counters, { get: (target, key, receiver) => (key === 'fields' && reads++, Reflect.get(target, key, receiver)) }) }
+    const frames = [0.3, 0.4, 0.5, 0.6]
+    const cost = (progress: number, size = FORMATS['9:16']) => {
+      const before = reads
+      layout(counted, size, progress)
+      return reads - before
+    }
+    const first = cost(frames[0])
+    // the counters on screen are built at every frame; the first one builds them a second time for the pass
+    expect(first).toBe(2 * cost(frames[1]))
+    expect(cost(frames[2])).toBe(first / 2)
+    // another size is another pass, the first one is kept
+    expect(cost(0.5, FORMATS['16:9'])).toBe(first)
+    expect(cost(frames[3])).toBe(first / 2)
+  })
+})
+
+// the vertical formats are left out: their widgets also move off the platforms' interface
+describe('free positions of a project saved in pixels', () => {
+  const image = { image: {} as CanvasImageSource, width: 400, height: 100 }
+  const alone = (logo: object): Record<string, unknown> => ({
+    ...DEFAULT_OVERLAY,
+    enabled: true,
+    counters: { ...DEFAULT_OVERLAY.counters, enabled: false },
+    profile: { ...DEFAULT_OVERLAY.profile, enabled: false },
+    logos: [{ ...DEFAULT_LOGO, enabled: true, image: 'data:image/png;base64,AAAA', ...logo }],
+  })
+
+  it.each([
+    ['16:9', '1080p', 1920, 1080],
+    ['21:9', '1080p', 2520, 1080],
+    ['16:9', '4k', 3840, 2160],
+    ['1:1', '720p', 720, 720],
+  ])('%s %s: in the format it was made in, a widget stays on the same pixels', (aspect, resolution, width, height) => {
+    for (const anchor of ['top-left', 'bottom-right'] as const) {
+      const old = { version: 7, settings: { video: { aspect, resolution }, overlay: alone({ anchor, offset: { x: 137, y: 42 } }) } }
+      const { settings } = sanitizeSettings((migrateProject(old) as { settings: unknown }).settings)
+      expect(settings.overlay.logos[0].free).toBeDefined()
+      const { ctx, images } = fakeContext()
+      drawOverlay(ctx, overlayFrameAt(track, 0.5), settings.overlay, { width, height }, { logos: [image] })
+      const [x, y, w, h] = images[0].args
+      // what the film drew before: the offset in pixels from the corner of the safe area at the anchor, inwards
+      expect(x).toBeCloseTo(anchor === 'top-left' ? width * SAFE_MARGIN + 137 : width * (1 - SAFE_MARGIN) - w - 137, 6)
+      expect(y).toBeCloseTo(anchor === 'top-left' ? height * SAFE_MARGIN + 42 : height * (1 - SAFE_MARGIN) - h - 42, 6)
+    }
   })
 })
 
@@ -884,12 +1111,38 @@ describe('source credits', () => {
       const px = Number(/(\d+(?:\.\d+)?)px/.exec(texts[0]?.font ?? '')?.[1])
       return { lines: texts.length, turned: calls.includes('rotate(1)'), px }
     }
-    expect(at({ width: 1080, height: 1920 })).toEqual({ lines: 1, turned: true, px: expect.any(Number) })
+    // a tall frame that is no format of the vertical feeds
+    expect(at({ width: 1080, height: 1840 })).toEqual({ lines: 1, turned: true, px: expect.any(Number) })
     expect(at({ width: 1920, height: 1080 })).toMatchObject({ lines: 1, turned: false })
     // half as large again as across the bottom of a frame of the same short side
-    expect(at({ width: 1080, height: 1920 }).px).toBeCloseTo(1.5 * at({ width: 1920, height: 1080 }).px, 6)
+    expect(at({ width: 1080, height: 1840 }).px).toBeCloseTo(1.5 * at({ width: 1920, height: 1080 }).px, 6)
     expect(at({ width: 1080, height: 1350 }).turned).toBe(false)
     expect(at({ width: 1080, height: 1350 }).lines).toBeGreaterThan(1)
+  })
+
+  it('leave the interface of the vertical feeds free: the left edge of a 9:16 frame, the top edge of a 4:5 one', () => {
+    // at the bottom right by default; in a tall frame the text is turned a quarter, its y is then the distance from the edge
+    const first = (size: { width: number; height: number }, extras: OverlayExtras = { credits, shortCredits: short }) => {
+      const { ctx, texts } = fakeContext()
+      drawOverlay(ctx, overlayFrameAt(track, 0.5), TITLED, size, {}, extras)
+      return texts[0]
+    }
+    expect(first({ width: 1080, height: 1840 }).y).toBeGreaterThan(540)
+    expect(first({ width: 1080, height: 1920 }).y).toBeLessThan(540)
+    expect(first({ width: 1080, height: 1080 }).y).toBeGreaterThan(540)
+    expect(first({ width: 1080, height: 1350 }).y).toBeLessThan(675)
+  })
+
+  it('stand above the caption of a vertical feed at the end of the film', () => {
+    const lowest = (size: { width: number; height: number }) => {
+      const { ctx, texts } = fakeContext()
+      drawOverlay(ctx, overlayFrameAt(track, 1), DEFAULT_OVERLAY, size, {}, { credits, shortCredits: short, time: progressTime(1) })
+      return Math.max(...texts.map((t) => t.y))
+    }
+    expect(lowest({ width: 1080, height: 1920 })).toBeLessThan(1480)
+    expect(lowest({ width: 1080, height: 1350 })).toBeLessThan(1195)
+    // elsewhere along the bottom edge
+    expect(lowest({ width: 1920, height: 1080 })).toBeGreaterThan(1000)
   })
 
   it('give the whole sentence in the corner with the full mode', () => {
@@ -955,7 +1208,7 @@ describe('source credits', () => {
   })
 
   it('lift the sources above a closing card anchored at the bottom of a tall frame', () => {
-    const tall = { width: 1080, height: 1920 }
+    const tall = { width: 1080, height: 1620 }
     const settings = { ...TITLED, end: { ...TITLED.end, anchor: 'bottom-center' as const } }
     const { ctx, texts } = fakeContext()
     // five sentences: the block is taller than the margin under the safe area, so it would cover the card

@@ -3,7 +3,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { LOGOS_MAX, OFFSET_MAX_PX, withWidgetOffset } from '../overlay/settings'
+import { LOGOS_MAX, OFFSET_MAX, withWidgetOffset } from '../overlay/settings'
 import { getSettingsHistory } from '../project/history'
 import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { OverlayPanel, WidgetPosition } from './OverlayPanel'
@@ -14,15 +14,15 @@ beforeAll(() => {
 
 let root: Root | null = null
 
-/** « Position libre » of the logo at (10, 20); the first number field is x. */
+/** « Position libre » of the logo at (10 %, 20 %); the first number field is x. */
 async function mount() {
-  const overlay = withWidgetOffset(DEFAULT_SETTINGS.overlay, 'logo', { x: 10, y: 20 })
+  const overlay = withWidgetOffset(DEFAULT_SETTINGS.overlay, 'logo', { x: 0.1, y: 0.2 })
   useAppStore.setState({ settings: { ...DEFAULT_SETTINGS, overlay } })
   const host = document.body.appendChild(document.createElement('div'))
   root = createRoot(host)
   await act(async () => root!.render(<WidgetPosition widget="logo" />))
   const x = host.querySelector<HTMLInputElement>('input[aria-roledescription="Number field"]')!
-  const offsetX = () => useAppStore.getState().settings.overlay.logos[0].offset?.x
+  const offsetX = () => Math.round(100 * useAppStore.getState().settings.overlay.logos[0].free!.x)
   return { x, offsetX }
 }
 
@@ -38,14 +38,14 @@ const blur = (input: HTMLInputElement) => act(async () => input.blur())
 const key = (input: HTMLInputElement, k: string) =>
   act(async () => void input.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })))
 
-describe('WidgetPosition: free position typed in pixels', () => {
+describe('WidgetPosition: free position typed in percent', () => {
   afterEach(async () => {
     await act(async () => root?.unmount())
     root = null
     document.body.innerHTML = ''
   })
 
-  it('shows the stored offsets', async () => {
+  it('shows the stored free position', async () => {
     const { x } = await mount()
     expect(x.value).toBe('10')
   })
@@ -81,8 +81,8 @@ describe('WidgetPosition: free position typed in pixels', () => {
     await type(x, '99999')
     expect(offsetX()).toBe(10) // not applied while typing
     await blur(x)
-    expect(offsetX()).toBe(OFFSET_MAX_PX)
-    expect(x.value).toBe(String(OFFSET_MAX_PX))
+    expect(offsetX()).toBe(100 * OFFSET_MAX)
+    expect(x.value).toBe(String(100 * OFFSET_MAX))
   })
 
   it('puts the stored value back when the field is left empty', async () => {
@@ -116,7 +116,7 @@ describe('WidgetPosition: free position typed in pixels', () => {
   it('follows a change made elsewhere while the field is not focused', async () => {
     const { x } = await mount()
     await act(async () =>
-      useAppStore.setState((s) => ({ settings: { ...s.settings, overlay: withWidgetOffset(s.settings.overlay, 'logo', { x: 77, y: 20 }) } })),
+      useAppStore.setState((s) => ({ settings: { ...s.settings, overlay: withWidgetOffset(s.settings.overlay, 'logo', { x: 0.77, y: 0.2 }) } })),
     )
     expect(x.value).toBe('77')
   })
@@ -129,9 +129,9 @@ describe('WidgetPosition: free position typed in pixels', () => {
     await type(x, '')
     await type(x, '1')
     await type(x, '12')
-    await type(x, '123')
+    await type(x, '45')
     await blur(x)
-    expect(offsetX()).toBe(123)
+    expect(offsetX()).toBe(45)
     history.undo()
     expect(offsetX()).toBe(10)
     expect(history.getState().canUndo).toBe(false)

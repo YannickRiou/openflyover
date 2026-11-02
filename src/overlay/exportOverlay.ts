@@ -13,7 +13,6 @@ import { junctionsDipAt } from '../film/junctions'
 import { clipTimeS, transitionDipAt } from '../film/model'
 import type { FilmMedia, TransitionDip } from '../film/model'
 import type { DrawOverlay } from '../export/capture'
-import { videoSize } from '../export/schedule'
 import { getMediaBitmaps, mediaToLoad, useMediaStore } from '../film/media'
 import { createExportVideos } from '../film/video'
 import type { ExportVideos } from '../film/video'
@@ -116,8 +115,7 @@ export function currentCreditSources(): CreditSources {
  * What the overlay draws beyond the track at film time `time` and `progress`, from the stores: the texts and photos
  * of the timeline, the credits of the sources in use (as the status bar: relief, imagery, weather and OpenStreetMap
  * once loaded), the ghost-race leaderboard, the legend of the track colouring, the dip of a shot transition, « À la suite » the card of each stage and the
- * dip of each junction (from the film clock: `time.junctions`), and the size of the film chosen for the project (the free offsets of the widgets are its pixels, whatever
- * the device caps it to).
+ * dip of each junction (from the film clock: `time.junctions`).
  */
 export function overlayExtras(time: OverlayTime, progress: number): OverlayExtras {
   const { settings, tracks } = useAppStore.getState()
@@ -139,7 +137,6 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
     dip: strongerDip(transitionDipAt(settings.film, time), sequence && time.junctions ? junctionsDipAt(time.junctions, time.timeS) : null),
     stage: sequence ? stageCardAt(sequence, time, settings.film, (k) => stageWeatherOf(sequence, k, tracks[0]?.id)) : null,
     day: !sequence && settings.film.dayCards?.enabled && time.dayCardsS ? dayCardAt(dayFiguresOf(filmTrackOf(tracks, settings.race) ?? tracks[0], useWeatherStore.getState().series), time, settings.film.dayCards) : null,
-    exportSize: videoSize(settings.video.aspect, settings.video.resolution, Number.POSITIVE_INFINITY),
     markerColor: leadMarkerColors(settings.marker, (trackUnderMarker(tracks, settings.race, progress)?.track ?? filmTrackOf(tracks, settings.race))?.color ?? '#FFFFFF').ball,
     credits: overlayCredits(sources),
     shortCredits: overlayShortCredits(sources),
