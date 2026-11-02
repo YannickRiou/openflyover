@@ -13,7 +13,8 @@ import { buildTrack } from '../import/stats'
 import { useAppStore } from '../state/store'
 import { runExport } from './ExportController'
 import { NO_ENCODING_KEY } from './diagnostic'
-import { renderSettledFrame } from './capture'
+import { composeFrame, renderSettledFrame } from './capture'
+import { overlayExtras, sceneHiddenAt } from '../overlay/exportOverlay'
 import type { RenderFrameDeps } from './capture'
 import { readBreadcrumbs } from './guard'
 import { createExportEncoder } from './nativeEncoder'
@@ -37,6 +38,7 @@ vi.mock('../overlay/exportOverlay', () => ({
   loadFrameMedia: vi.fn(async () => undefined),
   releaseFrameMedia: vi.fn(),
   overlayExtras: vi.fn(() => ({})),
+  sceneHiddenAt: vi.fn(() => false),
 }))
 vi.mock('./capture', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./capture')>()),
@@ -48,7 +50,7 @@ vi.stubGlobal(
   'OffscreenCanvas',
   class {
     getContext() {
-      return {}
+      return { createLinearGradient: () => ({ addColorStop: () => undefined }), fillRect: () => undefined, drawImage: () => undefined }
     }
   },
 )
@@ -209,6 +211,37 @@ describe('runExport', () => {
     // the first frame, then at most every 250 ms, and the last one (twice: the end of the loop and of the export)
     expect(reportFrame.mock.calls.length).toBeLessThan(frameCount)
     expect(reportFrame.mock.calls.at(-1)?.[0]).toBe(frameCount)
+  })
+
+  it('renders no view under a full-screen photo: the frame is composed all the same, the next view rendered again', async () => {
+    const overlay = () => vi.fn()
+    await exportFilm(destination(), { overlay })
+    const all = vi.mocked(renderSettledFrame).mock.calls.length
+    vi.clearAllMocks()
+    // the photo covers the film from 0.5 s to 1.5 s
+    vi.mocked(sceneHiddenAt).mockImplementation((timeS) => timeS >= 0.5 && timeS < 1.5)
+    const { frameCount } = await exportFilm(destination(), { overlay })
+    vi.mocked(sceneHiddenAt).mockImplementation(() => false)
+    expect(vi.mocked(renderSettledFrame).mock.calls.length).toBeLessThan(all - 5)
+    expect(session.addFrame).toHaveBeenCalledTimes(frameCount)
+    // only the views that were rendered wait for the GPU
+    expect(readPixels).toHaveBeenCalledTimes(useExportStore.getState().timings.rendered)
+  })
+
+  it('a held view whose overlay alone changes is rendered once, then composed again over its copy', async () => {
+    const overlay = () => vi.fn()
+    await exportFilm(destination(), { overlay })
+    const renders = vi.mocked(renderSettledFrame).mock.calls.length
+    const composes = vi.mocked(composeFrame).mock.calls.length
+    vi.clearAllMocks()
+    // the overlay changes at every frame (a dip that flickers), held frames included
+    let n = 0
+    vi.mocked(overlayExtras).mockImplementation(() => ({ dip: { alpha: n++ % 2 ? 0.3 : 0.6, color: '#000' } }) as never)
+    const { frameCount } = await exportFilm(destination(), { overlay })
+    vi.mocked(overlayExtras).mockImplementation(() => ({}))
+    expect(vi.mocked(composeFrame).mock.calls.length).toBe(frameCount)
+    expect(vi.mocked(composeFrame).mock.calls.length).toBeGreaterThan(composes)
+    expect(vi.mocked(renderSettledFrame).mock.calls.length).toBe(renders)
   })
 
   it('measures the ways to hand the frames to a WebCodecs encoder on the first ones, then keeps the fastest', async () => {
