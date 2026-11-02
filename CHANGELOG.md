@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **The overlay draws faster in the export**: the fixed parts of the elevation profile and of the mini-map are drawn once and reused at every image (about a quarter less time for the whole overlay on a 1080p frame).
 - **Versions of a project**: in Projet › Versions, « Enregistrer une version » keeps the project as it is now under a name (the date by default), photos and clips included. « Revenir à cette version » brings it back; the project as it was is kept as a version first, so going back can itself be undone. Versions are kept with the project in « Mes projets » and deleted with it.
 
 ## 4.8.0 (November 2026)

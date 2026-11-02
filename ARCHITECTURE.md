@@ -2638,6 +2638,14 @@ exports) gets it from the terrain source of the settings.
   projection, x east / y south, longest side = 1, proportions kept, at most 1,500 points). `overlayFrameAt(data, progress)` is
   a pure function of progress (including `mapPoint`, the marker position on the mini-map, and `clockMs`, the recorded
   time of day under the marker).
+- **Fixed parts kept as pictures** (`cachedLayer` in `draw.ts`): the profile's area, played area and ridge line and the
+  mini-map's whole route do not change from frame to frame; on a context without transform (the export's compositor)
+  each is drawn once into an `OffscreenCanvas` starting on the whole pixel at or before its box (so its pixels land where
+  a direct draw puts them; the anti-aliased edges may differ by 1 / 255 after compositing), kept per profile or outline
+  object (`WeakMap`) while its geometry and colours hold, and copied at each frame (the played area clipped up to the
+  marker). The covered part of the route, the dots and the marker are drawn at each frame. The preview (scaled to the
+  screen) and the tests draw as before. Measured in headless Chromium on a processor canvas (the ffmpeg encoder's case),
+  1080p: profile 1.9 → 1.1 ms, mini-map 1.6 → 1.0 ms, full overlay 4.3 → 3.1 ms per frame.
 - **Counters** (`COUNTER_IDS`): distance, altitude, D+, slope, elapsed time, time of day (`clock`), speed, pace (min/km
   from the speed, « – » below `PACE_MIN_KMH`), heart rate, power, temperature; each is left out when the track does not
   record it, and greyed out in the panel. The five added in 3.3 (`slope`, `clock`, `pace`, `power`, `temperature`) are

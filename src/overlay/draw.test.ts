@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import sampleGpx from '../import/__fixtures__/tour-du-mont-blanc-j1.gpx?raw'
 import { parseGpx } from '../import/gpx'
 import { trackLegend } from '../flyover/trackColor'
@@ -249,6 +249,39 @@ describe('film time', () => {
   it('narrows the texts sharing a row with another anchor', () => {
     expect(filmTextMaxWidths(['top-left', 'bottom-left', 'center'], 900, 15)).toEqual([900, 900, 900])
     expect(filmTextMaxWidths(['top-left', 'top-left', 'top-right', 'center'], 900, 15)).toEqual([290, 290, 290, 900])
+  })
+})
+
+describe('fixed parts of the profile and the mini-map', () => {
+  it('in the export (no transform) they are drawn once into pictures, then copied at each frame', () => {
+    const made: ReturnType<typeof fakeContext>[] = []
+    vi.stubGlobal(
+      'OffscreenCanvas',
+      class {
+        getContext() {
+          const layer = fakeContext()
+          made.push(layer)
+          return layer.ctx
+        }
+      },
+    )
+    try {
+      const settings = enabled({ minimap: { ...TITLED.minimap, enabled: true }, profile: { ...TITLED.profile, enabled: true } })
+      const frames = [0.3, 0.6].map((progress) => {
+        const fake = fakeContext()
+        ;(fake.ctx as unknown as Record<string, unknown>).getTransform = () => ({ a: 1, b: 0, isIdentity: true })
+        drawOverlay(fake.ctx, overlayFrameAt(track, progress), settings, SIZE)
+        return fake
+      })
+      // area, played area and ridge of the profile, route of the mini-map: built at the first frame only
+      expect(made).toHaveLength(4)
+      expect(made.every((layer) => layer.points.length > 100)).toBe(true)
+      for (const frame of frames) expect(frame.images.length).toBeGreaterThanOrEqual(4)
+      // the frame itself only traces the part of the route already covered
+      expect(frames[0].points.filter((pt) => pt.op === 'lineTo').length).toBeLessThan(made[3].points.length)
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })
 
