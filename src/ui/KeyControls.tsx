@@ -15,6 +15,7 @@ import { useAppStore } from '../state/store'
 import type { AppState } from '../state/store'
 import { Icon } from './icons'
 import { withShortcut } from './shortcuts'
+import { useModeShows } from './uiMode'
 import { Tip } from './primitives'
 
 /**
@@ -199,6 +200,9 @@ export function PanelKeys({ target }: { target: KeyTarget }) {
   const track = useFilmTrack()
   const keys = keysOf(clock, target)
   const state = useKeyState(clock, keys)
+  // keyframes are for « Expert »; the ones already in the film stay in reach
+  const shown = useModeShows('expert', [target.kind === 'marker' ? 'film.markerKeys' : 'film.paramKeys'])
+  if (!shown) return null
   return (
     <div className="mt-0.5 flex justify-center">
       <KeyButtons target={target} keys={keys} clock={clock} state={state} disabled={!track} tipSide="bottom" look="panel" />

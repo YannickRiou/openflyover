@@ -19,17 +19,19 @@ import { OpenChoiceDialog } from './ui/OpenChoiceDialog'
 import { EmptyState } from './ui/EmptyState'
 import { GradingPanel } from './ui/GradingPanel'
 import { HelpDialog } from './ui/HelpDialog'
+import { ModeQuestion } from './ui/ModeChoice'
 import { Tour } from './ui/Tour'
 import { SettingsSearch } from './ui/SettingsSearch'
-import { revealSection } from './ui/searchSections'
+import { isSectionShown, revealSection } from './ui/searchSections'
 import { Icon } from './ui/icons'
 import type { IconName } from './ui/icons'
 import { LandmarkPanel } from './ui/LandmarkPanel'
 import { LensPanel } from './ui/LensPanel'
 import { installCloseGuard, installLibraryAutosave } from './ui/library'
 import { OverlayPanel } from './ui/OverlayPanel'
-import { PanelSection, TabWeightDot } from './ui/PanelSection'
+import { ModeHint, PanelSection, TabWeightDot } from './ui/PanelSection'
 import { PreferencesPanel } from './ui/PreferencesPanel'
+import { useModeTabs } from './ui/uiMode'
 import { chooseFilesToOpen, openFiles, reopenLastProject, reportOpenFailure, saveProject, saveProjectAs } from './ui/projectActions'
 import { ProjectPanel } from './ui/ProjectPanel'
 import { LightSettings, MapSettings, WeatherSettings } from './ui/SettingsPanel'
@@ -55,6 +57,7 @@ import { Timeline } from './ui/Timeline'
 import { TimelineResizer } from './ui/TimelineResizer'
 import { Toaster } from './ui/Toaster'
 import { t as translate, useT } from './i18n'
+import { setPreferences } from './ui/preferences'
 import { showToast } from './ui/toast'
 import { TopBar } from './ui/TopBar'
 import { TrackList } from './ui/TrackList'
@@ -277,6 +280,8 @@ export default function App() {
     ),
   )
   const tabs = shownTabs(shell)
+  // the rail leaves out the tabs the mode hides (the search still finds their sections)
+  const railTabs = useModeTabs(tabs)
   const [dragging, setDragging] = useState(false)
   // the export drawer is mounted on its first opening, or on the first export (« Capturer cette image »), and kept (export
   // progress, result, batch): it is what saves the file
@@ -350,6 +355,11 @@ export default function App() {
   // no track: only « Projet » in the rail; the first track brings the other tabs back
   useEffect(() => dispatch({ type: 'tracks', loaded: hasTracks }), [hasTracks])
 
+  // the tab open is one the mode now hides: the first tab takes its place
+  useEffect(() => {
+    if (!railTabs.includes(shell.tab) && !shell.collapsed) dispatch({ type: 'select-tab', tab: railTabs[0], narrow: isNarrow() })
+  }, [railTabs, shell.tab, shell.collapsed])
+
   useEffect(() => {
     dockOpen.current = shell.dockOpen
   }, [shell.dockOpen])
@@ -357,7 +367,7 @@ export default function App() {
   // the phone tab bar scrolls: the open tab stays in sight (also when restored at startup)
   useEffect(() => {
     tabList.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-  }, [shell.tab, tabs])
+  }, [shell.tab, railTabs])
 
   useEffect(() => {
     collapsedRef.current = shell.collapsed
@@ -531,31 +541,45 @@ export default function App() {
           <TrackList />
           <TrackStyleSection hidden={!hasTracks} />
           <MarkerSection hidden={!hasTracks} />
+          <ModeHint panel="trace" />
         </>
       ),
       carte: (
         <>
           <MapSettings />
           <LandmarkPanel />
+          <ModeHint panel="carte" />
         </>
       ),
       meteo: (
         <>
-          <PanelSection title={t('shell.section.weather')} keys={['weather']} hidden={!hasTracks}>
+          <PanelSection title={t('shell.section.weather')} keys={['weather']} hidden={!hasTracks} min="confirme">
             <WeatherPanel />
           </PanelSection>
           <WeatherSettings />
+          <ModeHint panel="meteo" />
         </>
       ),
       lumiere: (
         <>
           <LightSettings />
           <GradingPanel />
+          <ModeHint panel="lumiere" />
         </>
       ),
-      survol: <CameraPanel />,
+      survol: (
+        <>
+          <CameraPanel />
+          <ModeHint panel="survol" />
+        </>
+      ),
       objectif: <LensPanel />,
-      habillage: <OverlayPanel />,
+      habillage: (
+        <>
+          <OverlayPanel />
+          <ModeHint panel="habillage" />
+        </>
+      ),
       projet: (
         <>
           <ProjectPanel />
@@ -617,7 +641,7 @@ export default function App() {
           {/* portrait phone: a selected block's actions take the place of the tab bar */}
           <nav className="rail-frame chrome-focus justify-between" data-rail="" aria-label={t('shell.rail.aria')} hidden={(phone && shell.inspecting) || renderWindow}>
             <TabList label={t('shell.rail.tablist')} className={TAB_LIST} ref={railRef}>
-              {tabs.map((tab) => (
+              {railTabs.map((tab) => (
                 <Tab key={tab} id={tab} data-testid={`tab-${tab}`} className="rail-tab" disabled={exporting} tip={TAB_LABELS[tab].label} tipDisabled={phone}>
                   <Icon name={TAB_LABELS[tab].icon} />
                   <span className="rail-label">{TAB_LABELS[tab].label}</span>
@@ -674,13 +698,19 @@ export default function App() {
 
       {!renderWindow && <StatusBar />}
       <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
+      {!renderWindow && <ModeQuestion />}
       {!renderWindow && <Tour />}
       <SettingsSearch
         open={searchOpen}
         tabs={tabs}
         onClose={() => setSearchOpen(false)}
-        onPick={({ tab, title }) => {
+        onPick={({ tab, title, needs }) => {
           setSearchOpen(false)
+          // a section the mode hides: the mode that has it comes on, and says so
+          if (needs && !isSectionShown(title)) {
+            setPreferences({ uiMode: needs })
+            showToast({ kind: 'info', text: t('shell.mode.switched', { mode: t(`shell.mode.${needs}`) }) })
+          }
           dispatch({ type: 'select-tab', tab, narrow: isNarrow() })
           // the tab is drawn (the event is discrete: React has committed it) before the next frame: then the section opens
           requestAnimationFrame(() => revealSection(title))

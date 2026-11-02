@@ -49,7 +49,7 @@ export function NightSettings() {
       : tr('light.nights.hint', { count: shown, pause: formatSecondsShort(nightPauseS(nights)) })
 
   return (
-    <PanelSection title={tr('light.nights.title')}>
+    <PanelSection title={tr('light.nights.title')} min="confirme" paths={['film.nights', 'film.dayCards']}>
       <Switch
         id={`${id}-nights`}
         checked={nights.enabled}

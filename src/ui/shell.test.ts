@@ -301,6 +301,7 @@ describe('parsePreferences', () => {
       language: 'fr',
       whatsNewSeen: '',
       previewQuality: 'auto',
+      uiMode: 'expert',
     })
     // preferences saved before the « Forêts » chip existed show it
     expect(parsePreferences('{"status":{"weather":false,"water":true}}').status).toEqual({ ...DEFAULT_PREFERENCES.status, weather: false })
@@ -313,6 +314,14 @@ describe('parsePreferences', () => {
     expect(parsePreferences('{"timelineFrames":1}').timelineFrames).toBe(false)
     expect(parsePreferences('{"previewQuality":"light"}').previewQuality).toBe('light')
     expect(parsePreferences('{"previewQuality":"ultra"}').previewQuality).toBe('auto')
+  })
+
+  it('reads the mode of the interface; Expert for preferences stored before the modes, or for an unknown one', () => {
+    expect(parsePreferences('{"uiMode":"debutant"}').uiMode).toBe('debutant')
+    expect(parsePreferences('{"uiMode":"confirme"}').uiMode).toBe('confirme')
+    expect(parsePreferences('{"timelineClock":true}').uiMode).toBe('expert')
+    expect(parsePreferences('{"uiMode":"maitre"}').uiMode).toBe('expert')
+    expect(parsePreferences(null).uiMode).toBe('expert')
   })
 
   it('reads the appearance, the defaults for preferences stored before it existed', () => {

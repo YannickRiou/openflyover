@@ -76,7 +76,9 @@ import type { Settings } from '../state/store'
 import { ExportHistory } from './ExportHistory'
 import { RenderQueue } from './RenderQueue'
 import { ModifiedMarker } from './ModifiedMarker'
-import { RangeField, RenderWeight, SettingRow } from './PanelSection'
+import { ModeGate, ModeHint, RangeField, RenderWeight, SettingRow } from './PanelSection'
+import { useModeShows } from './uiMode'
+import type { SettingPath } from '../project/apply'
 import { formatBytes, formatNumber } from './format'
 import { saveExportedFile } from './projectActions'
 import { effectiveProjectName } from './shell'
@@ -155,6 +157,9 @@ const seconds = (s: number) => `${formatNumber(s, s % 1 === 0 ? 0 : 1)} s`
 /** The panel of a mode in the dock: its fields in a column under a sticky header (the dock scrolls). */
 const PANEL = 'flex flex-col gap-3 px-4 pb-4 *:shrink-0'
 /** « Format », « Encodage », « Rendu »: a small caps heading over a hairline, the fields of the group under it. */
+/** What the « Encodage » group sets: shown from « Expert » on, or while one of them is not at its default. */
+const ENCODING_PATHS: SettingPath[] = ['video.manualBitrate', 'video.bitrateMbps', 'video.codec', 'video.nameTemplate', 'video.keyframeIntervalS', 'video.audioKbps', 'video.normalizeLoudness', 'video.loudnessLufs']
+
 const GROUP = 'mt-3 border-t border-edge pt-2 font-body text-hint font-semibold tracking-wider text-text-2 uppercase'
 /** The buttons of the panel, one per line. */
 const ACTIONS = 'flex flex-col gap-2 *:min-w-0'
@@ -403,6 +408,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </div>
         <p className="type-hint">{t('export.panel.platformsHint')}</p>
       </fieldset>
+      <ModeGate min="confirme" paths={['video.aspect', 'video.resolution', 'video.fps']}>
       <fieldset className="field min-w-0" disabled={busy}>
         <legend id={`${id}-proportions`} className="type-label">
           {t('export.panel.proportions')}
@@ -460,6 +466,9 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </RadioGroup>
       </fieldset>
 
+      </ModeGate>
+
+      <ModeGate min="expert" paths={ENCODING_PATHS} also={pngSequence}>
       <h3 className={GROUP}>{t('export.panel.encodingGroup')}</h3>
       {pngSequence && <p className="type-hint">{t('export.panel.sequenceNoEncoding')}</p>}
       <fieldset className="field min-w-0" disabled={busy || overlayOnly || pngSequence}>
@@ -586,6 +595,9 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </div>
       </SettingRow>
 
+      </ModeGate>
+
+      <ModeGate min="confirme" paths={['video.quality', 'clouds.quality']} also={overlayOnly}>
       <h3 className={GROUP}>{t('export.panel.renderGroup')}</h3>
       {overlayOnly && <p className="type-hint">{t('export.panel.overlayNoScene')}</p>}
       <fieldset className="field min-w-0" disabled={busy || overlayOnly}>
@@ -613,7 +625,10 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           </Button>
         )}
       </fieldset>
+      </ModeGate>
 
+      {/* a PNG sequence or the overlay alone, once chosen, stays in sight */}
+      <ModeGate min="expert" also={sequence || overlayOnly}>
       <div className="field">
         <Checkbox checked={sequence && !overlayOnly} disabled={busy || overlayOnly || !canPickFolder(getPlatform().capabilities)} onChange={(on) => setSequence(on)}>
           {t('export.panel.sequence')}
@@ -622,6 +637,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         <Checkbox checked={overlayOnly} disabled={busy} onChange={(on) => setOverlayOnly(on)}>{t('export.panel.overlayOnly')}</Checkbox>
         {overlayOnly && <p className="type-hint">{t('export.panel.overlayOnlyHint')}</p>}
       </div>
+      </ModeGate>
 
       <p className={SUMMARY} title={renderS === null ? t('export.panel.summaryTip') : `${t('export.panel.summaryTip')} ${t('export.panel.renderTimeTip')}`}>
         {[
@@ -634,7 +650,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           .join(' · ')}
       </p>
       <CopyCreditsButton />
-      {codec && streams && <p className="type-hint">{t('export.panel.direct')}</p>}
+      <ModeGate min="expert">{codec && streams && <p className="type-hint">{t('export.panel.direct')}</p>}</ModeGate>
       {codec && warnsInMemory(estimatedBytes, streams) && (
         <p className="type-hint">
           {t(deviceBudget().kind === 'desktop' ? 'export.panel.memoryDesktop' : 'export.panel.memoryOther', { limit: formatLimit(deviceBudget().memoryWarnBytes) })}
@@ -742,6 +758,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           <CopyCreditsButton />
         </p>
       )}
+
+      <ModeHint panel="export" />
 
       <ExportHistory />
 
@@ -1171,7 +1189,9 @@ export function ExportPanel({ onClose }: { onClose?: () => void }) {
   const exporting = useExportStore((s) => isExportBusy(s.phase))
   const batching = useBatchStore((s) => s.phase === 'running')
   const busy = exporting || batching
-  const modes = (
+  // several formats and the poster come with « Confirmé »: « Débutant » exports the film
+  const more = useModeShows('confirme')
+  const modes = more && (
     <fieldset className="field min-w-0" disabled={busy}>
       <legend className="sr-only">{t('export.panel.modeType')}</legend>
       <RadioGroup aria-label={t('export.panel.modeType')} value={mode} onChange={(next) => setMode(next)}>
@@ -1189,11 +1209,12 @@ export function ExportPanel({ onClose }: { onClose?: () => void }) {
       </RadioGroup>
     </fieldset>
   )
+  const shown = more ? mode : 'video'
   return (
     <>
-      <VideoExportPanel onClose={onClose} modes={mode === 'video' && modes} hidden={mode !== 'video'} />
-      <BatchExportPanel onClose={onClose} modes={mode === 'batch' && modes} hidden={mode !== 'batch'} />
-      <PosterPanel onClose={onClose} modes={mode === 'poster' && modes} hidden={mode !== 'poster'} />
+      <VideoExportPanel onClose={onClose} modes={mode === 'video' && modes} hidden={shown !== 'video'} />
+      <BatchExportPanel onClose={onClose} modes={mode === 'batch' && modes} hidden={shown !== 'batch'} />
+      <PosterPanel onClose={onClose} modes={mode === 'poster' && modes} hidden={shown !== 'poster'} />
     </>
   )
 }

@@ -33,7 +33,7 @@ export function LensPanel() {
   const set = (key: keyof LensSettings, value: number) => setSetting('lens', { ...lens, [key]: value })
 
   return (
-    <PanelSection title={t('lens.title')} keys={['lens']}>
+    <PanelSection title={t('lens.title')} keys={['lens']} min="expert">
       {SLIDERS.map(({ key, label, tip, weight, preset }) => (
         <RangeField key={key} label={label} tip={tip} weight={weight} preset={preset} {...LENS_RANGES[key]} value={lens[key]} format={formatAmount} onChange={(value) => set(key, value)} />
       ))}

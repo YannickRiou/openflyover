@@ -85,6 +85,7 @@ import { clampWorkArea, dragWorkArea, markIn, markOut } from '../film/workArea'
 import { getBlockClip, setBlockClip } from './blockClipboard'
 import { Filmstrip, filmstripCount } from './Filmstrip'
 import { useLaneState } from './laneState'
+import { modeAtLeast, useModeShows } from './uiMode'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
 import { modifiedSettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
@@ -612,6 +613,9 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const settingsMarker = useAppStore((s) => s.settings.marker)
   const clock = useFilmClock()
   const workArea = useAppStore((s) => s.workArea)
+  const mode = usePreferences((s) => s.uiMode)
+  // « Plans » and « Vitesse » from « Confirmé » on; before, only while the film has keys or speed changes
+  const plans = useModeShows('confirme', ['film.cameraKeys', 'film.speeds'])
   const [laneState, toggleLaneState] = useLaneState()
   const setWorkArea = useAppStore((s) => s.setWorkArea)
   // the export moves the playhead at every frame: the timeline keeps the playback it had (it would render with each one)
@@ -1043,8 +1047,11 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         })
       }
       const area = clampWorkArea(workArea, end)
-      items.push({ id: 'mark-in', label: t('timeline.menu.markIn'), onSelect: () => setWorkArea(markIn(area, timeS, end)) })
-      items.push({ id: 'mark-out', label: t('timeline.menu.markOut'), onSelect: () => setWorkArea(markOut(area, timeS, end)) })
+      // the playback area: from « Confirmé » on, or once there is one
+      if (modeAtLeast(mode, 'confirme') || area) {
+        items.push({ id: 'mark-in', label: t('timeline.menu.markIn'), onSelect: () => setWorkArea(markIn(area, timeS, end)) })
+        items.push({ id: 'mark-out', label: t('timeline.menu.markOut'), onSelect: () => setWorkArea(markOut(area, timeS, end)) })
+      }
     }
     const box = contentRef.current?.getBoundingClientRect()
     setContextMenu(items.length > 0 && box ? { x: e.clientX - box.left, y: e.clientY - box.top, items } : null)
@@ -1592,8 +1599,12 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   /** the lanes: always « Plans » and « Vitesse », a lane per keyed parameter, « Marqueur » with marker keys, the rest */
   const lanes: { id: string; name: string; keys?: KeyTarget }[] = [
     ...(sequence ? [{ id: 'stages', name: t('timeline.lane.stages') }] : []),
-    { id: 'shots', name: t('timeline.lane.shots'), keys: { kind: 'camera' } },
-    { id: 'param:speed', name: PARAM_LANE_LABELS.speed, keys: { kind: 'param', param: 'speed' } },
+    ...(plans
+      ? [
+          { id: 'shots', name: t('timeline.lane.shots'), keys: { kind: 'camera' } as KeyTarget },
+          { id: 'param:speed', name: PARAM_LANE_LABELS.speed, keys: { kind: 'param', param: 'speed' } as KeyTarget },
+        ]
+      : []),
     ...paramLanes(shownClock).map((param) => ({ id: `param:${param}`, name: PARAM_LANE_LABELS[param] })),
     ...(shownClock.markerKeys.length > 0 ? [{ id: 'marker', name: t('timeline.lane.marker') }] : []),
     { id: 'holds', name: t('timeline.lane.holds') },
@@ -1747,7 +1758,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           ref={tools}
         >
           {/* no lane headers on a centred timeline: the groups of the camera and speed keys lead the row */}
-          {centred && (
+          {centred && plans && (
             <>
               <span className="flex-none text-caption font-semibold text-glacier">{t('timeline.lane.shots')}</span>
               <KeyGroup target={{ kind: 'camera' }} clock={clock} timeS={frozenS} disabled={!hasTrack} look="bar" />
@@ -1988,6 +1999,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 </div>
               )}
 
+              {plans && (
               <div data-testid="timeline-lane" data-lane="camera" {...laneProps('shots', true)} role="group" aria-label={t('timeline.lane.shots')}>
                 {block(
                   'opening',
@@ -2064,7 +2076,9 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                   closing.style === 'aucune' ? [] : ['start'],
                 )}
               </div>
+              )}
 
+              {plans && (
               <div data-testid="timeline-lane" data-lane="param:speed" {...laneProps('param:speed', true)} role="group" aria-label={PARAM_LANE_LABELS.speed}>
                 {shownClock.speeds.map((s) => {
                   const label = formatSpeedFactor(s.factor)
@@ -2081,6 +2095,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 })}
                 {keysOfParam(shownClock.paramKeys, 'speed').map(paramKeyDot)}
               </div>
+              )}
 
               {paramLanes(shownClock).map((param) => (
                 <div key={param} data-testid="timeline-lane" data-lane={`param:${param}`} {...laneProps(`param:${param}`)} role="group" aria-label={PARAM_LANE_LABELS[param]}>

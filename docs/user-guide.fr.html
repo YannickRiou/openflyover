@@ -360,6 +360,30 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
   </ul>
   <p>Les messages (trace importée, projet enregistré, vidéo prête…) s’affichent en bas de la vue ; les erreurs restent affichées jusqu’à ce que vous les fermiez. L’application retient l’onglet ouvert et si le panneau est replié. À côté des réglages qui allongent l’export (qualité des nuages, flou de bougé, profondeur de champ, résolution, cadence d’images), une petite icône à trois barres indique le poids de la valeur actuelle, avec le facteur dans son info-bulle (appui long sur un téléphone) ; un point sur un onglet signifie que l’un de ses réglages est au niveau le plus lourd.</p>
   <p>Au premier lancement, une courte visite guidée montre l’import, les onglets, la timeline et l’export ; arrêtez-la quand vous voulez. « Revoir la visite guidée » dans l’aide (<kbd>?</kbd>) la relance.</p>
+  <h3 class="sub">Trois modes d’interface</h3>
+  <p>Le mode règle le nombre de réglages affichés : <strong>Débutant</strong>, <strong>Confirmé</strong> ou <strong>Expert</strong> (Expert montre tout, comme avant). La question est posée au premier lancement ; le choix se change ensuite à tout moment dans la barre du haut ou dans « Réglages » (sur téléphone, dans « Réglages » seulement). Il vaut pour cet appareil, pas pour le projet.</p>
+  <ul>
+    <li>Un mode cache des réglages, il ne change rien : le film est le même dans les trois modes, et un réglage caché garde sa valeur.</li>
+    <li>Un réglage que vous avez modifié reste visible dans tous les modes, avec la marque « modifié » (↺).</li>
+    <li><kbd>Ctrl+K</kbd> trouve aussi les sections cachées. En choisir une active le mode qui la montre, et le dit.</li>
+    <li>En bas de chaque panneau, une note dit ce que le mode cache et dans quel mode le trouver.</li>
+  </ul>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Onglet</th><th>Débutant</th><th>Confirmé</th><th>Expert</th></tr></thead>
+      <tbody>
+        <tr><td>Trace</td><td>Liste des traces, épaisseur et couleur de la ligne, forme du marqueur</td><td>+ tous les réglages de la trace et du marqueur, « Prévoir la sortie », « Corriger les chiffres », outils de la trace</td><td>+ options avancées et clés du marqueur</td></tr>
+        <tr><td>Carte</td><td>Fond en deux vignettes (Satellite, Carte), relief accentué, ambiance</td><td>+ choix des images, eau, forêt, courbes de niveau, repères</td><td>+ date et détail des images, source du relief, nettoyage du MNT</td></tr>
+        <tr><td>Météo, Lumière</td><td>Masqués : la météo du jour et le soleil se règlent seuls, ou par l’ambiance</td><td>Météo de la sortie, nuages, neige, soleil, jours et nuits, couleurs</td><td>+ pluie et brume, atmosphère, ombres des nuages, clarté des nuits</td></tr>
+        <tr><td>Survol</td><td>Film automatique, styles de caméra en vignettes, durée</td><td>+ style, focale, distance, inclinaison, transitions</td><td>+ visée, avance, lissages</td></tr>
+        <tr><td>Objectif</td><td>Masqué</td><td>Masqué</td><td>Effets d’objectif</td></tr>
+        <tr><td>Habillage</td><td>Habillage oui / non, style, titres</td><td>+ étiquettes 3D, compteurs, profil et mini-carte, météo, logo et texte</td><td>+ couleurs et polices imposées, crédits</td></tr>
+        <tr><td>Timeline</td><td>Arrêts, textes, médias, musique</td><td>+ plans, vitesse, zone de lecture</td><td>+ étapes, pistes à images clés, marqueur</td></tr>
+        <tr><td>Export</td><td>« Pour une plateforme » puis « Exporter »</td><td>+ proportions, résolution, images par seconde, qualité, plusieurs formats, affiche</td><td>+ encodage, séquence PNG, habillage seul, enregistrement direct</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>En mode Débutant, la section « Ambiance » de l’onglet Carte règle les nuages et le soleil d’un clic : « Météo du jour » (les nuages de la météo, le soleil à l’heure de la trace), « Grand beau » (sans nuages, le soleil à midi) ou « Coucher de soleil » (les nuages de la météo, le soleil au coucher). Elle ne fait que régler des réglages existants, que les onglets Météo et Lumière détaillent à partir du mode Confirmé. Tant que les valeurs sont celles d’une puce, ces onglets restent masqués ; réglées autrement, elles les font apparaître, même en mode Débutant.</p>
 </section>
 
 <!-- ================================================================== 3 -->
@@ -742,7 +766,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
     <table class="wide">
       <thead><tr><th>Touches</th><th>Action</th></tr></thead>
       <tbody>
-        <tr><td><kbd>Ctrl+K</kbd></td><td>Chercher un réglage : tapez son nom, la section correspondante s’ouvre (<kbd>Cmd+K</kbd> sur Mac)</td></tr>
+        <tr><td><kbd>Ctrl+K</kbd></td><td>Chercher un réglage : tapez son nom, la section correspondante s’ouvre, même si le mode l’a cachée (<kbd>Cmd+K</kbd> sur Mac)</td></tr>
         <tr><td><kbd>Espace</kbd> · <kbd>K</kbd></td><td>Lecture ou pause</td></tr>
         <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Reculer ou avancer d’une seconde ; avec un bloc sélectionné, le décaler d’une seconde (d’un dixième avec <kbd>Maj</kbd>)</td></tr>
         <tr><td><kbd>Maj+←</kbd> <kbd>Maj+→</kbd></td><td>Reculer ou avancer de cinq secondes</td></tr>

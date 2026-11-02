@@ -974,3 +974,36 @@ describe('Timeline — several keys at once', () => {
     act(() => root.unmount())
   })
 })
+
+describe('Timeline: the modes of the interface', () => {
+  it('keeps Arrêts, Textes, Médias and Musique in Débutant, Plans and Vitesse from Confirmé, and a lane that holds keys stays', async () => {
+    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    globalThis.ResizeObserver ??= class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    } as unknown as typeof ResizeObserver
+    const segments = [{ points: [6.8, 6.81, 6.82].map((lon, i) => ({ lon, lat: 45.9, ele: 1000 + i * 10 })) }]
+    useAppStore.setState({ tracks: [buildTrack({ name: 'Sortie', source: 'gpx', segments })], settings: DEFAULT_SETTINGS })
+    useExportStore.setState({ phase: 'idle' })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<Timeline />))
+    const lanes = () => Array.from(host.querySelectorAll('[data-testid="timeline-lane"]')).map((l) => l.getAttribute('aria-label'))
+    const heads = () => Array.from(host.querySelectorAll('[data-testid="timeline-heads"] [role="group"]')).map((g) => g.getAttribute('aria-label'))
+    await act(async () => setPreferences({ uiMode: 'debutant' }))
+    expect(lanes()).toEqual(['Arrêts', 'Textes', 'Médias', 'Musique'])
+    expect(heads()).toEqual([])
+    await act(async () => setPreferences({ uiMode: 'confirme' }))
+    expect(lanes()).toEqual(['Plans', 'Vitesse', 'Arrêts', 'Textes', 'Médias', 'Musique'])
+    // a speed change already in the film: its lane stays in Débutant
+    await act(async () => setPreferences({ uiMode: 'debutant' }))
+    const { settings, setSetting } = useAppStore.getState()
+    await act(async () => setSetting('film', { ...settings.film, speeds: [{ id: 'speed-1', fromM: 0, toM: 100, factor: 2 }] }))
+    expect(lanes()).toContain('Vitesse')
+    expect(useAppStore.getState().settings.film.speeds).toHaveLength(1)
+    await act(async () => setPreferences({ uiMode: 'expert' }))
+    act(() => root.unmount())
+    setSetting('film', settings.film)
+  })
+})

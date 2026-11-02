@@ -20,7 +20,8 @@ import { showToast } from './toast'
 import { formatDegrees, formatDistance, formatNumber, formatPercent, formatSecondsShort } from './format'
 import { Icon } from './icons'
 import type { IconName } from './icons'
-import { PanelSection, RangeField, SettingRow } from './PanelSection'
+import { ModeGate, PanelSection, RangeField, SettingRow } from './PanelSection'
+import type { UiMode } from './shell'
 import { retryRegion, useRegionStore } from '../osm/region'
 import type { RegionStatus } from '../osm/region'
 import { Button, Checkbox, Radio, RadioGroup, Select } from './primitives'
@@ -77,13 +78,13 @@ const PRESET_ICONS: Record<string, IconName> = {
 const CUSTOM_PRESET = 'custom'
 
 /** A preset tile is a Radio of a `plain` group: the label is the tile, framed, tinted and ringed with the accent once chosen. */
-const TILE = 'group flex min-w-0 flex-row items-stretch'
-const TILE_LABEL =
+export const TILE = 'group flex min-w-0 flex-row items-stretch'
+export const TILE_LABEL =
   'relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-start gap-0.5 rounded-sm border border-edge bg-surface-control px-1 pt-2 pb-1.5 text-center transition-ui hover:border-text-1 ' +
   'data-[selected=true]:border-brand data-[selected=true]:bg-accent-tint data-[selected=true]:ring-1 data-[selected=true]:ring-brand data-[selected=true]:ring-inset ' +
   'data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-offset-2 data-[focus-visible=true]:outline-brand'
-const TILE_GRID = 'grid grid-cols-3 gap-2'
-const TILE_NAME = 'max-w-full truncate text-hint font-medium'
+export const TILE_GRID = 'grid grid-cols-3 gap-2'
+export const TILE_NAME = 'max-w-full truncate text-hint font-medium'
 const TILE_FIGURES = 'text-caption whitespace-nowrap text-text-2 tabular-nums'
 
 /** Key figures of a preset tile: distance multiplier and tilt (none for 'free', which does not use them). */
@@ -103,17 +104,20 @@ interface Slider {
   format(value: number, autoM?: number): string
   /** styles where it does nothing: its row is left out */
   unusedIn?: readonly CameraStyle[]
+  /** the lowest mode that shows it */
+  min: UiMode
 }
 
 /** 0 -> the message `none`, else "2,5 s" */
 const formatSmoothingS = (none: 'camera.slider.noneMasc' | 'camera.slider.noneFem') => (v: number) => (v === 0 ? t(none) : formatSecondsShort(v))
 
 const SLIDERS: Slider[] = [
-  { key: 'distance', get label() { return t('camera.slider.distance') }, get tip() { return t('camera.slider.distanceTip') }, format: (v) => `×${formatNumber(v, 1)}` },
-  { key: 'pitchDeg', get label() { return t('camera.slider.pitch') }, get tip() { return t('camera.slider.pitchTip') }, format: formatDegrees },
-  { key: 'headingOffsetDeg', get label() { return t('camera.slider.heading') }, get tip() { return t('camera.slider.headingTip') }, format: formatDegrees },
+  { key: 'distance', min: 'confirme', get label() { return t('camera.slider.distance') }, get tip() { return t('camera.slider.distanceTip') }, format: (v) => `×${formatNumber(v, 1)}` },
+  { key: 'pitchDeg', min: 'confirme', get label() { return t('camera.slider.pitch') }, get tip() { return t('camera.slider.pitchTip') }, format: formatDegrees },
+  { key: 'headingOffsetDeg', min: 'expert', get label() { return t('camera.slider.heading') }, get tip() { return t('camera.slider.headingTip') }, format: formatDegrees },
   {
     key: 'leadRoomPct',
+    min: 'expert',
     get label() { return t('camera.slider.leadRoom') },
     get tip() { return t('camera.slider.leadRoomTip') },
     format: (v) => (v === 0 ? t('camera.slider.noneMasc') : formatPercent(v / 100)),
@@ -121,30 +125,35 @@ const SLIDERS: Slider[] = [
   },
   {
     key: 'turnSmoothingM',
+    min: 'expert',
     get label() { return t('camera.slider.turn') },
     get tip() { return t('camera.slider.turnTip') },
     format: (v, autoM) => (v > 0 ? formatDistance(v) : autoM === undefined ? t('camera.slider.auto') : t('camera.slider.autoDistance', { distance: formatDistance(autoM) })),
   },
   {
     key: 'aimSmoothingS',
+    min: 'expert',
     get label() { return t('camera.slider.aim') },
     get tip() { return t('camera.slider.aimTip') },
     format: formatSmoothingS('camera.slider.noneMasc'),
   },
   {
     key: 'cameraSmoothingS',
+    min: 'expert',
     get label() { return t('camera.slider.cameraSmoothing') },
     get tip() { return t('camera.slider.cameraSmoothingTip') },
     format: formatSmoothingS('camera.slider.noneMasc'),
   },
   {
     key: 'endingS',
+    min: 'expert',
     get label() { return t('camera.slider.ending') },
     get tip() { return t('camera.slider.endingTip') },
     format: formatSmoothingS('camera.slider.noneFem'),
   },
   {
     key: 'bankDeg',
+    min: 'expert',
     get label() { return t('camera.slider.bank') },
     get tip() { return t('camera.slider.bankTip') },
     format: (v) => (v === 0 ? t('camera.slider.noneFem') : formatDegrees(v)),
@@ -254,6 +263,7 @@ export function CameraPanel() {
           </p>
         </fieldset>
 
+        <ModeGate min="confirme" paths={['camera.orbitTurns', 'camera.northUp']}>
         {camera.style === 'orbit' && (
           <RangeField
             label={t('camera.panel.orbitTurns')}
@@ -268,8 +278,9 @@ export function CameraPanel() {
         {camera.style === 'top' && (
           <Checkbox id={`${id}-north-up`} checked={camera.northUp} onChange={(on) => update({ northUp: on })}>{t('camera.panel.northUp')}</Checkbox>
         )}
+        </ModeGate>
 
-        <SettingRow label={t('camera.panel.style')} value={CAMERA_STYLE_LABELS[camera.style]} paths={['camera.style']}>
+        <SettingRow label={t('camera.panel.style')} value={CAMERA_STYLE_LABELS[camera.style]} paths={['camera.style']} min="confirme">
           <div className="field">
             <label className="type-label" htmlFor={`${id}-style`}>
               {t('camera.panel.style')}
@@ -284,7 +295,7 @@ export function CameraPanel() {
           </div>
         </SettingRow>
         {/* the lens of the whole film, whatever the style (« Libre » too) */}
-        <SettingRow label={t('camera.slider.focal')} value={focalLabel} paths={['camera.focalMm']}>
+        <SettingRow label={t('camera.slider.focal')} value={focalLabel} paths={['camera.focalMm']} min="confirme">
           <RangeField
             label={t('camera.slider.focal')}
             tip={t('camera.slider.focalTip')}
@@ -297,17 +308,17 @@ export function CameraPanel() {
         {/* the camera keys take the view from the first to the last: these settings are those of the rest of the film */}
         {camera.style !== 'free' && cameraKeyCount > 0 && <p className="type-hint">{t('camera.panel.keyed', { count: cameraKeyCount })}</p>}
         {/* 'free' follows the keyframes alone: the framing sliders do nothing there */}
-        {camera.style !== 'free' && SLIDERS.filter(({ unusedIn }) => !unusedIn?.includes(camera.style)).map(({ key, label, tip, format }) => {
+        {camera.style !== 'free' && SLIDERS.filter(({ unusedIn }) => !unusedIn?.includes(camera.style)).map(({ key, label, tip, format, min }) => {
           const range = CAMERA_RANGES[key]
           const value = format(camera[key], autoTurnM)
           return (
-            <SettingRow key={key} label={label} value={value} paths={[`camera.${key}`]}>
+            <SettingRow key={key} label={label} value={value} paths={[`camera.${key}`]} min={min}>
               <RangeField label={label} tip={tip} {...range} value={camera[key]} format={() => value} onChange={(v) => update({ [key]: v })} />
             </SettingRow>
           )
         })}
         {/* next to « Fin en douceur »; it eases the speed in every style, « Libre » too */}
-        <SettingRow label={t('camera.pacing.transitions')} value={formatSecondsShort(pacing.transitionS)} paths={['pacing.transitionS']}>
+        <SettingRow label={t('camera.pacing.transitions')} value={formatSecondsShort(pacing.transitionS)} paths={['pacing.transitionS']} min="confirme">
           <RangeField
             label={t('camera.pacing.transitions')}
             tip={t('camera.pacing.transitionsTip')}
@@ -322,7 +333,7 @@ export function CameraPanel() {
       <PanelSection title={t('camera.panel.durationSection')} keys={['flyoverDurationS', 'pacing']}>
         <FlightDurationField />
 
-        <SettingRow label={t('camera.pacing.keep')} value={pacing.keepDuration ? t('common.yes') : t('common.no')} paths={['pacing.keepDuration']}>
+        <SettingRow label={t('camera.pacing.keep')} value={pacing.keepDuration ? t('common.yes') : t('common.no')} paths={['pacing.keepDuration']} min="confirme">
           <Checkbox checked={pacing.keepDuration} onChange={(on) => updatePacing({ keepDuration: on })}>{t('camera.pacing.keep')}</Checkbox>
           <p className="type-hint">{t('camera.pacing.keepHint')}</p>
         </SettingRow>

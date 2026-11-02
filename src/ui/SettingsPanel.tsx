@@ -5,7 +5,7 @@ import { formatDate } from '../i18n/format'
 import { hasParamKeys } from '../film/paramKeys'
 import { trackPathOf } from '../flyover/path'
 import { playsBilan, playsInSequence } from '../flyover/sequence'
-import { SUN_CHIP_LABELS, SUN_CHIPS, SUN_HOUR_RANGE, clockHourOfSolar, solarDay, sunChipHour, sunDayMs } from '../flyover/sun'
+import { PLAIN_DAY, SUN_CHIP_LABELS, SUN_CHIPS, SUN_HOUR_RANGE, clockHourOfSolar, solarDay, sunChipHour, sunDayMs } from '../flyover/sun'
 import type { SolarDay } from '../flyover/sun'
 import { FOREST_DENSITY_RANGE } from '../osm/forest'
 import { getSettingsHistory } from '../project/history'
@@ -20,7 +20,12 @@ import { SNOW_LINE_RANGE, snowLineAtProgress, type SnowMode, type SnowUnknown } 
 import { useWeatherStore, weatherSeriesOf } from '../weather/store'
 import { NightSettings } from './NightSettings'
 import { PanelKeys } from './KeyControls'
-import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
+import { AMBIANCES, AMBIANCE_CLOUDS, ambianceDay, ambianceHours, ambianceOf } from './uiMode'
+import type { Ambiance } from './uiMode'
+import { InfoTip, ModeGate, PanelSection, RangeField, SettingRow } from './PanelSection'
+import { TILE, TILE_GRID, TILE_LABEL, TILE_NAME } from './CameraPanel'
+import { Icon } from './icons'
+import { usePreferences } from './preferences'
 import { CONTOUR_INTERVAL_RANGE, CONTOUR_OPACITY_RANGE } from '../terrain/contours'
 import { formatEv, formatNumber, formatPercent } from './format'
 import { Button, Checkbox, ColorField, DateField, Radio, RadioGroup, Select, Slider, Switch } from './primitives'
@@ -54,7 +59,6 @@ function formatDay(date: string): string {
 }
 
 /** Day used for the chips and the day bar before a track is loaded. */
-const PLAIN_DAY: SolarDay = { sunrise: 6, sunset: 18, noon: 12, polar: null }
 
 /** Position of a solar hour along the slider. */
 const hourAt = (hour: number) => `${(Math.min(Math.max(hour, 0), SUN_HOUR_RANGE.max) / SUN_HOUR_RANGE.max) * 100}%`
@@ -317,7 +321,7 @@ function ImageryDateControl() {
     ...(value !== '' && !chosen ? [{ value, label: valueLabel }] : []),
   ]
   return (
-    <SettingRow label={t('light.map.imageryDate')} value={valueLabel} paths={['imageryDate']}>
+    <SettingRow label={t('light.map.imageryDate')} value={valueLabel} paths={['imageryDate']} min="expert">
       <div className="field">
         <label className="type-label" htmlFor={`${id}-imagery-date`}>
           {t('light.map.imageryDate')}
@@ -629,6 +633,86 @@ function DemCleanControl() {
   )
 }
 
+/** Day used by the chips of the « Ambiance » of the map tab: the solar day at the place and on the day of the film track. */
+function useSolarDay(): SolarDay {
+  const origin = useAppStore((s) => s.frameOrigin)
+  const sunDate = useAppStore((s) => s.settings.sunDate)
+  const startTime = useFilmTrack()?.stats.startTime
+  const [today] = useState(() => Date.now())
+  return useMemo(() => ambianceDay(origin, sunDate, startTime, today), [origin, sunDate, startTime, today])
+}
+
+/**
+ * « Fond de carte » in « Débutant »: photos or a map, in one tile each. A tile picks the first source of its kind that
+ * covers the first track (the regional one before the worldwide one); a source of that kind already chosen stays.
+ */
+function BasemapChoice() {
+  const t = useT()
+  const sourceId = useAppStore((s) => s.settings.imagerySourceId)
+  const setSetting = useAppStore((s) => s.setSetting)
+  const trackBounds = useAppStore((s) => s.tracks[0]?.bounds)
+  const groups = groupImagerySources(trackBounds ? centroid(trackBounds) : undefined)
+  const first = { photos: groups.find((g) => g.kind === 'photos')?.sources[0], maps: groups.find((g) => g.kind === 'maps')?.sources[0] }
+  const kind = getImagerySource(sourceId).map ? 'maps' : 'photos'
+  return (
+    <RadioGroup
+      look="plain"
+      className={`${TILE_GRID} grid-cols-2!`}
+      aria-label={t('light.map.background')}
+      value={kind}
+      onChange={(next: 'photos' | 'maps') => {
+        const source = first[next]
+        if (source && next !== kind) setSetting('imagerySourceId', source.id)
+      }}
+    >
+      {(['photos', 'maps'] as const).map((k) => (
+        <Radio key={k} value={k} disabled={!first[k]} className={TILE} labelClassName={TILE_LABEL}>
+          <Icon name={k === 'photos' ? 'satellite' : 'map'} size={20} />
+          <span className={TILE_NAME}>{t(k === 'photos' ? 'light.map.basemapPhotos' : 'light.map.basemapMap')}</span>
+        </Radio>
+      ))}
+    </RadioGroup>
+  )
+}
+
+/**
+ * « Ambiance » in « Débutant », where the Météo and Lumière tabs are left out: one choice sets the clouds and the sun of
+ * the film. « Météo du jour »: clouds of the weather, sun at the recorded time. « Grand beau »: no clouds, sun at
+ * noon. « Coucher de soleil »: clouds of the weather, sun at sunset. One undo step; none is chosen once the
+ * settings are anything else. While they are one chip's, the tabs they belong to stay hidden (`ambianceOf`, `useModeTabs`).
+ */
+function AmbianceSection() {
+  const t = useT()
+  const clouds = useAppStore((s) => s.settings.clouds)
+  const sunFromTrack = useAppStore((s) => s.settings.sunFromTrack)
+  const sunHour = useAppStore((s) => s.settings.sunHour)
+  const setSetting = useAppStore((s) => s.setSetting)
+  const day = useSolarDay()
+  const hours = ambianceHours(day)
+  const chosen = ambianceOf({ clouds, sunFromTrack, sunHour }, day)
+  const pick = (ambiance: Ambiance | '') => {
+    if (!ambiance) return
+    const hour = hours[ambiance]
+    if (hour === null) return
+    getSettingsHistory().transaction(() => {
+      setSetting('clouds', { ...clouds, mode: AMBIANCE_CLOUDS[ambiance] })
+      setSetting('sunFromTrack', hour === undefined)
+      if (hour !== undefined) setSetting('sunHour', hour)
+    })
+  }
+  return (
+    <PanelSection title={t('light.ambiance.title')}>
+      <RadioGroup look="chips" aria-label={t('light.ambiance.title')} value={chosen ?? ''} onChange={pick}>
+        {AMBIANCES.map((a) => (
+          <Radio key={a} value={a} disabled={hours[a] === null} title={hours[a] === null ? t('light.sun.notThatDay') : undefined}>
+            {t(`light.ambiance.${a}`)}
+          </Radio>
+        ))}
+      </RadioGroup>
+    </PanelSection>
+  )
+}
+
 /** « Carte » tab, before the track and the landmarks: sections Fond de carte and Relief. */
 export function MapSettings() {
   const t = useT()
@@ -640,11 +724,15 @@ export function MapSettings() {
   const imageryId = `${id}-imagery`
   const zoomLabel = ZOOM_OFFSETS.find((o) => o.value === settings.imageryZoomOffset)?.label
   const terrainName = TERRAIN_SOURCES.find((source) => source.id === settings.terrainSourceId)?.name
+  const mode = usePreferences((s) => s.uiMode)
 
   return (
     <>
       {/* the imagery source is left out of the marker: the import picks it per region (IGN, swisstopo) */}
       <PanelSection title={t('light.map.background')} keys={['terrainSourceId', 'imageryZoomOffset', 'water', 'forest']}>
+        {mode === 'debutant' && <BasemapChoice />}
+        {/* the import picks the imagery by region: its choice is shown from « Confirmé » on whatever its value */}
+        <ModeGate min="confirme">
         <div className="field">
           <label className="type-label" htmlFor={imageryId}>
             {t('light.map.imagery')}
@@ -660,14 +748,19 @@ export function MapSettings() {
           />
           <p className="type-hint">{t('light.map.imageryAuto')}</p>
         </div>
+        </ModeGate>
 
         <ImageryDateControl />
 
-        <WaterControl />
+        <ModeGate min="confirme" paths={['water']}>
+          <WaterControl />
+        </ModeGate>
 
-        <ForestControl />
+        <ModeGate min="confirme" paths={['forest']}>
+          <ForestControl />
+        </ModeGate>
 
-        <SettingRow label={t('light.map.imageryDetail')} value={zoomLabel} paths={['imageryZoomOffset']}>
+        <SettingRow label={t('light.map.imageryDetail')} value={zoomLabel} paths={['imageryZoomOffset']} min="expert">
           <fieldset className="field min-w-0">
             <legend className="type-label mb-1">{t('light.map.imageryDetail')}</legend>
             <RadioGroup
@@ -685,7 +778,7 @@ export function MapSettings() {
           </fieldset>
         </SettingRow>
 
-        <SettingRow label={t('light.map.terrainSource')} value={terrainName} paths={['terrainSourceId']}>
+        <SettingRow label={t('light.map.terrainSource')} value={terrainName} paths={['terrainSourceId']} min="expert">
           <div className="field">
             <label className="type-label" htmlFor={terrainId}>
               {t('light.map.terrainSource')}
@@ -713,10 +806,13 @@ export function MapSettings() {
           wide={false}
         />
 
-        <DemCleanControl />
+        <ModeGate min="expert" paths={['demClean']}>
+          <DemCleanControl />
+        </ModeGate>
       </PanelSection>
 
       <ContoursSection />
+      {mode === 'debutant' && <AmbianceSection />}
     </>
   )
 }
@@ -729,7 +825,7 @@ function ContoursSection() {
   const id = useId()
   const update = (patch: Partial<typeof contours>) => setSetting('contours', { ...contours, ...patch })
   return (
-    <PanelSection title={t('light.map.contours')} keys={['contours']}>
+    <PanelSection title={t('light.map.contours')} keys={['contours']} min="confirme">
       <div className="flex items-center gap-1">
         <Switch checked={contours.enabled} onChange={(enabled) => update({ enabled })}>{t('light.map.contours')}</Switch>
         <InfoTip text={t('light.map.contoursTip')} />
@@ -858,11 +954,11 @@ export function WeatherSettings() {
 
   return (
     <>
-      <PanelSection title={t('light.weather.clouds')} keys={['clouds']}>
+      <PanelSection title={t('light.weather.clouds')} keys={['clouds']} min="confirme">
         {atmosphere ? <CloudsControl weatherReady={weatherReady} /> : <AtmosphereOffHint what="clouds" />}
       </PanelSection>
 
-      <PanelSection title={t('light.weather.rainMist')} keys={['weatherScene']}>
+      <PanelSection title={t('light.weather.rainMist')} keys={['weatherScene']} min="expert">
         {!atmosphere ? (
           <AtmosphereOffHint what="scene" />
         ) : !weatherReady ? (
@@ -893,7 +989,7 @@ export function WeatherSettings() {
         )}
       </PanelSection>
 
-      <PanelSection title={t('light.weather.snow')} keys={['snow']}>
+      <PanelSection title={t('light.weather.snow')} keys={['snow']} min="confirme">
         <SnowControl />
       </PanelSection>
     </>
@@ -914,7 +1010,7 @@ export function LightSettings() {
 
   return (
     <>
-      <PanelSection title={t('light.atmosphere.title')} keys={['atmosphere', 'shadows', 'cloudShadows', 'nightLightEv']}>
+      <PanelSection title={t('light.atmosphere.title')} keys={['atmosphere', 'shadows', 'cloudShadows', 'nightLightEv']} min="expert">
         <Switch id={`${id}-atmosphere`} checked={atmosphere} onChange={(on) => setSetting('atmosphere', on)}>{t('light.atmosphere.enable')}</Switch>
 
         {atmosphere && (
@@ -944,7 +1040,7 @@ export function LightSettings() {
         )}
       </PanelSection>
 
-      <PanelSection title={t('light.atmosphere.sun')} keys={['sunFromTrack', 'sunHour', 'sunDate']}>
+      <PanelSection title={t('light.atmosphere.sun')} keys={['sunFromTrack', 'sunHour', 'sunDate']} min="confirme">
         {atmosphere ? (
           <SunTimeControl />
         ) : (

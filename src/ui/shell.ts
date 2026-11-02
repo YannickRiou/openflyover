@@ -280,6 +280,13 @@ export type PerfItem = (typeof PERF_ITEMS)[number]
 export const PREVIEW_QUALITIES = ['auto', 'light', 'full'] as const
 export type PreviewQuality = (typeof PREVIEW_QUALITIES)[number]
 
+/**
+ * « Mode de l'interface »: how many settings the panels show, from the fewest to all of them. A mode only hides, it never
+ * changes the film; a setting that is not at its default value shows in every mode (`uiMode.ts`).
+ */
+export const UI_MODES = ['debutant', 'confirme', 'expert'] as const
+export type UiMode = (typeof UI_MODES)[number]
+
 export interface Preferences {
   status: Record<StatusChip, boolean>
   performance: Record<PerfItem, boolean>
@@ -299,6 +306,8 @@ export interface Preferences {
   whatsNewSeen: string
   /** pixels and clouds of the 3D preview (`scene/previewQuality.ts`); never the export's */
   previewQuality: PreviewQuality
+  /** settings shown by the panels, the timeline and the export (`uiMode.ts`); Expert is every setting, as before the modes */
+  uiMode: UiMode
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -312,6 +321,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   language: DEFAULT_LANGUAGE,
   whatsNewSeen: '',
   previewQuality: 'auto',
+  uiMode: 'expert',
 }
 
 /** The booleans of `raw` for `keys`, the defaults for anything missing or not a boolean. */
@@ -340,6 +350,8 @@ export function parsePreferences(raw: string | null): Preferences {
     language: isLanguageCode(v.language) ? v.language : DEFAULT_PREFERENCES.language,
     whatsNewSeen: typeof v.whatsNewSeen === 'string' ? v.whatsNewSeen : DEFAULT_PREFERENCES.whatsNewSeen,
     previewQuality: (PREVIEW_QUALITIES as readonly unknown[]).includes(v.previewQuality) ? (v.previewQuality as PreviewQuality) : DEFAULT_PREFERENCES.previewQuality,
+    // preferences stored before the modes have none: they keep every setting
+    uiMode: (UI_MODES as readonly unknown[]).includes(v.uiMode) ? (v.uiMode as UiMode) : DEFAULT_PREFERENCES.uiMode,
   }
 }
 
