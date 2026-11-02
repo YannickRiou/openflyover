@@ -29,6 +29,10 @@ describe('searchSections', () => {
     expect(searchSections('nuages zzz', SHELL_TABS)).toEqual([])
   })
 
+  it('finds a section by the settings it holds', () => {
+    expect(searchSections('vives', SHELL_TABS)[0]).toMatchObject({ tab: 'carte', title: 'Fond de carte' })
+  })
+
   it('skips the tabs that are not shown', () => {
     expect(searchSections('nuages', ['projet'])).toEqual([])
   })

@@ -13,6 +13,8 @@ const messages: Messages['news'] = {
   'v50.layout.text': 'Un film esportato in 9:16, 4:5 o 1:1 dispone da solo contatori, profilo, minimappa, loghi e schede di titolo: niente si sovrappone, niente viene tagliato. Nei formati verticali lasciano anche libere le aree coperte da Reels, TikTok e Shorts. Nessuna impostazione da cambiare. «Posizione libera» si regola ora in percentuale dell’area di sicurezza.',
   'v50.tiles.title': 'Esportazioni che aspettano meno le tile',
   'v50.tiles.text': 'Il dettaglio « Fine » delle foto ora si carica solo dove si vede, vicino alla telecamera: la stessa immagine, molte meno foto da scaricare. Le tile del film arrivano anche più alla volta, senza mai chiedere a un servizio più di quanto consente il browser. Sul sito come nell\'app.',
+  'v50.vivid.title': 'Foto dell’IGN più vivaci',
+  'v50.vivid.text': 'Con le foto dell’IGN, il cursore «Colori vivaci» (Mappa, dalla modalità Intermedio) dà più brillantezza e contrasto alle foto, e rende l’erba secca un po’ più verde. Con 0 %, le foto restano così come sono. Gli altri sfondi non cambiano.',
   'v47.draw.title': 'Disegnare un itinerario sulla mappa',
   'v47.draw.text': '«Aggiungi» › «Disegna sulla mappa…»: fai clic sui punti della tua uscita. La linea segue i sentieri (IGN in Francia, OpenStreetMap altrove) o resta retta se lo scegli. Un clic in più e il film è pronto da preparare, senza file GPX.',
   'v47.ribbon.title': 'Un nastro di dati in 3D',

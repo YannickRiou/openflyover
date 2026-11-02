@@ -14,6 +14,7 @@ import type { LocalFrame, TerrainEngine, TerrainStats } from '../core/types'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { createTerrainEngine, restoreEngineImagery } from '../terrain/engine'
 import { createTileFetcher } from '../terrain/fetch'
+import { setVividUniforms } from '../terrain/vividShader'
 import { exportLodHeight } from '../export/schedule'
 import { isExportBusy, useExportStore } from '../export/store'
 import { playsBilan } from '../flyover/sequence'
@@ -137,6 +138,7 @@ export function TerrainLayer({ children }: TerrainLayerProps) {
 
   // Per-frame update + throttled stats (4 Hz, only when values change).
   useFrame(({ camera, size }, delta) => {
+    setVividUniforms(useAppStore.getState().settings)
     if (!engine) return
     const perspective = camera as PerspectiveCamera
     if (!perspective.isPerspectiveCamera) return

@@ -13,13 +13,15 @@ interface SectionEntry {
   title: MessageKey
   /** the lowest mode that shows the section (the `min` of its `PanelSection`); none: every mode */
   min?: UiMode
+  /** titles of settings of the section that the search finds it by too (they are not sections of their own) */
+  also?: readonly MessageKey[]
 }
 
 /** The sections, in the order of the tabs and of the panels (the order of an empty search). */
 const SECTIONS: readonly SectionEntry[] = [
   { tab: 'trace', title: 'marker.track.title' },
   { tab: 'trace', title: 'marker.section.title' },
-  { tab: 'carte', title: 'light.map.background' },
+  { tab: 'carte', title: 'light.map.background', also: ['light.map.vivid'] },
   { tab: 'carte', title: 'light.map.terrain' },
   { tab: 'carte', title: 'landmarks.title', min: 'confirme' },
   { tab: 'meteo', title: 'shell.section.weather', min: 'confirme' },
@@ -82,12 +84,15 @@ export function searchSections(query: string, tabs: readonly ShellTab[], mode: U
     const tabLabel = t(`shell.tab.${entry.tab}`)
     const folded = foldText(title)
     const foldedTab = foldText(tabLabel)
+    const foldedAlso = foldText((entry.also ?? []).map((key) => t(key)).join(' '))
     let score = 0
     for (const word of words) {
       const own = rank(folded, word)
       const inTab = rank(foldedTab, word)
-      // the title weighs more than the name of the tab
-      const best = own ?? (inTab === null ? null : inTab + 3)
+      const inAlso = foldedAlso ? rank(foldedAlso, word) : null
+      // the title weighs more than the name of the tab and the settings
+      const other = Math.min(inTab ?? Infinity, inAlso ?? Infinity) + 3
+      const best = own ?? (Number.isFinite(other) ? other : null)
       if (best === null) return
       score += best
     }

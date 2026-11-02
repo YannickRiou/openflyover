@@ -106,6 +106,7 @@ describe('engine options from settings', () => {
     imagerySourceId: 'arcgis-world-imagery',
     imageryDate: '',
     imageryZoomOffset: 1 as const,
+    imageryVivid: 1,
     exaggeration: 1,
     atmosphere: true,
     shadows: true,

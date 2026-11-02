@@ -127,6 +127,8 @@ export default {
   'ambiance.sunset': 'Coucher de soleil',
   'map.imagery': 'Imagerie',
   'map.imageryAuto': 'Esri World Imagery est la source par défaut, partout. En France et en Suisse, l’IGN et swisstopo sont plus détaillés : à choisir ici.',
+  'map.vivid': 'Couleurs vives',
+  'map.vividTip': 'Photos de l’IGN plus vives et plus contrastées, les herbes jaunes un peu plus vertes. 0\u00a0% :\u00a0les photos telles quelles.',
   'map.imageryDate': 'Date des photos',
   'map.imageryDateLatest': 'Les plus récentes',
   'map.imageryDateLatestOn': 'Les plus récentes ({date})',
