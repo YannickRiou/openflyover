@@ -37,6 +37,9 @@ export function setStoredTileReader(reader: StoredTileReader | null): void {
   storedTileReader = reader
 }
 
+/** The reader the offline packs registered, null when none. */
+export const getStoredTileReader = (): StoredTileReader | null => storedTileReader
+
 /** Thrown when the server answers with a non-2xx status. Carries the status and the URL. */
 export class TileFetchError extends Error {
   readonly url: string

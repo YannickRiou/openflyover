@@ -120,6 +120,8 @@ export interface ExportTimings {
   shadowOffscreenTriangles: number
   /** the way the frames reach the WebCodecs encoder, once measured (`handover.ts`) */
   handover?: HandoverMethod
+  /** the tiles of the film fetched before the first frame (`tilePreload.ts`); absent when there was none */
+  preloadMs?: number
 }
 
 export const EMPTY_TIMINGS: ExportTimings = {

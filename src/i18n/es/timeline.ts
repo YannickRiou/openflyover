@@ -134,6 +134,17 @@ const messages: Messages['timeline'] = {
   'menu.removeKey': 'Eliminar el fotograma clave',
   'menu.removeClose': {'one': 'Eliminar y cerrar el hueco', 'other': 'Eliminar los {count} bloques y cerrar el hueco'},
   'menu.removeKeys': { one: 'Eliminar el fotograma clave seleccionado', other: 'Eliminar los {count} fotogramas clave seleccionados' },
+  'menu.split': 'Cortar aquí',
+  'menu.duplicate': 'Duplicar',
+  'menu.copy': 'Copiar',
+  'menu.zoom': 'Ampliar este bloque',
+  'menu.addStop': 'Añadir una parada aquí',
+  'menu.addText': 'Añadir un texto aquí',
+  'menu.addMedia': 'Añadir fotos o vídeos aquí…',
+  'menu.paste': 'Pegar aquí',
+  'menu.markIn': 'Inicio de la zona de reproducción aquí',
+  'menu.markOut': 'Fin de la zona de reproducción aquí',
+  'place.title': '{label}, a {distance} (clic para ir)',
 }
 
 export default messages

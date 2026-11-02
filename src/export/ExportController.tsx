@@ -43,6 +43,11 @@ import { holdRegion } from '../osm/region'
 import { useWaterStore } from '../osm/store'
 import { useAppStore } from '../state/store'
 import { viewTileFailures } from '../terrain/engine'
+import { fetchTileBlob, getStoredTileReader } from '../terrain/fetch'
+import { getImagerySource, getTerrainSource } from '../terrain/sources'
+import { autoDistanceM } from '../flyover/camera'
+import { trackPathOf } from '../flyover/path'
+import { packImageryLevel } from '../offline/plan'
 import {
   DEFAULT_SETTLE,
   REPLACE_EPSILON,
@@ -65,6 +70,7 @@ import { compositorAttributes, createExportEncoder } from './nativeEncoder'
 import { isExportStep, setExportProbe, writeBreadcrumb } from './guard'
 import { effectiveRender } from './qualityTier'
 import { buildFrameSchedule, buildFrameTimes, exportLodHeight } from './schedule'
+import { PRELOAD_MAX_BYTES, filmTilesToPreload, preloadTiles } from './tilePreload'
 import {
   EMPTY_TIMINGS,
   REPORT_INTERVAL_MS,
@@ -110,6 +116,8 @@ interface RunDeps {
   signal: AbortSignal
   /** memory budget of the device (default: this one) */
   budget?: Pick<DeviceBudget, 'exportTileKeepFrames' | 'exportPrefetchAhead'>
+  /** fetches a tile of the film before its first frame (default: into the HTTP cache, `tilePreload.ts`) */
+  preloadTile?: (url: string) => Promise<unknown>
 }
 
 const noDraw = () => undefined
@@ -607,6 +615,42 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       keepFrames: exportTileKeepFrames,
       prefetchKeepFrames: Math.max(0, ...exportPrefetchAhead) + 2 * PREFETCH_EVERY,
     }
+    // the tiles of the whole film first, at full speed, into the HTTP cache (#401): the frames then wait for the GPU, not
+    // the network; its time is counted apart, and the remaining time starts after it
+    if (deps.engine()) {
+      const p0 = performance.now()
+      const app = useAppStore.getState()
+      const preload = app.bounds && app.tracks.length > 0 ? filmTilesToPreload({
+        points: app.tracks.flatMap((tr) => tr.segments.flatMap((sg) => sg.points)),
+        bounds: app.bounds,
+        terrain: getTerrainSource(settings.terrainSourceId),
+        imagery: getImagerySource(settings.imagerySourceId),
+        imageryZoomOffset: packImageryLevel(settings.imageryZoomOffset).zoomOffset,
+        // the follow camera at its lowest, as « Préparer hors ligne » (OfflinePanel)
+        cameraHeightM: Math.min(...app.tracks.map((tr) => autoDistanceM(trackPathOf(tr)))) * settings.camera.distance * Math.sin((settings.camera.pitchDeg * Math.PI) / 180),
+        viewportHeightPx: lodHeight,
+        maxBytes: PRELOAD_MAX_BYTES[deviceBudget().kind],
+      }) : null
+      if (preload && preload.urls.length > 0) {
+        writeBreadcrumb(`export : préchargement de ${preload.urls.length} tuiles sur ${preload.planned}`)
+        let reportedAt = -Infinity
+        const { failed } = await preloadTiles(preload.urls, {
+          download: deps.preloadTile ?? ((url) => fetchTileBlob(url)),
+          stored: getStoredTileReader(),
+          isCanceled,
+          onProgress: (done, total) => {
+            if (done < total && performance.now() - reportedAt < REPORT_INTERVAL_MS) return
+            reportedAt = performance.now()
+            exportStore().reportTiles(done, total)
+          },
+        })
+        if (isCanceled()) throw new ExportCanceledError()
+        timings.preloadMs = performance.now() - p0
+        writeBreadcrumb(`export : tuiles préchargées en ${(timings.preloadMs / 1000).toFixed(1)} s (${failed} échecs)`)
+        useExportStore.setState({ startedAt: exportStore().startedAt + timings.preloadMs })
+      }
+    }
+
     for (let i = 0; i < schedule.length; i++) {
       if (isCanceled()) throw new ExportCanceledError()
       // once per frame the page handles its input and paints (the export never waits otherwise when tiles are cached)

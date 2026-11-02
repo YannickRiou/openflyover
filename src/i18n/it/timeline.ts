@@ -128,6 +128,17 @@ const messages: Messages['timeline'] = {
   'menu.removeKey': 'Elimina il keyframe',
   'menu.removeClose': {'one': 'Eliminare e chiudere lo spazio', 'other': 'Eliminare i {count} blocchi e chiudere lo spazio'},
   'menu.removeKeys': { one: 'Elimina il keyframe selezionato', other: 'Elimina i {count} keyframe selezionati' },
+  'menu.split': 'Taglia qui',
+  'menu.duplicate': 'Duplica',
+  'menu.copy': 'Copia',
+  'menu.zoom': 'Ingrandisci su questo blocco',
+  'menu.addStop': 'Aggiungi una sosta qui',
+  'menu.addText': 'Aggiungi un testo qui',
+  'menu.addMedia': 'Aggiungi foto o video qui…',
+  'menu.paste': 'Incolla qui',
+  'menu.markIn': 'Inizio dell’area di riproduzione qui',
+  'menu.markOut': 'Fine dell’area di riproduzione qui',
+  'place.title': '{label}, a {distance} (clic per andarci)',
 }
 
 export default messages

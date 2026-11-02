@@ -603,7 +603,7 @@ type TimingSplit = Pick<
   ExportTimings,
   'rendered' | 'renders' | 'renderMs' | 'gpuMs' | 'gpuRenders' | 'waitMs' | 'encodeMs' | 'composeMs' | 'frameMs' | 'encodeWaitMs'
 > &
-  Partial<Pick<ExportTimings, 'gpuWaitMs'>>
+  Partial<Pick<ExportTimings, 'gpuWaitMs' | 'preloadMs'>>
 
 /**
  * Where the time of a render went, on one line: « rendu 50,0 s (GPU 21,3 s), 1,4 rendu par image, tuiles 30,0 s,
@@ -627,6 +627,7 @@ export function timingsSummary(timings: TimingSplit): string {
     const ratio = timings.renders / timings.rendered
     parts.push(t('export.history.timings.perImage', { count: ratio, ratio: comma(ratio) }))
   }
+  if (timings.preloadMs) parts.push(t('export.history.timings.preload', { time: s(timings.preloadMs) }))
   parts.push(t('export.history.timings.tiles', { time: s(timings.waitMs) }))
   if (timings.composeMs + timings.frameMs + timings.encodeWaitMs > 0) {
     if (timings.gpuWaitMs) parts.push(t('export.history.timings.gpuWait', { time: s(timings.gpuWaitMs) }))
