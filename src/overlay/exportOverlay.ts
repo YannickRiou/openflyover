@@ -34,7 +34,7 @@ import type { Sequence } from '../flyover/sequence'
 import { createCardImages, createLogos } from './assets'
 import { cumulativeAscent, dayCardAt, leaderboardRows, overlayCredits, overlayFilmFrameAt, overlayPermanentCredits, overlayShortCredits, prepareOverlayFilm, recordedAtProgress, stageCardAt } from './data'
 import type { CreditSources, LeaderboardRow, OverlayFilm } from './data'
-import { bilanStampAt, drawOverlay } from './draw'
+import { bilanStampAt, drawOverlay, photoCoversFrame } from './draw'
 import type { OverlayAssets, OverlayExtras, OverlayTime, OverlayTrackLegend } from './draw'
 import type { OverlayAnchor } from './settings'
 
@@ -170,6 +170,12 @@ export async function loadFrameMedia(timeS: number, progress: number): Promise<v
     recordedMs = recordedAtProgress(trackPathOf(track), progress)
   }
   await Promise.all([getMediaBitmaps().load(mediaToLoad(media, timeS)), exportVideos?.load(media, timeS, recordedMs)])
+}
+
+/** The 3D view does not show at film time `timeS`: a full-screen photo covers it (`photoCoversFrame`), its picture decoded by `loadFrameMedia`. */
+export function sceneHiddenAt(timeS: number): boolean {
+  const bitmaps = getMediaBitmaps()
+  return photoCoversFrame(useAppStore.getState().settings.film.media, timeS, (src) => bitmaps.get(src) !== undefined)
 }
 
 /** Close the clips opened for the export. */

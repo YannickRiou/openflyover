@@ -31,7 +31,7 @@ import { smoothedTrackPath } from '../flyover/smooth'
 import { junctionBlendAt, nightAt } from '../flyover/sun'
 import { loadOverlayFonts } from '../overlay/assets'
 import { filmTextOpacity, overlayTime, overlayTimedState } from '../overlay/draw'
-import { loadFrameMedia, overlayExtras, releaseFrameMedia } from '../overlay/exportOverlay'
+import { loadFrameMedia, overlayExtras, releaseFrameMedia, sceneHiddenAt } from '../overlay/exportOverlay'
 import { filmViewAt } from '../scene/filmView'
 import { adaptiveShutterSamples, sameShot, setShutterSubFrame, shutterSamples } from '../scene/lens'
 import { markerKeysMoveWithTime } from '../film/markerKeys'
@@ -53,6 +53,7 @@ import {
   REPLACE_EPSILON,
   composeFrame,
   composeOverlayFrame,
+  fillSky,
   renderSettledFrame,
   tileFailureMessage,
   wait,
@@ -609,6 +610,12 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     /** the view of the last rendered frame moved with time */
     let previousTimed = false
     let previousOverlay = ''
+    /**
+     * The last view rendered at the start of a hold, sky included: while it holds, a frame whose overlay alone changes
+     * (a text fading in, the opening card) is composed over this copy instead of rendering the same view again.
+     */
+    let sceneCopy: { canvas: OffscreenCanvas; ctx: OffscreenCanvasRenderingContext2D } | null = null
+    let sceneCopyValid = false
     // a phone: tiles are kept for a number of film frames, not seconds (the engine also caps them, deviceBudget.ts)
     const retention = {
       frame: 0,
@@ -686,7 +693,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       const overlayNow = overlayKey(progress, times[i])
       /** time spent composing this frame (ms), null when it repeats the previous one */
       let composed: number | null = null
-      if (rendered !== previous || ((timed || previousTimed) && times[i] !== frameTimeS) || overlayNow !== previousOverlay) {
+      const sceneChanged = rendered !== previous || ((timed || previousTimed) && times[i] !== frameTimeS)
+      if (sceneChanged || overlayNow !== previousOverlay) {
         frameTimeS = times[i]
         previousTimed = timed
         previousOverlay = overlayNow
@@ -694,32 +702,66 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         if (isExportStep(timings.rendered)) writeBreadcrumb(`export : image ${i + 1} / ${schedule.length}`)
         // pictures and video frames decoded before the render: composing must follow it in the same task
         await loadFrameMedia(frameTimeS, progress)
-        waitingFrame = i
-        for (let j = 0; j < renders.length; j++) {
-          setShutterSubFrame(j, renders.length)
-          frameTimeS = renders[j].timeS
-          const outcome = await renderSettledFrame(renders[j].progress, frameDeps, DEFAULT_SETTLE)
-          if (outcome !== 'complete') throw tilesFailed(outcome, i + 1)
+        const at = { progress, time: overlayTime(filmClock, progress, frameTimeS) }
+        const overlay = deps.overlay()
+        // a full-screen photo covers the whole frame: the view under it is not rendered (the image is the same)
+        const hidden = overlay !== undefined && sceneHiddenAt(at.time.timeS)
+        // the same view as the last one, only the overlay changed: composed over the copy kept at the start of the hold
+        const reused = !hidden && !sceneChanged && sceneCopyValid && sceneCopy !== null
+        if (hidden || reused) {
+          const t0 = performance.now()
+          composeFrame(handover.begin(), reused ? sceneCopy!.canvas : canvas, at, width, height, overlay)
+          composed = performance.now() - t0
+          timings.composeMs += composed
+          timings.encodeMs += composed
+          if (hidden) {
+            // the drawing buffer no longer holds a view: the next frame renders again
+            previous = ''
+            sceneCopyValid = false
+            if (i % PREFETCH_EVERY === 0) prefetchAhead(i)
+          }
+        } else {
+          waitingFrame = i
+          for (let j = 0; j < renders.length; j++) {
+            setShutterSubFrame(j, renders.length)
+            frameTimeS = renders[j].timeS
+            const outcome = await renderSettledFrame(renders[j].progress, frameDeps, DEFAULT_SETTLE)
+            if (outcome !== 'complete') throw tilesFailed(outcome, i + 1)
+          }
+          frameTimeS = times[i]
+          // the next frame's tiles load while the GPU draws this one (the wait below blocks the page, not the network nor
+          // the tile workers): on a phone that wait is a fifth of a second per image
+          prefetchAhead(i, NEXT_FRAME)
+          // same task as the last render: the drawing buffer still holds the frame; the render is waited for apart, so that
+          // composing and the video frame are not charged for it
+          const g0 = performance.now()
+          waitForGpu(glContext)
+          const waited = performance.now() - g0
+          timings.gpuWaitMs += waited
+          timings.encodeMs += waited
+          const t0 = performance.now()
+          composeFrame(handover.begin(), canvas, at, width, height, overlay)
+          // a hold starts and its view stays (it does not move with time, or the film time stands still): kept aside for the
+          // frames where only the overlay changes
+          sceneCopyValid = overlay !== undefined && schedule[i + 1] === progress && (!timed || times[i + 1] === times[i])
+          if (sceneCopyValid) {
+            if (!sceneCopy) {
+              const copy = new OffscreenCanvas(width, height)
+              const copyCtx = copy.getContext('2d', { alpha: false })
+              sceneCopy = copyCtx ? { canvas: copy, ctx: copyCtx } : null
+            }
+            if (sceneCopy) {
+              fillSky(sceneCopy.ctx, 0, 0, width, height)
+              sceneCopy.ctx.drawImage(canvas, 0, 0, width, height)
+            } else sceneCopyValid = false
+          }
+          composed = performance.now() - t0
+          timings.composeMs += composed
+          timings.encodeMs += composed
+          timings.rendered++
+          if ((timings.rendered - 1) % PREFETCH_EVERY === 0) prefetchAhead(i)
+          previous = rendered
         }
-        frameTimeS = times[i]
-        // the next frame's tiles load while the GPU draws this one (the wait below blocks the page, not the network nor
-        // the tile workers): on a phone that wait is a fifth of a second per image
-        prefetchAhead(i, NEXT_FRAME)
-        // same task as the last render: the drawing buffer still holds the frame; the render is waited for apart, so that
-        // composing and the video frame are not charged for it
-        const g0 = performance.now()
-        waitForGpu(glContext)
-        const waited = performance.now() - g0
-        timings.gpuWaitMs += waited
-        timings.encodeMs += waited
-        const t0 = performance.now()
-        composeFrame(handover.begin(), canvas, { progress, time: overlayTime(filmClock, progress, frameTimeS) }, width, height, deps.overlay())
-        composed = performance.now() - t0
-        timings.composeMs += composed
-        timings.encodeMs += composed
-        timings.rendered++
-        if ((timings.rendered - 1) % PREFETCH_EVERY === 0) prefetchAhead(i)
-        previous = rendered
       }
       // the previous frame out of the way, this one handed over: its canvas is read now, its encoding goes on while
       // the next frame renders
