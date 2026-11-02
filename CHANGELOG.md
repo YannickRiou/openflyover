@@ -3,8 +3,9 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 4.8.0 (November 2026)
 
+- **Dependencies of the app updated**, security fixes included: the list is in the commits since 4.7.2.
 - **Data ribbon**: a thin, lighter line runs along the top edge of the wall, and a second legend (stacked with the first) shows the ribbon's quantity when the line is coloured by another one.
 - **The timeline shows where the mouse is**: passing the mouse over the lanes draws a thin line with the film time, the distance and the elevation there, and the name of a pass, summit or record the track passes at that moment. Nothing changes until you click; a touch screen does not show it.
 - **A right-click menu that acts where you click**: on the empty part of the lanes or on the ruler, « Ajouter un arrêt ici » (during the flyover), « Ajouter un texte ici », « Ajouter des photos ou des vidéos ici… », « Coller ici » (after « Copier ») and « Début / Fin de la zone de lecture ici », besides « Ajouter une image clé ici » on the lanes with keys. On a text or a photo, « Couper ici », « Dupliquer » and « Copier »; on any block, « Zoomer sur ce bloc », then « Supprimer » as before. The keyboard shortcuts are unchanged.
