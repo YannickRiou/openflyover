@@ -535,6 +535,10 @@ describe('Timeline', () => {
       const place = host.querySelector<HTMLElement>('[data-testid="timeline-place"]')!
       expect(place.title).toContain('Col du Test')
       expect(parseFloat(place.style.left)).toBeCloseTo(10 + passS - 3, 5)
+      // in a row of its own under the times, the head of the lanes as tall as the ruler
+      const ruler = place.closest<HTMLElement>('[role="slider"]')!
+      expect(ruler.className).toContain('h-9')
+      expect(host.querySelector('[data-testid="timeline-head"]')!.className).toContain('h-9')
       await act(async () => void place.dispatchEvent(Object.assign(new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }), { pointerId: 1, isPrimary: true })))
       const { playback } = useAppStore.getState()
       expect(playback.timeS ?? clock.timeAtProgress(playback.progress)).toBeCloseTo(passS, 5)
