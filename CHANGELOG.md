@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Data ribbon**: a thin, lighter line runs along the top edge of the wall, and a second legend (stacked with the first) shows the ribbon's quantity when the line is coloured by another one.
 - **The timeline shows where the mouse is**: passing the mouse over the lanes draws a thin line with the film time, the distance and the elevation there, and the name of a pass, summit or record the track passes at that moment. Nothing changes until you click; a touch screen does not show it.
 - **A right-click menu that acts where you click**: on the empty part of the lanes or on the ruler, « Ajouter un arrêt ici » (during the flyover), « Ajouter un texte ici », « Ajouter des photos ou des vidéos ici… », « Coller ici » (after « Copier ») and « Début / Fin de la zone de lecture ici », besides « Ajouter une image clé ici » on the lanes with keys. On a text or a photo, « Couper ici », « Dupliquer » and « Copier »; on any block, « Zoomer sur ce bloc », then « Supprimer » as before. The keyboard shortcuts are unchanged.
 - **The places of the track on the ruler**: the passes, summits and records the automatic stops can use show as small marks on the ruler at their moment in the film, with their name where it fits (otherwise in the tooltip). A click on a mark takes the playhead there.

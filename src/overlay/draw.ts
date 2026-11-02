@@ -130,6 +130,8 @@ export interface OverlayExtras {
   markerColor?: string
   /** legend of the track colouring (`trackLegend`) and its place, drawn even while the overlay is off */
   trackLegend?: OverlayTrackLegend | null
+  /** second legend, the data ribbon's, when it shows another quantity than the line's colouring */
+  ribbonLegend?: OverlayTrackLegend | null
 }
 
 /** Legend of the track colouring as the overlay draws it: the values, and the anchor chosen for it. */
@@ -2025,6 +2027,7 @@ export function drawOverlay(
   }
   // the legend of the track colouring follows the colouring, overlay on or off
   if (legend && live > 0) add(trackLegendWidget(p, legend, live))
+  if (extras.ribbonLegend && live > 0) add(trackLegendWidget(p, extras.ribbonLegend, live))
   // photo cards after the widgets of their anchor; the caption of a full-screen photo is drawn like a text
   for (const { item, opacity, image } of photos) {
     const caption = item.caption?.trim()

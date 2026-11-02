@@ -793,10 +793,10 @@ describe('flights: curtain, ground shadow, width weights', () => {
     applyTrackRibbon([set], on)
     const layer = set.segments[0].ribbon!
     const position = layer.mesh.geometry.getAttribute('position')
-    // two vertices per point: the foot on the line, the top above it by the value's share of the height
+    // three vertices per point: the foot on the line, the bottom of the edge strip and the top, above it by the value's share of the height
     const points = set.segments[0].points.length
-    expect(position.count).toBe(points * 2)
-    const top = (k: number) => Math.hypot(position.getX(2 * k + 1) - position.getX(2 * k), position.getY(2 * k + 1) - position.getY(2 * k), position.getZ(2 * k + 1) - position.getZ(2 * k))
+    expect(position.count).toBe(points * 3)
+    const top = (k: number) => Math.hypot(position.getX(3 * k + 2) - position.getX(3 * k), position.getY(3 * k + 2) - position.getY(3 * k), position.getZ(3 * k + 2) - position.getZ(3 * k))
     expect(top(0)).toBeCloseTo(200 * RIBBON_MIN_SHARE, 3)
     expect(top(points - 1)).toBeCloseTo(200, 3)
     expect(layer.mesh.visible).toBe(true)
