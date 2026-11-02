@@ -24,6 +24,7 @@ import {
   layoutWidgets,
   overlayTime,
   overlayTimedState,
+  mediaCoversFrame,
   progressTime,
   titleCardOpacity,
   titleCardOpacityOf,
@@ -282,6 +283,26 @@ describe('fixed parts of the profile and the mini-map', () => {
     } finally {
       vi.unstubAllGlobals()
     }
+  })
+})
+
+describe('mediaCoversFrame', () => {
+  const photo = (patch: Partial<FilmMedia> = {}): FilmMedia => ({ ...MEDIA_DEFAULTS, id: 'p', startS: 10, durationS: 4, kind: 'image', src: 'a', layout: 'plein-ecran', ...patch })
+  const ready = () => true
+
+  it('a full-screen photo or clip at full opacity, decoded: the view under it does not show', () => {
+    expect(mediaCoversFrame([photo()], 12, ready)).toBe(true)
+    // the export decodes a clip's frames over black, without alpha
+    expect(mediaCoversFrame([photo({ kind: 'video' })], 12, ready)).toBe(true)
+    // fading in or out, outside its window, not decoded: the view shows through
+    expect(mediaCoversFrame([photo()], 10.1, ready)).toBe(false)
+    expect(mediaCoversFrame([photo()], 13.9, ready)).toBe(false)
+    expect(mediaCoversFrame([photo()], 15, ready)).toBe(false)
+    expect(mediaCoversFrame([photo()], 12, () => false)).toBe(false)
+  })
+
+  it('a photo card never hides the view', () => {
+    expect(mediaCoversFrame([photo({ layout: 'carte' })], 12, ready)).toBe(false)
   })
 })
 

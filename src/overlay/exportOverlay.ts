@@ -10,7 +10,7 @@ import type { Track } from '../core/types'
 import { dayFigures, trackDays } from '../film/days'
 import type { DayFigures } from '../film/days'
 import { junctionsDipAt } from '../film/junctions'
-import { transitionDipAt } from '../film/model'
+import { clipTimeS, transitionDipAt } from '../film/model'
 import type { FilmMedia, TransitionDip } from '../film/model'
 import type { DrawOverlay } from '../export/capture'
 import { videoSize } from '../export/schedule'
@@ -34,7 +34,7 @@ import type { Sequence } from '../flyover/sequence'
 import { createCardImages, createLogos } from './assets'
 import { cumulativeAscent, dayCardAt, leaderboardRows, overlayCredits, overlayFilmFrameAt, overlayPermanentCredits, overlayShortCredits, prepareOverlayFilm, recordedAtProgress, stageCardAt } from './data'
 import type { CreditSources, LeaderboardRow, OverlayFilm } from './data'
-import { bilanStampAt, drawOverlay } from './draw'
+import { bilanStampAt, drawOverlay, mediaCoversFrame } from './draw'
 import type { OverlayAssets, OverlayExtras, OverlayTime, OverlayTrackLegend } from './draw'
 import type { OverlayAnchor } from './settings'
 
@@ -170,6 +170,22 @@ export async function loadFrameMedia(timeS: number, progress: number): Promise<v
     recordedMs = recordedAtProgress(trackPathOf(track), progress)
   }
   await Promise.all([getMediaBitmaps().load(mediaToLoad(media, timeS)), exportVideos?.load(media, timeS, recordedMs)])
+}
+
+/**
+ * The 3D view does not show at film time `timeS` and `progress`: a full-screen photo or clip covers it
+ * (`mediaCoversFrame`), its picture or frame decoded by `loadFrameMedia`.
+ */
+export function sceneHiddenAt(timeS: number, progress: number): boolean {
+  const { tracks, settings } = useAppStore.getState()
+  const { media } = settings.film
+  const bitmaps = getMediaBitmaps()
+  // the frame of a clip following the flight is the one recorded under the marker, as in `loadFrameMedia`
+  const track = media.some((m) => m.sync?.follow) ? filmTrackOf(tracks, settings.race) : undefined
+  const recordedMs = track ? recordedAtProgress(trackPathOf(track), progress) : undefined
+  return mediaCoversFrame(media, timeS, (item) =>
+    item.kind === 'video' ? exportVideos?.get(item, clipTimeS(item, timeS, recordedMs)) !== undefined : bitmaps.get(item.src) !== undefined,
+  )
 }
 
 /** Close the clips opened for the export. */
