@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **Versions of a project**: in Projet › Versions, « Enregistrer une version » keeps the project as it is now under a name (the date by default), photos and clips included. « Revenir à cette version » brings it back; the project as it was is kept as a version first, so going back can itself be undone. Versions are kept with the project in « Mes projets » and deleted with it.
+
 ## 4.8.0 (November 2026)
 
 - **Dependencies of the app updated**, security fixes included: the list is in the commits since 4.7.2.

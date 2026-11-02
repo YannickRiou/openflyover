@@ -2264,7 +2264,14 @@ The interface and the texts drawn into the films and posters exist in **French**
   writes at once, a single toast per series of failures); each write marks the project as saved ("Enregistré"
   in the bar). Opening an entry goes through `openProject(file, entry)` (same validations and warnings, the entry's
   name wins); `openProject` first writes a pending change (`flushAutosave`), and a project opened from
-  a file has no entry. **Closing** (`installCloseGuard`, installed by `App`): `closeLoss` says what would be lost (the
+  a file has no entry. **Versions** (« Versions » section of the "Projet" tab, open entry only): `saveVersion` writes a
+  full copy of the document, `<id>.<version id>.version.json`, then its line in `<id>.versions.json`
+  (`ProjectVersion { id, name, createdAt, sizeBytes }`, most recent first, a damaged list reads as none); `remove`
+  deletes them with the project. `restoreVersion` (`ui/projectActions.ts`) reads the version, keeps the open project
+  as a version « Avant le retour à … », opens the version through `openProject(file, entry, false, name)` (the entry's
+  name wins, history cleared) and writes it to the entry at once (`writeOpenEntry`): coming back is undone by coming
+  back to that version. No automatic version and no limit: each version costs the size of the project, media
+  included (shown in the list). **Closing** (`installCloseGuard`, installed by `App`): `closeLoss` says what would be lost (the
   export in progress, otherwise a "Modifié" (modified) project). Desktop: the window waits for `confirmClose`
   (`guardClose` of the platform, `onCloseRequested` then `destroy`): pending write finished (4 s at most), then a
   native question if something would be lost ("Enregistrer" / "Fermer sans enregistrer" / "Annuler" (save / close

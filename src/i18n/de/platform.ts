@@ -11,6 +11,7 @@ const messages: Messages['platform'] = {
   'library.invalidId': 'Ungültige Projektkennung: {id}',
   'library.emptyName': 'Der Projektname ist leer.',
   'library.gone': 'Dieses Projekt ist nicht mehr in „Meine Projekte“.',
+  'library.versionGone': 'Diese Version gibt es nicht mehr.',
   'app.updateAvailable': 'Neue Version verfügbar',
   'app.iosInstall': 'OpenFlyover installieren: auf „Teilen“ tippen, dann auf „Zum Home-Bildschirm“.',
   'app.reload': 'Neu laden',

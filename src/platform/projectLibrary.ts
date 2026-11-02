@@ -1,12 +1,13 @@
 /**
  * « Mes projets » behind `ProjectLibrary` (see platform.ts). Each project is two text files named by its id: the
  * document `<id>.openflyover.json` (tens of MB with its pictures and clips) and its entry `<id>.entry.json` (name,
- * date, summary, size, a thumbnail of a few KB), so the list reads only the small files. Desktop: files under
+ * date, summary, size, a thumbnail of a few KB), so the list reads only the small files. Its versions, when it has
+ * some: their list `<id>.versions.json` and a full copy of the document each, `<id>.<version id>.version.json`. Desktop: files under
  * `<app data>/projects/` (the capability adds that folder to the fs scope). Web: one Cache Storage cache,
  * `openflyover-projects-v1`. Both take their storage as an argument (tests).
  */
 import type * as TauriFs from '@tauri-apps/plugin-fs'
-import type { ProjectEntry, ProjectLibrary } from './platform'
+import type { ProjectEntry, ProjectLibrary, ProjectVersion } from './platform'
 import { currentLocale, t } from '../i18n'
 
 /** Named text files in one folder. */
@@ -28,6 +29,8 @@ const WEB_PROJECT_URL = '/openflyover-projects/'
 const PROJECT_ID = /^[a-z0-9-]{1,64}$/
 const DOCUMENT_SUFFIX = '.openflyover.json'
 const ENTRY_SUFFIX = '.entry.json'
+const VERSIONS_SUFFIX = '.versions.json'
+const VERSION_SUFFIX = '.version.json'
 const MAX_NAME_LENGTH = 120
 /** longest thumbnail kept in an entry (data URL characters, ~60 KB of JPEG); a 240 px view takes ~10 KB */
 export const MAX_THUMBNAIL_LENGTH = 80_000
@@ -37,6 +40,30 @@ const THUMBNAIL = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/
 export function projectFileNames(id: string): { document: string; entry: string } {
   if (!PROJECT_ID.test(id)) throw new Error(t('platform.library.invalidId', { id }))
   return { document: `${id}${DOCUMENT_SUFFIX}`, entry: `${id}${ENTRY_SUFFIX}` }
+}
+
+/** File names of a version of project `id` and of the list of its versions; both ids checked first. */
+export function versionFileNames(id: string, versionId: string | null): { document: string; list: string } {
+  projectFileNames(id)
+  if (versionId !== null && !PROJECT_ID.test(versionId)) throw new Error(t('platform.library.invalidId', { id: versionId }))
+  return { document: `${id}.${versionId}${VERSION_SUFFIX}`, list: `${id}${VERSIONS_SUFFIX}` }
+}
+
+/** The versions stored in `text`, most recent first; those that are not one are left out (damaged list: none). */
+export function parseProjectVersions(text: string): ProjectVersion[] {
+  try {
+    const raw: unknown = JSON.parse(text)
+    if (!Array.isArray(raw)) return []
+    return raw
+      .filter(
+        (v: Partial<ProjectVersion>) =>
+          typeof v?.id === 'string' && PROJECT_ID.test(v.id) && typeof v.name === 'string' && Number.isFinite(v.createdAt) && Number.isFinite(v.sizeBytes),
+      )
+      .map(({ id, name, createdAt, sizeBytes }: ProjectVersion) => ({ id, name, createdAt, sizeBytes }))
+      .sort((a, b) => b.createdAt - a.createdAt)
+  } catch {
+    return []
+  }
 }
 
 /** Name of an entry: trimmed, spaces collapsed, 120 characters at most. */
@@ -87,6 +114,11 @@ export function createProjectLibrary(
     return entry
   }
   const writeEntry = (entry: ProjectEntry) => files.write(projectFileNames(entry.id).entry, JSON.stringify(entry))
+  const readVersions = async (id: string) => {
+    const blob = await files.read(versionFileNames(id, null).list)
+    return blob === null ? [] : parseProjectVersions(await blob.text())
+  }
+  const writeVersions = (id: string, versions: ProjectVersion[]) => files.write(versionFileNames(id, null).list, JSON.stringify(versions))
 
   return {
     async list() {
@@ -122,7 +154,33 @@ export function createProjectLibrary(
     },
     async remove(id) {
       const { document, entry } = projectFileNames(id)
+      const versions = await readVersions(id)
       await files.remove(entry)
+      await files.remove(document)
+      for (const version of versions) await files.remove(versionFileNames(id, version.id).document)
+      await files.remove(versionFileNames(id, null).list)
+    },
+    versions: readVersions,
+    async saveVersion(id, { name, text }) {
+      const version: ProjectVersion = {
+        id: newId(),
+        name: cleanProjectName(name),
+        createdAt: now(),
+        sizeBytes: typeof text === 'string' ? new TextEncoder().encode(text).length : text.size,
+      }
+      // the document first: the list never names a version that was not written
+      await files.write(versionFileNames(id, version.id).document, text)
+      await writeVersions(id, [version, ...(await readVersions(id))])
+      return version
+    },
+    async loadVersion(id, versionId) {
+      const document = await files.read(versionFileNames(id, versionId).document)
+      if (document === null) throw new Error(t('platform.library.versionGone'))
+      return document
+    },
+    async removeVersion(id, versionId) {
+      const { document } = versionFileNames(id, versionId)
+      await writeVersions(id, (await readVersions(id)).filter((v) => v.id !== versionId))
       await files.remove(document)
     },
   }

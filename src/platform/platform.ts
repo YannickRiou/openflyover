@@ -124,6 +124,16 @@ export interface ProjectEntry {
   thumbnail?: string
 }
 
+/** A version of a kept project: its document as it was when the version was saved, to come back to. */
+export interface ProjectVersion {
+  id: string
+  name: string
+  /** ms since 1970 */
+  createdAt: number
+  /** size of the document (UTF-8 bytes) */
+  sizeBytes: number
+}
+
 /** Projects kept by the app (desktop: files in the app data folder; web: Cache Storage of the site). */
 export interface ProjectLibrary {
   /** most recent first; an entry that cannot be read is left out */
@@ -134,7 +144,15 @@ export interface ProjectLibrary {
   load(id: string): Promise<Blob>
   /** the entry only: the document keeps its name until its next save */
   rename(id: string, name: string): Promise<ProjectEntry>
+  /** the entry, its document and its versions */
   remove(id: string): Promise<void>
+  /** versions of entry `id`, most recent first */
+  versions(id: string): Promise<ProjectVersion[]>
+  /** keep `text` as a new version of entry `id` */
+  saveVersion(id: string, version: { name: string; text: string | Blob }): Promise<ProjectVersion>
+  /** the document of a version, as `load` */
+  loadVersion(id: string, versionId: string): Promise<Blob>
+  removeVersion(id: string, versionId: string): Promise<void>
 }
 
 /**

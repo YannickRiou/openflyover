@@ -27,6 +27,7 @@ import {
   createWebLibraryFiles,
   isProjectThumbnail,
   parseProjectEntry,
+  parseProjectVersions,
   projectFileNames,
   sortProjectEntries,
 } from './projectLibrary'
@@ -628,6 +629,37 @@ describe('offline tile cache', () => {
     await expect(library.load('p1')).rejects.toThrow(/plus dans/)
     await expect(library.rename('p1', 'x')).rejects.toThrow(/plus dans/)
     await expect(library.load('../tiles/a')).rejects.toThrow(/invalide/)
+  })
+
+  it('« Mes projets »: versions of a project, a full copy each, most recent first, gone with the project', async () => {
+    const storage = fakeCaches()
+    let clock = 10
+    let ids = 0
+    const library = createProjectLibrary(createWebLibraryFiles(storage), () => clock++, () => `v${++ids}`)
+    const entry = await library.save(null, { name: 'Vercors', summary: '', text: '{"a":1}' })
+    expect(await library.versions(entry.id)).toEqual([])
+
+    const first = await library.saveVersion(entry.id, { name: ' Avant la musique ', text: '{"a":1}' })
+    expect(first).toEqual({ id: 'v2', name: 'Avant la musique', createdAt: 11, sizeBytes: 7 })
+    await library.save(entry.id, { name: 'Vercors', summary: '', text: '{"a":2}' })
+    const second = await library.saveVersion(entry.id, { name: 'Montage court', text: new Blob(['{"a":2}']) })
+    expect((await library.versions(entry.id)).map((v) => v.name)).toEqual(['Montage court', 'Avant la musique'])
+    // a version keeps its document whatever the entry becomes
+    expect(await (await library.loadVersion(entry.id, first.id)).text()).toBe('{"a":1}')
+    expect(await (await library.load(entry.id)).text()).toBe('{"a":2}')
+    // the list of the projects is unchanged
+    expect((await library.list()).map((e) => e.id)).toEqual([entry.id])
+
+    await library.removeVersion(entry.id, second.id)
+    expect((await library.versions(entry.id)).map((v) => v.id)).toEqual([first.id])
+    await expect(library.loadVersion(entry.id, second.id)).rejects.toThrow(/n’existe plus/)
+    await expect(library.loadVersion(entry.id, '../a')).rejects.toThrow(/invalide/)
+
+    await library.remove(entry.id)
+    const cache = storage.caches.get(WEB_PROJECT_CACHE)!
+    expect([...cache.keys()]).toEqual([])
+    expect(parseProjectVersions('pas du JSON')).toEqual([])
+    expect(parseProjectVersions('[{"id":"x","name":"ok","createdAt":1,"sizeBytes":2},{"id":"../y","name":"no","createdAt":1,"sizeBytes":2}]').map((v) => v.id)).toEqual(['x'])
   })
 
   it('« Mes projets » on the web: one cache, the browser asked once to keep it', async () => {

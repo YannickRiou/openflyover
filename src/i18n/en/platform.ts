@@ -12,6 +12,7 @@ const messages: Messages['platform'] = {
   'library.invalidId': 'Invalid project identifier: {id}',
   'library.emptyName': 'The project name is empty.',
   'library.gone': 'This project is no longer in “My projects”.',
+  'library.versionGone': 'This version no longer exists.',
   'app.updateAvailable': 'New version available',
   'app.iosInstall': 'To install OpenFlyover: tap Share, then “Add to Home Screen”.',
   'app.reload': 'Reload',

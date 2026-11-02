@@ -12,7 +12,7 @@ import { useMediaStore } from '../film/media'
 import { importFile, importText, supportedExtension } from '../import'
 import { chainTracks, followEachOther, replaceByChain } from '../import/chain'
 import { fileTargetOf, getPlatform } from '../platform'
-import type { OpenFilesOptions, ProjectEntry } from '../platform'
+import type { OpenFilesOptions, ProjectEntry, ProjectVersion } from '../platform'
 import { applyEmptyProject, applyProject } from '../project/apply'
 import { parseProject, projectFileName, serializeProject } from '../project/document'
 import { PROJECT_EXTENSION, decodeProjectFile, encodeProjectFile } from '../project/file'
@@ -21,7 +21,17 @@ import { useAppStore } from '../state/store'
 import { setAutoFilmOpen } from './autoFilmOpen'
 import { importFiles } from './importFlow'
 import type { ImportJob } from './importFlow'
-import { confirmClose, flushAutosave, lastOpenProject, projectCloseLoss, setOpenEntry, unsavedChangesText, useLibraryStore } from './library'
+import {
+  confirmClose,
+  flushAutosave,
+  lastOpenProject,
+  projectCloseLoss,
+  saveOpenVersion,
+  setOpenEntry,
+  unsavedChangesText,
+  useLibraryStore,
+  writeOpenEntry,
+} from './library'
 import { askOpenChoice, askUnsavedChanges, dismissOpenQuestions } from './openChoice'
 import { effectiveProjectName, openedTracksAction, routeOpenedFiles } from './shell'
 import { dismissToast, showToast } from './toast'
@@ -78,9 +88,10 @@ export async function saveExportedFile(url: string, fileName: string): Promise<v
 
 /**
  * Replace everything by the project in `file`; says so, with the warnings of the file, or why it failed. `entry`: the
- * « Mes projets » entry it comes from (its name wins, it is saved automatically from now on); `reopened` at start-up.
+ * « Mes projets » entry it comes from (its name wins, it is saved automatically from now on); `reopened` at start-up;
+ * `restored`: the name of the version of `entry` it is.
  */
-export async function openProject(file: File, entry: ProjectEntry | null = null, reopened = false): Promise<boolean> {
+export async function openProject(file: File, entry: ProjectEntry | null = null, reopened = false, restored?: string): Promise<boolean> {
   // a change of the project being replaced, still waiting for its autosave
   await flushAutosave()
   try {
@@ -94,7 +105,10 @@ export async function openProject(file: File, entry: ProjectEntry | null = null,
     // a file opened from disk is written again by « Enregistrer » where the platform kept its place
     store.setProjectFile(entry ? null : fileTargetOf(file))
     setOpenEntry(entry?.id ?? null)
-    const opened = t(reopened ? 'project.actions.reopened' : 'project.actions.opened', { name: effectiveProjectName(name, store.tracks[0]?.name) })
+    const opened =
+      restored !== undefined
+        ? t('project.versions.restored', { name: restored })
+        : t(reopened ? 'project.actions.reopened' : 'project.actions.opened', { name: effectiveProjectName(name, store.tracks[0]?.name) })
     if (project.warnings.length > 0) showToast({ kind: 'info', text: t('project.actions.openedWarnings', { opened, warnings: project.warnings.join('\n') }) })
     else showToast({ kind: 'success', text: opened })
     return true
@@ -103,6 +117,31 @@ export async function openProject(file: File, entry: ProjectEntry | null = null,
     showToast({ kind: 'error', text: t('project.actions.openFailed', { fileName: file.name, reason }) })
     return false
   }
+}
+
+/**
+ * Come back to a version of the open entry: the project as it is now is kept as a version first (so this can be undone
+ * by coming back to that one), then the version replaces it and is written to the entry. False when nothing changed.
+ */
+export async function restoreVersion(version: ProjectVersion): Promise<boolean> {
+  const library = getPlatform().projectLibrary
+  const entry = useLibraryStore.getState().entries.find((e) => e.id === useLibraryStore.getState().currentId)
+  if (!library || !entry) return false
+  let file: File
+  try {
+    file = new File([await library.loadVersion(entry.id, version.id)], projectFileName(entry.name), { type: 'application/json' })
+    await saveOpenVersion(t('project.versions.before', { name: version.name }))
+  } catch (err) {
+    showToast({ kind: 'error', text: t('project.versions.restoreFailed', { name: version.name, error: errorMessage(err) }) })
+    return false
+  }
+  if (!(await openProject(file, entry, false, version.name))) return false
+  try {
+    await writeOpenEntry()
+  } catch (err) {
+    showToast({ kind: 'error', text: t('project.library.autosaveFailed', { error: errorMessage(err) }) })
+  }
+  return true
 }
 
 /** A file the system asked the app to open (double-click on a project) that could not be read. */

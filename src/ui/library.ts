@@ -12,7 +12,7 @@ import type { Track } from '../core/types'
 import { useMediaStore } from '../film/media'
 import { t } from '../i18n'
 import { getPlatform } from '../platform'
-import type { KeyValueStore, Platform, ProjectEntry, ProjectLibrary } from '../platform'
+import type { KeyValueStore, Platform, ProjectEntry, ProjectLibrary, ProjectVersion } from '../platform'
 import { sortProjectEntries } from '../platform/projectLibrary'
 import { projectFileName, serializeProjectBlob } from '../project/document'
 import { useAppStore } from '../state/store'
@@ -166,6 +166,23 @@ async function writeOpenProject(library: ProjectLibrary, id: string | null): Pro
     useLibraryStore.setState({ currentId: entry.id })
   }
   return entry
+}
+
+/** Write the open project to its entry now, even unchanged since its last write (a version brought back). */
+export async function writeOpenEntry(): Promise<void> {
+  const library = getPlatform().projectLibrary
+  const id = useLibraryStore.getState().currentId
+  if (library && id !== null) await writeOpenProject(library, id)
+}
+
+/** Keep the open project, as it is now, as a version `name` of its entry (the entry must be open). */
+export async function saveOpenVersion(name: string): Promise<ProjectVersion> {
+  const library = getPlatform().projectLibrary
+  const id = useLibraryStore.getState().currentId
+  if (!library || id === null) throw new Error(t('platform.library.gone'))
+  const state = useAppStore.getState()
+  const text = serializeProjectBlob(state, effectiveProjectName(state.projectName, state.tracks[0]?.name), useMediaStore.getState().table)
+  return library.saveVersion(id, { name, text })
 }
 
 /** The open project now is entry `id` (null: not kept); called by `openProject` once the project is applied. */
