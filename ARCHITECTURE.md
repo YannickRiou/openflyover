@@ -3050,9 +3050,12 @@ exports) gets it from the terrain source of the settings.
   `gpuWaitMs` then tells the GPU's share), `waitMs`, `gpuWaitMs` (waiting for the GPU to finish the last render,
   « attente de la carte graphique »; absent from the summary of older entries), `composeMs`, `frameMs` (VideoFrame /
   readback), `encodeWaitMs` (back-pressure), `encodeMs` = the last four, `timeouts`, `givenUp`, and `handover` (the
-  method kept, a string; stored in the history entry as `handover`). `timingsSummary` writes them on one line for the
+  method kept, a string; stored in the history entry as `handover`), `preloadMs` (the tiles of the film fetched before the
+  first frame, stored in the history entry too). `timingsSummary` writes them on one line for the
   console `[export]` line, the history « Répartition » and the diagnostic « Résultat » (added to the stored report when
-  an export ends, shown in « Dernier export »).
+  an export ends, shown in « Dernier export »); given the total time, it ends with « autre », what no line counts (preparing
+  the film, the page updated between two images, the prefetch of the coming frames' tiles), so that the lines add up to
+  the total. Before, the history did not keep the preload and its total included it: a third of the time looked unaccounted.
 - **Shadow pass count** (#52): `shadowTiles`, `shadowTriangles` and their `shadowOffscreen…` share, summed over the renders. `TerrainShadow`
   counts them after fitting its camera and selecting the casters (`lastShadowPass`: the tiles that cast and that three's
   shadow culling keeps, the off-screen casters apart: those out of the view that can still shade it); `ExportController` adds them after each `advance`. `shadowSummary` writes « ombres : N tuiles (M hors

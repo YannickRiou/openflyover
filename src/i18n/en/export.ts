@@ -107,6 +107,7 @@ const messages: Messages['export'] = {
   'history.timings.videoFrame': 'video frame {time}',
   'history.timings.encoderWait': 'encoder wait {time}',
   'history.timings.composeEncode': 'composing and encoding {time}',
+  'history.timings.other': 'other {time}',
   'history.shadows': 'shadows: {tiles} tiles ({offTiles} off-screen), {triangles} triangles ({offTriangles} off-screen) per render',
   'history.row.output': 'Output',
   'history.row.outputOverlay': '{output}, overlay only',

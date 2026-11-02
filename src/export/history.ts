@@ -76,7 +76,7 @@ export interface HistoryEntry {
   name: string
   outcome: RenderOutcome
   error?: string
-  /** real time from the first frame to the end (confirmation dialogs excluded), ms */
+  /** real time from the start of the export (the tile preload included) to the end (confirmation dialogs excluded), ms */
   wallMs: number
   /** frames of the film, encoded when it ended, distinct images rendered (held frames reuse the previous one) */
   frames: number
@@ -119,6 +119,8 @@ export interface HistoryEntry {
   hardware?: true
   /** the way the frames reached the encoder, the fastest measured on the device (`handover.ts`) */
   handover?: HandoverMethod
+  /** the tiles of the film fetched before the first frame (ms); absent when there was none, and in entries recorded before */
+  preloadMs?: number
   settings: RenderSettings
 }
 
@@ -203,6 +205,7 @@ export function entryOf(record: RenderRecord): HistoryEntry {
     ...(record.encoder && { encoder: record.encoder }),
     ...(result?.hardware && { hardware: true as const }),
     ...(timings.handover && { handover: timings.handover }),
+    ...(timings.preloadMs !== undefined && { preloadMs: round(timings.preloadMs) }),
     settings: summariseSettings(record.settings, request.quality),
   }
 }
@@ -343,6 +346,7 @@ function parseEntry(raw: unknown): HistoryEntry | null {
     ...(encoder && { encoder }),
     ...(raw.hardware === true && { hardware: true as const }),
     ...(handover && { handover }),
+    ...(raw.preloadMs !== undefined && { preloadMs: count(raw.preloadMs) }),
     settings: parseSettings(raw.settings),
   }
 }
@@ -599,6 +603,9 @@ export function settingsDetails(settings: RenderSettings): { label: string; valu
   return rows
 }
 
+/** Time left out of the lines of a split shown as « autre » from this much (ms): below, rounding. */
+const OTHER_MIN_MS = 100
+
 type TimingSplit = Pick<
   ExportTimings,
   'rendered' | 'renders' | 'renderMs' | 'gpuMs' | 'gpuRenders' | 'waitMs' | 'encodeMs' | 'composeMs' | 'frameMs' | 'encodeWaitMs'
@@ -612,7 +619,7 @@ type TimingSplit = Pick<
  * recorded before); the GPU time when measured. A split recorded before the composition was measured apart gives
  * « composition et encodage ».
  */
-export function timingsSummary(timings: TimingSplit): string {
+export function timingsSummary(timings: TimingSplit, wallMs?: number): string {
   const s = (ms: number) => t('format.seconds', { value: comma(ms / 1000) })
   // a few queries may be lost (GPU reset, the last ones): the measured average over every render
   const gpu =
@@ -637,6 +644,9 @@ export function timingsSummary(timings: TimingSplit): string {
       t('export.history.timings.encoderWait', { time: s(timings.encodeWaitMs) }),
     )
   } else parts.push(t('export.history.timings.composeEncode', { time: s(timings.encodeMs) }))
+  // what no line counts (preparing the film, the page between two images, prefetching): the lines then add up to the total
+  const other = wallMs === undefined ? 0 : wallMs - (timings.preloadMs ?? 0) - timings.renderMs - timings.waitMs - timings.encodeMs
+  if (other >= OTHER_MIN_MS) parts.push(t('export.history.timings.other', { time: s(other) }))
   return parts.join(', ')
 }
 
@@ -671,7 +681,7 @@ export function entryDetails(entry: HistoryEntry): { label: string; value: strin
   })
   const mp = secondsPerMegapixel(entry)
   if (mp !== null) rows.push({ label: t('export.history.row.speed'), value: t('export.history.speedMp', { speed: formatSpeed(entry), value: comma(mp) }) })
-  if (entry.renderMs + entry.waitMs + entry.encodeMs > 0) rows.push({ label: t('export.history.row.breakdown'), value: timingsSummary(entry) })
+  if (entry.renderMs + entry.waitMs + entry.encodeMs > 0) rows.push({ label: t('export.history.row.breakdown'), value: timingsSummary(entry, entry.wallMs) })
   if (entry.timeouts > 0) rows.push({ label: t('export.history.row.timeouts'), value: t('export.history.row.frames', { count: entry.timeouts }) })
   if (entry.givenUp > 0) rows.push({ label: t('export.history.row.givenUp'), value: t('export.history.row.frames', { count: entry.givenUp }) })
   if (entry.encoder) {

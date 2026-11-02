@@ -779,7 +779,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     report(schedule.length, performance.now(), timings, true)
     const s = (ms: number) => (ms / 1000).toFixed(1)
     console.info(
-      `[export] ${schedule.length} images (${timings.rendered} rendues) en ${s(performance.now() - startedAt)} s : ${timingsSummary(timings)}` +
+      `[export] ${schedule.length} images (${timings.rendered} rendues) en ${s(performance.now() - startedAt)} s : ${timingsSummary(timings, performance.now() - startedAt)}` +
         `${shadowSummary(timings) ? ` ; ${shadowSummary(timings)}` : ''}` +
         `${timings.gpuRenders === 0 ? " (GPU non mesuré : voir l'attente de la carte graphique)" : ''} ; ` +
         `encodeur ${container}/${codec}${hardware ? ' matériel' : ''} ; ` +
