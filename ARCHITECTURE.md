@@ -775,7 +775,7 @@ pointer (`appearance.css`).
   in `PanelSection`: "Habillage" (switch, style, "Couleurs et polices" (colors and fonts) collapsed; the only ↺ "modifié" button,
   for all of `overlay`), "Titres" (titles), "Compteurs" (counters; and "Classement (course fantôme)" (ghost race ranking) from two tracks), "Profil et mini-carte" (profile and mini-map), "Météo, logo et texte" (weather, logo and text; absent when the overlay is off), "Crédits des
   sources" (source credits; always). Each element (`WidgetGroup`) has its switch, then its position (`WidgetPosition`: 3 × 3
-  grid `AnchorPicker`, then "Position libre" with two offsets in pixels of the exported film, labelled from the anchor; `OffsetField` keeps a draft
+  grid `AnchorPicker`, then "Position libre" with two shares in percent of the safe area, labelled from the anchor; `OffsetField` keeps a draft
   while focused, one undo step per edit),
   then up to three tabs, only those it has: "Contenu" (content: `children`), "Style" (`style`: size, the logo's opacity,
   then its own colors and fonts) and
@@ -2228,7 +2228,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   `withStageCardsOverCommon`; version 5: the cards of an overlay that was off switched off and the automatic stops kept
   as the pacing made them, `withTitlesAndStopsOnTheirOwn`; version 6: the night and the high view of a junction on their
   own, `withNightAndRecapOnTheirOwn`; version 7: the pauses of the removed « Ralentir aux temps forts » no longer make
-  the automatic stops of the films saved before the timeline, `withoutHighlightPauses`).
+  the automatic stops of the films saved before the timeline, `withoutHighlightPauses`; version 8: the free positions of
+  the overlay in shares of the safe area instead of pixels, `withFreePositionsAsShares`).
 - Settings **history** outside the store: subscribed to `useAppStore`, each step keeps only the changed keys; changes to the
   same keys less than 400 ms apart are merged (keyboard), a pointer slider drag = one step from press to release however
   slow it is (`beginGesture`, wired to every `input[type=range]` by `installSliderGestures`), a preset = one step, a timeline gesture = one step; settings changed
@@ -2634,9 +2635,9 @@ exports) gets it from the terrain source of the settings.
   accent and a small capital label, the profile as a faded area filling the band, the title on an accent stripe at the top
   left (two lines at most), the map clipped to a circle at the top right). `STYLE_LAYOUTS` gives each of them the default
   anchors and sizes of its widgets, applied by `withStyleLayout(overlay, style)` when the style is chosen in the picker
-  (nothing is overwritten while the style stays the same; the free offsets of the laid-out widgets are dropped; leaving a
+  (nothing is overwritten while the style stays the same; the free positions of the laid-out widgets are dropped; leaving a
   structured style puts the anchors back to the defaults of a new project). A widget is drawn by the structure only while
-  it sits in a slot of the style (`inStyleSlot`: the style's anchor, or the left column for `journal`, and no free offset);
+  it sits in a slot of the style (`inStyleSlot`: the style's anchor, or the left column for `journal`, and no free position);
   moved elsewhere, it is an ordinary widget with the style's theme. The structure leaves an `area` of the frame to the
   ordinary widgets, the timeline texts, the photos and the credits (`layoutWidgets(items, size, gap, area)`). A structure is
   drawn whenever the overlay is on. Removed ids (`sport`, `mono`, `topo`, `magazine`, never released) open in `broadcast`,
@@ -2648,10 +2649,32 @@ exports) gets it from the terrain source of the settings.
   per `LandmarkKind`), even with the overlay off; `OverlaySettings.labelColors?` (partial kind → '#rrggbb',
   `isValidLabelColors`, `withLabelColor`) overrides an accent; Éditorial reproduces the former look.
 - **Units**: 1 u = 1% of the shorter side of the image; safety margins of 5% on each side; shadow blurs corrected for the
-  context transform (devicePixelRatio). Widgets that share one of the 9 anchors stack (`layoutWidgets`). A widget with a free position (`offset`) leaves its
-  anchor's stack (the others close up as if it were not there): it is placed alone at its anchor, moved by the offset
-  from the anchor's corner of the safe area towards the inside of the frame (to the right / down on a centred axis), and
-  may overlap the others. Every choice of a position in the frame uses the same 3 × 3 grid (`src/ui/AnchorPicker.tsx`,
+  context transform (devicePixelRatio). Widgets that share one of the 9 anchors stack (`layoutWidgets`). A widget with a free position (`free`, a
+  `WidgetOffset`) leaves its anchor's stack (the others close up as if it were not there): it is placed alone at its
+  anchor, moved from the anchor's corner of the safe area towards the inside of the frame (to the right / down on a
+  centred axis) by a share of the width (x) and of the height (y) of the safe area (`OFFSET_MAX` 1, `placed` in
+  `drawOverlay` makes pixels of it), so it keeps its place in every format of the film. Projects and presets saved before
+  hold `offset`, pixels of the film of the project's format and resolution: `MIGRATIONS[7]` (`withFreePositions`)
+  converts them from `settings.video`, so the film in its own format stays on the same pixels; a preset of before is read
+  as pixels of a 1080p film in 16:9 (`withOverlayDefaults`).
+  **Layout for each format** (`drawOverlay`, so the preview of a format and the export of a batch job, which pass their
+  width and height and nothing else, get the same layout): the widgets of the settings (`Widget.id`, set by `placed`:
+  counters, profile, mini-map, weather, text, leaderboard, logos, title and end cards) go through `fitWidgets` (pure: boxes
+  in, boxes out) after `layoutWidgets` has stacked them. In order, each box is pulled inside the area (the safe area, or
+  what a structure leaves of it), moved off the boxes before it and the zones to avoid (`clearOf`: the shorter of a move
+  along the anchor's edge, the way widgets stack there, and a move sideways towards the inside), then scaled down
+  towards its anchor's corner by 10 % steps to `FIT_SCALE_MIN` (0.6) when there is no room (a widget wider than the area
+  gets as small as it needs). With no overlap and nothing outside, every widget stays where `layoutWidgets` puts it. In
+  9:16 and 4:5 `clearOfInterface` shrinks the area under the top bar and above the caption of the platforms and makes the
+  buttons a zone to avoid (`phoneInterfaceFor` in `src/ui/safeZoneLayout.ts`, the geometry of the preview's safe zones,
+  from the size of the frame); the corner credits move to the side edge (9:16) or the top edge (4:5), clear of them, and the
+  full sources at the end of the film stand above the caption. The pass works on every widget the film shows at some time
+  (`adaptedLayout` builds them all at full opacity, `collect`), not on those on screen, so a widget fading in or out never
+  makes another one move; the opening and closing cards, never on screen with the live widgets, only keep clear of the text
+  and the logos. It is worked out once per settings, track, frame size, area and set of widgets on screen (a cache in
+  `layoutPasses`), not at every frame. The widgets of the slots of a style with a structure of its own stay with the style
+  (they are not in the pass); the others adapt inside its area. Not in the pass yet: the timeline texts and media and the
+  track legend (placed by `layoutWidgets` as before). `drawOverlay` returns the boxes it drew (`DrawnWidget`). Every choice of a position in the frame uses the same 3 × 3 grid (`src/ui/AnchorPicker.tsx`,
   arrow keys via `nextGridIndex`): overlay elements, source credits (`allowed`: the four corners), timeline texts and photos.
 - **Data** (`data.ts`): `prepareOverlayTrack(track, weather?)` once per track: path, cumulative elevation gain (same smoothing and same
   3 m hysteresis as `computeStats`, so the last value equals `stats.ascentM`), smoothed speed and heart rate,
@@ -2675,13 +2698,11 @@ exports) gets it from the terrain source of the settings.
   widgets — opening card, closing card, counters, profile, mini-map (optional north arrow), logo, free text,
   weather, ranking — each with `enabled`, `anchor`, `size`. Optional `markerColor` ('#rrggbb', '' or absent = the 3D marker's colour:
   `marker.color`, else the colour of the track under the marker; `OverlayExtras.markerColor`) on `profile` and `minimap`: the position dot
-  (« Point de position » in the widget's Style tab, « Comme le marqueur » to reset). Optional `offset {x, y}` on every placed widget (`PLACED_WIDGETS`), absent by
-  default (stacked): whole pixels of the exported film (`OFFSET_MAX_PX` = ±10 000), checked by `isValidOffset`;
-  `withWidgetOffset` sets it or drops the key. `overlayExtras` passes `exportSize` (`videoSize(aspect, resolution)` without
-  the device cap); `drawOverlay` scales the offsets by the ratio of the shorter sides of the drawn frame and of
-  `exportSize`. Ignored on the closing card while its credits roll. `logos` is a list of `LogoSettings` (one to
+  (« Point de position » in the widget's Style tab, « Comme le marqueur » to reset). Optional `free {x, y}` on every placed widget (`PLACED_WIDGETS`), absent by
+  default (stacked): shares of the safe area (`OFFSET_MAX` = ±1), checked by `isValidOffset`;
+  `withWidgetOffset` sets it or drops the key; `drawOverlay` makes pixels of it from the size of the drawn frame alone. Ignored on the closing card while its credits roll. `logos` is a list of `LogoSettings` (one to
   `LOGOS_MAX` = 4, the first always there; « Ajouter un logo » / « Supprimer ce logo » in the panel): each has its own
-  image, `anchor`, `size`, `opacity` (0–1, default 1) and optional `offset`; logos on one anchor are stacked by
+  image, `anchor`, `size`, `opacity` (0–1, default 1) and optional `free`; logos on one anchor are stacked by
   `layoutWidgets` like any widget, in list order. `placedSettings` / `withWidgetOffset` / `withWidgetAnchor` take the
   logo's place in the list for the `'logo'` widget. An older project or preset with the single `logo` is read as a
   one-item `logos` by `withOverlayDefaults` (the opacity filled in when it had none): the film is the same. The
@@ -3095,7 +3116,7 @@ exports) gets it from the terrain source of the settings.
   (`keepOpenProject`: the store fields and the media table, put back as the same objects, so « Enregistré » stays), holds
   the batch store `running` (`hold` / `release`: no autosave, no edit, same « Annuler » button), then for each item applies
   the snapshot as « Ouvrir » does (`parseProject` + `applyProject`, no toast, no « Mes projets » entry), waits for the
-  landmarks and weather (`loadTrackData`) and renders its films with `runBatch` + `exportJob` (before each job `settings.video` takes the job's aspect and resolution, so the film is composed for the format ticked for the queue, not the project's: stage frame, overlay `exportSize`; the poster gets the project's own; `keepOpenProject` puts the open project's settings back), each into the folder asked at the
+  landmarks and weather (`loadTrackData`) and renders its films with `runBatch` + `exportJob` (before each job `settings.video` takes the job's aspect and resolution, so the film is composed for the format ticked for the queue, not the project's: stage frame, overlay layout; the poster gets the project's own; `keepOpenProject` puts the open project's settings back), each into the folder asked at the
   start (`pickFolder`; without a folder API the films are downloaded). Before starting, `confirmClose` asks to save if the open
   project has changes kept nowhere.
 - **Persistence**: `{ v: 1, items }` under `openflyover.renderQueue.v1` in the platform `storage`, rewritten at each change;

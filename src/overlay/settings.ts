@@ -120,8 +120,10 @@ export type CreditsMode = (typeof CREDITS_MODES)[number]
 export const LOGO_MAX_SIZE_PX = 512
 /** Most logos on the film: each one is an image kept in the project. */
 export const LOGOS_MAX = 4
-/** Largest free offset of a widget from its anchor, either way (pixels of the exported film). */
-export const OFFSET_MAX_PX = 10000
+/** Safe area: 5 % of the frame on each side. */
+export const SAFE_MARGIN = 0.05
+/** Largest free position of a widget from its anchor, either way (share of the safe area): beyond it the widget is off the frame. */
+export const OFFSET_MAX = 1
 
 /** Fonts the user can pick for the titles or the figures: the bundled faces, then a few system families. */
 export const OVERLAY_FONT_IDS = ['fraunces', 'plex', 'plex-condensed', 'georgia', 'system', 'mono'] as const
@@ -154,8 +156,9 @@ export interface OverlayOverrides {
 }
 
 /**
- * Free position of a widget: pixels of the exported film (`settings.video`) from the corner of the safe area at its
- * anchor, towards the inside of the frame (to the right / down on a centred axis); scaled with the frame elsewhere.
+ * Free position of a widget: share of the width (x) and of the height (y) of the safe area, from the corner of the safe
+ * area at its anchor, towards the inside of the frame (to the right / down on a centred axis). A share, not pixels: the
+ * widget keeps its place in every format of the film.
  */
 export interface WidgetOffset {
   x: number
@@ -165,8 +168,8 @@ export interface WidgetOffset {
 interface Placed {
   enabled: boolean
   anchor: OverlayAnchor
-  /** free position (out of its anchor's stack, may overlap the others); absent = stacked at its anchor */
-  offset?: WidgetOffset
+  /** free position (out of its anchor's stack); absent = stacked at its anchor */
+  free?: WidgetOffset
   /** this widget's own colours and fonts, on top of the overlay's (`OverlaySettings.overrides`); absent = the same */
   overrides?: OverlayOverrides
 }
@@ -348,7 +351,7 @@ export interface StyleLayout {
   profile: { anchor: OverlayAnchor; width: number; height: number }
   minimap: { anchor: OverlayAnchor; size: number }
   weather: { anchor: OverlayAnchor; size: number }
-  /** anchors at which a widget sits in the structure of the style; at any other (or with a free offset) it stays an ordinary widget */
+  /** anchors at which a widget sits in the structure of the style; at any other (or with a free position) it stays an ordinary widget */
   slots: Record<LaidOutWidget, readonly OverlayAnchor[]>
 }
 
@@ -400,7 +403,7 @@ const FREE_LAYOUT: StyleLayout = {
 }
 
 /**
- * `overlay` in `style`, with the style's placement of its widgets (anchors, sizes, no free offset) when the style
+ * `overlay` in `style`, with the style's placement of its widgets (anchors, sizes, no free position) when the style
  * changes; going from a style with a structure to one without puts them back where a new project has them.
  * Nothing is touched while the style stays the same, so the user's own positions are kept.
  */
@@ -409,16 +412,16 @@ export function withStyleLayout(overlay: OverlaySettings, style: OverlayStyleId)
   const layout = STYLE_LAYOUTS[style] ?? (STYLE_LAYOUTS[overlay.style] ? FREE_LAYOUT : undefined)
   if (!layout) return { ...overlay, style }
   const place = <K extends LaidOutWidget>(key: K): OverlaySettings[K] => {
-    const { offset: _offset, ...rest } = overlay[key]
+    const { free: _free, ...rest } = overlay[key]
     return { ...rest, ...layout[key] } as OverlaySettings[K]
   }
   return { ...overlay, style, title: place('title'), end: place('end'), counters: place('counters'), profile: place('profile'), minimap: place('minimap'), weather: place('weather') }
 }
 
-/** Is widget `key` where the structure of the style draws it (a slot of the style, no free offset)? Else it is an ordinary widget. */
+/** Is widget `key` where the structure of the style draws it (a slot of the style, no free position)? Else it is an ordinary widget. */
 export function inStyleSlot(overlay: OverlaySettings, key: LaidOutWidget): boolean {
   const layout = STYLE_LAYOUTS[overlay.style]
-  return layout !== undefined && !overlay[key].offset && layout.slots[key].includes(overlay[key].anchor)
+  return layout !== undefined && !overlay[key].free && layout.slots[key].includes(overlay[key].anchor)
 }
 
 /** Widgets added after the first saved format: missing from older projects and presets. */
@@ -427,9 +430,11 @@ const OVERLAY_ADDED_KEYS: readonly (keyof OverlaySettings)[] = ['minimap', 'cred
 /**
  * Raw overlay settings of an older project or preset with the widgets (and the logo opacity) added since filled in
  * with their defaults and its single logo made the first of the list, so they still load. Applied before the shape
- * check: anything else (other keys, a present but malformed widget) is left as is and still rejected.
+ * check: anything else (other keys, a present but malformed widget) is left as is and still rejected. The free
+ * positions of a preset of before are pixels of a 1080p film in 16:9 (a project's are converted by its own migration).
  */
-export function withOverlayDefaults(raw: unknown): unknown {
+export function withOverlayDefaults(saved: unknown): unknown {
+  const raw = withFreePositions(saved, { width: 1920, height: 1080 })
   if (!isRecord(raw)) return raw
   const missing = OVERLAY_ADDED_KEYS.filter((key) => !(key in raw))
   const filled = missing.length === 0 ? raw : { ...Object.fromEntries(missing.map((key) => [key, DEFAULT_OVERLAY[key]])), ...raw }
@@ -477,7 +482,7 @@ export function withWidgetOverrides(overlay: OverlaySettings, key: StyledWidget,
   return { ...overlay, [key]: kept ? { ...rest, overrides: kept } : rest }
 }
 
-/** Widgets laid out at an anchor, which can leave its stack for a free position (`offset`). */
+/** Widgets laid out at an anchor, which can leave its stack for a free position (`free`). */
 export const PLACED_WIDGETS = ['title', 'end', 'counters', 'profile', 'logo', 'text', 'weather', 'minimap', 'leaderboard'] as const
 export type PlacedWidget = (typeof PLACED_WIDGETS)[number]
 
@@ -491,10 +496,29 @@ function withPlaced(overlay: OverlaySettings, key: PlacedWidget, placed: Placed,
   return key === 'logo' ? { ...overlay, logos: overlay.logos.map((logo, i) => (i === index ? (placed as LogoSettings) : logo)) } : { ...overlay, [key]: placed }
 }
 
-/** `overlay` with widget `key` (logo number `index`) at the free position `offset`, or back in its anchor's stack (null: the key dropped). */
-export function withWidgetOffset(overlay: OverlaySettings, key: PlacedWidget, offset: WidgetOffset | null, index = 0): OverlaySettings {
-  const { offset: _offset, ...rest } = placedSettings(overlay, key, index)
-  return withPlaced(overlay, key, offset ? { ...rest, offset } : rest, index)
+/** `overlay` with widget `key` (logo number `index`) at the free position `free`, or back in its anchor's stack (null: the key dropped). */
+export function withWidgetOffset(overlay: OverlaySettings, key: PlacedWidget, free: WidgetOffset | null, index = 0): OverlaySettings {
+  const { free: _free, ...rest } = placedSettings(overlay, key, index)
+  return withPlaced(overlay, key, free ? { ...rest, free } : rest, index)
+}
+
+/**
+ * Raw overlay settings with the free positions of before (`offset`: pixels of the film exported at `film`, the size the
+ * project's format gives) made shares of its safe area (`free`): a film in the format it was made in stays where it was.
+ * A value that is not a number is left for the shape check.
+ */
+export function withFreePositions(raw: unknown, film: { width: number; height: number }): unknown {
+  if (!isRecord(raw)) return raw
+  const share = (px: unknown, side: number) => (typeof px === 'number' ? Math.max(-OFFSET_MAX, Math.min(OFFSET_MAX, px / (side * (1 - 2 * SAFE_MARGIN)))) : px)
+  const convert = (placed: unknown) => {
+    if (!isRecord(placed) || !('offset' in placed)) return placed
+    const { offset, ...rest } = placed
+    return { ...rest, free: isRecord(offset) ? { ...offset, x: share(offset.x, film.width), y: share(offset.y, film.height) } : offset }
+  }
+  const moved: Record<string, unknown> = {}
+  for (const key of PLACED_WIDGETS) if (key in raw && isRecord(raw[key]) && 'offset' in raw[key]) moved[key] = convert(raw[key])
+  if (Array.isArray(raw.logos) && raw.logos.some((logo) => isRecord(logo) && 'offset' in logo)) moved.logos = raw.logos.map(convert)
+  return Object.keys(moved).length > 0 ? { ...raw, ...moved } : raw
 }
 
 /** `overlay` with widget `key` (logo number `index`) at `anchor`. */
@@ -555,9 +579,9 @@ export function withLabelColor(overlay: OverlaySettings, kind: LabelKind, color:
   return Object.keys(kept).length > 0 ? { ...rest, labelColors: kept } : rest
 }
 
-const isOffsetValue = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= OFFSET_MAX_PX
+const isOffsetValue = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= OFFSET_MAX
 
-/** Free position read from a project: absent, or exactly `{ x, y }` within ±OFFSET_MAX_PX (not covered by the shape check). */
+/** Free position read from a project: absent, or exactly `{ x, y }` within ±OFFSET_MAX (not covered by the shape check). */
 export function isValidOffset(o: unknown): boolean {
   if (o === undefined) return true
   return isRecord(o) && Object.keys(o).length === 2 && isOffsetValue(o.x) && isOffsetValue(o.y)
@@ -598,7 +622,7 @@ export function isValidOverlay(o: OverlaySettings): boolean {
     within(o.profile.width, PROFILE_WIDTH_MIN, PROFILE_WIDTH_MAX) &&
     within(o.profile.height, PROFILE_HEIGHT_MIN, PROFILE_HEIGHT_MAX) &&
     within(o.logos.length, 1, LOGOS_MAX) &&
-    o.logos.every((logo) => validSized(logo) && isLogoImage(logo.image) && within(logo.opacity, 0, 1) && isValidOffset(logo.offset)) &&
+    o.logos.every((logo) => validSized(logo) && isLogoImage(logo.image) && within(logo.opacity, 0, 1) && isValidOffset(logo.free)) &&
     validSized(o.text) &&
     validSized(o.weather) &&
     validSized(o.minimap) &&
@@ -610,6 +634,6 @@ export function isValidOverlay(o: OverlaySettings): boolean {
     isValidOverrides(o.overrides) &&
     isValidLabelColors(o.labelColors) &&
     STYLED_WIDGETS.every((key) => isValidOverrides(o[key].overrides)) &&
-    PLACED_WIDGETS.every((key) => key === 'logo' || isValidOffset(o[key].offset))
+    PLACED_WIDGETS.every((key) => key === 'logo' || isValidOffset(o[key].free))
   )
 }

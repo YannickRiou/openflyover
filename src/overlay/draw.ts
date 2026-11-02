@@ -19,12 +19,13 @@ import { getLanguage, t } from '../i18n'
 import type { MessageKey } from '../i18n'
 import { formatDate } from '../i18n/format'
 import { formatClock, formatDistance, formatDuration, formatNumber, formatPace } from '../ui/format'
+import { phoneInterfaceFor } from '../ui/safeZoneLayout'
 import { openMeteoAttribution } from '../weather/openMeteo'
 import type { WeatherSummary } from '../weather/series'
 import { OPEN_METEO_SHORT, recordedAtProgress } from './data'
 import type { BilanCumul, LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
 import type { CardExtras, CardFigure, CardWindow, CounterId, CreditsPosition, EndCardSettings, LaidOutWidget, LogoSettings, TitleCardSettings, OverlayAnchor, OverlayFontId, OverlayOverrides, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
-import { CARD_FADE_OUT, CARD_FIGURES, COUNTER_IDS, BILAN_CARD_FIGURES, DEFAULT_TEXT_BACKING, END_CARD_FIGURES, fitWindow, inStyleSlot, placedSettings, widgetOverrides } from './settings'
+import { CARD_FADE_OUT, CARD_FIGURES, COUNTER_IDS, BILAN_CARD_FIGURES, DEFAULT_TEXT_BACKING, END_CARD_FIGURES, SAFE_MARGIN, fitWindow, inStyleSlot, placedSettings, widgetOverrides } from './settings'
 import { OVERLAY_FONT_FAMILIES, resolveOverlayTheme, softTextOf } from './themes'
 import type { OverlayTheme } from './themes'
 import { styleStructure } from './structures'
@@ -124,8 +125,6 @@ export interface OverlayExtras {
   stage?: StageCard | null
   /** card of the day starting in a multi-day track (`dayCardAt`), drawn inside its window */
   day?: DayCard | null
-  /** size of the exported film, which the free offsets of the widgets are measured in; default: the drawn frame */
-  exportSize?: OverlaySize
   /** colour of the 3D marker ('#rrggbb'): the position dot of the profile and the mini-map, until they have their own */
   markerColor?: string
   /** legend of the track colouring (`trackLegend`) and its place, drawn even while the overlay is off */
@@ -222,8 +221,7 @@ export function bilanStampAt(sequence: Sequence, time: OverlayTime): FilmText | 
   }
 }
 
-/** Safe area: 5 % of the frame on each side. */
-export const SAFE_MARGIN = 0.05
+export { SAFE_MARGIN }
 /** Fade lengths of the cards, as fractions of the flight. */
 export const CARD_FADE_IN = 0.01
 export { CARD_FADE_OUT }
@@ -583,6 +581,81 @@ export function layoutWidgets(items: readonly LayoutItem[], size: OverlaySize, g
   return out
 }
 
+/** A widget as the layout pass leaves it: its top-left corner, and how much smaller than its own size it is drawn (1: as it is). */
+export interface Fit {
+  x: number
+  y: number
+  scale: number
+}
+
+/** Smallest scale of the layout pass, short of a widget wider than its area. */
+export const FIT_SCALE_MIN = 0.6
+const FIT_SCALE_STEP = 0.9
+const FIT_EPSILON = 0.01
+
+const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w - FIT_EPSILON && a.x + a.w > b.x + FIT_EPSILON && a.y < b.y + b.h - FIT_EPSILON && a.y + a.h > b.y + FIT_EPSILON
+const inside = (a: Rect, area: Rect) =>
+  a.x >= area.x - FIT_EPSILON && a.y >= area.y - FIT_EPSILON && a.x + a.w <= area.x + area.w + FIT_EPSILON && a.y + a.h <= area.y + area.h + FIT_EPSILON
+
+/**
+ * `box` moved off the boxes of `taken` it overlaps and inside `area`, or null when there is no room. It moves past the
+ * first box it overlaps, along the edge of its anchor (down from the top, up from the bottom, away from the other box at
+ * the middle: the way widgets stack there) or sideways towards the inside of the frame, whichever is the shorter move
+ * that leaves room; each move may meet another box, up to `depth` moves.
+ */
+function clearOf(box: Rect, anchor: OverlayAnchor, taken: readonly Rect[], area: Rect, gap: number, depth = 4): Rect | null {
+  const hit = taken.find((r) => overlaps(box, r))
+  if (!hit) return box
+  if (depth === 0) return null
+  const row = rowOf(anchor)
+  const up = row === 'bottom' || (row === 'middle' && box.y + box.h / 2 < hit.y + hit.h / 2)
+  const moves: Rect[] = [{ ...box, y: up ? hit.y - box.h - gap : hit.y + hit.h + gap }]
+  if (anchor.endsWith('left')) moves.push({ ...box, x: hit.x + hit.w + gap })
+  else if (anchor.endsWith('right')) moves.push({ ...box, x: hit.x - box.w - gap })
+  const length = (m: Rect) => Math.abs(m.x - box.x) + Math.abs(m.y - box.y)
+  for (const moved of moves.sort((a, b) => length(a) - length(b))) {
+    const placed = inside(moved, area) ? clearOf(moved, anchor, taken, area, gap, depth - 1) : null
+    if (placed) return placed
+  }
+  return null
+}
+
+/**
+ * Where each item sits so that nothing overlaps and nothing is cut: its place by `layoutWidgets`, then, in order, the
+ * items pulled inside `area`, moved off the boxes before them and the `avoid` ones (`clearOf`), and, when there is no
+ * room left, scaled down towards their anchor's corner, down to `FIT_SCALE_MIN` (an item wider than `area` gets as small
+ * as it needs). With no overlap and nothing outside, every item stays where `layoutWidgets` puts it, at scale 1.
+ */
+export function fitWidgets(items: readonly LayoutItem[], size: OverlaySize, gap: number, area: Rect, avoid: readonly Rect[] = []): Fit[] {
+  const start = layoutWidgets(items, size, gap, area)
+  const taken = [...avoid]
+  return items.map((item, i) => {
+    const fitting = Math.min(1, area.w / item.width, area.h / item.height)
+    const floor = Math.min(fitting, FIT_SCALE_MIN)
+    const column = item.anchor.endsWith('left') ? 0 : item.anchor.endsWith('right') ? 1 : 0.5
+    const row = rowOf(item.anchor) === 'top' ? 0 : rowOf(item.anchor) === 'bottom' ? 1 : 0.5
+    let scale = fitting
+    for (;;) {
+      const w = item.width * scale
+      const h = item.height * scale
+      // the corner of the anchor stays where it is while the box shrinks, and the box is pulled inside the area
+      const box = {
+        x: Math.min(Math.max(start[i].x + (item.width - w) * column, area.x), area.x + area.w - w),
+        y: Math.min(Math.max(start[i].y + (item.height - h) * row, area.y), area.y + area.h - h),
+        w,
+        h,
+      }
+      const placed = clearOf(box, item.anchor, taken, area, gap)
+      if (placed || scale <= floor) {
+        const at = placed ?? box
+        taken.push(at)
+        return { x: at.x, y: at.y, scale }
+      }
+      scale = Math.max(floor, scale * FIT_SCALE_STEP)
+    }
+  })
+}
+
 /** Horizontal alignment of a widget's content from its anchor. */
 function alignOf(anchor: OverlayAnchor): CanvasTextAlign {
   return anchor.endsWith('left') ? 'left' : anchor.endsWith('right') ? 'right' : 'center'
@@ -755,6 +828,8 @@ export function truncate(p: Painter, text: string, maxWidth: number, style: Text
 // ---------------------------------------------------------------------------
 
 export interface Widget extends LayoutItem {
+  /** which widget of the settings it is (`placed`): set for those the layout pass adapts to the frame */
+  id?: string
   opacity: number
   draw(x: number, y: number): void
 }
@@ -1962,12 +2037,83 @@ function logoWidget(p: Painter, settings: LogoSettings, logo: OverlayImage | nul
 // ---------------------------------------------------------------------------
 
 /**
+ * `area` kept clear of the interface the vertical feeds draw over a frame of this size (`phoneInterfaceFor`): the bars
+ * across the top and the bottom narrow it (`top` and `bottom` tell how much of the frame they cover), the buttons on the
+ * side are boxes to `avoid`. Any other format: `area` as it is.
+ */
+function clearOfInterface(area: Rect, size: OverlaySize): { area: Rect; avoid: Rect[]; top: number; bottom: number; vertical: boolean } {
+  const zones = phoneInterfaceFor(size.width, size.height)
+  const avoid: Rect[] = []
+  let top = 0
+  let bottom = 0
+  for (const { box } of zones) {
+    const zone = { x: box.left * size.width, y: box.top * size.height, w: box.width * size.width, h: box.height * size.height }
+    if (zone.w < 0.99 * size.width) avoid.push(zone)
+    else if (zone.y === 0) top = zone.h
+    else bottom = size.height - zone.y
+  }
+  const y = Math.max(area.y, top)
+  return { area: zones.length > 0 ? { ...area, y, h: Math.min(area.y + area.h, size.height - bottom) - y } : area, avoid, top, bottom, vertical: zones.length > 0 }
+}
+
+/** Layout passes kept by settings, then track, then what they were made for (frame size, area, widgets shown): see `adaptedLayout`. */
+const layoutPasses = new WeakMap<object, WeakMap<object, Map<string, Map<string, Fit>>>>()
+
+/**
+ * Where the widgets of the settings (those `Widget.id` names) sit in a frame of this size, nothing overlapping or cut
+ * (`fitWidgets`). The pass works on every widget the film shows at some time, `every` builds them all at full opacity,
+ * not on those on screen (`shown`): a widget fading in or out never makes another move. The opening and the closing
+ * card never share the screen with the live widgets, so they only keep clear of what stays (text, logos). Done once per
+ * frame size, area and set of widgets on screen (a widget changing size starts it again), not at every frame.
+ */
+function adaptedLayout(
+  settings: OverlaySettings,
+  track: object,
+  shown: readonly Widget[],
+  every: () => Widget[],
+  size: OverlaySize,
+  gap: number,
+  area: Rect,
+  avoid: readonly Rect[],
+): ReadonlyMap<string, Fit> {
+  const adapted = shown.filter((w) => w.id)
+  if (adapted.length === 0) return new Map()
+  const key = [size.width, size.height, getLanguage(), JSON.stringify([area, avoid]), ...adapted.map((w) => `${w.id}:${Math.round(w.width * 10)}x${Math.round(w.height * 10)}`)].join('|')
+  let byTrack = layoutPasses.get(settings)
+  if (!byTrack) layoutPasses.set(settings, (byTrack = new WeakMap()))
+  let passes = byTrack.get(track)
+  if (!passes) byTrack.set(track, (passes = new Map()))
+  let fits = passes.get(key)
+  if (!fits) {
+    const byId = new Map(every().map((w) => [w.id, w]))
+    for (const w of adapted) byId.set(w.id, w)
+    const widgets = [...byId.values()]
+    const isCard = (w: Widget) => w.id === 'title' || w.id === 'end'
+    const live = widgets.filter((w) => !isCard(w))
+    fits = new Map<string, Fit>()
+    const liveFits = fitWidgets(live, size, gap, area, avoid)
+    live.forEach((w, i) => fits!.set(w.id!, liveFits[i]))
+    // the text and the logos are drawn over the cards
+    const stays = live.flatMap((w, i) => (w.id === 'text' || w.id!.startsWith('logo') ? [{ x: liveFits[i].x, y: liveFits[i].y, w: w.width * liveFits[i].scale, h: w.height * liveFits[i].scale }] : []))
+    for (const card of widgets.filter(isCard)) fits.set(card.id!, fitWidgets([card], size, gap, area, [...avoid, ...stays])[0])
+    if (passes.size >= 16) passes.clear()
+    passes.set(key, fits)
+  }
+  return fits
+}
+
+/** A widget of the settings as drawn: which one (`Widget.id`) and its box in the frame, the scale of the layout pass applied. */
+export interface DrawnWidget extends Rect {
+  id: string
+}
+
+/**
  * Draw the overlay of one frame. The context's current transform maps `size` (user units) onto the canvas;
  * the caller clears the canvas first (the overlay only adds). Synchronous and deterministic: the same
  * arguments always give the same image. The source credits, the photos of the timeline, the legend of the track
  * colouring and the dip of a shot transition are drawn even while the rest of the overlay is off. The dip covers everything but the credits: it is a
  * transition of the whole picture (widgets left over a black frame would float), short, and the credits the
- * licences require stay legible on top.
+ * licences require stay legible on top. Returns the boxes of the widgets of the settings it drew.
  */
 export function drawOverlay(
   ctx: OverlayContext2D,
@@ -1976,8 +2122,8 @@ export function drawOverlay(
   size: OverlaySize,
   assets: OverlayAssets = {},
   extras: OverlayExtras = {},
-): void {
-  if (size.width <= 0 || size.height <= 0) return
+): DrawnWidget[] {
+  if (size.width <= 0 || size.height <= 0) return []
   const mode = settings.credits.mode
   const credits = mode === 'full' ? [...(extras.credits ?? [])] : [...(mode === 'short' ? (extras.shortCredits ?? []) : (extras.permanentCredits ?? []))]
   const time = extras.time ?? progressTime(frame.progress)
@@ -2008,7 +2154,7 @@ export function drawOverlay(
   // with a roll on the closing card they close it (`drawCreditsRoll`), else they fade in along the bottom edge over the last seconds
   const rollsSources = settings.end.enabled && creditLines(settings.end.credits).length > 0
   const endSources = sources.length > 0 && !rollsSources ? endSourcesOpacity(time) : 0
-  if (!settings.enabled && !titles && credits.length === 0 && endSources <= 0.001 && photos.length === 0 && !dip && stageOpacity <= 0.001 && dayOpacity <= 0.001 && !legend) return
+  if (!settings.enabled && !titles && credits.length === 0 && endSources <= 0.001 && photos.length === 0 && !dip && stageOpacity <= 0.001 && dayOpacity <= 0.001 && !legend) return []
   const transform = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null
   const p: Painter = {
     ctx,
@@ -2032,10 +2178,9 @@ export function drawOverlay(
     if (w && w.opacity > 0.001) widgets.push(w)
   }
   const texts: { item: FilmText; opacity: number }[] = []
-  let roll: (() => void) | null = null
+  let roll = null as (() => void) | null
   // how much of the full credits the film shows now (the roll's or the bottom block's): the corner credits give way to them
   let sourcesCover = endSources
-  let weather: Widget | null = null
   let weatherShown = false
   let endOpacity = 0
   let structure: Structure | null = null
@@ -2057,39 +2202,41 @@ export function drawOverlay(
   // a widget with its own colours or fonts draws with its own theme
   const of = (key: StyledWidget): Painter =>
     settings[key].overrides ? { ...p, theme: resolveOverlayTheme(settings.style, widgetOverrides(settings, key)) } : p
-  // a widget at a free position: its offset in pixels of the exported film, scaled to this frame
-  const exported = extras.exportSize
-  const scale = exported && exported.width > 0 && exported.height > 0 ? Math.min(size.width, size.height) / Math.min(exported.width, exported.height) : 1
+  // a widget at a free position: its share of the safe area, in pixels of this frame; `id` tells the layout pass which one it is
+  const safe = { w: size.width * (1 - 2 * SAFE_MARGIN), h: size.height * (1 - 2 * SAFE_MARGIN) }
   const placed = (key: PlacedWidget, w: Widget | null, index = 0): Widget | null => {
-    const offset = placedSettings(settings, key, index).offset
-    return w && offset ? { ...w, offset: { x: offset.x * scale, y: offset.y * scale } } : w
+    const free = placedSettings(settings, key, index).free
+    return w && { ...w, id: key === 'logo' ? `logo${index}` : key, ...(free && { offset: { x: free.x * safe.w, y: free.y * safe.h } }) }
   }
   if (settings.enabled) structure = styleStructure({ p, of, frame, settings, slot, live, titleOpacity, endOpacity, markerColor: extras.markerColor })
-  if (titleOpacity > 0 && !slot('title')) add(placed('title', titleWidget(of('title'), frame, settings, titleOpacity, assets)))
-  if (endOpacity > 0 && !slot('end')) {
-    const card = endWidget(of('end'), frame, settings, endOpacity, assets)
-    const credits = creditLines(settings.end.credits)
-    // with credits, the card heads a roll drawn over the other widgets instead of being laid out with them
-    if (credits.length === 0) add(placed('end', card))
-    else {
-      roll = () => {
-        sourcesCover = drawCreditsRoll(of('end'), card, credits, settings.end.size, creditsRollProgress(time, settings.end.start, settings.end.window), sources)
-      }
+  // the widgets of the settings, given to `put`, with the opening card, the closing card and the live widgets at these opacities
+  const collect = (put: (w: Widget | null) => void, titleO: number, endO: number, liveO: number, onRoll?: (card: Widget, credits: string[]) => void) => {
+    if (titleO > 0 && !slot('title')) put(placed('title', titleWidget(of('title'), frame, settings, titleO, assets)))
+    if (endO > 0 && !slot('end')) {
+      const card = endWidget(of('end'), frame, settings, endO, assets)
+      const credits = creditLines(settings.end.credits)
+      // with credits, the card heads a roll drawn over the other widgets instead of being laid out with them
+      if (credits.length === 0) put(placed('end', card))
+      else onRoll?.(card, credits)
+    }
+    if (settings.enabled) {
+      if (settings.counters.enabled && liveO > 0 && !slot('counters')) put(placed('counters', countersWidget(of('counters'), frame, settings, liveO)))
+      if (settings.profile.enabled && liveO > 0 && !slot('profile')) put(placed('profile', profileWidget(of('profile'), frame, settings, liveO, extras.markerColor)))
+      if (settings.weather.enabled && liveO > 0 && !slot('weather')) put(placed('weather', weatherWidget(of('weather'), frame, settings, liveO)))
+      if (settings.minimap.enabled && liveO > 0 && !slot('minimap')) put(placed('minimap', minimapWidget(of('minimap'), frame, settings, liveO, extras.markerColor)))
+      if (settings.leaderboard.enabled && liveO > 0) put(placed('leaderboard', leaderboardWidget(of('leaderboard'), extras.leaderboard ?? [], settings, liveO)))
+      if (settings.text.enabled) put(placed('text', textWidget(of('text'), settings)))
+      settings.logos.forEach((logo, i) => {
+        if (logo.enabled) put(placed('logo', logoWidget(p, logo, assets.logos?.[i]), i))
+      })
     }
   }
-  if (settings.enabled) {
-    if (settings.counters.enabled && live > 0 && !slot('counters')) add(placed('counters', countersWidget(of('counters'), frame, settings, live)))
-    if (settings.profile.enabled && live > 0 && !slot('profile')) add(placed('profile', profileWidget(of('profile'), frame, settings, live, extras.markerColor)))
-    weather = settings.weather.enabled && live > 0 && !slot('weather') ? placed('weather', weatherWidget(of('weather'), frame, settings, live)) : null
-    add(weather)
-    weatherShown = (weather !== null && weather.opacity > 0.001) || (slot('weather') && settings.weather.enabled && frame.weather !== undefined && live > 0.001)
-    if (settings.minimap.enabled && live > 0 && !slot('minimap')) add(placed('minimap', minimapWidget(of('minimap'), frame, settings, live, extras.markerColor)))
-    if (settings.leaderboard.enabled && live > 0) add(placed('leaderboard', leaderboardWidget(of('leaderboard'), extras.leaderboard ?? [], settings, live)))
-    if (settings.text.enabled) add(placed('text', textWidget(of('text'), settings)))
-    settings.logos.forEach((logo, i) => {
-      if (logo.enabled) add(placed('logo', logoWidget(p, logo, assets.logos?.[i]), i))
-    })
-  }
+  collect(add, titleOpacity, endOpacity, live, (card, lines) => {
+    roll = () => {
+      sourcesCover = drawCreditsRoll(of('end'), card, lines, settings.end.size, creditsRollProgress(time, settings.end.start, settings.end.window), sources)
+    }
+  })
+  weatherShown = widgets.some((w) => w.id === 'weather') || (slot('weather') && settings.weather.enabled && frame.weather !== undefined && live > 0.001)
   // texts of the timeline inside their window, overlay on or off
   for (const item of extras.texts ?? []) {
     const opacity = filmTextOpacity(item, time.timeS)
@@ -2112,13 +2259,27 @@ export function drawOverlay(
   )
   texts.forEach(({ item, opacity }, i) => add(filmTextWidget(p, item, opacity, maxWidths[i])))
 
+  // inside the safe area (what the style's structure leaves of it), and in the vertical formats clear of the platforms' interface
+  const clear = clearOfInterface(structure?.area ?? { x: size.width * SAFE_MARGIN, y: size.height * SAFE_MARGIN, w: safe.w, h: safe.h }, size)
   const positions = layoutWidgets(widgets, size, 2 * p.u, structure?.area)
+  // the widgets of the settings no longer in their stack's place but where the layout pass puts them for this frame
+  const fits = adaptedLayout(settings, frame.track, widgets, () => {
+    const every: Widget[] = []
+    collect((w) => w && every.push(w), settings.title.enabled ? 1 : 0, settings.end.enabled ? 1 : 0, 1)
+    return every
+  }, size, 2 * p.u, clear.area, [...clear.avoid, ...(structure?.obstacles ?? [])])
+  const boxes = widgets.map((w, i): Fit => (w.id ? fits.get(w.id) : undefined) ?? { ...positions[i], scale: 1 })
   // the structure of the style (bars, sheet, band and what sits in them) under the other widgets
   structure?.draw()
   widgets.forEach((widget, i) => {
+    const { x, y, scale } = boxes[i]
     ctx.save()
     ctx.globalAlpha = widget.opacity
-    widget.draw(positions[i].x, positions[i].y)
+    if (scale < 1) {
+      ctx.translate(x, y)
+      ctx.scale(scale, scale)
+      widget.draw(0, 0)
+    } else widget.draw(x, y)
     ctx.restore()
   })
   roll?.()
@@ -2152,14 +2313,20 @@ export function drawOverlay(
   if (credits.length > 0 && sourcesCover < 0.999) {
     ctx.save()
     ctx.globalAlpha = 1 - sourcesCover
-    drawCornerCredits(p, settings.credits.position, structure?.area, (q, position, area) =>
-      mode === 'full' ? drawCredits(q, credits, position, area) : drawShortCredits(q, credits, position, area),
+    // in the vertical formats they leave the corner the interface covers: the side edge, the top edge of a frame with no top bar
+    const tall = size.height >= VERTICAL_CREDITS_RATIO * size.width
+    const at = settings.credits.position
+    const position = !clear.vertical ? at : (tall ? at.replace('right', 'left') : at.replace('bottom', 'top')) as CreditsPosition
+    const along = clear.vertical ? { x: clear.area.x, y: clear.top, w: clear.area.w, h: size.height - clear.top - clear.bottom } : structure?.area
+    drawCornerCredits(p, position, along, (q, corner, area) =>
+      mode === 'full' ? drawCredits(q, credits, corner, area) : drawShortCredits(q, credits, corner, area),
     )
     ctx.restore()
   }
   if (endSources > 0.001) {
-    const obstacles = [...widgets.map((w, i) => ({ x: positions[i].x, y: positions[i].y, w: w.width, h: w.height })), ...(structure?.obstacles ?? [])]
-    drawEndSources(p, sources, endSources, structure?.area, obstacles)
+    const obstacles = [...widgets.map((w, i) => ({ x: boxes[i].x, y: boxes[i].y, w: w.width * boxes[i].scale, h: w.height * boxes[i].scale })), ...(structure?.obstacles ?? [])]
+    drawEndSources(p, sources, endSources, clear.vertical ? clear.area : structure?.area, obstacles)
   }
   ctx.restore()
+  return widgets.flatMap((w, i) => (w.id ? [{ id: w.id, x: boxes[i].x, y: boxes[i].y, w: w.width * boxes[i].scale, h: w.height * boxes[i].scale }] : []))
 }

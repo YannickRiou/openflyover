@@ -6,7 +6,7 @@ import {
   DEFAULT_OVERLAY,
   LABEL_KINDS,
   LOGOS_MAX,
-  OFFSET_MAX_PX,
+  OFFSET_MAX,
   WIDGET_SIZE_MIN,
   OVERLAY_STYLES,
   OVERLAY_STYLE_LABELS,
@@ -163,7 +163,7 @@ describe('overlay settings', () => {
     expect(isValidOverlay(withPatch((o) => o.logos.push({ ...DEFAULT_LOGO, image: 'https://example.org/logo.png' })))).toBe(false)
     expect(isValidOverlay(withPatch((o) => o.logos.push({ ...DEFAULT_LOGO, anchor: 'nowhere' as never })))).toBe(false)
     expect(isValidOverlay(withPatch((o) => o.logos.push({ ...DEFAULT_LOGO, opacity: 2 })))).toBe(false)
-    expect(isValidOverlay(withPatch((o) => o.logos.push({ ...DEFAULT_LOGO, offset: { x: 1e9, y: 0 } })))).toBe(false)
+    expect(isValidOverlay(withPatch((o) => o.logos.push({ ...DEFAULT_LOGO, free: { x: 1e9, y: 0 } })))).toBe(false)
     expect(sanitizeSettings({ overlay: several(2) }).invalid).toEqual([])
   })
 
@@ -184,23 +184,34 @@ describe('overlay settings', () => {
 
 describe('free position of a widget', () => {
   it('is absent by default, set and dropped by withWidgetOffset', () => {
-    expect(DEFAULT_OVERLAY.counters.offset).toBeUndefined()
-    const moved = withWidgetOffset(DEFAULT_OVERLAY, 'logo', { x: 120, y: -8 })
-    expect(moved.logos[0]).toEqual({ ...DEFAULT_LOGO, offset: { x: 120, y: -8 } })
+    expect(DEFAULT_OVERLAY.counters.free).toBeUndefined()
+    const moved = withWidgetOffset(DEFAULT_OVERLAY, 'logo', { x: 0.12, y: -0.08 })
+    expect(moved.logos[0]).toEqual({ ...DEFAULT_LOGO, free: { x: 0.12, y: -0.08 } })
     expect(moved.counters).toBe(DEFAULT_OVERLAY.counters)
     const back = withWidgetOffset(moved, 'logo', null)
     expect(back).toEqual(DEFAULT_OVERLAY)
-    expect('offset' in back.logos[0]).toBe(false)
+    expect('free' in back.logos[0]).toBe(false)
     // each logo has its own
     const two = { ...DEFAULT_OVERLAY, logos: [DEFAULT_LOGO, DEFAULT_LOGO] }
-    expect(withWidgetOffset(two, 'logo', { x: 5, y: 6 }, 1).logos.map((l) => l.offset)).toEqual([undefined, { x: 5, y: 6 }])
+    expect(withWidgetOffset(two, 'logo', { x: 0.05, y: 0.06 }, 1).logos.map((l) => l.free)).toEqual([undefined, { x: 0.05, y: 0.06 }])
+  })
+
+  it('is read from a preset of before, in pixels of a 1080p film in 16:9, as a share of its safe area', () => {
+    const { offset: _offset, ...counters } = { ...DEFAULT_OVERLAY.counters, offset: { x: 172.8, y: 97.2 } }
+    const old = { ...DEFAULT_OVERLAY, counters: { ...DEFAULT_OVERLAY.counters, offset: { x: 172.8, y: 97.2 } } }
+    const { settings, invalid } = sanitizeSettings({ overlay: old })
+    expect(invalid).toEqual([])
+    expect(settings.overlay.counters).toEqual({ ...counters, free: { x: expect.closeTo(0.1, 12), y: expect.closeTo(0.1, 12) } })
+    // a free position already in shares stays as it is
+    const shares = withWidgetOffset(DEFAULT_OVERLAY, 'counters', { x: 0.3, y: 0.2 })
+    expect(withOverlayDefaults(shares)).toBe(shares)
   })
 
   it('is restored from a project when valid, and rejects the overlay when not', () => {
-    const custom = withWidgetOffset(withWidgetOffset(DEFAULT_OVERLAY, 'title', { x: 0, y: 40 }), 'profile', { x: -OFFSET_MAX_PX, y: 3.5 })
+    const custom = withWidgetOffset(withWidgetOffset(DEFAULT_OVERLAY, 'title', { x: 0, y: 0.4 }), 'profile', { x: -OFFSET_MAX, y: 0.35 })
     expect(sanitizeSettings({ overlay: custom }).settings.overlay).toEqual(custom)
-    for (const bad of [null, [], { x: 1 }, { x: 1, y: '2' }, { x: 1, y: OFFSET_MAX_PX + 1 }, { x: 1, y: 2, z: 3 }]) {
-      const overlay = { ...DEFAULT_OVERLAY, text: { ...DEFAULT_OVERLAY.text, offset: bad } }
+    for (const bad of [null, [], { x: 1 }, { x: 1, y: '2' }, { x: 1, y: OFFSET_MAX + 1 }, { x: 1, y: 2, z: 3 }]) {
+      const overlay = { ...DEFAULT_OVERLAY, text: { ...DEFAULT_OVERLAY.text, free: bad } }
       expect(isValidOverlay(overlay as OverlaySettings)).toBe(false)
       expect(sanitizeSettings({ overlay }).invalid).toEqual(['overlay'])
     }
@@ -381,11 +392,11 @@ describe('styles with a structure', () => {
 
   it('keeps what is not a placement, drops the free offsets, and gives the widgets back to the free styles', () => {
     const custom: OverlaySettings = {
-      ...withWidgetOffset(DEFAULT_OVERLAY, 'counters', { x: 10, y: 20 }),
+      ...withWidgetOffset(DEFAULT_OVERLAY, 'counters', { x: 0.1, y: 0.2 }),
       enabled: true,
       overrides: { accent: '#112233' },
       labelColors: { peak: '#445566' },
-      counters: { ...DEFAULT_OVERLAY.counters, overrides: { text: '#ffffff' }, offset: { x: 10, y: 20 }, fields: { ...DEFAULT_OVERLAY.counters.fields, speed: true } },
+      counters: { ...DEFAULT_OVERLAY.counters, overrides: { text: '#ffffff' }, free: { x: 0.1, y: 0.2 }, fields: { ...DEFAULT_OVERLAY.counters.fields, speed: true } },
     }
     const tableau = withStyleLayout(custom, 'tableau')
     expect(tableau.enabled).toBe(true)
@@ -393,7 +404,7 @@ describe('styles with a structure', () => {
     expect(tableau.labelColors).toEqual({ peak: '#445566' })
     expect(tableau.counters.overrides).toEqual({ text: '#ffffff' })
     expect(tableau.counters.fields.speed).toBe(true)
-    expect(tableau.counters.offset).toBeUndefined()
+    expect(tableau.counters.free).toBeUndefined()
     // a style without a structure takes nothing from a style that had none...
     expect(withStyleLayout(DEFAULT_OVERLAY, 'neon')).toEqual({ ...DEFAULT_OVERLAY, style: 'neon' })
     expect(withStyleLayout(custom, 'broadcast').counters).toBe(custom.counters)
@@ -409,7 +420,7 @@ describe('styles with a structure', () => {
     // the opening card of the cinema is an ordinary card
     expect(inStyleSlot(cinema, 'title')).toBe(false)
     expect(inStyleSlot({ ...cinema, counters: { ...cinema.counters, anchor: 'top-left' } }, 'counters')).toBe(false)
-    expect(inStyleSlot(withWidgetOffset(cinema, 'counters', { x: 5, y: 5 }), 'counters')).toBe(false)
+    expect(inStyleSlot(withWidgetOffset(cinema, 'counters', { x: 0.05, y: 0.05 }), 'counters')).toBe(false)
     const journal = withStyleLayout(DEFAULT_OVERLAY, 'journal')
     expect(inStyleSlot({ ...journal, profile: { ...journal.profile, anchor: 'top-left' } }, 'profile')).toBe(true)
     expect(inStyleSlot({ ...journal, profile: { ...journal.profile, anchor: 'top-right' } }, 'profile')).toBe(false)

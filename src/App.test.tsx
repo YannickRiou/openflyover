@@ -29,6 +29,7 @@ vi.mock('./ui/PreferencesPanel', () => ({ PreferencesPanel: counted('Preferences
 const { default: App } = await import('./App')
 const { useAppStore } = await import('./state/store')
 const { PREFERENCES_KEY, setPreferences, usePreferences } = await import('./ui/preferences')
+const { useTour } = await import('./ui/tourSteps')
 
 /** names of the mocked parts shown in tab `tab` */
 const mocksIn = (tab: string) => [...document.querySelectorAll(`[data-testid="tab-panel-${tab}"] [data-mock]`)].map((el) => el.getAttribute('data-mock'))
@@ -148,6 +149,8 @@ describe('First launch: « Combien de réglages voulez-vous voir ? »', () => {
   const launch = async () => {
     ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
     Element.prototype.scrollIntoView = () => {}
+    // a tour started by a slower test before (its 1.5 s delay) stays open in its store: the question must be judged alone
+    useTour.setState({ open: false, step: 0, steps: [] })
     const host = document.body.appendChild(document.createElement('div'))
     const root = createRoot(host)
     await act(async () => root.render(<App />))
