@@ -2862,7 +2862,11 @@ exports) gets it from the terrain source of the settings.
   sample position by `joinSoundChunks`, pure and tested, a single `AudioBuffer` from `inS` over its played duration) and placed
   at the same film time + held frames, directly on the output (never ducked), 20 ms fades at the edges. Rendering
   identical from one export to the next, never in real time; an unreadable file stops the export with a message (for a
-  video: "coupez-le dans l'inspecteur"), a video without a sound track stays silent; nothing to hear: no sound track. The encoder (`createVideoEncoder(…, { audio })`) picks AAC in MP4,
+  video: "coupez-le dans l'inspecteur"), a video without a sound track stays silent; nothing to hear: no sound track.
+  **Once per batch**: `filmSoundtrack` (batch.ts, called by the export) keeps the last mix, loudness applied, while the batch store is
+  `running` (« Plusieurs formats », « Un film par trace », the render queue); the next export with the same film and media
+  table objects, the same start offset, length and target loudness gets a copy of it (the loudness pass and the encoders
+  may change the samples they get) instead of decoding and mixing again; the end of the batch drops it. The encoder (`createVideoEncoder(…, { audio })`) picks AAC in MP4,
   otherwise Opus (`AUDIO_CANDIDATES`, `canEncodeAudio`, 192 kbit/s; Opus only in WebM), adds the sound track
   (`AudioSampleSource`) and feeds it samples as the frames go, 1 s ahead (`AUDIO_LEAD_S`, chunks of at most
   1 s, separate `f32-planar` planes) so the two tracks interleave, the rest at the end; same path in memory and
