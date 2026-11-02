@@ -194,23 +194,29 @@ export const loadImageryTexture: LoadImageryTexture = async (
         try {
           let key = op.key
           let from = source
-          // dated photos where the year did not fly (a blank tile, or a 404 for some): the latest photos instead
-          const dated = await fetcher.fetchBitmap(buildTileUrl(from, key), { priority, signal }).catch((error: unknown) => {
-            if (from.fallback && error instanceof TileFetchError && error.status === 404) return null
-            throw error
-          })
-          if (dated && !(from.fallback && isBlank(dated))) bitmap = dated
-          else {
-            from = from.fallback ?? from
-            bitmap = await fetcher.fetchBitmap(buildTileUrl(from, key), { priority, signal })
+          // a tile a dated or regional source does not have (a 404: the year did not fly there, or the ground lies beyond
+          // the border) is missing, null, rather than a failure
+          const fetchOrMissing = (s: ImagerySource, k: TileKey) =>
+            fetcher.fetchBitmap(buildTileUrl(s, k), { priority, signal }).catch((error: unknown) => {
+              if ((s.fallback || s.coverage) && error instanceof TileFetchError && error.status === 404) return null
+              throw error
+            })
+          let found = await fetchOrMissing(from, key)
+          // dated photos where the year did not fly (a blank tile, or a 404): the latest photos instead
+          if (from.fallback && (!found || isBlank(found))) {
+            from = from.fallback
+            found = await fetchOrMissing(from, key)
           }
-          // a blank tile (regional sources only): the same ground from the nearest coarser tile that is not, like a source's own overview
-          for (let up = 0; up < BLANK_FALLBACK_LEVELS && key.z > from.minZoom && from.coverage && isBlank(bitmap); up++) {
+          // a blank or missing tile (regional sources only, IGN outside France): the same ground from the nearest coarser
+          // tile that is there, like a source's own overview
+          for (let up = 0; up < BLANK_FALLBACK_LEVELS && key.z > from.minZoom && from.coverage && (!found || isBlank(found)); up++) {
             const half = from.tileSize / 2
             ;[sx, sy, sw, sh] = [(key.x & 1) * half + sx / 2, (key.y & 1) * half + sy / 2, sw / 2, sh / 2]
             key = { z: key.z - 1, x: key.x >> 1, y: key.y >> 1 }
-            bitmap = await fetcher.fetchBitmap(buildTileUrl(from, key), { priority, signal })
+            found = await fetchOrMissing(from, key)
           }
+          if (!found) throw new TileFetchError(buildTileUrl(from, key), 404)
+          bitmap = found
         } catch (error) {
           if (!isAbortError(error)) failure = error
           return

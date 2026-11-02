@@ -271,7 +271,8 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    (`source.coverage`: IGN answers one, HTTP 200, outside France from z13, `docs/sources.md`; 8 × 8 samples of the
    decoded bitmap all ≥ 250) is replaced by the same ground from the nearest coarser tile that is not white (up to 6
    levels, z12 mosaic for IGN): the terrain no longer turns white, and no longer flips to the coarse colours and back when
-   the level of detail changes. If a sub-tile fails: the area is gray and
+   the level of detail changes. A **404** of a regional or dated source (IGN beyond the border: the sample's Spanish side)
+   is a missing tile, climbed the same way, not a failure: before, its 8 attempts stopped the export. If a sub-tile fails: the area is gray and
    the texture carries `userData.incomplete`; the engine tries the tile again (below). Rejects only if all fail.
 5. **Mesh** (`mesh.ts`): `(segments+1)²` grid; for each vertex, fractional Mercator position → lon/lat →
    bilinear height (DEM grid, height × exaggeration) → ECEF → local through `frame.toLocal`. UV (0,0) = NW corner... careful:
