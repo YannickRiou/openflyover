@@ -385,6 +385,15 @@ export function overlayTimedState(
   return [title, end, ...(sources > 0 ? [sources] : []), ...roll, ...texts.map((text) => filmTextOpacity(text, time.timeS)), ...photos, ...dip]
 }
 
+/**
+ * A full-screen photo or clip at full opacity at film time `timeS` whose picture or frame is decoded (`ready`): its crop
+ * always fills the frame (`kenBurnsCrop`), a photo is a JPEG and the export decodes a clip's frames without alpha (over
+ * black, `createExportVideos`), so nothing under it shows and the export need not render the 3D view.
+ */
+export function mediaCoversFrame(media: readonly FilmMedia[], timeS: number, ready: (item: FilmMedia) => boolean): boolean {
+  return media.some((item) => item.layout === 'plein-ecran' && filmTextOpacity(item, timeS) >= 1 && ready(item))
+}
+
 /** Part of a picture drawn over the frame (source rectangle of `drawImage`). */
 export interface Crop {
   sx: number
@@ -928,6 +937,55 @@ function cellsWidget(
   }
 }
 
+/** A picture of the fixed part of a widget (`cachedLayer`), kept while its `key` holds. */
+interface Layer {
+  key: string
+  canvas: OffscreenCanvas
+  x0: number
+  y0: number
+}
+/** layers of a widget's data (the profile, the outline): a new track gets new ones */
+const layers = new WeakMap<object, Map<string, Layer>>()
+
+/**
+ * Draw `paint` (absolute coordinates, inside the box `x, y, w, h` plus `margin`) through a picture kept for `owner`
+ * while `key` holds, instead of building and filling its path at every frame. The picture starts on the whole pixel at
+ * or before the box, so its pixels land where a direct draw puts them. Only on a context without transform (the
+ * export's compositor) where OffscreenCanvas exists; elsewhere (the preview scaled to the screen, the tests) drawn as is.
+ */
+function cachedLayer(
+  ctx: OverlayContext2D,
+  owner: object,
+  name: string,
+  key: string,
+  box: { x: number; y: number; w: number; h: number; margin: number },
+  paint: (c: OverlayContext2D) => void,
+): void {
+  const t = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null
+  if (typeof OffscreenCanvas === 'undefined' || !t || !t.isIdentity) {
+    paint(ctx)
+    return
+  }
+  let named = layers.get(owner)
+  if (!named) layers.set(owner, (named = new Map()))
+  let layer = named.get(name)
+  if (!layer || layer.key !== key) {
+    const x0 = Math.floor(box.x - box.margin)
+    const y0 = Math.floor(box.y - box.margin)
+    const canvas = new OffscreenCanvas(Math.max(1, Math.ceil(box.x + box.w + box.margin) - x0), Math.max(1, Math.ceil(box.y + box.h + box.margin) - y0))
+    const c = canvas.getContext('2d')
+    if (!c) {
+      paint(ctx)
+      return
+    }
+    c.translate(-x0, -y0)
+    paint(c)
+    layer = { key, canvas, x0, y0 }
+    named.set(name, layer)
+  }
+  ctx.drawImage(layer.canvas, layer.x0, layer.y0)
+}
+
 function profileWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number, markerColor?: string): Widget | null {
   const profile = frame.track.profile
   if (!profile) return null
@@ -954,52 +1012,59 @@ function profileWidget(p: Painter, frame: OverlayFrame, settings: OverlaySetting
       const xAt = (i: number) => ix + (i / (n - 1)) * iw
       const yAt = (e: number) => iy + ih * (1 - (e - minEle) / span)
 
-      const area = () => {
-        ctx.beginPath()
+      const area = (c: OverlayContext2D) => {
+        c.beginPath()
         let open = false
         for (let i = 0; i <= n; i++) {
           const known = i < n && !Number.isNaN(ele[i])
           if (known && !open) {
-            ctx.moveTo(xAt(i), iy + ih)
+            c.moveTo(xAt(i), iy + ih)
             open = true
           }
-          if (known) ctx.lineTo(xAt(i), yAt(ele[i]))
+          if (known) c.lineTo(xAt(i), yAt(ele[i]))
           else if (open) {
-            ctx.lineTo(xAt(i - 1), iy + ih)
-            ctx.closePath()
+            c.lineTo(xAt(i - 1), iy + ih)
+            c.closePath()
             open = false
           }
         }
       }
+      // the area, the played area and the ridge line do not change from frame to frame: kept as pictures (the played
+      // one shown up to the marker)
+      const key = [ix, iy, iw, ih, u, theme.profile.area, theme.profile.played, theme.profile.line].join()
+      const box = { x: ix, y: iy, w: iw, h: ih, margin: 2 * u }
+      const fillArea = (color: string) => (c: OverlayContext2D) => {
+        area(c)
+        c.fillStyle = color
+        c.fill()
+      }
       ctx.save()
-      area()
-      ctx.fillStyle = theme.profile.area
-      ctx.fill()
+      cachedLayer(ctx, profile, 'area', key, box, fillArea(theme.profile.area))
       const markerX = ix + frame.progress * iw
       ctx.save()
       ctx.beginPath()
       ctx.rect(ix, iy - u, markerX - ix, ih + 2 * u)
       ctx.clip()
-      area()
-      ctx.fillStyle = theme.profile.played
-      ctx.fill()
+      cachedLayer(ctx, profile, 'played', key, box, fillArea(theme.profile.played))
       ctx.restore()
       // ridge line
-      ctx.beginPath()
-      let pen = false
-      for (let i = 0; i < n; i++) {
-        if (Number.isNaN(ele[i])) {
-          pen = false
-          continue
+      cachedLayer(ctx, profile, 'ridge', key, box, (c) => {
+        c.beginPath()
+        let pen = false
+        for (let i = 0; i < n; i++) {
+          if (Number.isNaN(ele[i])) {
+            pen = false
+            continue
+          }
+          if (pen) c.lineTo(xAt(i), yAt(ele[i]))
+          else c.moveTo(xAt(i), yAt(ele[i]))
+          pen = true
         }
-        if (pen) ctx.lineTo(xAt(i), yAt(ele[i]))
-        else ctx.moveTo(xAt(i), yAt(ele[i]))
-        pen = true
-      }
-      ctx.strokeStyle = theme.profile.line
-      ctx.lineWidth = 0.22 * u
-      ctx.lineJoin = 'round'
-      ctx.stroke()
+        c.strokeStyle = theme.profile.line
+        c.lineWidth = 0.22 * u
+        c.lineJoin = 'round'
+        c.stroke()
+      })
       // marker
       if (frame.ele !== undefined) {
         ctx.beginPath()
@@ -1060,12 +1125,17 @@ export function minimapWidget(p: Painter, frame: OverlayFrame, settings: Overlay
       ctx.save()
       ctx.lineJoin = 'round'
       ctx.lineCap = 'round'
-      ctx.beginPath()
-      ctx.moveTo(px(outline.x[0]), py(outline.y[0]))
-      for (let i = 1; i < n; i++) ctx.lineTo(px(outline.x[i]), py(outline.y[i]))
-      ctx.strokeStyle = theme.minimap.route
-      ctx.lineWidth = 0.35 * u * s
-      ctx.stroke()
+      // the whole route does not change from frame to frame: kept as a picture
+      cachedLayer(ctx, outline, 'route', [ox, oy, k, u, s, theme.minimap.route].join(), { x: mx, y: my, w: mapW, h: mapH, margin: 2 * u * s }, (c) => {
+        c.lineJoin = 'round'
+        c.lineCap = 'round'
+        c.beginPath()
+        c.moveTo(px(outline.x[0]), py(outline.y[0]))
+        for (let i = 1; i < n; i++) c.lineTo(px(outline.x[i]), py(outline.y[i]))
+        c.strokeStyle = theme.minimap.route
+        c.lineWidth = 0.35 * u * s
+        c.stroke()
+      })
       // covered part: the kept points behind the marker, then the marker itself
       ctx.beginPath()
       ctx.moveTo(px(outline.x[0]), py(outline.y[0]))
