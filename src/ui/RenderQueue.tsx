@@ -7,12 +7,15 @@ import {
   addOpenProject,
   askNotificationPermission,
   canMove,
+  cancelRenderWindow,
   chooseQueueFolder,
   formatLabel,
   jobCount,
   runRenderQueue,
+  snapshotsWritten,
   useQueueStore,
 } from '../export/queue'
+import { openRenderWindow, showRenderWindow } from '../export/renderWindow'
 import type { QueueItem } from '../export/queue'
 import { isExportBusy, useExportStore } from '../export/store'
 import type { ExportResult } from '../export/store'
@@ -30,12 +33,14 @@ import { showToast } from './toast'
 
 const ACTIONS = 'flex flex-col gap-2 *:min-w-0'
 
-/** Status line of an item; `fraction` is the part of the film being rendered that is done. */
-function statusText(item: QueueItem, fraction: number): string {
+/** Status line of an item; `fraction` is the part of the film being rendered that is done; `elsewhere`: in the « File de rendus » window. */
+function statusText(item: QueueItem, fraction: number, elsewhere: boolean): string {
   if (item.status === 'pending') return item.interrupted ? translate('export.queue.interrupted') : translate('export.panel.status.pending')
   if (item.status === 'running') {
-    const percent = Math.round(Math.min(1, Math.max(0, fraction)) * 100)
+    const done = elsewhere ? (item.percent ?? 0) : fraction
+    const percent = Math.round(Math.min(1, Math.max(0, done)) * 100)
     const progress = translate('export.queue.progress', { index: item.step ?? 1, total: jobCount(item), percent })
+    if (elsewhere) return `${translate('export.queue.inWindow')} ${progress}`
     return `${translate('export.panel.status.running')} ${progress}`
   }
   if (item.status === 'error') return translate('export.panel.status.failed', { error: item.error ?? translate('export.panel.status.unknown') })
@@ -56,6 +61,8 @@ export function RenderQueue({ selection, save }: { selection: BatchSelection; sa
   const t = useT()
   const items = useQueueStore((s) => s.items)
   const running = useQueueStore((s) => s.running)
+  /** desktop: the « File de rendus » window renders the queue */
+  const elsewhere = useQueueStore((s) => !s.running && s.items.some((i) => i.status === 'running'))
   const hasTrack = useAppStore((s) => s.tracks.length > 0)
   const exporting = useExportStore((s) => isExportBusy(s.phase))
   const batching = useBatchStore((s) => s.phase === 'running')
@@ -101,6 +108,12 @@ export function RenderQueue({ selection, save }: { selection: BatchSelection; sa
     void folder.then(async (picked) => {
       if (picked === null) return
       setFolderPath(getPlatform().storage.get(QUEUE_FOLDER_KEY))
+      // desktop: rendered in a window of its own, this one stays free (the projects of the queue never replace the open one)
+      if (capabilities.isDesktop && picked) {
+        await snapshotsWritten()
+        if (await openRenderWindow()) return
+        showToast({ kind: 'info', text: t('export.queue.windowFailed') })
+      }
       // the open project is replaced by those of the queue (and put back at the end): its changes are asked about first
       const proceed = await confirmClose({ flush: flushAutosave, loss: projectCloseLoss, ask, save: saveProject })
       if (proceed && !(await runRenderQueue({ folder: picked ?? null, save }))) showToast({ kind: 'error', text: t('export.queue.busy') })
@@ -132,7 +145,7 @@ export function RenderQueue({ selection, save }: { selection: BatchSelection; sa
                 <span className="text-body font-semibold text-text-1">
                   {t('export.queue.formats', { name: item.name, formats: contents(item) })}
                 </span>
-                <span className="type-hint">{statusText(item, fraction)}</span>
+                <span className="type-hint">{statusText(item, fraction, elsewhere)}</span>
                 {item.status !== 'running' && (
                   <div className="flex gap-2">
                     {item.status === 'pending' && (
@@ -170,7 +183,7 @@ export function RenderQueue({ selection, save }: { selection: BatchSelection; sa
           </>
         )}
 
-        {!running && !question && waiting.length > 0 && (
+        {!running && !elsewhere && !question && waiting.length > 0 && (
           <Button variant="primary" block onClick={start} disabled={busy}>
             <Icon name="download" size={18} />
             {waiting.some((i) => i.interrupted) ? t('export.queue.resume') : t('export.queue.start')}
@@ -180,6 +193,16 @@ export function RenderQueue({ selection, save }: { selection: BatchSelection; sa
           <Button block onClick={() => useBatchStore.getState().cancel()} disabled={cancelRequested}>
             {t('export.queue.cancel')}
           </Button>
+        )}
+        {elsewhere && (
+          <div className={ACTIONS}>
+            <Button block onClick={() => void showRenderWindow()}>
+              {t('export.queue.showWindow')}
+            </Button>
+            <Button block onClick={cancelRenderWindow}>
+              {t('export.queue.cancel')}
+            </Button>
+          </div>
         )}
         {folderPath && !running && (
           <div className="grid justify-items-start gap-1">
@@ -195,7 +218,7 @@ export function RenderQueue({ selection, save }: { selection: BatchSelection; sa
             </Button>
           </div>
         )}
-        <p className="type-hint">{t('export.queue.help')}</p>
+        <p className="type-hint">{t(capabilities.isDesktop ? 'export.queue.helpDesktop' : 'export.queue.help')}</p>
         {running && <p className="type-hint">{t('export.queue.background')}</p>}
       </div>
     </details>

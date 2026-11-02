@@ -3082,6 +3082,30 @@ exports) gets it from the terrain source of the settings.
   Tauri `exists` check) when it is still there; the fs scope given by the dialog is not persisted across launches (no
   persisted-scope plugin), so after a restart `exists` is refused and the dialog opens again, in the old folder
   (`pickFolder(…, startIn)`). « Changer de dossier » forgets the path.
+- **Desktop: rendered in a window of its own** (`src/export/renderWindow.ts`, `src/ui/RenderWindowBar.tsx`). « Lancer la
+  file » picks or reuses the folder (its path is then in the app's fs scope, shared by every window), waits for the
+  snapshot files (`snapshotsWritten`) and opens a second window of the same app, label `file-de-rendus`, 480 × 340,
+  loading `index.html?file-de-rendus` (`openRenderWindow`; an open one is brought to the front). That page
+  (`isRenderWindow`, App.tsx) mounts the whole app as usual, so the export is exactly the one of the main window (same
+  `ExportController`, same speed), but shows only the 3D view under `RenderWindowBar` (project, film n / N, %, « Annuler »);
+  it skips what belongs to the edited project: reopening the last entry, the command-line batch, files opened by the
+  system, the autosave to « Mes projets », the close guard, the tour, the remembered tab. `runInRenderWindow` reuses the
+  folder kept under `openflyover.renderQueue.folder`, runs `runRenderQueue({ sharesProgress: true })` (the projects of the
+  queue never replace the one edited in the main window, so no `confirmClose`), then closes the window after
+  `CLOSE_AFTER_MS`. If the window cannot be made, the queue runs in the main window as before. **Snapshots**: on the
+  desktop each one is also written to `<app data>/projects/queue-<id>.snapshot.json` (`createQueueSnapshots`, `stored`
+  items: not copied into the storage, so no size limit and kept across launches), read by `renderItem`, deleted once the
+  item is rendered or removed. **Two windows, one queue** (`installQueueSync`, the `storage` event, which only the other
+  windows receive): the main window takes the stored queue as it is (`mergeQueue`, keeping its snapshots in memory), read
+  « live » (`parseQueue(raw, true)`: an item `running` stays `running`, with `step` and `percent`); the render window keeps
+  the status of what it renders or rendered and takes the rest (items added, removed, moved: one added during a run is
+  rendered next, `runQueue` reads the live list). A list received is not written back (`fromOtherWindow`). The render
+  window writes `percent` at most once a second (`PERCENT_EVERY_MS`); the main window's « Annuler » sets
+  `openflyover.renderQueue.cancel`, and the end message (`openflyover.renderQueue.done`) is shown in the main window too.
+  While an item runs elsewhere the main preview stays light (`useRenderElsewhere`, `previewRung(…, elsewhere)`: rung 1 at
+  least, the export's own budget untouched), so the graphics card goes to the film. Capability: the window label in
+  `windows`, `core:webview:allow-create-webview-window`, `core:window:allow-close`, `allow-set-focus`, `allow-unminimize`.
+  Closing the main window leaves the render window running (the app exits once both are closed).
 - **Notification**: at the end of a run `notifyWhenAway` uses the web Notification API when the window is hidden or not
   focused (permission asked at « Lancer la file »). The desktop app has no notification plugin (`@tauri-apps/plugin-notification`
   is not a dependency): it shows the toast only. `--rendu` is unchanged.

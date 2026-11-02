@@ -73,10 +73,14 @@ export function sceneBudget(preview: PreviewBudget, exporting: boolean, device: 
   return { shadowMapSize, maxTrees }
 }
 
-/** Rung of the preview: « Légère » is 1, « Complète » 0, « Auto » the rung measured (`createRungGovernor`). */
-export function previewRung(quality: PreviewQuality, measured: PreviewRung): PreviewRung {
-  return quality === 'light' ? 1 : quality === 'full' ? 0 : measured
+/** Rung of the preview: « Légère » is 1, « Complète » 0, « Auto » the rung measured (`createRungGovernor`); 1 at least while `elsewhere`. */
+export function previewRung(quality: PreviewQuality, measured: PreviewRung, elsewhere = false): PreviewRung {
+  const rung = quality === 'light' ? 1 : quality === 'full' ? 0 : measured
+  return elsewhere ? (Math.max(1, rung) as PreviewRung) : rung
 }
+
+/** Desktop: a film is being made in the « File de rendus » window (export/queue.ts): the preview here stays light, the graphics card is for that film. */
+export const useRenderElsewhere = create<{ active: boolean }>()(() => ({ active: false }))
 
 /** Shortest time (ms) between two frames while the film plays: 0 on a computer, 1000 / 60 or, from rung 1, 1000 / 30 on a phone or tablet. */
 export function frameIntervalMs(kind: DeviceKind, rung: PreviewRung): number {
@@ -190,7 +194,7 @@ export const usePreviewMeasure = create<{ rung: PreviewRung }>()(() => ({ rung: 
 
 /** Rung of the preview now. */
 export function currentPreviewRung(): PreviewRung {
-  return previewRung(usePreferences.getState().previewQuality, usePreviewMeasure.getState().rung)
+  return previewRung(usePreferences.getState().previewQuality, usePreviewMeasure.getState().rung, useRenderElsewhere.getState().active)
 }
 
 /** Preview limits now (the diagnostic report). */
@@ -202,5 +206,6 @@ export function currentPreviewBudget(): PreviewBudget {
 export function usePreviewBudget(): PreviewBudget {
   const quality = usePreferences((s) => s.previewQuality)
   const measured = usePreviewMeasure((s) => s.rung)
-  return useMemo(() => previewBudget(deviceBudget(), previewRung(quality, measured) !== 0), [quality, measured])
+  const elsewhere = useRenderElsewhere((s) => s.active)
+  return useMemo(() => previewBudget(deviceBudget(), previewRung(quality, measured, elsewhere) !== 0), [quality, measured, elsewhere])
 }

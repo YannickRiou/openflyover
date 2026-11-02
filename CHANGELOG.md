@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Render in the background (desktop app)**: « Lancer la file » now opens a small « File de rendus » window that renders the queue while you keep editing in the main window. It shows the image being made, the film and the percentage, and « Annuler »; the main window shows the progress too, and its preview stays light meanwhile so the graphics card goes to the film. A project added to the queue during the render is rendered next. The projects of the queue are kept as files, so a large project no longer has to be added again after closing the app.
 - **The overlay draws faster in the export**: the fixed parts of the elevation profile and of the mini-map are drawn once and reused at every image (about a quarter less time for the whole overlay on a 1080p frame).
 - **Faster export of films with photos and texts**: under a full-screen photo or video the 3D view is no longer computed (it does not show), and during a stop where only a text or a card changes, the view is computed once instead of at every image. The film is the same, image for image.
 - **Versions of a project**: in Projet › Versions, « Enregistrer une version » keeps the project as it is now under a name (the date by default), photos and clips included. « Revenir à cette version » brings it back; the project as it was is kept as a version first, so going back can itself be undone. Versions are kept with the project in « Mes projets » and deleted with it.
