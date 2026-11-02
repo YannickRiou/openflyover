@@ -20,9 +20,13 @@ import type { WebGLRenderer } from 'three'
 import { EffectComposer } from 'postprocessing'
 import type { LocalFrame, TerrainEngine } from '../core/types'
 import { mixFilmAudio } from '../film/audio'
+import type { MixedAudio } from '../film/audio'
 import { normaliseLoudness } from '../film/loudness'
+import { useBatchStore } from './batch'
 import type { FilmClock } from '../film/clock'
 import { useMediaStore } from '../film/media'
+import type { MediaTable } from '../film/media'
+import type { Film } from '../film/model'
 import { pinsMoveWithTime } from '../film/photoPins'
 import { fovDegOf } from '../flyover/cameraSettings'
 import { filmViewMovesWithTime, lookAtView, overviewView } from '../flyover/filmCamera'
@@ -258,6 +262,36 @@ function noEncodingSession(rendered: () => number): VideoEncodeSession {
 }
 
 // oxlint-disable-next-line react/only-export-components -- exported for its tests
+/**
+ * The soundtrack of the last film, kept while a batch or the render queue runs: the next formats of the same film have
+ * the same one, so the music is decoded, mixed and brought to its loudness once per batch. Dropped when the batch ends.
+ */
+let keptSoundtrack: { film: Film; table: MediaTable; offsetS: number; lengthS: number; lufs: number | null; audio: MixedAudio | null } | null = null
+useBatchStore.subscribe((state, previous) => {
+  if (previous.phase === 'running' && state.phase !== 'running') keptSoundtrack = null
+})
+
+/** A copy: the encoders and the loudness pass may change the samples they are given. */
+const copySoundtrack = (audio: MixedAudio | null): MixedAudio | null => audio && { ...audio, channels: audio.channels.map((c) => c.slice()) }
+
+/** The mixed soundtrack (`mixFilmAudio`), at `lufs` when « Normaliser le volume » is on; from `keptSoundtrack` within a batch. */
+async function filmSoundtrack(film: Film, offsetS: number, lengthS: number, lufs: number | null): Promise<MixedAudio | null> {
+  const table = useMediaStore.getState().table
+  const kept = keptSoundtrack
+  if (kept && kept.film === film && kept.table === table && kept.offsetS === offsetS && kept.lengthS === lengthS && kept.lufs === lufs) {
+    writeBreadcrumb('export : son repris du film précédent du lot')
+    return copySoundtrack(kept.audio)
+  }
+  const audio = await mixFilmAudio(film, (id) => table[id], { offsetS, lengthS })
+  // « Normaliser le volume »: the mix brought to the target loudness and kept under the true-peak ceiling
+  if (audio && lufs != null) {
+    const { measured, gainDb, limitedDb } = normaliseLoudness(audio, lufs)
+    writeBreadcrumb(measured === null ? 'export : son silencieux, volume inchangé' : `export : volume ${measured.toFixed(1)} LUFS, gain ${gainDb.toFixed(1)} dB, limiteur ${limitedDb.toFixed(1)} dB`)
+  }
+  keptSoundtrack = useBatchStore.getState().phase === 'running' ? { film, table, offsetS, lengthS, lufs, audio: copySoundtrack(audio) } : null
+  return audio
+}
+
 export async function runExport(request: ExportRequest, deps: RunDeps): Promise<void> {
   const exportStore = useExportStore.getState
   // « Export de test sans encodage » (Projet › Diagnostic): is the encoder or the render what a phone dies of?
@@ -535,15 +569,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     const settings = useAppStore.getState().settings
     // the soundtrack from the first frame: film time 0 comes after the frames held at the start
     // an image sequence has no sound
-    const audio = request.sequence ? null : await mixFilmAudio(settings.film, (id) => useMediaStore.getState().table[id], {
-      offsetS: Math.round(request.holdStartS * fps) / fps,
-      lengthS: schedule.length / fps,
-    })
-    // « Normaliser le volume »: the mix brought to the target loudness and kept under the true-peak ceiling
-    if (audio && request.encoding?.loudnessLufs != null) {
-      const { measured, gainDb, limitedDb } = normaliseLoudness(audio, request.encoding.loudnessLufs)
-      writeBreadcrumb(measured === null ? 'export : son silencieux, volume inchangé' : `export : volume ${measured.toFixed(1)} LUFS, gain ${gainDb.toFixed(1)} dB, limiteur ${limitedDb.toFixed(1)} dB`)
-    }
+    const audio = request.sequence ? null : await filmSoundtrack(settings.film, Math.round(request.holdStartS * fps) / fps, schedule.length / fps, request.encoding?.loudnessLufs ?? null)
     if (isCanceled()) throw new ExportCanceledError()
     // WebCodecs, else the system's ffmpeg (desktop app on Linux); the test without encoding ends on its message
     session = noEncoding

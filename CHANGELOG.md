@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Batches start their films faster**: in « Plusieurs formats » and the render queue, the soundtrack of a film is decoded, mixed and brought to its volume once, then reused for its other formats.
 - **Versions of a project**: in Projet › Versions, « Enregistrer une version » keeps the project as it is now under a name (the date by default), photos and clips included. « Revenir à cette version » brings it back; the project as it was is kept as a version first, so going back can itself be undone. Versions are kept with the project in « Mes projets » and deleted with it.
 
 ## 4.8.0 (November 2026)

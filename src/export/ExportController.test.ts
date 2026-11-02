@@ -17,6 +17,8 @@ import { renderSettledFrame } from './capture'
 import type { RenderFrameDeps } from './capture'
 import { readBreadcrumbs } from './guard'
 import { createExportEncoder } from './nativeEncoder'
+import { mixFilmAudio } from '../film/audio'
+import { useBatchStore } from './batch'
 import { buildFrameSchedule } from './schedule'
 import { useExportStore, type ExportRequest } from './store'
 
@@ -209,6 +211,23 @@ describe('runExport', () => {
     // the first frame, then at most every 250 ms, and the last one (twice: the end of the loop and of the export)
     expect(reportFrame.mock.calls.length).toBeLessThan(frameCount)
     expect(reportFrame.mock.calls.at(-1)?.[0]).toBe(frameCount)
+  })
+
+  it('mixes the soundtrack once per batch: each film gets its own copy, and the batch\'s end drops it', async () => {
+    vi.mocked(mixFilmAudio).mockImplementation(async () => ({ sampleRate: 48_000, channels: [new Float32Array([0.1, 0.2])] }))
+    const audioOf = (call: number) => (vi.mocked(createExportEncoder).mock.calls[call][1] as { audio: { channels: Float32Array[] } }).audio
+    useBatchStore.getState().hold(null)
+    await exportFilm(destination())
+    await exportFilm(destination())
+    expect(mixFilmAudio).toHaveBeenCalledTimes(1)
+    expect(audioOf(1).channels[0]).toEqual(audioOf(0).channels[0])
+    expect(audioOf(1).channels[0]).not.toBe(audioOf(0).channels[0])
+    useBatchStore.getState().release()
+    // alone, or after the batch: mixed again
+    await exportFilm(destination())
+    await exportFilm(destination())
+    expect(mixFilmAudio).toHaveBeenCalledTimes(3)
+    vi.mocked(mixFilmAudio).mockImplementation(async () => null)
   })
 
   it('measures the ways to hand the frames to a WebCodecs encoder on the first ones, then keeps the fastest', async () => {
