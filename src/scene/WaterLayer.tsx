@@ -185,11 +185,13 @@ export interface WaterPiece {
 /** Height above sea level (metres, before exaggeration and lift) of each vertex of a piece; null when its relief is not known yet. */
 function pieceHeights({ kind, mesh }: WaterPiece, engine: TerrainEngine | null): Float64Array | null {
   if (kind === 'sea') return new Float64Array(mesh.fade.length)
-  const heights = sampleHeights(mesh, engine)
   if (kind === 'line') {
-    const samples = stripHeights(Array.from({ length: mesh.fade.length / 3 }, (_, i) => heights[3 * i + 1]))
+    // only the middle of each sample is read: the banks take its height
+    const at = (v: number) => engine?.sampleHeight(mesh.lonLat[2 * v], mesh.lonLat[2 * v + 1]) ?? Number.NaN
+    const samples = stripHeights(Array.from({ length: mesh.fade.length / 3 }, (_, i) => at(3 * i + 1)))
     return samples && Float64Array.from({ length: mesh.fade.length }, (_, v) => samples[Math.floor(v / 3)])
   }
+  const heights = sampleHeights(mesh, engine)
   const level = lakeLevel(heights, mesh.fade)
   if (Number.isNaN(level)) return null
   return kind === 'lake' ? new Float64Array(heights.length).fill(level) : heights.map((h) => (Number.isNaN(h) ? level : h))
