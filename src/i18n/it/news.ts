@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v50.layout.title': 'Gli elementi si adattano a ogni formato',
+  'v50.layout.text': 'Un film esportato in 9:16, 4:5 o 1:1 dispone da solo contatori, profilo, minimappa, loghi e schede di titolo: niente si sovrappone, niente viene tagliato. Nei formati verticali lasciano anche libere le aree coperte da Reels, TikTok e Shorts. Nessuna impostazione da cambiare. «Posizione libera» si regola ora in percentuale dell’area di sicurezza.',
   'v47.draw.title': 'Disegnare un itinerario sulla mappa',
   'v47.draw.text': '«Aggiungi» › «Disegna sulla mappa…»: fai clic sui punti della tua uscita. La linea segue i sentieri (IGN in Francia, OpenStreetMap altrove) o resta retta se lo scegli. Un clic in più e il film è pronto da preparare, senza file GPX.',
   'v47.ribbon.title': 'Un nastro di dati in 3D',

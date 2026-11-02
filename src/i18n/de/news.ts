@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v50.layout.title': 'Das Overlay passt sich jedem Format an',
+  'v50.layout.text': 'Ein Film, der in 9:16, 4:5 oder 1:1 exportiert wird, ordnet Zähler, Profil, Minikarte, Logos und Titelkarten selbst an: Nichts überlappt, nichts wird abgeschnitten. In den vertikalen Formaten bleiben sie außerdem frei von den Bereichen, die Reels, TikTok und Shorts überdecken. Keine Einstellung nötig. „Freie Position“ wird jetzt in Prozent des Sicherheitsbereichs angegeben.',
   'v47.draw.title': 'Route auf der Karte zeichnen',
   'v47.draw.text': '„Hinzufügen“ › „Auf der Karte zeichnen…“: Klicken Sie die Punkte Ihrer Tour. Die Linie folgt den Wegen (IGN in Frankreich, sonst OpenStreetMap) oder bleibt gerade, wenn Sie es wählen. Ein weiterer Klick, und der Film wird vorbereitet, ohne GPX-Datei.',
   'v47.ribbon.title': 'Ein 3D-Datenband',

@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v50.layout.title': 'L’habillage s’adapte à chaque format',
+  'v50.layout.text': 'Un film exporté en 9:16, en 4:5 ou en 1:1 place seul les compteurs, le profil, la mini-carte, les logos et les cartes de titre\u00a0: rien ne se chevauche, rien n’est coupé. Dans les formats verticaux, ils laissent libres les zones que Reels, TikTok et Shorts recouvrent. Aucun réglage à faire. «\u00a0Position libre\u00a0» se règle maintenant en pourcentage de la zone de sécurité.',
   'v47.draw.title': 'Tracer un itinéraire sur la carte',
   'v47.draw.text': '« Ajouter » › « Tracer sur la carte… » : cliquez les points de votre sortie. Le tracé suit les sentiers (IGN en France, OpenStreetMap ailleurs), ou reste en ligne droite si vous le choisissez. Un clic de plus, et le film se prépare, sans fichier GPX.',
   'v47.ribbon.title': 'Un ruban de données en 3D',

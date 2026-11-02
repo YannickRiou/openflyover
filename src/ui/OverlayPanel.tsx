@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { videoSize } from '../export/schedule'
 import { CARD_LABELS, END_CARD_ID, TITLE_CARD_ID } from '../film/cards'
 import { t, useT } from '../i18n'
 import type { CardId } from '../film/cards'
@@ -12,7 +11,7 @@ import {
   COUNTER_IDS,
   CREDITS_MODES,
   CREDITS_POSITIONS,
-  OFFSET_MAX_PX,
+  OFFSET_MAX,
   OVERLAY_FONT_IDS,
   OVERLAY_FONT_LABELS,
   OVERLAY_STYLES,
@@ -85,10 +84,11 @@ const OFFSET_Y_LABELS: Record<string, string> = {
 }
 
 /**
- * A pixel offset typed digit by digit: a value in range is applied at once, Enter or leaving the field rounds and clamps
- * it, an empty or invalid entry puts the stored value back. One undo step per edit (focus to blur).
+ * A free position typed in percent of the safe area, digit by digit: a value in range is applied at once, Enter or
+ * leaving the field rounds and clamps it, an empty or invalid entry puts the stored value back. One undo step per edit
+ * (focus to blur).
  */
-function OffsetField({ id, label, value, onCommit }: { id: string; label: string; value: number; onCommit(px: number): void }) {
+function OffsetField({ id, label, value, onCommit }: { id: string; label: string; value: number; onCommit(share: number): void }) {
   const endGesture = useRef<(() => void) | null>(null)
   const stop = () => {
     endGesture.current?.()
@@ -99,57 +99,55 @@ function OffsetField({ id, label, value, onCommit }: { id: string; label: string
     <NumberField
       id={id}
       label={label}
-      min={-OFFSET_MAX_PX}
-      max={OFFSET_MAX_PX}
+      min={-100 * OFFSET_MAX}
+      max={100 * OFFSET_MAX}
       step={1}
       live
-      value={value}
+      value={Math.round(100 * value)}
       onFocus={() => {
         endGesture.current ??= getSettingsHistory().beginGesture()
       }}
-      onChange={(px) => onCommit(Math.round(px))}
+      onChange={(percent) => onCommit(Math.round(percent) / 100)}
       onBlur={stop}
     />
   )
 }
 
 /**
- * Where a widget sits: its anchor on the 3 × 3 grid, then « Position libre », an offset in pixels of the exported film
- * from that corner of the safe area (the widget leaves its anchor's stack).
+ * Where a widget sits: its anchor on the 3 × 3 grid, then « Position libre », a share of the safe area from that corner
+ * of it (the widget leaves its anchor's stack).
  */
 export function WidgetPosition({ widget, index = 0 }: { widget: PlacedWidget; index?: number }) {
   const t = useT()
   const id = useId()
   const overlay = useAppStore((s) => s.settings.overlay)
-  const video = useAppStore((s) => s.settings.video)
   const set = (next: OverlaySettings) => useAppStore.getState().setSetting('overlay', next)
-  const { anchor, offset } = placedSettings(overlay, widget, index)
+  const { anchor, free } = placedSettings(overlay, widget, index)
   const [row, column] = anchor === 'center' ? ['middle', 'center'] : anchor.split('-')
-  const film = videoSize(video.aspect, video.resolution, Number.POSITIVE_INFINITY)
   const axis = (key: keyof WidgetOffset, label: string, current: WidgetOffset) => (
     <OffsetField
       id={`${id}-${key}`}
       label={label}
       value={current[key]}
-      onCommit={(px) => set(withWidgetOffset(overlay, widget, { ...current, [key]: px }, index))}
+      onCommit={(share) => set(withWidgetOffset(overlay, widget, { ...current, [key]: share }, index))}
     />
   )
   return (
     <>
       <AnchorPicker label={t('overlay.position')} value={anchor} onChange={(next) => set(withWidgetAnchor(overlay, widget, next, index))} />
       <Checkbox
-        checked={offset !== undefined}
+        checked={free !== undefined}
         onChange={(on) => set(withWidgetOffset(overlay, widget, on ? { x: 0, y: 0 } : null, index))}
       >
         {t('overlay.freePosition')}
       </Checkbox>
-      {offset && (
+      {free && (
         <>
           <div className="grid grid-cols-2 gap-2">
-            {axis('x', OFFSET_X_LABELS[column], offset)}
-            {axis('y', OFFSET_Y_LABELS[row], offset)}
+            {axis('x', OFFSET_X_LABELS[column], free)}
+            {axis('y', OFFSET_Y_LABELS[row], free)}
           </div>
-          <p className="type-hint">{t('overlay.freePositionHint', { width: film.width, height: film.height })}</p>
+          <p className="type-hint">{t('overlay.freePositionHint')}</p>
         </>
       )}
     </>

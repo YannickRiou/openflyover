@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v50.layout.title': 'The overlay fits each format',
+  'v50.layout.text': 'A film exported in 9:16, 4:5 or 1:1 places its counters, profile, mini-map, logos and title cards by itself: nothing overlaps, nothing is cut. In the vertical formats they also keep clear of the areas that Reels, TikTok and Shorts cover. No setting to change. “Free position” is now set in percent of the safe area.',
   'v47.draw.title': 'Draw a route on the map',
   'v47.draw.text': '“Add” › “Draw on the map…”: click the points of your outing. The line follows the paths (IGN in France, OpenStreetMap elsewhere), or stays straight if you choose. One more click and the film is ready to build, with no GPX file.',
   'v47.ribbon.title': 'A 3D data ribbon',

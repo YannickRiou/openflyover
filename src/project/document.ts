@@ -19,10 +19,11 @@ import { isValidRace } from '../flyover/race'
 import { isSunDate } from '../flyover/sun'
 import { TRACK_COLORS } from '../import'
 import { buildTrack, isUtcOffsetMin, statsOverrideOf } from '../import/stats'
-import { isValidVideoSettings, withVideoDefaults } from '../export/schedule'
+import { isValidVideoSettings, videoSize, withVideoDefaults } from '../export/schedule'
+import type { VideoAspect, VideoResolution } from '../export/schedule'
 import { isValidForest } from '../osm/forest'
 import { LANDMARK_DENSITIES, LANDMARK_DISTANCE_RANGE, withLandmarkDefaults } from '../osm/landmarks'
-import { OVERLAY_ANCHORS, isValidOverlay, withKnownStyle, withOverlayDefaults } from '../overlay/settings'
+import { OVERLAY_ANCHORS, isValidOverlay, withFreePositions, withKnownStyle, withOverlayDefaults } from '../overlay/settings'
 import { isValidPoster, withPosterDefaults } from '../poster/settings'
 import { isValidGrading } from '../scene/grading'
 import { isValidLens, withLensDefaults } from '../scene/lens'
@@ -41,7 +42,7 @@ import { PROJECT_EXTENSION } from './file'
 import { t } from '../i18n'
 
 export const PROJECT_FORMAT = 'openflyover-project'
-export const PROJECT_VERSION = 7
+export const PROJECT_VERSION = 8
 /** Suffix of saved project files (`<name>.opnflvr`, see `file.ts`). */
 export const PROJECT_FILE_SUFFIX = `.${PROJECT_EXTENSION}`
 export const defaultProjectName = (): string => t('project.doc.defaultName')
@@ -371,6 +372,20 @@ export const MIGRATIONS: Readonly<Record<number, ProjectMigration>> = {
   5: withNightAndRecapOnTheirOwn,
   // v7: « Ralentir aux temps forts » is gone, and the pauses it made as the automatic stops of the films saved before the timeline
   6: withoutHighlightPauses,
+  // v8: a widget's free position is a share of the safe area, so it keeps its place in every format of the film
+  7: withFreePositionsAsShares,
+}
+
+/**
+ * Before v8 the free position of a widget (`offset`) was in pixels of the film of the project's format and resolution.
+ * Written as a share of that film's safe area (`free`), so the film in its own format stays where it was; the other
+ * formats of the project now follow it (`withFreePositions`).
+ */
+function withFreePositionsAsShares(doc: Record<string, unknown>): Record<string, unknown> {
+  if (!isRecord(doc.settings) || !isRecord(doc.settings.overlay)) return doc
+  const video = isRecord(doc.settings.video) ? doc.settings.video : {}
+  const film = videoSize(video.aspect as VideoAspect, video.resolution as VideoResolution, Number.POSITIVE_INFINITY)
+  return { ...doc, settings: { ...doc.settings, overlay: withFreePositions(doc.settings.overlay, film) } }
 }
 
 /**
