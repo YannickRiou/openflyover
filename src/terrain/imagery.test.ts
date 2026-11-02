@@ -404,6 +404,14 @@ describe('loadImageryTexture', () => {
       expect(texture.userData.incomplete).toBeUndefined()
     })
 
+    it('a tile the regional source does not have (404, beyond the border) is drawn from the coarser tile too, not a failure', async () => {
+      const fetcher = fakeFetcher((url) => (url.endsWith('/11/1061/741.jpg') ? Promise.reject(new TileFetchError(url, 404)) : Promise.resolve(bitmapFor(url))))
+      const texture = await loadImageryTexture(KEY, covered(), fetcher, { zoomOffset: 1 })
+      expect(fetcher.calls.map((c) => c.url)).toContain('https://tiles.test/10/530/370.jpg')
+      expect((texture.image as FakeOffscreenCanvas).ctx.drawImage).toHaveBeenCalledTimes(4)
+      expect(texture.userData.incomplete).toBeUndefined()
+    })
+
     it('leaves a source without coverage alone', async () => {
       const fetcher = fakeFetcher(whiteAt('/11/1061/741.jpg'))
       await loadImageryTexture(KEY, source(), fetcher, { zoomOffset: 1 })
