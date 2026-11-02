@@ -4104,7 +4104,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Rust crates (512)
+## Rust crates (513)
 
 Every registry crate of `src-tauri/Cargo.lock`, including those used only on one operating system or at build time. License as declared on crates.io; the copyright notice of each crate is in its source, <https://crates.io/crates/NAME/VERSION>.
 
@@ -4114,7 +4114,6 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - alloc-stdlib 0.3.0: BSD-3-Clause
 - android_system_properties 0.1.6: MIT OR Apache-2.0
 - anyhow 1.0.104: MIT OR Apache-2.0
-- arbitrary 1.5.0: MIT OR Apache-2.0
 - async-broadcast 0.7.2: MIT OR Apache-2.0
 - async-channel 2.5.0: Apache-2.0 OR MIT
 - async-executor 1.14.0: Apache-2.0 OR MIT
@@ -4157,6 +4156,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - cfb 0.14.0: MIT
 - cfg-expr 0.15.8: MIT OR Apache-2.0
 - cfg-if 1.0.5: MIT OR Apache-2.0
+- cfg_aliases 0.2.2: MIT
 - chrono 0.4.45: MIT OR Apache-2.0
 - combine 4.6.8: MIT
 - concurrent-queue 2.5.0: Apache-2.0 OR MIT
@@ -4182,7 +4182,6 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - defmt-macros 1.1.1: MIT OR Apache-2.0
 - defmt-parser 1.0.0: MIT OR Apache-2.0
 - deranged 0.5.8: MIT OR Apache-2.0
-- derive_arbitrary 1.5.0: MIT OR Apache-2.0
 - derive_more 2.1.1: MIT
 - derive_more-impl 2.1.1: MIT
 - digest 0.10.7: MIT OR Apache-2.0
@@ -4324,6 +4323,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - ndk-context 0.1.1: MIT OR Apache-2.0
 - ndk-sys 0.6.0+11769913: MIT OR Apache-2.0
 - new_debug_unreachable 1.0.6: MIT
+- nix 0.31.3: MIT
 - ntapi 0.4.3: Apache-2.0 OR MIT
 - num-conv 0.2.2: MIT OR Apache-2.0
 - num-traits 0.2.19: MIT OR Apache-2.0
@@ -4475,7 +4475,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - tauri-plugin-oauth 2.1.0: MIT OR Apache-2.0
 - tauri-plugin-opener 2.7.2: Apache-2.0 OR MIT
 - tauri-plugin-process 2.4.0: Apache-2.0 OR MIT
-- tauri-plugin-updater 2.14.0: Apache-2.0 OR MIT
+- tauri-plugin-updater 2.14.1: Apache-2.0 OR MIT
 - tauri-runtime 2.12.2: Apache-2.0 OR MIT
 - tauri-runtime-wry 2.12.3: Apache-2.0 OR MIT
 - tauri-utils 2.10.2: Apache-2.0 OR MIT
@@ -4512,6 +4512,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - tracing-core 0.1.36: MIT
 - tray-icon 0.25.1: MIT OR Apache-2.0
 - try-lock 0.2.5: MIT
+- typed-path 0.13.0: MIT OR Apache-2.0
 - typeid 1.0.3: MIT OR Apache-2.0
 - typenum 1.20.1: MIT OR Apache-2.0
 - uds_windows 1.2.1: MIT
@@ -4614,7 +4615,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - zerotrie 0.2.5: Unicode-3.0
 - zerovec 0.11.8: Unicode-3.0
 - zerovec-derive 0.11.6: Unicode-3.0
-- zip 4.6.1: MIT
+- zip 9.2.2: MIT
 - zlib-rs 0.6.8: Zlib
 - zmij 1.0.23: MIT
 - zvariant 5.15.0: MIT
