@@ -9,6 +9,7 @@ import { filmClockFor } from '../film/clock'
 import { DEFAULT_DAY_CARDS, DEFAULT_FILM } from '../film/model'
 import { addCameraKey, addMarkerKey, addParamKey, removeFilmItem, updateMarkerKey } from '../film/timeline'
 import { filmSequenceOf } from '../flyover/sequence'
+import { useLandmarkStore } from '../osm/store'
 import { getSettingsHistory } from '../project/history'
 import { DEFAULT_OVERLAY } from '../overlay/settings'
 import { addMarkerKeyHere, addParamKeyHere, getFilmSource } from '../scene/usePacing'
@@ -446,37 +447,110 @@ describe('Timeline', () => {
       act(() => root.unmount())
     })
 
-    it('have a right-click menu of their own: « Supprimer » on a block, « Ajouter une image clé ici » on a lane, never the browser menu', async () => {
+    it('have a right-click menu of their own that acts where it is made, never the browser menu', async () => {
       HTMLElement.prototype.setPointerCapture ??= () => {}
       const { host, root, setOverlay, card } = await setup()
       await act(async () => setOverlay({ enabled: true, ...TITLES }))
-      const rightClick = async (el: Element) => {
-        const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, clientX: 40, clientY: 10 })
+      await act(async () => useAppStore.getState().setWorkArea(null))
+      await act(async () => useAppStore.getState().setSetting('film', { ...useAppStore.getState().settings.film, texts: [] }))
+      // no layout in jsdom: a pixel is a second of film, the lanes start 10 px in (clientX 40 is 30 s)
+      const rightClick = async (el: Element, clientX = 40) => {
+        const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, clientX, clientY: 10 })
         await act(async () => void el.dispatchEvent(event))
         return event
       }
-      const menuItems = () => Array.from(document.querySelectorAll('[role="menuitem"]'))
+      const menuItems = () => Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+      const pick = (label: string) => act(async () => menuItems().find((i) => i.textContent === label)!.click())
+      const film = () => useAppStore.getState().settings.film
 
-      // on a block: the browser menu is replaced by the deletion of the block (here the card, switched off)
+      // on a block: the browser menu is replaced by what the block can do (here the card: zoom on it, or switch it off)
       const blocked = await rightClick(card("Titre d'ouverture"))
       expect(blocked.defaultPrevented).toBe(true)
-      expect(menuItems().map((i) => i.textContent)).toEqual(['Supprimer'])
-      await act(async () => (menuItems()[0] as HTMLElement).click())
+      expect(menuItems().map((i) => i.textContent)).toEqual(['Zoomer sur ce bloc', 'Supprimer'])
+      await pick('Supprimer')
       expect(useAppStore.getState().settings.overlay.title.enabled).toBe(false)
 
-      // on the empty part of a lane that holds keys: a key added there
+      // on the empty part of a lane that holds keys: a key added there, and what can be added anywhere
       const speedLane = host.querySelector('[data-lane="param:speed"]')!
-      expect(useAppStore.getState().settings.film.paramKeys.filter((k) => k.param === 'speed')).toHaveLength(0)
+      expect(film().paramKeys.filter((k) => k.param === 'speed')).toHaveLength(0)
       const lane = await rightClick(speedLane)
       expect(lane.defaultPrevented).toBe(true)
-      expect(menuItems().map((i) => i.textContent)).toEqual(['Ajouter une image clé ici'])
-      await act(async () => (menuItems()[0] as HTMLElement).click())
-      expect(useAppStore.getState().settings.film.paramKeys.filter((k) => k.param === 'speed')).toHaveLength(1)
+      expect(menuItems().map((i) => i.textContent)).toEqual([
+        'Ajouter une image clé ici',
+        'Ajouter un arrêt ici',
+        'Ajouter un texte ici',
+        'Ajouter des photos ou des vidéos ici…',
+        'Début de la zone de lecture ici',
+        'Fin de la zone de lecture ici',
+      ])
+      await pick('Ajouter une image clé ici')
+      expect(film().paramKeys.filter((k) => k.param === 'speed')).toHaveLength(1)
 
-      // a lane without keys (the texts): nothing to offer, and still not the browser menu
-      const none = await rightClick(host.querySelector('[role="group"][aria-label="Textes"]')!)
-      expect(none.defaultPrevented).toBe(true)
-      expect(menuItems()).toHaveLength(0)
+      // a lane without keys (the texts), at 30 s: a text, a stop where the marker is at that time, the work area from there
+      const texts = host.querySelector('[role="group"][aria-label="Textes"]')!
+      await rightClick(texts)
+      expect(menuItems().map((i) => i.textContent)).not.toContain('Ajouter une image clé ici')
+      await pick('Ajouter un texte ici')
+      expect(film().texts.map((x) => x.startS)).toEqual([30])
+      const clock = filmClockFor(getFilmSource())
+      const stops = film().stops.length
+      await rightClick(texts)
+      await pick('Ajouter un arrêt ici')
+      expect(film().stops).toHaveLength(stops + 1)
+      expect(film().stops[stops].atM).toBe(Math.round(clock.progressAtTime(30) * getFilmSource().track!.stats.distanceM))
+      await rightClick(texts)
+      await pick('Début de la zone de lecture ici')
+      expect(useAppStore.getState().workArea).toEqual({ inS: 30, outS: clock.totalTime() })
+
+      // on the text, at 32 s: cut it there, then copy a half and paste it at 40 s
+      const text = host.querySelector<HTMLElement>(`[data-item="${film().texts[0].id}"]`)!
+      // the stop added before it slowed the marker down there: the text follows its place in the film
+      const startS = film().texts[0].startS
+      await rightClick(text, 10 + startS + 2)
+      expect(menuItems().map((i) => i.textContent)).toEqual(['Couper ici', 'Dupliquer', 'Copier', 'Zoomer sur ce bloc', 'Supprimer', 'Supprimer et fermer l’espace'])
+      await pick('Couper ici')
+      expect(film().texts.map((x) => [x.startS, x.durationS])).toEqual([
+        [startS, 2],
+        [startS + 2, 2],
+      ])
+      await rightClick(host.querySelector<HTMLElement>(`[data-item="${film().texts[0].id}"]`)!, 10 + startS + 1)
+      await pick('Copier')
+      await rightClick(texts, 60)
+      await pick('Coller ici')
+      expect(film().texts.map((x) => x.startS)).toEqual([startS, startS + 2, 50])
+      expect(useAppStore.getState().filmSelection).toBe(film().texts[2].id)
+      act(() => root.unmount())
+      await act(async () => useAppStore.setState({ workArea: null, filmKeys: [], filmSelection: null }))
+    })
+
+    it('show where the mouse is: a line with the film time, the distance, the elevation and the place the track passes', async () => {
+      const { host, root } = await setup()
+      const track = useAppStore.getState().tracks[0]
+      const pass = { id: 'node/1', kind: 'pass' as const, name: 'Col du Test', lon: 6.81, lat: 45.9, distanceM: 0, alongM: track.stats.distanceM / 2, priority: 1, text: 'Col du Test' }
+      await act(async () => useLandmarkStore.setState({ landmarks: { [track.id]: [pass] } }))
+      const clock = filmClockFor(getFilmSource())
+      const passS = clock.timeAtProgress(0.5)
+
+      // the pass on the ruler, at its film time: a press goes there
+      const place = host.querySelector<HTMLElement>('[data-testid="timeline-place"]')!
+      expect(place.title).toContain('Col du Test')
+      expect(parseFloat(place.style.left)).toBeCloseTo(10 + passS - 3, 5)
+      await act(async () => void place.dispatchEvent(Object.assign(new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }), { pointerId: 1, isPrimary: true })))
+      const { playback } = useAppStore.getState()
+      expect(playback.timeS ?? clock.timeAtProgress(playback.progress)).toBeCloseTo(passS, 5)
+
+      // the mouse over the lanes, at the pass: the guide names it; it goes when the mouse leaves, and a touch never shows it
+      const content = host.querySelector('[data-testid="timeline-scroller"] > div')!
+      const move = (clientX: number, pointerType = 'mouse') =>
+        act(async () => void content.dispatchEvent(Object.assign(new MouseEvent('pointermove', { bubbles: true, clientX }), { pointerId: 1, pointerType })))
+      const guide = () => host.querySelector('[data-testid="timeline-hover"]')
+      await move(10 + passS)
+      expect(guide()?.textContent).toMatch(/^\d+:\d\d,\d · .+ m · .+ m · Col du Test$/)
+      await act(async () => void content.dispatchEvent(new MouseEvent('pointerout', { bubbles: true, relatedTarget: null })))
+      expect(guide()).toBeNull()
+      await move(10 + passS, 'touch')
+      expect(guide()).toBeNull()
+      await act(async () => useLandmarkStore.setState({ landmarks: {} }))
       act(() => root.unmount())
     })
 

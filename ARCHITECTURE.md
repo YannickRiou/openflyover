@@ -1499,8 +1499,13 @@ The interface and the texts drawn into the films and posters exist in **French**
   parameter has keys its slider edits the key under the playhead and creates one on the first change (`useKeyedValue` in `scene/usePacing.ts`;
   `KeyControls.tsx`, `GradingSlider`). The camera follows the mouse: with the playhead on a camera key, orbiting or zooming writes the
   pose into it as it goes (`FlyoverRig.tsx`: listeners on the OrbitControls start / change / end, `beginGesture()` makes one undo step).
-  The timeline's right-click menu (`onContentContextMenu` in `ui/Timeline.tsx`, `data-lane` on the lanes) offers « Ajouter une image clé ici »
-  (camera, parameter and marker lanes), « Supprimer » and « Supprimer l'image clé », and works on the selected group. Empty by default, `[]` for a film saved earlier, no version bump);
+  The timeline's right-click menu (`onContentContextMenu` in `ui/Timeline.tsx`, `data-lane` on the lanes) acts at the film time of the click:
+  on a block « Couper ici » and « Dupliquer » (a text or a photo: `splitFilmItem`, `duplicateFilmItem`), « Copier » (`copyBlocks`), « Zoomer sur ce bloc »,
+  « Supprimer » and « Supprimer l'image clé » (the selected group); elsewhere (lanes, ruler) « Ajouter une image clé ici » (camera, parameter and
+  marker lanes), « Ajouter un arrêt ici » (during the flyover), « Ajouter un texte ici », « Ajouter des photos ou des vidéos ici… » (the playhead goes
+  there first), « Coller ici » (`pasteBlocks`) and the ends of the work area (`markIn`, `markOut`). The mouse over the lanes draws `HoverGuide`
+  (film time, distance, elevation, the place passed; its own store, the timeline does not render as the mouse moves), and the ruler carries the
+  places of `stopCandidates` at their film time (a press seeks there). Empty by default, `[]` for a film saved earlier, no version bump);
   `cameraKeys[]` `{ id, atM, distance, pitchDeg, headingOffsetDeg, aimRightM?, aimAheadM? }` (keyframes, « Images
   clés »: exact poses of the flight camera along the first track, not rounded; `CAMERA_KEY_RANGES` (distance ×0.01–×1000,
   pitch 0–90°, any view the orbit can take; heading ±180°), `isValidCameraKey`; empty by default, a film saved earlier

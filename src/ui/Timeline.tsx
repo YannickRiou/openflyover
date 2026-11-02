@@ -14,7 +14,7 @@
 import { errorMessage } from '../core/errors'
 import { useScrollEdges } from './useScrollEdges'
 import { isExportBusy, useExportStore } from '../export/store'
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { CSSProperties, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent, ReactNode, UIEvent } from 'react'
 import { materializeStops, stopAt, stopCandidates } from '../film/assemble'
 import { AUDIO_FILE_EXTENSIONS, fitFilmToMusic, isAudioFile, musicLengthS, readAudio, startMusicPreview, useMusicPreview, waveformPath } from '../film/audio'
@@ -46,6 +46,10 @@ import {
   centredScrollLeft,
   centredTime,
   clipSyncOffsetS,
+  copyBlocks,
+  duplicateFilmItem,
+  pasteBlocks,
+  splitFilmItem,
   dragFilm,
   dragKeys,
   rollClosing,
@@ -77,7 +81,8 @@ import {
   zoomAt,
 } from '../film/timeline'
 import type { DragContext, Grip, SnapBlock, SnapTarget, TimelineItem } from '../film/timeline'
-import { clampWorkArea, dragWorkArea } from '../film/workArea'
+import { clampWorkArea, dragWorkArea, markIn, markOut } from '../film/workArea'
+import { getBlockClip, setBlockClip } from './blockClipboard'
 import { Filmstrip, filmstripCount } from './Filmstrip'
 import { useLaneState } from './laneState'
 import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
@@ -203,6 +208,10 @@ const PROFILE_MIN_SPAN_M = 100
 /** Blank space at both ends of the lanes, so that the edges of the first and last blocks can be grabbed. */
 const PAD_PX = 10
 const SNAP_PX = 8
+/** a place of the track this close to the mouse (px) is named in the hover readout */
+const HOVER_PLACE_PX = 12
+/** width of a character of a place name on the ruler (caption), to tell whether the name fits before the next place */
+const PLACE_CHAR_PX = 6.5
 /** Distance at which a caught target is let go (hysteresis: it does not flicker at the edge of its pull). */
 const RELEASE_PX = 14
 /** Narrowest a junction block is drawn, so that a plain cut can still be grabbed. */
@@ -346,6 +355,76 @@ function PlayheadReadouts({
 function Playhead({ frozen, clock, pad, pxPerS, centred }: { frozen: Playback | null; clock: FilmClock; pad: number; pxPerS: number; centred: boolean }) {
   const playheadS = playheadOf(useShownPlayback(frozen), clock)
   return <div className={centred ? 'hidden' : PLAYHEAD} data-testid="timeline-playhead" style={{ left: pad + playheadS * pxPerS }} aria-hidden="true" />
+}
+
+/** A notable place of the track (pass, summit, record) at its film time, on the ruler. */
+interface RulerPlace {
+  timeS: number
+  atM: number
+  label: string
+}
+
+/** The film time under the mouse, kept apart from the timeline's state: only `HoverGuide` renders with it. */
+function createHover() {
+  let timeS: number | null = null
+  const listeners = new Set<() => void>()
+  return {
+    set(next: number | null) {
+      if (next === timeS) return
+      timeS = next
+      for (const listener of listeners) listener()
+    },
+    get: () => timeS,
+    subscribe(listener: () => void) {
+      listeners.add(listener)
+      return () => void listeners.delete(listener)
+    },
+  }
+}
+
+/**
+ * Where the mouse is over the lanes: a thin line, with the film time, the distance and the elevation there and the place
+ * the track passes. The timeline does not render as the mouse moves, only this.
+ */
+function HoverGuide({
+  hover,
+  clock,
+  path,
+  lengthM,
+  places,
+  xOf,
+  pxPerS,
+  contentWidth,
+}: {
+  hover: ReturnType<typeof createHover>
+  clock: FilmClock
+  path: ReturnType<typeof buildTrackPath>
+  lengthM: number
+  places: readonly RulerPlace[]
+  xOf(timeS: number): number
+  pxPerS: number
+  contentWidth: number
+}) {
+  const timeS = useSyncExternalStore(hover.subscribe, hover.get)
+  if (timeS === null || timeS < 0 || timeS > clock.totalTime()) return null
+  const inFlight = timeS >= clock.openingS && timeS <= clock.openingS + clock.flightS
+  const progress = clock.progressAtTime(timeS)
+  const ele = inFlight && path.count > 0 ? samplePath(path, progress * path.lengthM).ele : undefined
+  const place = places.find((p) => Math.abs(p.timeS - timeS) * pxPerS <= HOVER_PLACE_PX)
+  const text = [
+    formatFilmTime(timeS, true),
+    inFlight ? formatDistance(progress * lengthM) : '',
+    ele !== undefined && Number.isFinite(ele) ? `${formatNumber(ele)} m` : '',
+    place?.label ?? '',
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  const x = xOf(timeS)
+  return (
+    <div className="pointer-events-none absolute inset-y-0 z-2 w-px bg-white/40" style={{ left: x }} data-testid="timeline-hover" aria-hidden="true">
+      <span className={`absolute top-0.5 rounded-[2px] bg-ink/90 px-1 text-caption whitespace-nowrap text-white ${tickLabelFlips(x, contentWidth) ? 'right-1' : 'left-1'}`}>{text}</span>
+    </div>
+  )
 }
 
 /** The part of the profile the playhead has flown, as a clip. */
@@ -613,6 +692,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     if (item) [...(contentRef.current?.querySelectorAll<HTMLElement>('[data-item]') ?? [])].find((b) => b.dataset.item === item)?.focus()
   })
   const edgeRef = useRef<EdgeScroll | null>(null)
+  /** the film time under the mouse (`HoverGuide`), null hides it */
+  const [hover] = useState(createHover)
   /** zoom for the wheel listener */
   const zoomRef = useRef(zoom)
   /** Shift held while an edge is dragged: the blocks after it follow (« décalage en chaîne ») */
@@ -803,6 +884,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const xOf = (t: number) => pad + t * pxPerS
   const contentWidth = timelineContentWidth(width, total, pxPerS, pad)
   const freeCandidates = candidates.filter((c) => !stopAt(shownClock.stops, c.atM))
+  const places: RulerPlace[] = candidates.map((c) => ({ timeS: shownClock.timeAtProgress(c.atM / lengthM), atM: c.atM, label: c.label }))
 
   // --- edits -------------------------------------------------------------------------------------------------
   const isStop = (item: TimelineItem) => clock.stops.some((s) => s.id === item)
@@ -884,25 +966,41 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     } else if (lane === 'marker') addMarkerKeyHere()
     else addParamKeyHere(lane.slice('param:'.length) as FilmParam)
   }
+  /** the cut or the copy of a text or a photo, selected (one undo step) */
+  const editItem = (done: (f: Film) => { film: Film; id: string } | null) =>
+    editFilm((f) => {
+      const result = done(f)
+      return result ? { film: result.film, id: result.id } : { film: f }
+    })
   /**
-   * Right click on the lanes, instead of the browser's menu: on a block, to delete it (a key of the selected group:
-   * the whole group, like Delete); on the empty part of a lane that holds keys, to add a key there.
+   * Right click on the lanes or the ruler, instead of the browser's menu, acting where it is made: on a block, to cut it
+   * there, duplicate, copy or zoom on it, and to delete it (a key of the selected group: the whole group, like Delete);
+   * elsewhere, to add a key (a lane that holds keys), a stop, a text or photos there, paste the copied blocks there, or
+   * set an end of the work area there.
    */
   const onContentContextMenu = (e: ReactMouseEvent<HTMLDivElement>) => {
     e.preventDefault()
+    hover.set(null)
     const target = e.target instanceof Element ? e.target : null
     const item = target?.closest<HTMLElement>('[data-item]')?.dataset.item
     const lane = target?.closest<HTMLElement>('[data-lane]')?.dataset.lane
+    const end = clock.totalTime()
+    const timeS = Math.min(end, Math.max(0, timeAt(e.clientX)))
     const items: MenuItem[] = []
     if (item && !isStageItem(item) && !isJunctionItem(item) && !isStageCardItem(item)) {
       const together = group.length > 1 && group.includes(item) ? group : null
       if (!together) setSelected(item)
+      const picked = together ?? [item]
+      if (!together && splitFilmItem(film, item, timeS)) items.push({ id: 'split', label: t('timeline.menu.split'), onSelect: () => editItem((f) => splitFilmItem(f, item, timeS)) })
+      if (!together && duplicateFilmItem(film, item)) items.push({ id: 'duplicate', label: t('timeline.menu.duplicate'), onSelect: () => editItem((f) => duplicateFilmItem(f, item)) })
+      const copied = picked.every((id) => blockIds.includes(id)) ? copyBlocks(film, picked) : null
+      if (copied) items.push({ id: 'copy', label: t('timeline.menu.copy'), onSelect: () => setBlockClip(copied) })
+      if (!together && !centred) items.push({ id: 'zoom', label: t('timeline.menu.zoom'), onSelect: () => zoomToSelection(item) })
       items.push({
         id: 'remove',
         label: together ? t('timeline.menu.removeKeys', { count: together.length }) : t(keyIds.includes(item) ? 'timeline.menu.removeKey' : 'timeline.menu.remove'),
         onSelect: () => (together ? removeKeys(together) : remove(item)),
       })
-      const picked = together ?? [item]
       if (picked.every((id) => blockIds.includes(id))) {
         items.push({
           id: 'remove-close',
@@ -910,9 +1008,41 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           onSelect: () => editFilm((f) => ({ film: rippleRemove(f, picked), id: null })),
         })
       }
-    } else if (!item && lane) {
-      const timeS = Math.max(0, timeAt(e.clientX))
-      items.push({ id: 'add-key', label: t('timeline.menu.addKey'), onSelect: () => addKeyAt(lane, timeS) })
+    } else if (!item) {
+      if (lane) items.push({ id: 'add-key', label: t('timeline.menu.addKey'), onSelect: () => addKeyAt(lane, timeS) })
+      // a stop is a place of the track: only during the flyover
+      if (timeS >= clock.openingS && timeS <= clock.openingS + clock.flightS) {
+        items.push({ id: 'add-stop', label: t('timeline.menu.addStop'), onSelect: () => addStopAt(Math.round(clock.progressAtTime(timeS) * lengthM)) })
+      }
+      items.push({ id: 'add-text', label: t('timeline.menu.addText'), onSelect: () => editFilm((f) => addText(f, timeS)) })
+      items.push({
+        id: 'add-media',
+        label: t('timeline.menu.addMedia'),
+        disabled: reading,
+        onSelect: () => {
+          // the media go at the playhead
+          seek(timeS)
+          void pickFiles({ filters: MEDIA_FILTERS, multiple: true }).then((files) => (files.length > 0 ? addMediaFiles(files) : undefined))
+        },
+      })
+      const clip = getBlockClip()
+      const hasMedia = (src: string) => useMediaStore.getState().table[src] !== undefined
+      if (clip && pasteBlocks(film, clip, timeS, hasMedia)) {
+        items.push({
+          id: 'paste',
+          label: t('timeline.menu.paste'),
+          // as Ctrl+V (`SeekShortcuts`), at the place of the click instead of the playhead
+          onSelect: () => {
+            const pasted = pasteBlocks(getFilmSource().film, clip, timeS, hasMedia)
+            if (!pasted) return
+            editFilm((f) => ({ film: pasteBlocks(f, clip, timeS, hasMedia)?.film ?? f }))
+            setKeys(pasted.ids)
+          },
+        })
+      }
+      const area = clampWorkArea(workArea, end)
+      items.push({ id: 'mark-in', label: t('timeline.menu.markIn'), onSelect: () => setWorkArea(markIn(area, timeS, end)) })
+      items.push({ id: 'mark-out', label: t('timeline.menu.markOut'), onSelect: () => setWorkArea(markOut(area, timeS, end)) })
     }
     const box = contentRef.current?.getBoundingClientRect()
     setContextMenu(items.length > 0 && box ? { x: e.clientX - box.left, y: e.clientY - box.top, items } : null)
@@ -1234,6 +1364,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   }
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     const g = gestureRef.current
+    // a mouse that only passes over: the guide follows it (none on a touch screen, nor during a gesture)
+    hover.set(!g && e.pointerType === 'mouse' && !centred ? timeAt(e.clientX) : null)
     if (!g) return
     if (g.kind === 'marquee') g.y = e.clientY - (contentRef.current?.getBoundingClientRect().top ?? 0)
     rippleRef.current = e.shiftKey
@@ -1372,11 +1504,11 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     const width = parseFloat(el.style.width) || 0
     return { startS: (left - pad) / pxPerS, endS: (left + width - pad) / pxPerS }
   }
-  /** « Zoom sur la sélection »: the selected block (or the work area, else the whole film) fills the view. */
-  const zoomToSelection = () => {
+  /** « Zoom sur la sélection »: the selected block, or `item` (or the work area, else the whole film) fills the view. */
+  const zoomToSelection = (item: TimelineItem | null = selected) => {
     const el = scrollerRef.current
     if (!el || centred) return
-    const span = (selected !== null ? spanOfItem(selected) : null) ?? (workSpan ? { startS: workSpan.inS, endS: workSpan.outS } : null)
+    const span = (item !== null ? spanOfItem(item) : null) ?? (workSpan ? { startS: workSpan.inS, endS: workSpan.outS } : null)
     if (!span) return fitZoom()
     const next = zoomToSpan(span.startS, span.endS, el.clientWidth, total, PAD_PX)
     pendingScrollRef.current = next.scrollLeft
@@ -1385,7 +1517,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     if (Math.abs(next.zoom - zoom) < 1e-9) el.scrollLeft = next.scrollLeft
     setZoom(next.zoom)
   }
-  zoomSelectionRef.current = zoomToSelection
+  zoomSelectionRef.current = () => zoomToSelection()
 
   // --- blocks ------------------------------------------------------------------------------------------------
   const liftedItem = stageDrag ? stageItemId(stageDrag.id) : null
@@ -1704,7 +1836,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               onClick={() => zoomBy(BUTTON_ZOOM)}
               disabled={zoom >= ZOOM_RANGE.max}
             />
-            <BarButton icon="maximize" name={t('timeline.zoom.selection')} tip={withShortcut(t('timeline.zoom.selectionTip'), 'zoom-selection')} onClick={zoomToSelection} disabled={!hasTrack} />
+            <BarButton icon="maximize" name={t('timeline.zoom.selection')} tip={withShortcut(t('timeline.zoom.selectionTip'), 'zoom-selection')} onClick={() => zoomToSelection()} disabled={!hasTrack} />
             <BarButton icon="move-horizontal" name={t('timeline.zoom.fit')} tip={t('timeline.zoom.fitTip')} onClick={fitZoom} disabled={zoom <= ZOOM_RANGE.min} />
           </div>
           {workSpan && <BarButton icon="rotate-cw" name={t('timeline.workArea.clear')} tip={t('timeline.workArea.clearTip', { from: formatFilmTime(workSpan.inS), to: formatFilmTime(workSpan.outS) })} on onClick={() => setWorkArea(null)} />}
@@ -1787,6 +1919,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               onPointerMove={onPointerMove}
               onPointerUp={endGesture}
               onPointerCancel={endGesture}
+              onPointerLeave={() => hover.set(null)}
               onContextMenu={onContentContextMenu}
             >
               <RulerSlider
@@ -1824,6 +1957,27 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                     {formatFilmTime(t)}
                   </span>
                 ))}
+                {/* the passes, summits and records of the track at their film time: a click goes there; the name shows when it fits before the next one */}
+                {places.map((p, i) => {
+                  const roomPx = (places[i + 1] ? places[i + 1].timeS - p.timeS : total - p.timeS) * pxPerS
+                  return (
+                    <span
+                      key={`${p.atM}-${p.label}`}
+                      data-testid="timeline-place"
+                      title={t('timeline.place.title', { label: p.label, distance: formatDistance(p.atM) })}
+                      className="absolute bottom-0 z-1 flex h-3 cursor-pointer items-end gap-0.5 overflow-hidden pr-1 text-caption leading-none whitespace-nowrap text-accent-light"
+                      style={{ left: xOf(p.timeS) - 3 }}
+                      onPointerDown={(e) => {
+                        if (e.button !== 0) return
+                        e.stopPropagation()
+                        seek(p.timeS)
+                      }}
+                    >
+                      <span className="size-0 flex-none border-x-[3px] border-t-[5px] border-x-transparent border-t-accent-light" aria-hidden="true" />
+                      {roomPx > p.label.length * PLACE_CHAR_PX + 12 && <span className="rounded-[2px] bg-chrome px-0.5">{p.label}</span>}
+                    </span>
+                  )
+                })}
               </RulerSlider>
 
               {sequence && (
@@ -2104,6 +2258,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 </div>
               )}
               <Playhead frozen={frozenPlayback} clock={clock} pad={pad} pxPerS={pxPerS} centred={centred} />
+              <HoverGuide hover={hover} clock={shownClock} path={path} lengthM={lengthM} places={places} xOf={xOf} pxPerS={pxPerS} contentWidth={contentWidth} />
               {contextMenu && (
                 <Menu label={t('timeline.menu.label')} items={contextMenu.items} point={{ x: contextMenu.x, y: contextMenu.y }} onClose={() => setContextMenu(null)} placement="bottom start" sheet />
               )}
