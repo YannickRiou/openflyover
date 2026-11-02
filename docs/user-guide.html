@@ -360,6 +360,30 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
   </ul>
   <p>Messages (track imported, project saved, video ready…) appear at the bottom of the view; errors stay until you close them. The app remembers the open tab and whether the panel is folded. Next to the settings that make the export longer (clouds quality, motion blur, depth of field, resolution, frame rate) a small three-bar icon shows how heavy the current value is, with the factor in its tooltip (long-press on a phone); a dot on a tab means one of its settings is at the heaviest level.</p>
   <p>On the first launch a short guided tour points at the import, the tabs, the timeline and the export; stop it whenever you like. "Revoir la visite guidée" in the help (<kbd>?</kbd>) starts it again.</p>
+  <h3 class="sub">Three interface modes</h3>
+  <p>The mode sets how many settings are shown: <strong>Beginner</strong>, <strong>Intermediate</strong> or <strong>Expert</strong> (Expert shows everything, as before). The question is asked on the first launch; you can change the choice at any time in the top bar or in “Settings” (on a phone, in “Settings” only). It applies to this device, not to the project.</p>
+  <ul>
+    <li>A mode hides settings, it changes nothing: the film is the same in the three modes, and a hidden setting keeps its value.</li>
+    <li>A setting you changed stays visible in every mode, with the “modified” mark (↺).</li>
+    <li><kbd>Ctrl+K</kbd> also finds hidden sections. Choosing one turns on the mode that shows it, and says so.</li>
+    <li>At the bottom of each panel, a note says what the mode hides and in which mode to find it.</li>
+  </ul>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Tab</th><th>Beginner</th><th>Intermediate</th><th>Expert</th></tr></thead>
+      <tbody>
+        <tr><td>Track</td><td>Track list, width and colour of the line, shape of the marker</td><td>+ every track and marker setting, “Plan the outing”, “Correct the figures”, track tools</td><td>+ advanced options and keys of the marker</td></tr>
+        <tr><td>Map</td><td>Background as two tiles (Satellite, Map), exaggerated relief, mood</td><td>+ choice of images, water, forest, contour lines, landmarks</td><td>+ date and detail of the images, terrain source, DEM cleaning</td></tr>
+        <tr><td>Weather, Light</td><td>Hidden: the weather of the day and the sun set themselves, or with the mood</td><td>Weather of the outing, clouds, snow, sun, days and nights, colours</td><td>+ rain and mist, atmosphere, cloud shadows, night brightness</td></tr>
+        <tr><td>Flyover</td><td>Automatic film, camera styles as tiles, duration</td><td>+ style, focal length, distance, tilt, transitions</td><td>+ aim, lead room, smoothings</td></tr>
+        <tr><td>Lens</td><td>Hidden</td><td>Hidden</td><td>Lens effects</td></tr>
+        <tr><td>Overlay</td><td>Overlay on / off, style, titles</td><td>+ 3D labels, counters, profile and mini-map, weather, logo and text</td><td>+ forced colours and fonts, credits</td></tr>
+        <tr><td>Timeline</td><td>Stops, texts, media, music</td><td>+ shots, speed, playback area</td><td>+ stages, keyframe lanes, marker</td></tr>
+        <tr><td>Export</td><td>“For a platform”, then “Export”</td><td>+ aspect ratio, resolution, frames per second, quality, several formats, poster</td><td>+ encoding, PNG sequence, overlay alone, direct recording</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>In Beginner mode, the “Mood” section of the Map tab sets the clouds and the sun in one click: “Weather of the day” (the clouds of the weather, the sun at the time of the track), “Clear sky” (no clouds, the sun at noon) or “Sunset” (the clouds of the weather, the sun at sunset). It only sets existing settings: once changed, they appear in the Weather and Light tabs.</p>
 </section>
 
 <!-- ================================================================== 3 -->
@@ -741,7 +765,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
     <table class="wide">
       <thead><tr><th>Keys</th><th>Action</th></tr></thead>
       <tbody>
-        <tr><td><kbd>Ctrl+K</kbd></td><td>Search for a setting: type its name, the matching section opens (<kbd>Cmd+K</kbd> on a Mac)</td></tr>
+        <tr><td><kbd>Ctrl+K</kbd></td><td>Search for a setting: type its name, the matching section opens, even if the mode hid it (<kbd>Cmd+K</kbd> on a Mac)</td></tr>
         <tr><td><kbd>Space</kbd> · <kbd>K</kbd></td><td>Play or pause</td></tr>
         <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Back or forward one second; with a block selected, nudge it by one second (a tenth with <kbd>Shift</kbd>)</td></tr>
         <tr><td><kbd>Shift+←</kbd> <kbd>Shift+→</kbd></td><td>Back or forward five seconds</td></tr>

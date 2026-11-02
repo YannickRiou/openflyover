@@ -8,6 +8,7 @@ import { buildTrack } from '../import/stats'
 import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { CameraPanel } from './CameraPanel'
 import { setAutoFilmOpen } from './autoFilmOpen'
+import { usePreferences } from './preferences'
 import { runImport } from './projectActions'
 import { useToastStore } from './toast'
 
@@ -332,5 +333,32 @@ describe('« Film automatique » after an import', () => {
     await act(async () => importSortie())
     expect(success()).toBeDefined()
     expect(success()?.action).toBeUndefined()
+  })
+})
+
+describe('CameraPanel: the modes of the interface', () => {
+  afterEach(() => {
+    usePreferences.setState({ uiMode: 'expert' })
+    useAppStore.setState({ tracks: [], settings: DEFAULT_SETTINGS })
+    document.body.innerHTML = ''
+  })
+
+  it('shows the presets and the duration in Débutant, the framing from Confirmé, the smoothings from Expert; a changed value stays', async () => {
+    usePreferences.setState({ uiMode: 'debutant' })
+    const { host, root } = await mount(timed, 60)
+    const labels = () => [...host.querySelectorAll('[data-testid="setting-row-label"]')].map((el) => el.textContent)
+    expect(labels()).toEqual([])
+    expect(host.textContent).toContain('Cinéma')
+    await act(async () => usePreferences.setState({ uiMode: 'confirme' }))
+    expect(labels()).toEqual(expect.arrayContaining(['Style', 'Focale', 'Distance', 'Inclinaison']))
+    expect(labels()).not.toContain('Visée')
+    await act(async () => usePreferences.setState({ uiMode: 'expert' }))
+    expect(labels()).toContain('Visée')
+    // back in Débutant: the distance changed by hand is still there, the others are not
+    await act(async () => useAppStore.getState().setSetting('camera', { ...DEFAULT_SETTINGS.camera, distance: 2 }))
+    await act(async () => usePreferences.setState({ uiMode: 'debutant' }))
+    expect(labels()).toEqual(['Distance'])
+    expect(useAppStore.getState().settings.camera.distance).toBe(2)
+    act(() => root.unmount())
   })
 })

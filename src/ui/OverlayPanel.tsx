@@ -50,7 +50,7 @@ import { AnchorPicker } from './AnchorPicker'
 import { formatNumber, formatPercent } from './format'
 import { PanelKeys } from './KeyControls'
 import { LabelSettings } from './LabelSettings'
-import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
+import { InfoTip, ModeGate, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { Button, Checkbox, Chip, ColorField as ColorFieldControl, NumberField, Radio, RadioGroup, Select, Switch, TextField, ToggleButton, ToggleButtonGroup } from './primitives'
 
 const COUNTER_LABELS: Record<CounterId, string> = {
@@ -471,6 +471,7 @@ function LabelColors({ overlay, onChange }: { overlay: OverlaySettings; onChange
       label={t('overlay.labelColors.title')}
       value={Object.keys(own).length > 0 ? t('overlay.custom') : t('overlay.overrides.style')}
       paths={['overlay.labelColors']}
+      min="expert"
     >
       <div className="field">
         <label className="type-label" htmlFor={kindId}>
@@ -573,7 +574,11 @@ export function OverlayPanel() {
             <p className="type-hint">{t('overlay.panel.styleHint')}</p>
           </fieldset>
         )}
-        {(overlay.enabled || overlay.title.enabled || overlay.end.enabled) && <StyleOverrides overlay={overlay} onChange={(patch) => setSetting('overlay', withOverrides(overlay, patch))} />}
+        {(overlay.enabled || overlay.title.enabled || overlay.end.enabled) && (
+          <ModeGate min="expert" paths={['overlay.overrides']}>
+            <StyleOverrides overlay={overlay} onChange={(patch) => setSetting('overlay', withOverrides(overlay, patch))} />
+          </ModeGate>
+        )}
       </PanelSection>
 
       {/* the titles have their own switches: shown whether the rest of the overlay is or not */}
@@ -583,7 +588,7 @@ export function OverlayPanel() {
       </PanelSection>
 
       {/* every setting of the 3D labels in one place: what shows, size and range, colours, keys along the way */}
-      <PanelSection title={t('overlay.panel.labels3d')} keys={['labels']}>
+      <PanelSection title={t('overlay.panel.labels3d')} keys={['labels']} min="confirme">
         <LabelSettings />
         <LabelColors overlay={overlay} onChange={(next) => setSetting('overlay', next)} />
         <p className="type-hint">{t('overlay.panel.labels3dHint')}</p>
@@ -593,7 +598,7 @@ export function OverlayPanel() {
 
       {overlay.enabled && (
         <>
-          <PanelSection title={t('overlay.panel.counters')}>
+          <PanelSection title={t('overlay.panel.counters')} min="confirme" paths={['overlay.counters', 'overlay.leaderboard']}>
             <WidgetGroup
               label={t('overlay.panel.showCounters')}
               enabled={overlay.counters.enabled}
@@ -639,7 +644,7 @@ export function OverlayPanel() {
             )}
           </PanelSection>
 
-          <PanelSection title={t('overlay.panel.profileMinimap')}>
+          <PanelSection title={t('overlay.panel.profileMinimap')} min="confirme" paths={['overlay.profile', 'overlay.minimap']}>
             <WidgetGroup
               label={t('overlay.panel.profile')}
               enabled={overlay.profile.enabled}
@@ -699,7 +704,7 @@ export function OverlayPanel() {
             </WidgetGroup>
           </PanelSection>
 
-          <PanelSection title={t('overlay.panel.weatherLogoText')}>
+          <PanelSection title={t('overlay.panel.weatherLogoText')} min="confirme" paths={['overlay.weather', 'overlay.logos', 'overlay.text']}>
             <WidgetGroup
               label={t('overlay.panel.weather')}
               enabled={overlay.weather.enabled}
@@ -783,7 +788,7 @@ export function OverlayPanel() {
         </>
       )}
 
-      <PanelSection title={t('overlay.panel.credits')}>
+      <PanelSection title={t('overlay.panel.credits')} min="expert" paths={['overlay.credits']}>
         <fieldset className="field min-w-0">
           <legend className="type-label mb-1 flex items-center gap-1">
             {t('overlay.panel.creditsMode')}

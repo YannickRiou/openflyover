@@ -360,6 +360,30 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
   </ul>
   <p>I messaggi (traccia importata, progetto salvato, video pronto…) appaiono in fondo alla vista; gli errori restano finché non li chiudi. L'app ricorda la scheda aperta e se il pannello è compresso. Accanto alle impostazioni che allungano l'esportazione (qualità delle nuvole, sfocatura di movimento, profondità di campo, risoluzione, fotogrammi al secondo) una piccola icona a tre barre indica quanto è pesante il valore attuale, con il fattore nel suo suggerimento (pressione prolungata su un telefono); un puntino su una scheda significa che una delle sue impostazioni è al livello più pesante.</p>
   <p>Al primo avvio, una breve visita guidata indica l'importazione, le schede, la timeline e l'esportazione; puoi fermarla quando vuoi. "Revoir la visite guidée" nell'aiuto (<kbd>?</kbd>) la rilancia.</p>
+  <h3 class="sub">Tre modalità dell’interfaccia</h3>
+  <p>La modalità stabilisce quante impostazioni sono mostrate: <strong>Principiante</strong>, <strong>Intermedio</strong> o <strong>Esperto</strong> (Esperto mostra tutto, come prima). La domanda viene posta al primo avvio; la scelta si cambia in qualsiasi momento nella barra in alto o in «Impostazioni» (su telefono, solo in «Impostazioni»). Vale per questo dispositivo, non per il progetto.</p>
+  <ul>
+    <li>Una modalità nasconde impostazioni, non cambia nulla: il film è lo stesso nelle tre modalità, e un’impostazione nascosta conserva il suo valore.</li>
+    <li>Un’impostazione che avete modificato resta visibile in tutte le modalità, con il segno «modificato» (↺).</li>
+    <li><kbd>Ctrl+K</kbd> trova anche le sezioni nascoste. Sceglierne una attiva la modalità che la mostra, e lo dice.</li>
+    <li>In fondo a ogni pannello, una nota dice cosa la modalità nasconde e in quale modalità trovarlo.</li>
+  </ul>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Scheda</th><th>Principiante</th><th>Intermedio</th><th>Esperto</th></tr></thead>
+      <tbody>
+        <tr><td>Traccia</td><td>Elenco delle tracce, spessore e colore della linea, forma del marcatore</td><td>+ tutte le impostazioni della traccia e del marcatore, «Prevedere l’uscita», «Correggere i numeri», strumenti della traccia</td><td>+ opzioni avanzate e chiavi del marcatore</td></tr>
+        <tr><td>Mappa</td><td>Sfondo in due miniature (Satellite, Mappa), rilievo accentuato, atmosfera</td><td>+ scelta delle immagini, acqua, foresta, curve di livello, punti di riferimento</td><td>+ data e dettaglio delle immagini, sorgente del rilievo, pulizia del DEM</td></tr>
+        <tr><td>Meteo, Luce</td><td>Nascoste: il meteo del giorno e il sole si regolano da soli, o con l’atmosfera</td><td>Meteo dell’uscita, nuvole, neve, sole, giorni e notti, colori</td><td>+ pioggia e foschia, atmosfera, ombre delle nuvole, chiarore delle notti</td></tr>
+        <tr><td>Sorvolo</td><td>Film automatico, stili di camera in miniature, durata</td><td>+ stile, lunghezza focale, distanza, inclinazione, transizioni</td><td>+ direzione, anticipo, smussature</td></tr>
+        <tr><td>Obiettivo</td><td>Nascosta</td><td>Nascosta</td><td>Effetti dell’obiettivo</td></tr>
+        <tr><td>Overlay</td><td>Overlay sì / no, stile, titoli</td><td>+ etichette 3D, contatori, profilo e minimappa, meteo, logo e testo</td><td>+ colori e caratteri imposti, crediti</td></tr>
+        <tr><td>Timeline</td><td>Soste, testi, media, musica</td><td>+ inquadrature, velocità, area di riproduzione</td><td>+ tappe, piste di fotogrammi chiave, marcatore</td></tr>
+        <tr><td>Esporta</td><td>«Per una piattaforma» poi «Esporta»</td><td>+ proporzioni, risoluzione, fotogrammi al secondo, qualità, più formati, poster</td><td>+ codifica, sequenza PNG, overlay da solo, registrazione diretta</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>In modalità Principiante, la sezione «Atmosfera» della scheda Mappa regola nuvole e sole con un clic: «Meteo del giorno» (le nuvole del meteo, il sole all’ora della traccia), «Cielo sereno» (senza nuvole, il sole a mezzogiorno) o «Tramonto» (le nuvole del meteo, il sole al tramonto). Regola solo impostazioni esistenti: una volta cambiate, compaiono nelle schede Meteo e Luce.</p>
 </section>
 
 <!-- ================================================================== 3 -->
@@ -741,7 +765,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
     <table class="wide">
       <thead><tr><th>Tasti</th><th>Azione</th></tr></thead>
       <tbody>
-        <tr><td><kbd>Ctrl+K</kbd></td><td>Cercare un'impostazione: scrivi il nome, si apre la sezione corrispondente (<kbd>Cmd+K</kbd> su Mac)</td></tr>
+        <tr><td><kbd>Ctrl+K</kbd></td><td>Cercare un'impostazione: scrivi il nome, si apre la sezione corrispondente, anche se la modalità la nasconde (<kbd>Cmd+K</kbd> su Mac)</td></tr>
         <tr><td><kbd>Spazio</kbd> · <kbd>K</kbd></td><td>Avvia o metti in pausa</td></tr>
         <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Indietro o avanti di un secondo; con un blocco selezionato, lo sposta di un secondo (di un decimo con <kbd>Maiusc</kbd>)</td></tr>
         <tr><td><kbd>Maiusc+←</kbd> <kbd>Maiusc+→</kbd></td><td>Indietro o avanti di cinque secondi</td></tr>

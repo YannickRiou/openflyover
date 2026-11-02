@@ -52,7 +52,7 @@ export function GradingPanel() {
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
 
   return (
-    <PanelSection title={t('light.grading.title')} keys={['exposureEv', 'grading']}>
+    <PanelSection title={t('light.grading.title')} keys={['exposureEv', 'grading']} min="confirme">
       <div className="field">
         <span id={`${id}-presets`} className="type-label">
           {t('light.grading.preset')}

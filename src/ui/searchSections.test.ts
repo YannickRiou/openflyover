@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SHELL_TABS } from './shell'
-import { foldText, revealSection, searchSections } from './searchSections'
+import { foldText, isSectionShown, revealSection, searchSections } from './searchSections'
 
 describe('foldText', () => {
   it('drops the accents and the case', () => {
@@ -32,6 +32,16 @@ describe('searchSections', () => {
   it('skips the tabs that are not shown', () => {
     expect(searchSections('nuages', ['projet'])).toEqual([])
   })
+
+  it('finds the sections a mode hides, and tells the mode that has them', () => {
+    expect(searchSections('pluie', SHELL_TABS, 'debutant')[0]).toMatchObject({ title: 'Pluie et brume', needs: 'expert' })
+    expect(searchSections('nuages', SHELL_TABS, 'debutant')[0]).toMatchObject({ title: 'Nuages', needs: 'confirme' })
+    expect(searchSections('nuages', SHELL_TABS, 'confirme')[0].needs).toBeUndefined()
+    expect(searchSections('pluie', SHELL_TABS, 'confirme')[0].needs).toBe('expert')
+    expect(searchSections('pluie', SHELL_TABS)[0].needs).toBeUndefined()
+    // a section every mode shows needs nothing
+    expect(searchSections('Fond de carte', SHELL_TABS, 'debutant')[0].needs).toBeUndefined()
+  })
 })
 
 describe('revealSection', () => {
@@ -50,5 +60,17 @@ describe('revealSection', () => {
     vi.advanceTimersByTime(2000)
     expect(section.classList.contains('section-found')).toBe(false)
     expect(revealSection('Absente')).toBe(false)
+  })
+})
+
+describe('isSectionShown', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('is true for a section drawn, false for one that a mode leaves out', () => {
+    document.body.innerHTML = '<details data-panel-section="Nuages"><summary>Nuages</summary></details>'
+    expect(isSectionShown('Nuages')).toBe(true)
+    expect(isSectionShown('Pluie et brume')).toBe(false)
   })
 })

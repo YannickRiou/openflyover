@@ -360,6 +360,30 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
   </ul>
   <p>Meldungen (Track importiert, Projekt gespeichert, Video fertig…) erscheinen unten in der Ansicht; Fehler bleiben stehen, bis Sie sie schließen. Die App merkt sich den geöffneten Reiter und ob das Panel eingeklappt ist. Neben den Einstellungen, die den Export verlängern (Wolkenqualität, Bewegungsunschärfe, Tiefenschärfe, Auflösung, Bildrate), zeigt ein kleines Symbol mit drei Balken, wie aufwendig der aktuelle Wert ist, mit dem Faktor im Tooltip (auf dem Smartphone lange drücken); ein Punkt an einem Reiter bedeutet, dass eine seiner Einstellungen auf der aufwendigsten Stufe steht.</p>
   <p>Beim ersten Start zeigt eine kurze geführte Tour den Import, die Tabs, die Zeitleiste und den Export; Sie können sie jederzeit beenden. „Revoir la visite guidée“ in der Hilfe (<kbd>?</kbd>) startet sie erneut.</p>
+  <h3 class="sub">Drei Modi der Oberfläche</h3>
+  <p>Der Modus legt fest, wie viele Einstellungen angezeigt werden: <strong>Einsteiger</strong>, <strong>Fortgeschritten</strong> oder <strong>Experte</strong> (Experte zeigt alles, wie bisher). Die Frage wird beim ersten Start gestellt; die Wahl lässt sich jederzeit in der oberen Leiste oder unter „Einstellungen“ ändern (auf dem Telefon nur unter „Einstellungen“). Sie gilt für dieses Gerät, nicht für das Projekt.</p>
+  <ul>
+    <li>Ein Modus blendet Einstellungen aus, er ändert nichts: Der Film ist in den drei Modi derselbe, und eine ausgeblendete Einstellung behält ihren Wert.</li>
+    <li>Eine Einstellung, die Sie geändert haben, bleibt in jedem Modus sichtbar, mit der Markierung „geändert“ (↺).</li>
+    <li><kbd>Ctrl+K</kbd> findet auch ausgeblendete Abschnitte. Wer einen wählt, schaltet den Modus ein, der ihn zeigt, und es wird gesagt.</li>
+    <li>Am Ende jedes Bereichs sagt ein Hinweis, was der Modus ausblendet und in welchem Modus man es findet.</li>
+  </ul>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Reiter</th><th>Einsteiger</th><th>Fortgeschritten</th><th>Experte</th></tr></thead>
+      <tbody>
+        <tr><td>Track</td><td>Trackliste, Breite und Farbe der Linie, Form der Markierung</td><td>+ alle Einstellungen von Track und Markierung, „Tour planen“, „Zahlen korrigieren“, Track-Werkzeuge</td><td>+ erweiterte Optionen und Keyframes der Markierung</td></tr>
+        <tr><td>Karte</td><td>Hintergrund als zwei Kacheln (Satellit, Karte), betontes Relief, Stimmung</td><td>+ Bildauswahl, Wasser, Wald, Höhenlinien, Orientierungspunkte</td><td>+ Datum und Detail der Bilder, Reliefquelle, DGM-Bereinigung</td></tr>
+        <tr><td>Wetter, Licht</td><td>Ausgeblendet: Wetter des Tages und Sonne stellen sich selbst ein, oder mit der Stimmung</td><td>Wetter der Tour, Wolken, Schnee, Sonne, Tage und Nächte, Farben</td><td>+ Regen und Dunst, Atmosphäre, Wolkenschatten, Nachthelligkeit</td></tr>
+        <tr><td>Überflug</td><td>Automatischer Film, Kamerastile als Kacheln, Dauer</td><td>+ Stil, Brennweite, Abstand, Neigung, Übergänge</td><td>+ Blickrichtung, Vorlauf, Glättungen</td></tr>
+        <tr><td>Objektiv</td><td>Ausgeblendet</td><td>Ausgeblendet</td><td>Objektiveffekte</td></tr>
+        <tr><td>Overlay</td><td>Overlay an / aus, Stil, Titel</td><td>+ 3D-Beschriftungen, Zähler, Profil und Minikarte, Wetter, Logo und Text</td><td>+ vorgegebene Farben und Schriften, Quellenangaben</td></tr>
+        <tr><td>Zeitleiste</td><td>Stopps, Texte, Medien, Musik</td><td>+ Einstellungen, Geschwindigkeit, Wiedergabebereich</td><td>+ Etappen, Keyframe-Spuren, Markierung</td></tr>
+        <tr><td>Export</td><td>„Für eine Plattform“, dann „Exportieren“</td><td>+ Seitenverhältnis, Auflösung, Bilder pro Sekunde, Qualität, mehrere Formate, Poster</td><td>+ Kodierung, PNG-Sequenz, Overlay allein, direkte Aufnahme</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Im Modus Einsteiger stellt der Abschnitt „Stimmung“ des Reiters Karte Wolken und Sonne mit einem Klick ein: „Wetter des Tages“ (die Wolken des Wetters, die Sonne zur Zeit des Tracks), „Klarer Himmel“ (ohne Wolken, die Sonne mittags) oder „Sonnenuntergang“ (die Wolken des Wetters, die Sonne beim Untergang). Er stellt nur vorhandene Einstellungen ein: Sind sie geändert, erscheinen sie in den Reitern Wetter und Licht.</p>
 </section>
 
 <!-- ================================================================== 3 -->
@@ -741,7 +765,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
     <table class="wide">
       <thead><tr><th>Tasten</th><th>Aktion</th></tr></thead>
       <tbody>
-        <tr><td><kbd>Ctrl+K</kbd></td><td>Eine Einstellung suchen: Namen eingeben, der passende Abschnitt öffnet sich (<kbd>Cmd+K</kbd> am Mac)</td></tr>
+        <tr><td><kbd>Ctrl+K</kbd></td><td>Eine Einstellung suchen: Namen eingeben, der passende Abschnitt öffnet sich, auch wenn der Modus ihn ausblendet (<kbd>Cmd+K</kbd> am Mac)</td></tr>
         <tr><td><kbd>Leertaste</kbd> · <kbd>K</kbd></td><td>Abspielen oder pausieren</td></tr>
         <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Eine Sekunde zurück oder vor; bei ausgewähltem Block diesen um eine Sekunde verschieben (eine Zehntelsekunde mit <kbd>Umschalt</kbd>)</td></tr>
         <tr><td><kbd>Umschalt+←</kbd> <kbd>Umschalt+→</kbd></td><td>Fünf Sekunden zurück oder vor</td></tr>

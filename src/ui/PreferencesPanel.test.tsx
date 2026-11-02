@@ -92,3 +92,17 @@ describe('PreferencesPanel, « Apparence »', () => {
     expect(reset().hasAttribute('disabled')).toBe(true)
   })
 })
+
+describe('PreferencesPanel, « Mode de l’interface »', () => {
+  it('names the three modes, says what the chosen one shows, and keeps the choice on this device', async () => {
+    expect(host.textContent).toContain('Mode de l’interface')
+    expect(radio('Expert').checked).toBe(true)
+    expect(host.textContent).toContain('Tous les réglages, images clés et encodage.')
+    await act(async () => radio('Débutant').click())
+    expect(usePreferences.getState().uiMode).toBe('debutant')
+    expect(JSON.parse(getPlatform().storage.get(PREFERENCES_KEY)!).uiMode).toBe('debutant')
+    expect(host.textContent).toContain('Une trace, un film automatique, un bouton pour exporter.')
+    // the preference is not part of the project
+    expect(host.textContent).toContain('Un réglage modifié reste visible.')
+  })
+})
