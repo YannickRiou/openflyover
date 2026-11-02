@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { useBatchStore } from './export/batch'
+import { isRenderWindow, runInRenderWindow } from './export/renderWindow'
 import { isExportBusy, useExportStore } from './export/store'
 import { isCardItem } from './film/cards'
 import { addStop, addText, copyBlocks, duplicateFilmItem, pasteBlocks, removeFilmItem, rippleRemove, splitFilmItem, timedBlockIds } from './film/timeline'
@@ -67,6 +68,7 @@ import { Tab, TabList, TabPanel, Tabs, Tip, isModalOpen } from './ui/primitives'
 const ExportPanel = lazy(() => import('./ui/ExportPanel').then((m) => ({ default: m.ExportPanel })))
 const OfflinePanel = lazy(() => import('./ui/OfflinePanel').then((m) => ({ default: m.OfflinePanel })))
 // the film inspector only opens on a selected timeline block
+const RenderWindowBar = lazy(() => import('./ui/RenderWindowBar').then((m) => ({ default: m.RenderWindowBar })))
 const FilmInspector = lazy(() => import('./ui/FilmInspector').then((m) => ({ default: m.FilmInspector })))
 
 const TAB_LABELS: Record<ShellTab, { label: string; icon: IconName }> = {
@@ -101,6 +103,11 @@ const isNarrow = () => window.innerWidth < ONE_SIDE_MAX_WIDTH
 const DRAWER_MAX_WIDTH = 1024
 const isDrawer = () => window.innerWidth < DRAWER_MAX_WIDTH
 // a batch keeps the shell locked between its jobs too (the export store is idle for a moment between two)
+/** Desktop: this page is the « File de rendus » window (export/renderWindow.ts): the 3D view and a progress bar only. */
+const renderWindow = isRenderWindow()
+/** its run starts once (StrictMode mounts the effects twice in development) */
+let renderWindowStarted = false
+
 const isExporting = () => isExportBusy(useExportStore.getState().phase) || useBatchStore.getState().phase === 'running'
 
 /** The portrait phone layout (`BOTTOM_SHEET_QUERY`): preview on top, timeline, tab bar, half sheets. */
@@ -293,14 +300,33 @@ export default function App() {
   // desktop: a batch asked on the command line runs once the app is up, then the app quits (export/cliRender.ts);
   // otherwise the project open when the app was last left comes back
   useEffect(() => {
+    if (renderWindow) {
+      if (!renderWindowStarted) void runInRenderWindow()
+      renderWindowStarted = true
+      return
+    }
     const rendering = getPlatform().capabilities.isDesktop ? import('./export/cliRender').then((m) => m.runCliRenderIfAsked()) : Promise.resolve(false)
     void reopenLastProject(rendering, () => takeOpenedFiles(reportOpenFailure))
+  }, [])
+
+  // desktop: the queue rendered in the « File de rendus » window shows here as it goes
+  useEffect(() => {
+    if (!getPlatform().capabilities.isDesktop || renderWindow) return
+    let stop: (() => void) | null = null
+    let live = true
+    void import('./export/queue').then(({ installQueueSync }) => {
+      if (live) stop = installQueueSync(false)
+    })
+    return () => {
+      live = false
+      stop?.()
+    }
   }, [])
 
   // desktop: a project the system opens with the app while it runs (macOS; elsewhere each file starts an instance)
   useEffect(
     () =>
-      watchOpenedFiles((files) => {
+      renderWindow ? undefined : watchOpenedFiles((files) => {
         if (isExporting()) showToast({ kind: 'info', text: translate('shell.exportBusy') })
         else void openFiles(files)
       }, reportOpenFailure),
@@ -313,7 +339,7 @@ export default function App() {
   useEffect(() => {
     // the drawer of a narrow window opens and closes on its own: only the tab is worth keeping then; the home
     // screen's folded « Projet » is not a choice
-    if (isDrawer() || home) return
+    if (isDrawer() || home || renderWindow) return
     try {
       getPlatform().storage.set(PREFS_KEY, JSON.stringify({ tab: shell.tab, collapsed: keptCollapsed }))
     } catch {
@@ -350,8 +376,9 @@ export default function App() {
   useEffect(() => installHistoryShortcuts(getSettingsHistory(), window, () => !isExporting()), [])
   useEffect(() => installSliderGestures(getSettingsHistory()), [])
   // a project emptied of its tracks is not written over the kept one (it waits for a track)
-  useEffect(() => installLibraryAutosave(() => !isExporting() && useAppStore.getState().tracks.length > 0), [])
-  useEffect(() => installCloseGuard(isExporting, saveProject), [])
+  // the render window shows the queue's projects, never the one being edited: nothing of it is kept
+  useEffect(() => (renderWindow ? undefined : installLibraryAutosave(() => !isExporting() && useAppStore.getState().tracks.length > 0)), [])
+  useEffect(() => (renderWindow ? undefined : installCloseGuard(isExporting, saveProject)), [])
   // a hidden page draws no frame: the film pauses, and its music and video clips with it (an export goes on hidden)
   useEffect(() => {
     const pause = () => {
@@ -567,12 +594,18 @@ export default function App() {
 
   return (
     <div className="shell-frame">
+      {renderWindow ? (
+        <Suspense>
+          <RenderWindowBar />
+        </Suspense>
+      ) : (
       <TopBar
         onOpen={() => void chooseFilesToOpen()}
         exportOpen={shell.dockOpen}
         onToggleExport={() => dispatch({ type: 'toggle-dock', narrow: isNarrow() })}
         onHelp={() => setHelpOpen(true)}
       />
+      )}
 
       <div className="relative flex min-h-0 phone:flex-col" data-collapsed={shell.collapsed || undefined}>
         <Tabs
@@ -582,7 +615,7 @@ export default function App() {
           orientation={phone ? 'horizontal' : 'vertical'}
         >
           {/* portrait phone: a selected block's actions take the place of the tab bar */}
-          <nav className="rail-frame chrome-focus justify-between" data-rail="" aria-label={t('shell.rail.aria')} hidden={phone && shell.inspecting}>
+          <nav className="rail-frame chrome-focus justify-between" data-rail="" aria-label={t('shell.rail.aria')} hidden={(phone && shell.inspecting) || renderWindow}>
             <TabList label={t('shell.rail.tablist')} className={TAB_LIST} ref={railRef}>
               {tabs.map((tab) => (
                 <Tab key={tab} id={tab} data-testid={`tab-${tab}`} className="rail-tab" disabled={exporting} tip={TAB_LABELS[tab].label} tipDisabled={phone}>
@@ -609,7 +642,7 @@ export default function App() {
 
           {/* every tab stays mounted: weather, landmarks and export have side effects */}
           {/* no change to the tracks or the settings while a film is being made: the export reads them live */}
-          <aside id="side-panel" data-testid="side-panel" className="panel-frame" aria-label={t('shell.panel.aria')} hidden={shell.collapsed} inert={exporting}>
+          <aside id="side-panel" data-testid="side-panel" className="panel-frame" aria-label={t('shell.panel.aria')} hidden={shell.collapsed || renderWindow} inert={exporting}>
             <SheetHandle title={TAB_LABELS[shell.tab].label} onClose={() => dispatch({ type: 'fold' })} />
             {SHELL_TABS.map((tab) => panel(tab, contents[tab]))}
           </aside>
@@ -617,11 +650,11 @@ export default function App() {
 
         <main className="flex min-h-0 min-w-0 flex-auto flex-col bg-chrome phone:order-1 phone-any:relative">
           {contents.stage}
-          {hasTracks && <TimelineResizer disabled={exporting} />}
-          {timeline}
+          {hasTracks && !renderWindow && <TimelineResizer disabled={exporting} />}
+          {!renderWindow && timeline}
         </main>
 
-        <aside id="export-dock" data-testid="export-dock" className="dock-frame" aria-label={t('shell.dock.export')} hidden={!shell.dockOpen}>
+        <aside id="export-dock" data-testid="export-dock" className="dock-frame" aria-label={t('shell.dock.export')} hidden={!shell.dockOpen || renderWindow}>
           <SheetHandle onClose={() => !exporting && dispatch({ type: 'close-dock' })} />
           <Suspense fallback={<p className="type-hint px-4">{t('shell.loading')}</p>}>
             {dockMounted && <ExportPanel onClose={exporting ? undefined : () => dispatch({ type: 'close-dock' })} />}
@@ -639,9 +672,9 @@ export default function App() {
         </aside>
       </div>
 
-      <StatusBar />
+      {!renderWindow && <StatusBar />}
       <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
-      <Tour />
+      {!renderWindow && <Tour />}
       <SettingsSearch
         open={searchOpen}
         tabs={tabs}

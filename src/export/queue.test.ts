@@ -5,6 +5,7 @@ import {
   MAX_QUEUE_ITEMS,
   MAX_SNAPSHOT_CHARS,
   MAX_STORED_CHARS,
+  QUEUE_CANCEL_KEY,
   QUEUE_FOLDER_KEY,
   QUEUE_KEY,
   addOpenProject,
@@ -14,6 +15,8 @@ import {
   jobCount,
   moveItem,
   formatLabel,
+  installQueueSync,
+  mergeQueue,
   notifyWhenAway,
   parseQueue,
   runQueue,
@@ -27,6 +30,7 @@ import { useMediaStore } from '../film/media'
 import { IMAGERY_SOURCES } from '../terrain/sources'
 import { buildTrack } from '../import/stats'
 import { useAppStore } from '../state/store'
+import { useRenderElsewhere } from '../scene/previewQuality'
 
 // nothing renders in a test: a film is « made » at once, named after its job
 vi.mock('./batch', async (importOriginal) => ({
@@ -89,6 +93,65 @@ describe('stored form', () => {
     expect(parseQueue(serialiseQueue([done]))[0].snapshot).toBeNull()
     const many = Array.from({ length: MAX_LISTED_ITEMS + 5 }, (_, i) => item(String(i)))
     expect(parseQueue(serialiseQueue(many))).toHaveLength(MAX_LISTED_ITEMS)
+  })
+})
+
+/** what the other window's write looks like here (no StorageEvent outside a browser) */
+const storageEvent = (key: string, newValue: string) => Object.assign(new Event('storage'), { key, newValue })
+
+describe('two windows (desktop « File de rendus »)', () => {
+  it('a snapshot kept in a file is not copied into the storage, and its item still waits after a restart', () => {
+    const stored = item('a', { stored: true, snapshot: 'x'.repeat(MAX_SNAPSHOT_CHARS + 1) })
+    expect(JSON.parse(serialiseQueue([stored])).items[0].snapshot).toBeNull()
+    expect(parseQueue(serialiseQueue([stored]))).toEqual([{ ...stored, snapshot: null }])
+  })
+
+  it('read live, a render going on stays « en cours » with its progress', () => {
+    const running = item('a', { status: 'running', step: 2, percent: 0.4, stored: true, snapshot: null })
+    expect(parseQueue(serialiseQueue([running]), true)).toEqual([running])
+    expect(parseQueue(serialiseQueue([running]))[0]).toMatchObject({ status: 'pending', interrupted: true })
+  })
+
+  it('mergeQueue: the main window takes the other one\'s queue, keeping its snapshots in memory', () => {
+    const local = [item('a'), item('b')]
+    const remote = [item('a', { status: 'running', snapshot: null, step: 1 }), item('b', { snapshot: null })]
+    expect(mergeQueue(local, remote, false)).toEqual([{ ...remote[0], snapshot: '{"id":"a"}' }, item('b')])
+  })
+
+  it('mergeQueue: the render window keeps the status of what it renders, and takes the items added, removed or moved', () => {
+    const local = [item('a', { status: 'running', step: 1 }), item('b'), item('c', { status: 'done', snapshot: null })]
+    // the main window still lists a and c as waiting, removed b, added d
+    const remote = [item('d'), item('a'), item('c')]
+    expect(mergeQueue(local, remote, true).map((i) => `${i.id}:${i.status}`)).toEqual(['d:pending', 'a:running', 'c:done'])
+    // the item being rendered is never dropped
+    expect(mergeQueue(local, [item('d')], true).map((i) => i.id)).toEqual(['d', 'a'])
+  })
+
+  it('installQueueSync: the other window\'s queue comes in without being written back; the preview goes light while it renders', () => {
+    useQueueStore.setState({ items: [item('a')], running: false })
+    const target = new EventTarget()
+    const stop = installQueueSync(false, target as unknown as Window)
+    const set = vi.spyOn(getPlatform().storage, 'set')
+    const newValue = serialiseQueue([item('a', { status: 'running', step: 1, percent: 0.5, snapshot: null })])
+    target.dispatchEvent(storageEvent(QUEUE_KEY, newValue))
+    expect(useQueueStore.getState().items[0]).toMatchObject({ status: 'running', percent: 0.5, snapshot: '{"id":"a"}' })
+    expect(useRenderElsewhere.getState().active).toBe(true)
+    expect(set).not.toHaveBeenCalled()
+    target.dispatchEvent(storageEvent(QUEUE_KEY, serialiseQueue([item('a', { status: 'done', snapshot: null })])))
+    expect(useRenderElsewhere.getState().active).toBe(false)
+    stop()
+    set.mockRestore()
+    useQueueStore.setState({ items: [] })
+  })
+
+  it('installQueueSync: the render window stops its run when the main window asks', () => {
+    const target = new EventTarget()
+    const stop = installQueueSync(true, target as unknown as Window)
+    const cancel = vi.spyOn(useBatchStore.getState(), 'cancel')
+    target.dispatchEvent(storageEvent(QUEUE_CANCEL_KEY, '1'))
+    expect(cancel).toHaveBeenCalledTimes(1)
+    stop()
+    cancel.mockRestore()
   })
 })
 

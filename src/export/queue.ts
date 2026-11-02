@@ -5,10 +5,15 @@
  * (`parseQueue` never throws): a run cut short by closing the app comes back as « en attente », « interrompu », and starts
  * again from the first image (no resume inside a film). See ARCHITECTURE.md "Video export".
  *
- * Pure (tested): the stored form, `runQueue` (sequencing with an injected runner). `runRenderQueue` drives the app: it
- * loads each snapshot the way « Ouvrir » does, renders its films through `exportJob` (batch.ts, one export at a time, the
- * view restored after each), then puts back the project that was open. The batch store is held « running » for the whole
- * run, so the rest of the app is as busy as during a batch (no autosave, no edit, the same cancel button).
+ * Pure (tested): the stored form, `runQueue` (sequencing with an injected runner), `mergeQueue`. `runRenderQueue` drives
+ * the app: it loads each snapshot the way « Ouvrir » does, renders its films through `exportJob` (batch.ts, one export at
+ * a time, the view restored after each), then puts back the project that was open. The batch store is held « running »
+ * for the whole run, so the rest of the app is as busy as during a batch (no autosave, no edit, the same cancel button).
+ *
+ * Desktop: the run goes on in a window of its own, « File de rendus » (renderWindow.ts), while the main window stays free
+ * for editing. Each snapshot is a file of the app data folder (`queueSnapshots`, no size limit, read by that window), and
+ * both windows keep the same queue through the shared storage (`installQueueSync`): the main window adds, removes and
+ * reorders, the render window owns the status of what it renders and writes its progress (`percent`).
  */
 import { create } from 'zustand'
 import { errorMessage } from '../core/errors'
@@ -18,10 +23,12 @@ import { t } from '../i18n'
 import { getPlatform } from '../platform'
 import type { Capabilities } from '../platform/platform'
 import { pickFolder, reuseFolder } from '../platform/folder'
+import { createDesktopLibraryFiles } from '../platform/projectLibrary'
 import type { WritableFolder } from '../platform/folder'
 import { applyProject } from '../project/apply'
 import { parseProject, serializeProject } from '../project/document'
 import { getSettingsHistory } from '../project/history'
+import { useRenderElsewhere } from '../scene/previewQuality'
 import { useAppStore } from '../state/store'
 import { effectiveProjectName } from '../ui/shell'
 import { startPoster } from '../poster/export'
@@ -66,8 +73,12 @@ export interface QueueItem {
   interrupted?: boolean
   /** files written (or downloaded) */
   files?: string[]
-  /** film being rendered (1-based), while it runs; not kept */
+  /** film being rendered (1-based), while it runs */
   step?: number
+  /** part of that film done (0..1), while it runs in the render window */
+  percent?: number
+  /** desktop: the snapshot is a file of the app data folder (`queueSnapshots`), `snapshot` only a copy in memory */
+  stored?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -81,20 +92,22 @@ export interface QueueItem {
  */
 export function serialiseQueue(items: readonly QueueItem[]): string {
   let room = MAX_STORED_CHARS
-  const stored = items.slice(0, MAX_LISTED_ITEMS).map(({ id, name, formats, still, poster, progress, status, error, snapshot, interrupted, files }) => {
+  const list = items.slice(0, MAX_LISTED_ITEMS).map(({ id, name, formats, still, poster, progress, status, error, snapshot, interrupted, files, stored, step, percent }) => {
     const waiting = status === 'pending' || status === 'running'
-    const keep = waiting && snapshot !== null && snapshot.length <= Math.min(MAX_SNAPSHOT_CHARS, room)
+    // a snapshot in a file is not copied into the storage
+    const keep = waiting && !stored && snapshot !== null && snapshot.length <= Math.min(MAX_SNAPSHOT_CHARS, room)
     if (keep) room -= snapshot.length
-    return { id, name, formats, still, poster, progress, status, error, interrupted, files, snapshot: keep ? snapshot : null }
+    const running = status === 'running' ? { step, percent } : {}
+    return { id, name, formats, still, poster, progress, status, error, interrupted, files, stored, ...running, snapshot: keep ? snapshot : null }
   })
-  return JSON.stringify({ v: QUEUE_VERSION, items: stored })
+  return JSON.stringify({ v: QUEUE_VERSION, items: list })
 }
 
 const isStrings = (value: unknown): value is string[] => Array.isArray(value) && value.every((v) => typeof v === 'string')
 
-function parseItem(raw: unknown): QueueItem | null {
+function parseItem(raw: unknown, live: boolean): QueueItem | null {
   if (!isRecord(raw)) return null
-  const { id, name, formats, still, poster, progress, status, error, snapshot, interrupted, files } = raw
+  const { id, name, formats, still, poster, progress, status, error, snapshot, interrupted, files, stored, step, percent } = raw
   if (typeof id !== 'string' || typeof name !== 'string' || !isStrings(formats)) return null
   if (status !== 'pending' && status !== 'running' && status !== 'done' && status !== 'error') return null
   const head = {
@@ -105,16 +118,28 @@ function parseItem(raw: unknown): QueueItem | null {
     ...(still === true ? { still } : {}),
     ...(poster === true ? { poster } : {}),
     ...(typeof progress === 'number' && progress >= 0 && progress <= 1 ? { progress } : {}),
+    ...(stored === true ? { stored } : {}),
   }
   if (status === 'done') return { ...head, status, ...(isStrings(files) ? { files } : {}) }
   if (status === 'error') return { ...head, status, ...(typeof error === 'string' ? { error } : {}) }
-  if (head.snapshot === null) return { ...head, status: 'error', error: t('export.queue.tooBig') }
+  // read by the other window while the render window runs it
+  if (live && status === 'running')
+    return {
+      ...head,
+      status,
+      ...(typeof step === 'number' ? { step } : {}),
+      ...(typeof percent === 'number' && percent >= 0 && percent <= 1 ? { percent } : {}),
+    }
+  if (head.snapshot === null && !head.stored) return { ...head, status: 'error', error: t('export.queue.tooBig') }
   // a run cut short: the film starts again from its first image
   return { ...head, status: 'pending', ...(status === 'running' || interrupted === true ? { interrupted: true } : {}) }
 }
 
-/** The queue stored in `raw`; empty when there is none or it is damaged. A render interrupted comes back « en attente ». */
-export function parseQueue(raw: string | null | undefined): QueueItem[] {
+/**
+ * The queue stored in `raw`; empty when there is none or it is damaged. A render interrupted comes back « en attente »;
+ * `live`: read while the render window may be running it, a render going on stays « en cours ».
+ */
+export function parseQueue(raw: string | null | undefined, live = false): QueueItem[] {
   if (!raw) return []
   try {
     const data: unknown = JSON.parse(raw)
@@ -122,7 +147,7 @@ export function parseQueue(raw: string | null | undefined): QueueItem[] {
     const seen = new Set<string>()
     const items: QueueItem[] = []
     for (const raw of data.items) {
-      const item = parseItem(raw)
+      const item = parseItem(raw, live)
       if (item && !seen.has(item.id)) {
         seen.add(item.id)
         items.push(item)
@@ -197,6 +222,58 @@ export function moveItem(items: readonly QueueItem[], id: string, direction: -1 
   return moved
 }
 
+/**
+ * The queue of this window once the other one wrote `remote` (render window: `rendering`). The main window takes it as
+ * it is, keeping the snapshots it holds in memory. The render window keeps the status of the items it rendered or
+ * renders (the other window may still list them « en attente ») and takes the rest: items added, removed, reordered.
+ */
+export function mergeQueue(local: readonly QueueItem[], remote: readonly QueueItem[], rendering: boolean): QueueItem[] {
+  const mine = new Map(local.map((i) => [i.id, i]))
+  if (!rendering) return remote.map((i) => (i.snapshot === null && mine.get(i.id)?.snapshot ? { ...i, snapshot: mine.get(i.id)!.snapshot } : i))
+  const owned = (i: QueueItem | undefined) => i !== undefined && i.status !== 'pending'
+  const merged = remote.map((i) => (owned(mine.get(i.id)) ? mine.get(i.id)! : i))
+  // never drop the item being rendered
+  const running = local.filter((i) => i.status === 'running' && !remote.some((r) => r.id === i.id))
+  return [...merged, ...running]
+}
+
+// ---------------------------------------------------------------------------
+// Snapshots in files (desktop)
+// ---------------------------------------------------------------------------
+
+/** Snapshots of the queue as files, by item id. */
+export interface QueueSnapshots {
+  write(id: string, text: string): Promise<void>
+  /** null when it is not there */
+  read(id: string): Promise<string | null>
+  remove(id: string): Promise<void>
+}
+
+const snapshotName = (id: string) => `queue-${id.replace(/[^a-z0-9-]/gi, '')}.snapshot.json`
+
+/** Desktop: `<app data>/projects/queue-<id>.snapshot.json` (beside « Mes projets », whose list reads only its entries). */
+export function createQueueSnapshots(files = createDesktopLibraryFiles(() => import('@tauri-apps/plugin-fs'))): QueueSnapshots {
+  return {
+    write: (id, text) => files.write(snapshotName(id), text),
+    read: async (id) => (await (await files.read(snapshotName(id)))?.text()) ?? null,
+    remove: (id) => files.remove(snapshotName(id)),
+  }
+}
+
+let snapshots: QueueSnapshots | null = null
+const queueSnapshots = (): QueueSnapshots | null => (getPlatform().capabilities.isDesktop ? (snapshots ??= createQueueSnapshots()) : null)
+/** snapshot writes not finished yet: the render window must not start before them */
+const writing = new Set<Promise<unknown>>()
+
+/** Once every snapshot added so far is written. */
+export async function snapshotsWritten(): Promise<void> {
+  await Promise.all([...writing])
+}
+
+function forgetSnapshot(item: QueueItem): void {
+  if (item.stored) void queueSnapshots()?.remove(item.id).catch(() => undefined)
+}
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -220,7 +297,7 @@ function write(items: readonly QueueItem[]): void {
 
 export interface QueueState {
   items: QueueItem[]
-  /** a run is going on (between two items too) */
+  /** a run is going on in this window (between two items too) */
   running: boolean
   /** false when the queue is full */
   add(item: QueueItem): boolean
@@ -244,6 +321,8 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
     return true
   },
   remove(id) {
+    const gone = get().items.find((i) => i.id === id && i.status !== 'running')
+    if (gone) forgetSnapshot(gone)
     set({ items: get().items.filter((i) => i.id !== id || i.status === 'running') })
   },
   move(id, direction) {
@@ -256,9 +335,47 @@ export const useQueueStore = create<QueueState>()((set, get) => ({
   },
 }))
 
+/** the items came from the other window: not written back */
+let fromOtherWindow = false
+
 useQueueStore.subscribe((state, previous) => {
-  if (state.items !== previous.items) write(state.items)
+  if (state.items !== previous.items && !fromOtherWindow) write(state.items)
 })
+
+/** Storage key the main window sets to stop the run of the render window. */
+export const QUEUE_CANCEL_KEY = 'openflyover.renderQueue.cancel'
+/** Storage key the render window sets at the end of its run: the message, shown in the main window. */
+export const QUEUE_DONE_KEY = 'openflyover.renderQueue.done'
+
+/**
+ * Desktop: keep the queue of this window in step with the other one through the shared storage (`storage` events come
+ * from the other windows only). `rendering`: this is the render window (it also stops its run when asked). Once, at start.
+ */
+export function installQueueSync(rendering: boolean, scope: Pick<Window, 'addEventListener' | 'removeEventListener'> = window): () => void {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === QUEUE_KEY) {
+      const items = mergeQueue(useQueueStore.getState().items, parseQueue(event.newValue, true), rendering)
+      fromOtherWindow = true
+      try {
+        useQueueStore.setState({ items })
+      } finally {
+        fromOtherWindow = false
+      }
+      if (!rendering) useRenderElsewhere.setState({ active: items.some((i) => i.status === 'running') })
+    } else if (event.key === QUEUE_CANCEL_KEY && rendering && event.newValue !== null) useBatchStore.getState().cancel()
+    else if (event.key === QUEUE_DONE_KEY && !rendering && event.newValue) {
+      const { text, kind } = JSON.parse(event.newValue) as { text: string; kind: 'success' | 'error' | 'info' }
+      showToast({ kind, text })
+    }
+  }
+  scope.addEventListener('storage', onStorage)
+  return () => scope.removeEventListener('storage', onStorage)
+}
+
+/** Main window: ask the render window to stop its run. */
+export function cancelRenderWindow(): void {
+  getPlatform().storage.set(QUEUE_CANCEL_KEY, String(Date.now()))
+}
 
 /** « 16:9@1080p » -> « 16:9 1080p » */
 export const formatLabel = (key: string): string => key.replace('@', ' ')
@@ -267,16 +384,29 @@ export const formatLabel = (key: string): string => key.replace('@', ' ')
 export function addOpenProject(selection: BatchSelection): string | null {
   const state = useAppStore.getState()
   const name = effectiveProjectName(state.projectName, state.tracks[0]?.name)
+  const id = crypto.randomUUID()
+  const snapshot = serializeProject(state, name, useMediaStore.getState().table)
+  const files = queueSnapshots()
   const added = useQueueStore.getState().add({
-    id: crypto.randomUUID(),
+    id,
     name,
     formats: [...selection.formats],
     ...(selection.still ? { still: true } : {}),
     ...(selection.poster ? { poster: true } : {}),
     ...(selection.still || selection.poster ? { progress: state.playback.progress } : {}),
     status: 'pending',
-    snapshot: serializeProject(state, name, useMediaStore.getState().table),
+    snapshot,
+    ...(files ? { stored: true } : {}),
   })
+  if (added && files) {
+    const written = files.write(id, snapshot).catch((error: unknown) => {
+      // kept in memory: rendered in this window only
+      console.warn('[file de rendus] copie du projet impossible à écrire :', errorMessage(error))
+      useQueueStore.getState().patch(id, { stored: undefined })
+    })
+    writing.add(written)
+    void written.finally(() => writing.delete(written))
+  }
   return added ? name : null
 }
 
@@ -345,7 +475,12 @@ export interface QueueRunOptions {
   /** receives every film; null: each film is handed to `save` (download) */
   folder: WritableFolder | null
   save(result: ExportResult): void
+  /** render window: the part of the film done is written to the item (`percent`) for the main window */
+  sharesProgress?: boolean
 }
+
+/** Shortest time between two writes of `percent` (the whole queue goes to the storage each time). */
+export const PERCENT_EVERY_MS = 1000
 
 /** Replace the project shown by the snapshot of an item (as « Ouvrir » does, without the toast); throws when it cannot be read. */
 function showSnapshot(text: string): void {
@@ -355,8 +490,9 @@ function showSnapshot(text: string): void {
 }
 
 async function renderItem(item: QueueItem, { folder, save }: QueueRunOptions, canceled: () => boolean): Promise<ItemOutcome> {
-  if (item.snapshot === null) return { status: 'error', error: t('export.queue.tooBig') }
-  showSnapshot(item.snapshot)
+  const snapshot = item.snapshot ?? (item.stored ? await queueSnapshots()?.read(item.id) : null)
+  if (!snapshot) return { status: 'error', error: t('export.queue.tooBig') }
+  showSnapshot(snapshot)
   await loadTrackData(canceled)
   const { video } = useAppStore.getState().settings
   const jobs = buildBatchJobs({ formats: item.formats, still: item.still === true, poster: item.poster === true }, video)
@@ -404,14 +540,28 @@ export async function runRenderQueue(options: QueueRunOptions): Promise<boolean>
   batch.hold(options.folder?.name ?? null)
   useQueueStore.setState({ running: true })
   const canceled = () => useBatchStore.getState().cancelRequested
+  let lastPercent = 0
+  const stopPercent = options.sharesProgress
+    ? useExportStore.subscribe(({ frame, frameCount }) => {
+        const item = useQueueStore.getState().items.find((i) => i.status === 'running')
+        if (!item || frameCount <= 0 || Date.now() - lastPercent < PERCENT_EVERY_MS) return
+        lastPercent = Date.now()
+        useQueueStore.getState().patch(item.id, { percent: frame / frameCount })
+      })
+    : () => {}
   try {
     await runQueue({
       items: () => useQueueStore.getState().items,
       patch: (id, patch) => useQueueStore.getState().patch(id, patch),
-      run: (item) => renderItem(item, options, canceled),
+      run: async (item) => {
+        const outcome = await renderItem(item, options, canceled)
+        if (outcome.status !== 'canceled') forgetSnapshot(item)
+        return outcome
+      },
       canceled,
     })
   } finally {
+    stopPercent()
     putBack()
     resume()
     useQueueStore.setState({ running: false })
@@ -432,8 +582,15 @@ function announceQueue(ids: readonly string[]): void {
       : failed > 0
         ? t('export.queue.failedSome', { done, failed })
         : t('export.queue.finished')
-  showToast({ kind: failed > 0 ? 'error' : left > 0 ? 'info' : 'success', text })
+  const kind = failed > 0 ? 'error' : left > 0 ? 'info' : 'success'
+  showToast({ kind, text })
   notifyWhenAway(text)
+  // render window: the main window says it too
+  try {
+    getPlatform().storage.set(QUEUE_DONE_KEY, JSON.stringify({ text, kind, at: Date.now() }))
+  } catch {
+    // storage unavailable: the message stays in this window
+  }
 }
 
 // ---------------------------------------------------------------------------
