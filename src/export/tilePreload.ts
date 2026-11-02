@@ -16,8 +16,8 @@ import type { StoredTileReader } from '../terrain/fetch'
 
 /** width of the corridor of the track whose fine tiles are fetched (metres, as the narrowest offline pack) */
 export const PRELOAD_CORRIDOR_M = 2_000
-/** requests at once */
-export const PRELOAD_CONCURRENCY = 8
+/** requests at once, all servers together (each one within its own `maxRequests`, see `preloadTiles`) */
+export const PRELOAD_CONCURRENCY = 24
 /** most bytes fetched ahead (estimated): about what the HTTP cache of the device keeps without dropping the first ones */
 export const PRELOAD_MAX_BYTES: Record<DeviceKind, number> = { phone: 250e6, tablet: 400e6, desktop: 1e9 }
 /** points of the track the order is taken from (the nearest one gives a tile its place in the film) */
@@ -83,26 +83,60 @@ export interface PreloadDeps {
   isCanceled(): boolean
   onProgress?(done: number, total: number): void
   concurrency?: number
+  /** most requests at once to the server of a URL (`maxRequestsFor`); none: no limit but `concurrency` */
+  maxRequestsOf?(url: string): number
 }
 
-/** Fetch `urls`, `concurrency` at a time, until the end or a cancel. */
+/**
+ * Fetch `urls`, `concurrency` at a time, in their order, until the end or a cancel. A server at its `maxRequestsOf` is
+ * skipped meanwhile: its requests would only wait for the browser's connections (6 to an HTTP/1.1 server), holding
+ * places the other servers' tiles could use (the relief behind Esri's imagery).
+ */
 export async function preloadTiles(urls: readonly string[], deps: PreloadDeps): Promise<{ done: number; failed: number }> {
-  let next = 0
+  const limit = Math.max(1, deps.concurrency ?? PRELOAD_CONCURRENCY)
+  /** the URLs of each server, in order, and how many of them are being fetched */
+  const servers = new Map<string, { indices: number[]; next: number; running: number; max: number }>()
+  urls.forEach((url, i) => {
+    const host = /^https?:\/\/([^/]+)/.exec(url)?.[1] ?? ''
+    let server = servers.get(host)
+    if (!server) servers.set(host, (server = { indices: [], next: 0, running: 0, max: Math.max(1, deps.maxRequestsOf?.(url) ?? Infinity) }))
+    server.indices.push(i)
+  })
+  let running = 0
   let done = 0
   let failed = 0
-  const worker = async () => {
-    while (next < urls.length && !deps.isCanceled()) {
-      const url = urls[next++]
-      try {
-        const held = deps.stored?.covers(url) ? await deps.stored.get(url) : null
-        if (!held) await deps.download(url)
-      } catch {
-        failed++
-      }
-      done++
-      deps.onProgress?.(done, urls.length)
+  const fetchOne = async (url: string) => {
+    try {
+      const held = deps.stored?.covers(url) ? await deps.stored.get(url) : null
+      if (!held) await deps.download(url)
+    } catch {
+      failed++
     }
   }
-  await Promise.all(Array.from({ length: Math.max(1, deps.concurrency ?? PRELOAD_CONCURRENCY) }, worker))
+  await new Promise<void>((resolve) => {
+    const pump = () => {
+      while (running < limit && !deps.isCanceled()) {
+        // the earliest URL of a server with room
+        let pick: { indices: number[]; next: number; running: number } | undefined
+        for (const server of servers.values()) {
+          if (server.next < server.indices.length && server.running < server.max && (!pick || server.indices[server.next] < pick.indices[pick.next])) pick = server
+        }
+        if (!pick) break
+        const server = pick
+        const url = urls[server.indices[server.next++]]
+        server.running++
+        running++
+        void fetchOne(url).then(() => {
+          server.running--
+          running--
+          done++
+          deps.onProgress?.(done, urls.length)
+          pump()
+        })
+      }
+      if (running === 0) resolve()
+    }
+    pump()
+  })
   return { done, failed }
 }

@@ -42,7 +42,7 @@ import { useWaterStore } from '../osm/store'
 import { useAppStore } from '../state/store'
 import { viewTileFailures } from '../terrain/engine'
 import { fetchTileBlob, getStoredTileReader } from '../terrain/fetch'
-import { getImagerySource, getTerrainSource } from '../terrain/sources'
+import { getImagerySource, getTerrainSource, maxRequestsFor } from '../terrain/sources'
 import { autoDistanceM } from '../flyover/camera'
 import { trackPathOf } from '../flyover/path'
 import { packImageryLevel } from '../offline/plan'
@@ -633,6 +633,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         let reportedAt = -Infinity
         const { failed } = await preloadTiles(preload.urls, {
           download: deps.preloadTile ?? ((url) => fetchTileBlob(url)),
+          maxRequestsOf: maxRequestsFor,
           stored: getStoredTileReader(),
           isCanceled,
           onProgress: (done, total) => {

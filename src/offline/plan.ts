@@ -204,7 +204,8 @@ export function planOfflineTiles(input: OfflinePlanInput): OfflinePlan {
   let imageryTiles = 0
   if (imagery) {
     for (const key of terrainKeys) {
-      for (const op of planImagerySubtiles(key, imagery, input.imageryZoomOffset).tiles) {
+      // the finer imagery levels only at the deepest zoom of the relief, as the engine draws them (`imageryOffsetOf`)
+      for (const op of planImagerySubtiles(key, imagery, key.z >= terrain.maxZoom ? input.imageryZoomOffset : 0).tiles) {
         if (add(buildTileUrl(imagery, op.key), imagery.id, op.key)) imageryTiles++
       }
     }

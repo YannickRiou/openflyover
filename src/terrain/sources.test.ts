@@ -7,6 +7,7 @@ import {
   getImagerySource,
   getTerrainSource,
   groupImagerySources,
+  maxRequestsFor,
   sourceCovers,
 } from './sources'
 
@@ -70,6 +71,15 @@ describe('getters', () => {
   it('fall back to the first catalogue entry for unknown ids', () => {
     expect(getTerrainSource('nope')).toBe(TERRAIN_SOURCES[0])
     expect(getImagerySource('')).toBe(IMAGERY_SOURCES[0])
+  })
+})
+
+describe('maxRequestsFor', () => {
+  it('limits Esri to the 6 connections the browser gives an HTTP/1.1 server, not the others', () => {
+    const key = { z: 14, x: 8296, y: 5992 }
+    expect(maxRequestsFor(buildTileUrl(getImagerySource('arcgis-world-imagery'), key))).toBe(6)
+    expect(maxRequestsFor(buildTileUrl(getTerrainSource('mapterhorn'), key))).toBe(Infinity)
+    expect(maxRequestsFor(buildTileUrl(getImagerySource('ign-ortho'), key))).toBe(Infinity)
   })
 })
 
