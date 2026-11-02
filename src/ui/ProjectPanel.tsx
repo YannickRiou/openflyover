@@ -3,7 +3,7 @@ import { t as translate, useT } from '../i18n'
 import { formatDate } from '../i18n/format'
 import { useEffect, useId, useState } from 'react'
 import { getPlatform } from '../platform'
-import type { ProjectEntry } from '../platform'
+import type { ProjectEntry, ProjectVersion } from '../platform'
 import { applySettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
 import { PRESET_NAME_MAX, PRESET_SCOPE_LABELS, PRESET_SCOPES, getPresetStore, normalizePresetName, presetSettings } from '../project/presets'
@@ -19,10 +19,11 @@ import {
   libraryFile,
   refreshLibrary,
   renameEntry,
+  saveOpenVersion,
   unsavedChangesText,
   useLibraryStore,
 } from './library'
-import { chooseFilesToOpen, closeProject, newProject, openProject, saveProject, saveProjectAs } from './projectActions'
+import { chooseFilesToOpen, closeProject, newProject, openProject, restoreVersion, saveProject, saveProjectAs } from './projectActions'
 import type { CloseAnswer } from './projectActions'
 import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
@@ -39,14 +40,15 @@ const EMPTY = 'rounded-md bg-surface-card p-3 text-center text-hint text-text-2'
 const CARD = 'grid grid-cols-[96px_minmax(0,1fr)] gap-x-2 gap-y-0.5 rounded-md border p-2'
 
 /**
- * "Projet" tab: the actions on the open project (new, open, save as a file, close), « Mes projets », then the presets
- * of the settings. Open and save are also in the top bar, with their shortcuts.
+ * "Projet" tab: the actions on the open project (new, open, save as a file, close), « Mes projets », the versions of
+ * the open project, then the presets of the settings. Open and save are also in the top bar, with their shortcuts.
  */
 export function ProjectPanel() {
   return (
     <>
       <ProjectSection />
       <LibrarySection />
+      <VersionSection />
       <PresetSection />
     </>
   )
@@ -301,6 +303,155 @@ function LibrarySection() {
                     </li>
                   )
                 })}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
+    </section>
+  )
+}
+
+/**
+ * Versions of the open project, when it is kept in « Mes projets »: a full copy of it saved under a name, to come back
+ * to later (the project as it is then is kept as a version first). Not during an export.
+ */
+function VersionSection() {
+  const t = useT()
+  const library = getPlatform().projectLibrary
+  const currentId = useLibraryStore((s) => s.currentId)
+  const exporting = useExportStore((s) => isExportBusy(s.phase))
+  const batchRunning = useBatchStore((s) => s.phase === 'running')
+  /** versions read for an entry: those of another entry are not shown */
+  const [read, setRead] = useState<{ id: string; versions: ProjectVersion[] } | null>(null)
+  /** bumped after a change, to read the list again */
+  const [changes, setChanges] = useState(0)
+  const [name, setName] = useState('')
+  /** a version being saved or brought back */
+  const [working, setWorking] = useState(false)
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const id = useId()
+  const busy = exporting || batchRunning || working
+  const versions = read !== null && read.id === currentId ? read.versions : []
+
+  useEffect(() => {
+    if (!library || currentId === null) return
+    let live = true
+    library.versions(currentId).then(
+      (list) => live && setRead({ id: currentId, versions: list }),
+      () => live && setRead({ id: currentId, versions: [] }),
+    )
+    return () => {
+      live = false
+    }
+  }, [library, currentId, changes])
+
+  if (!library) return null
+
+  const run = async (action: () => Promise<void>) => {
+    setWorking(true)
+    try {
+      await action()
+    } finally {
+      setWorking(false)
+      setChanges((n) => n + 1)
+    }
+  }
+
+  const save = () =>
+    run(async () => {
+      const named = name.trim() || translate('project.versions.defaultName', { date: formatDate(Date.now(), { dateStyle: 'medium', timeStyle: 'short' }) })
+      try {
+        await saveOpenVersion(named)
+        setName('')
+        showToast({ kind: 'success', text: translate('project.versions.saved', { name: named }) })
+      } catch (err) {
+        showToast({ kind: 'error', text: translate('project.versions.saveFailed', { error: errorMessage(err) }) })
+      }
+    })
+
+  const remove = (version: ProjectVersion) =>
+    run(async () => {
+      if (currentId === null) return
+      try {
+        await library.removeVersion(currentId, version.id)
+      } catch (err) {
+        showToast({ kind: 'error', text: translate('project.versions.deleteFailed', { name: version.name, error: errorMessage(err) }) })
+      }
+    })
+
+  return (
+    <section aria-labelledby={`${id}-title`}>
+      <div className="panel-head">
+        <h2 id={`${id}-title`} className="panel-title">
+          {t('project.versions.title')}
+        </h2>
+      </div>
+      <div className={BODY}>
+        {currentId === null ? (
+          <p className={EMPTY}>{t('project.versions.notKept')}</p>
+        ) : (
+          <>
+            <p className="type-hint">{t('project.versions.hint')}</p>
+            <form
+              className={FIELD_ROW}
+              onSubmit={(e) => {
+                e.preventDefault()
+                void save()
+              }}
+            >
+              <TextField
+                className="min-w-0 flex-1"
+                aria-label={t('project.versions.name')}
+                placeholder={t('project.versions.name')}
+                value={name}
+                maxLength={120}
+                onChange={setName}
+              />
+              <Button type="submit" className="flex-none" disabled={busy}>
+                {t('project.versions.save')}
+              </Button>
+            </form>
+            {versions.length === 0 ? (
+              <p className={EMPTY}>{t('project.versions.empty')}</p>
+            ) : (
+              <ul className="flex flex-col gap-2" data-testid="project-versions">
+                {versions.map((version) => (
+                  <li key={version.id} className="flex flex-col gap-0.5 rounded-md border border-edge p-2">
+                    <span className="font-semibold wrap-anywhere">{version.name}</span>
+                    <span className="type-hint">
+                      {formatDate(version.createdAt, { dateStyle: 'medium', timeStyle: 'short' })} · {formatProjectSize(version.sizeBytes)}
+                    </span>
+                    <div className={`${ROW} mt-1`}>
+                      {confirmingId === version.id ? (
+                        <>
+                          <Button
+                            size="sm"
+                            className="px-2"
+                            onClick={() => {
+                              setConfirmingId(null)
+                              void remove(version)
+                            }}
+                          >
+                            {t('project.panel.deleteForever')}
+                          </Button>
+                          <Button size="sm" className="px-2" onClick={() => setConfirmingId(null)}>
+                            {t('common.cancel')}
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button size="sm" className="px-2" disabled={busy} onClick={() => void run(async () => void (await restoreVersion(version)))}>
+                            {t('project.versions.restore')}
+                          </Button>
+                          <Button size="sm" className="px-2" disabled={busy} onClick={() => setConfirmingId(version.id)}>
+                            {t('common.delete')}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </li>
+                ))}
               </ul>
             )}
           </>

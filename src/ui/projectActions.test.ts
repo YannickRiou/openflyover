@@ -3,11 +3,13 @@ import { useMediaStore } from '../film/media'
 import type { MediaAsset } from '../film/media'
 import { buildTrack } from '../import/stats'
 import { rememberFileTarget } from '../platform'
-import type { DocumentOutcome, FileTarget, OpenFilesOptions, SaveDocumentOptions } from '../platform'
+import type { DocumentOutcome, FileTarget, OpenFilesOptions, ProjectLibrary, SaveDocumentOptions } from '../platform'
+import { createProjectLibrary } from '../platform/projectLibrary'
+import type { LibraryFiles } from '../platform/projectLibrary'
 import { decodeProjectFile } from '../project/file'
 import { getSettingsHistory } from '../project/history'
 import { DEFAULT_SETTINGS, resetAppStore, useAppStore } from '../state/store'
-import { useLibraryStore } from './library'
+import { keepOpenProject, saveOpenVersion, useLibraryStore } from './library'
 import { resetExportStore, useExportStore } from '../export/store'
 import { useOpenChoiceStore } from './openChoice'
 import type { CloseAnswer } from './projectActions'
@@ -17,6 +19,7 @@ import { useToastStore } from './toast'
 const platform = vi.hoisted(() => ({
   saveDocument: vi.fn<(produce: () => Promise<Blob>, options: SaveDocumentOptions) => Promise<DocumentOutcome>>(),
   openFiles: vi.fn<(options: OpenFilesOptions) => Promise<File[]>>(),
+  projectLibrary: null as ProjectLibrary | null,
 }))
 vi.mock('../platform', async (original) => ({ ...(await original<object>()), getPlatform: () => platform }))
 
@@ -31,7 +34,18 @@ vi.mock('../import', async (original) => ({
   },
 }))
 
-const { chooseProjectToOpen, closeProject, newProject, openFiles, openProject, removeTrackOrCloseProject, reopenLastProject, saveProject, saveProjectAs } = await import('./projectActions')
+const {
+  chooseProjectToOpen,
+  closeProject,
+  newProject,
+  openFiles,
+  openProject,
+  removeTrackOrCloseProject,
+  reopenLastProject,
+  restoreVersion,
+  saveProject,
+  saveProjectAs,
+} = await import('./projectActions')
 
 const rando = () =>
   buildTrack({
@@ -74,6 +88,7 @@ beforeEach(() => {
   resetExportStore()
   platform.saveDocument.mockReset()
   platform.openFiles.mockReset()
+  platform.projectLibrary = null
 })
 
 /** An import (lazy parser, elevations completed) can take more than the 1 s of `vi.waitFor` while the whole suite runs. */
@@ -239,6 +254,58 @@ describe('openProject', () => {
     expect(toasts().at(-1)).toEqual({ kind: 'error', text: "Impossible d'ouvrir « vide.opnflvr » : Le fichier est vide." })
     await openProject(new File(['{"a":'], 'casse.json'))
     expect(toasts().at(-1)?.text).toContain("ce n'est pas du JSON valide")
+  })
+})
+
+describe('restoreVersion', () => {
+  function memoryFiles(): LibraryFiles {
+    const files = new Map<string, string>()
+    return {
+      names: async () => [...files.keys()],
+      read: async (name) => (files.has(name) ? new Blob([files.get(name)!]) : null),
+      write: async (name, body) => void files.set(name, typeof body === 'string' ? body : await body.text()),
+      remove: async (name) => void files.delete(name),
+    }
+  }
+  const exaggerationOf = async (blob: Blob) => (JSON.parse(await decodeProjectFile(new File([blob], 'p.json'))) as { settings: { exaggeration: number } }).settings.exaggeration
+
+  it('brings a version back into the open entry, the project as it was kept as a version first', async () => {
+    let ids = 0
+    const library = createProjectLibrary(memoryFiles(), () => 1, () => `id${++ids}`)
+    platform.projectLibrary = library
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setProjectName('Rando')
+    useAppStore.getState().setSetting('exaggeration', 2)
+    await keepOpenProject()
+    const entryId = useLibraryStore.getState().currentId!
+    const version = await saveOpenVersion('Relief ×2')
+    useAppStore.getState().setSetting('exaggeration', 3)
+    useToastStore.setState({ toasts: [] })
+
+    expect(await restoreVersion(version)).toBe(true)
+    expect(useAppStore.getState().settings.exaggeration).toBe(2)
+    expect(useAppStore.getState().projectName).toBe('Rando')
+    expect(useLibraryStore.getState().currentId).toBe(entryId)
+    expect(dirty()).toBe(false)
+    // the entry holds the version now, and the project as it was is a version of its own
+    expect(await exaggerationOf(await library.load(entryId))).toBe(2)
+    const versions = await library.versions(entryId)
+    expect(versions.map((v) => v.name)).toEqual(['Avant le retour à « Relief ×2 »', 'Relief ×2'])
+    expect(await exaggerationOf(await library.loadVersion(entryId, versions[0].id))).toBe(3)
+    expect(toasts()).toContainEqual({ kind: 'success', text: 'Retour à la version « Relief ×2 ». Le projet d’avant est gardé en version.' })
+  })
+
+  it('a version that cannot be read says why and leaves the project as it is', async () => {
+    const library = createProjectLibrary(memoryFiles())
+    platform.projectLibrary = library
+    useAppStore.getState().addTracks([rando()])
+    useAppStore.getState().setSetting('exaggeration', 3)
+    await keepOpenProject()
+    useToastStore.setState({ toasts: [] })
+    expect(await restoreVersion({ id: 'gone', name: 'Perdue', createdAt: 1, sizeBytes: 1 })).toBe(false)
+    expect(useAppStore.getState().settings.exaggeration).toBe(3)
+    expect(toasts()).toEqual([{ kind: 'error', text: 'Impossible de revenir à la version « Perdue » : Cette version n’existe plus.' }])
+    expect(await library.versions(useLibraryStore.getState().currentId!)).toEqual([])
   })
 })
 

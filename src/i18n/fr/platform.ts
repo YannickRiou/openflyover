@@ -10,6 +10,7 @@ export default {
   'library.invalidId': 'Identifiant de projet invalide : {id}',
   'library.emptyName': 'Le nom du projet est vide.',
   'library.gone': 'Ce projet n’est plus dans « Mes projets ».',
+  'library.versionGone': 'Cette version n’existe plus.',
   'app.updateAvailable': 'Nouvelle version disponible',
   'app.iosInstall': "Pour installer OpenFlyover : touchez Partager, puis « Sur l'écran d'accueil ».",
   'app.reload': 'Recharger',
