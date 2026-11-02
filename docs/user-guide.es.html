@@ -360,6 +360,30 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
   </ul>
   <p>Los mensajes (track importado, proyecto guardado, vídeo listo…) aparecen en la parte inferior de la vista; los errores se quedan hasta que los cierras. La aplicación recuerda la pestaña abierta y si el panel está plegado. Junto a los ajustes que alargan la exportación (calidad de las nubes, desenfoque de movimiento, profundidad de campo, resolución, fotogramas por segundo), un pequeño icono de tres barras indica lo pesado que es el valor actual, con el factor en su información emergente (pulsación larga en un teléfono); un punto en una pestaña indica que uno de sus ajustes está en el nivel más pesado.</p>
   <p>En el primer arranque, una breve visita guiada señala la importación, las pestañas, la línea de tiempo y la exportación; deténgala cuando quiera. «Revoir la visite guidée» en la ayuda (<kbd>?</kbd>) la vuelve a lanzar.</p>
+  <h3 class="sub">Tres modos de interfaz</h3>
+  <p>El modo fija cuántos ajustes se muestran: <strong>Principiante</strong>, <strong>Intermedio</strong> o <strong>Experto</strong> (Experto lo muestra todo, como antes). La pregunta se hace en el primer inicio; la elección se cambia en cualquier momento en la barra superior o en «Ajustes» (en un teléfono, solo en «Ajustes»). Vale para este dispositivo, no para el proyecto.</p>
+  <ul>
+    <li>Un modo oculta ajustes, no cambia nada: la película es la misma en los tres modos, y un ajuste oculto conserva su valor.</li>
+    <li>Un ajuste que usted modificó sigue visible en todos los modos, con la marca «modificado» (↺).</li>
+    <li><kbd>Ctrl+K</kbd> también encuentra las secciones ocultas. Elegir una activa el modo que la muestra, y lo dice.</li>
+    <li>Al final de cada panel, una nota dice lo que el modo oculta y en qué modo encontrarlo.</li>
+  </ul>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Pestaña</th><th>Principiante</th><th>Intermedio</th><th>Experto</th></tr></thead>
+      <tbody>
+        <tr><td>Track</td><td>Lista de tracks, grosor y color de la línea, forma del marcador</td><td>+ todos los ajustes del track y del marcador, «Prever la salida», «Corregir las cifras», herramientas del track</td><td>+ opciones avanzadas y claves del marcador</td></tr>
+        <tr><td>Mapa</td><td>Fondo en dos miniaturas (Satélite, Mapa), relieve acentuado, ambiente</td><td>+ elección de imágenes, agua, bosque, curvas de nivel, referencias</td><td>+ fecha y detalle de las imágenes, fuente del relieve, limpieza del MDE</td></tr>
+        <tr><td>Meteo, Luz</td><td>Ocultas: el clima del día y el sol se ajustan solos, o con el ambiente</td><td>Clima de la salida, nubes, nieve, sol, días y noches, colores</td><td>+ lluvia y bruma, atmósfera, sombras de las nubes, claridad de las noches</td></tr>
+        <tr><td>Vuelo</td><td>Película automática, estilos de cámara en miniaturas, duración</td><td>+ estilo, focal, distancia, inclinación, transiciones</td><td>+ rumbo, avance, suavizados</td></tr>
+        <tr><td>Objetivo</td><td>Oculta</td><td>Oculta</td><td>Efectos de objetivo</td></tr>
+        <tr><td>Gráficos</td><td>Gráficos sí / no, estilo, títulos</td><td>+ etiquetas 3D, contadores, perfil y minimapa, clima, logo y texto</td><td>+ colores y fuentes impuestos, créditos</td></tr>
+        <tr><td>Línea de tiempo</td><td>Paradas, textos, medios, música</td><td>+ planos, velocidad, zona de reproducción</td><td>+ etapas, pistas de fotogramas clave, marcador</td></tr>
+        <tr><td>Exportar</td><td>«Para una plataforma» y luego «Exportar»</td><td>+ proporciones, resolución, fotogramas por segundo, calidad, varios formatos, póster</td><td>+ codificación, secuencia PNG, gráficos solos, grabación directa</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>En el modo Principiante, la sección «Ambiente» de la pestaña Mapa ajusta las nubes y el sol con un clic: «Clima del día» (las nubes del clima, el sol a la hora del track), «Cielo despejado» (sin nubes, el sol al mediodía) o «Puesta de sol» (las nubes del clima, el sol al ponerse). Solo ajusta ajustes que ya existen, que las pestañas Meteo y Luz detallan desde el modo Intermedio. Mientras los valores son los de un botón, esas pestañas siguen ocultas; ajustados de otro modo, las hacen aparecer, incluso en el modo Principiante.</p>
 </section>
 
 <!-- ================================================================== 3 -->
@@ -742,7 +766,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
     <table class="wide">
       <thead><tr><th>Teclas</th><th>Acción</th></tr></thead>
       <tbody>
-        <tr><td><kbd>Ctrl+K</kbd></td><td>Buscar un ajuste: escriba su nombre, se abre la sección correspondiente (<kbd>Cmd+K</kbd> en Mac)</td></tr>
+        <tr><td><kbd>Ctrl+K</kbd></td><td>Buscar un ajuste: escriba su nombre, se abre la sección correspondiente, aunque el modo la oculte (<kbd>Cmd+K</kbd> en Mac)</td></tr>
         <tr><td><kbd>Espacio</kbd> · <kbd>K</kbd></td><td>Reproducir o pausar</td></tr>
         <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Retroceder o avanzar un segundo; con un bloque seleccionado, desplazarlo un segundo (una décima con <kbd>Mayús</kbd>)</td></tr>
         <tr><td><kbd>Mayús+←</kbd> <kbd>Mayús+→</kbd></td><td>Retroceder o avanzar cinco segundos</td></tr>

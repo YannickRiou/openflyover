@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { presetBadge } from '../export/qualityTier'
 import { useT } from '../i18n'
+import type { MessageKey } from '../i18n'
 import type { PresetKnob } from '../export/qualityTier'
 import { getPlatform } from '../platform'
 import { modifiedPaths } from '../project/apply'
@@ -13,7 +14,9 @@ import { ModifiedMarker } from './ModifiedMarker'
 import { tabHasHeavySetting, tierName, weightOf } from './renderCost'
 import type { WeightKey } from './renderCost'
 import { FOLDS_KEY, parseFoldPrefs } from './shell'
-import type { ShellTab } from './shell'
+import type { ShellTab, UiMode } from './shell'
+import { usePreferences } from './preferences'
+import { useModeShows } from './uiMode'
 import { Disclosure, Slider, Tip } from './primitives'
 
 /** The fold states remembered by the browser (none when its storage cannot be read). */
@@ -38,21 +41,26 @@ function saveFold(title: string, open: boolean) {
 /**
  * Foldable section of a tab, flat with a sticky header (title, « modifié / Par défaut » of `keys` if given, chevron).
  * Open at first, then as last left (remembered by title in the browser, `FOLDS_KEY`); the content stays mounted when
- * folded.
+ * folded. From the mode `min` on (every mode without it), or while one of `paths` (`keys` without them) is modified.
  */
 export function PanelSection({
   title,
   keys,
   hidden = false,
+  min,
+  paths = keys,
   children,
 }: {
   title: string
   keys?: (keyof Settings)[]
   hidden?: boolean
+  min?: UiMode
+  paths?: readonly SettingPath[]
   children: ReactNode
 }) {
   // read once: the element then keeps its own state
   const [open] = useState(() => loadFolds()[title] ?? true)
+  if (!useModeShows(min, paths)) return null
   return (
     <details className="group" data-panel-section={title} open={open} hidden={hidden} onToggle={(e) => saveFold(title, e.currentTarget.open)}>
       <summary className="panel-head cursor-pointer list-none [&::-webkit-details-marker]:hidden">
@@ -170,11 +178,14 @@ export function SettingRow({
   paths = [],
   weight,
   preset,
+  min,
   children,
 }: {
   label: string
   value: ReactNode
   paths?: readonly SettingPath[]
+  /** the lowest mode that shows it; a lower mode shows it only while it is modified */
+  min?: UiMode
   /** the setting lengthens the export: its pictogram follows the name */
   weight?: WeightKey
   /** the export quality drives the setting: its badge follows the pictogram */
@@ -193,6 +204,7 @@ export function SettingRow({
       if (control) return control.focus()
     }
   }, [open])
+  if (!useModeShows(min, paths)) return null
   return (
     <Disclosure
       className={ROW}
@@ -222,6 +234,37 @@ export function SettingRow({
       {children}
     </Disclosure>
   )
+}
+
+/** Content of a panel that shows from the mode `min` on, or whenever one of its `paths` is modified (or `also`, for what is not a setting). */
+export function ModeGate({ min, paths, also = false, children }: { min: UiMode; paths?: readonly SettingPath[]; also?: boolean; children: ReactNode }) {
+  const shown = useModeShows(min, paths)
+  return shown || also ? <>{children}</> : null
+}
+
+/** The panels that tell, at their bottom, what a mode leaves out of them. */
+type HintPanel = 'trace' | 'carte' | 'meteo' | 'lumiere' | 'survol' | 'habillage' | 'export'
+
+const HINTS: Record<HintPanel, Partial<Record<UiMode, MessageKey>>> = {
+  trace: { debutant: 'shell.mode.hint.trace.debutant', confirme: 'shell.mode.hint.trace.confirme' },
+  carte: { debutant: 'shell.mode.hint.carte.debutant', confirme: 'shell.mode.hint.carte.confirme' },
+  meteo: { confirme: 'shell.mode.hint.meteo.confirme' },
+  lumiere: { confirme: 'shell.mode.hint.lumiere.confirme' },
+  survol: { debutant: 'shell.mode.hint.survol.debutant', confirme: 'shell.mode.hint.survol.confirme' },
+  habillage: { debutant: 'shell.mode.hint.habillage.debutant', confirme: 'shell.mode.hint.habillage.confirme' },
+  export: { debutant: 'shell.mode.hint.export.debutant', confirme: 'shell.mode.hint.export.confirme' },
+}
+
+/** The note at the bottom of a panel: what the current mode leaves out of it, and that Ctrl+K still finds it. */
+export function ModeHint({ panel }: { panel: HintPanel }) {
+  const t = useT()
+  const mode = usePreferences((s) => s.uiMode)
+  const key = HINTS[panel][mode]
+  return key ? (
+    <p className="type-hint pb-3" data-testid="mode-hint">
+      {t(key)} {t('shell.mode.hint.search')}
+    </p>
+  ) : null
 }
 
 /** ⓘ with a one-sentence explanation (tooltip on hover and keyboard focus, read by screen readers). */

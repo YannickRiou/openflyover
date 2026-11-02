@@ -50,6 +50,7 @@ import type { CloseAnswer } from './projectActions'
 import { DrawRouteDialog } from './DrawRouteDialog'
 import { StravaDialog } from './StravaImport'
 import { TrackToolsButton } from './TrackTools'
+import { ModeGate } from './PanelSection'
 import { Button, ColorField, DateField, Menu, Radio, RadioGroup, Select, Slider, Switch, TextField, TimeField, Tip } from './primitives'
 
 /** Progress steps the leaderboard follows: a few renders per second of its own rows, not one per frame. */
@@ -978,10 +979,16 @@ export function TrackList() {
                   </span>
                 )}
               </span>
-              <TrackElevation track={track} busy={busy} />
-              <TrackCorrections track={track} busy={busy} />
-              <TrackToolsButton track={track} busy={busy} />
-              {(track.timesEstimated || track.stats.startTime === undefined) && <OutingPlanForm track={track} />}
+              <ModeGate min="confirme">
+                <TrackElevation track={track} busy={busy} />
+              </ModeGate>
+              <ModeGate min="confirme" also={track.statsOverride !== undefined}>
+                <TrackCorrections track={track} busy={busy} />
+              </ModeGate>
+              <ModeGate min="confirme">
+                <TrackToolsButton track={track} busy={busy} />
+                {(track.timesEstimated || track.stats.startTime === undefined) && <OutingPlanForm track={track} />}
+              </ModeGate>
             </li>
           ))}
         </ul>
@@ -1003,8 +1010,12 @@ export function TrackList() {
       <p className="sr-only" role="status" aria-live="polite">
         {announcement}
       </p>
-      {tracks.length >= 2 && <ChainTracks tracks={tracks} />}
-      {tracks.length >= 2 && <RacePanel tracks={tracks} />}
+      {tracks.length >= 2 && (
+        <ModeGate min="confirme" paths={['race']}>
+          <ChainTracks tracks={tracks} />
+          <RacePanel tracks={tracks} />
+        </ModeGate>
+      )}
     </section>
   )
 }

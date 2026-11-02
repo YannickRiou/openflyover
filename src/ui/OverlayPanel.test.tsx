@@ -7,6 +7,7 @@ import { LOGOS_MAX, OFFSET_MAX, withWidgetOffset } from '../overlay/settings'
 import { getSettingsHistory } from '../project/history'
 import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { OverlayPanel, WidgetPosition } from './OverlayPanel'
+import { usePreferences } from './preferences'
 
 beforeAll(() => {
   ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -184,5 +185,34 @@ describe('several logos', () => {
     await click('Supprimer ce logo')
     expect(logos()).toHaveLength(LOGOS_MAX - 1)
     expect(button('Ajouter un logo').disabled).toBe(false)
+  })
+})
+
+describe('OverlayPanel: the modes of the interface', () => {
+  afterEach(async () => {
+    await act(async () => root?.unmount())
+    root = null
+    usePreferences.setState({ uiMode: 'expert' })
+    useAppStore.setState({ settings: DEFAULT_SETTINGS })
+    document.body.innerHTML = ''
+  })
+
+  it('shows the overlay and the titles in Débutant, the widgets from Confirmé, the credits from Expert; a modified widget stays', async () => {
+    useAppStore.setState({ settings: { ...DEFAULT_SETTINGS, overlay: { ...DEFAULT_SETTINGS.overlay, enabled: true } } })
+    usePreferences.setState({ uiMode: 'debutant' })
+    const host = document.body.appendChild(document.createElement('div'))
+    root = createRoot(host)
+    await act(async () => root!.render(<OverlayPanel />))
+    const sections = () => [...host.querySelectorAll('details[data-panel-section]')].map((d) => d.getAttribute('data-panel-section'))
+    expect(sections()).toEqual(['Habillage', 'Titres'])
+    await act(async () => usePreferences.setState({ uiMode: 'confirme' }))
+    expect(sections()).toEqual(['Habillage', 'Titres', 'Étiquettes 3D', 'Compteurs', 'Profil et mini-carte', 'Météo, logo et texte'])
+    await act(async () => usePreferences.setState({ uiMode: 'expert' }))
+    expect(sections()).toContain('Crédits des sources')
+    // the colours of the style, changed: still in sight in Débutant
+    await act(async () => useAppStore.getState().setSetting('overlay', { ...useAppStore.getState().settings.overlay, overrides: { accent: '#ff0000' } }))
+    await act(async () => usePreferences.setState({ uiMode: 'debutant' }))
+    expect(host.textContent).toContain('Couleurs et polices')
+    expect(host.textContent).not.toContain('Crédits des sources')
   })
 })

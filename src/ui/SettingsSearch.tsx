@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { useT } from '../i18n'
-import { searchSections } from './searchSections'
+import { isSectionShown, searchSections } from './searchSections'
+import { usePreferences } from './preferences'
 import type { SectionMatch } from './searchSections'
 import type { ShellTab } from './shell'
 import { Modal, TextField } from './primitives'
@@ -18,7 +19,8 @@ export function SettingsSearch({ open, tabs, onClose, onPick }: { open: boolean;
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   // about thirty sections: worded and filtered at each render, so a change of language shows at once
-  const results = searchSections(query, tabs)
+  const mode = usePreferences((state) => state.uiMode)
+  const results = searchSections(query, tabs, mode)
   // the dialog opens empty, on its first result
   const reset = () => {
     setQuery('')
@@ -64,7 +66,7 @@ export function SettingsSearch({ open, tabs, onClose, onPick }: { open: boolean;
           <li key={`${match.tab}/${match.title}`} role="option" aria-selected={i === active}>
             <button type="button" tabIndex={-1} className={OPTION} aria-selected={i === active} onClick={() => pick(match)} onMouseMove={() => setActive(i)}>
               <span>{match.title}</span>
-              <span className="type-hint">{match.tabLabel}</span>
+              <span className="type-hint">{match.needs && !isSectionShown(match.title) ? t('shell.search.availableIn', { mode: t(`shell.mode.${match.needs}`) }) : match.tabLabel}</span>
             </button>
           </li>
         ))}

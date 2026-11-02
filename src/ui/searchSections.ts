@@ -5,11 +5,14 @@
  */
 import { t } from '../i18n'
 import type { MessageKey } from '../i18n'
-import type { ShellTab } from './shell'
+import type { ShellTab, UiMode } from './shell'
+import { modeAtLeast } from './uiMode'
 
 interface SectionEntry {
   tab: ShellTab
   title: MessageKey
+  /** the lowest mode that shows the section (the `min` of its `PanelSection`); none: every mode */
+  min?: UiMode
 }
 
 /** The sections, in the order of the tabs and of the panels (the order of an empty search). */
@@ -18,25 +21,25 @@ const SECTIONS: readonly SectionEntry[] = [
   { tab: 'trace', title: 'marker.section.title' },
   { tab: 'carte', title: 'light.map.background' },
   { tab: 'carte', title: 'light.map.terrain' },
-  { tab: 'carte', title: 'landmarks.title' },
-  { tab: 'meteo', title: 'shell.section.weather' },
-  { tab: 'meteo', title: 'light.weather.clouds' },
-  { tab: 'meteo', title: 'light.weather.rainMist' },
-  { tab: 'meteo', title: 'light.weather.snow' },
-  { tab: 'lumiere', title: 'light.atmosphere.title' },
-  { tab: 'lumiere', title: 'light.atmosphere.sun' },
-  { tab: 'lumiere', title: 'light.nights.title' },
-  { tab: 'lumiere', title: 'light.grading.title' },
+  { tab: 'carte', title: 'landmarks.title', min: 'confirme' },
+  { tab: 'meteo', title: 'shell.section.weather', min: 'confirme' },
+  { tab: 'meteo', title: 'light.weather.clouds', min: 'confirme' },
+  { tab: 'meteo', title: 'light.weather.rainMist', min: 'expert' },
+  { tab: 'meteo', title: 'light.weather.snow', min: 'confirme' },
+  { tab: 'lumiere', title: 'light.atmosphere.title', min: 'expert' },
+  { tab: 'lumiere', title: 'light.atmosphere.sun', min: 'confirme' },
+  { tab: 'lumiere', title: 'light.nights.title', min: 'confirme' },
+  { tab: 'lumiere', title: 'light.grading.title', min: 'confirme' },
   { tab: 'survol', title: 'camera.panel.camera' },
   { tab: 'survol', title: 'camera.panel.durationSection' },
-  { tab: 'objectif', title: 'lens.title' },
+  { tab: 'objectif', title: 'lens.title', min: 'expert' },
   { tab: 'habillage', title: 'overlay.panel.title' },
   { tab: 'habillage', title: 'overlay.panel.titles' },
-  { tab: 'habillage', title: 'overlay.panel.labels3d' },
-  { tab: 'habillage', title: 'overlay.panel.counters' },
-  { tab: 'habillage', title: 'overlay.panel.profileMinimap' },
-  { tab: 'habillage', title: 'overlay.panel.weatherLogoText' },
-  { tab: 'habillage', title: 'overlay.panel.credits' },
+  { tab: 'habillage', title: 'overlay.panel.labels3d', min: 'confirme' },
+  { tab: 'habillage', title: 'overlay.panel.counters', min: 'confirme' },
+  { tab: 'habillage', title: 'overlay.panel.profileMinimap', min: 'confirme' },
+  { tab: 'habillage', title: 'overlay.panel.weatherLogoText', min: 'confirme' },
+  { tab: 'habillage', title: 'overlay.panel.credits', min: 'expert' },
   { tab: 'projet', title: 'shell.section.offline' },
   { tab: 'reglages', title: 'settings.preferences.appearance.title' },
   { tab: 'reglages', title: 'settings.preferences.statusBar.title' },
@@ -50,6 +53,8 @@ export interface SectionMatch {
   title: string
   /** the name of its tab */
   tabLabel: string
+  /** the mode that shows it, when the current mode does not */
+  needs?: UiMode
 }
 
 /** Lower case without accents: « Météo » and « meteo » are the same word. */
@@ -66,9 +71,9 @@ function rank(title: string, word: string): number | null {
 
 /**
  * The sections of the `tabs` that match `query`: every word of the query must be in the title or in the name of the tab; best
- * matches first, then the order of the panels. An empty query lists every section.
+ * matches first, then the order of the panels. An empty query lists every section, the ones the `mode` hides too.
  */
-export function searchSections(query: string, tabs: readonly ShellTab[]): SectionMatch[] {
+export function searchSections(query: string, tabs: readonly ShellTab[], mode: UiMode = 'expert'): SectionMatch[] {
   const words = foldText(query).split(/\s+/).filter(Boolean)
   const found: { match: SectionMatch; score: number; order: number }[] = []
   SECTIONS.forEach((entry, order) => {
@@ -86,9 +91,14 @@ export function searchSections(query: string, tabs: readonly ShellTab[]): Sectio
       if (best === null) return
       score += best
     }
-    found.push({ match: { tab: entry.tab, title, tabLabel }, score, order })
+    found.push({ match: { tab: entry.tab, title, tabLabel, needs: entry.min && !modeAtLeast(mode, entry.min) ? entry.min : undefined }, score, order })
   })
   return found.sort((a, b) => a.score - b.score || a.order - b.order).map((f) => f.match)
+}
+
+/** The section titled `title` is on the screen: a section a mode hides is not drawn (unless one of its settings is modified). */
+export function isSectionShown(title: string): boolean {
+  return Array.from(document.querySelectorAll<HTMLElement>('details[data-panel-section]')).some((d) => d.dataset.panelSection === title)
 }
 
 /** How long the section found stays outlined (ms). */

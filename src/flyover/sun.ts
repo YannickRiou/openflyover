@@ -251,6 +251,9 @@ export interface SolarDay {
   polar: SunTimes['polar']
 }
 
+/** Day used before there is a place: sunrise at 6 h, sunset at 18 h. */
+export const PLAIN_DAY: SolarDay = { sunrise: 6, sunset: 18, noon: 12, polar: null }
+
 export function solarDay(lat: number, lon: number, dayMs: number): SolarDay {
   const times = sunTimes(lat, lon, new Date(dayMs))
   const hour = (d: Date | null) => (d ? solarHourOf(dayMs, lon, d) : null)

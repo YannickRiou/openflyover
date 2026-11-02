@@ -11,6 +11,8 @@ import { fileToAvatarDataUrl } from '../scene/markerBadge'
 import { MARKER_VALUE_IDS } from '../scene/markerValue'
 import { FIGURE_GRID, MARKER_FIGURE_PATHS } from '../scene/markerFigures'
 import {
+  DEFAULT_MARKER,
+  DEFAULT_TRACK_STYLE,
   figureOfActivity,
   MARKER_BALL_STYLE_LABELS,
   MARKER_BALL_STYLES,
@@ -44,7 +46,8 @@ import { formatDistance, formatPercent, formatShort } from './format'
 import { AnchorPicker } from './AnchorPicker'
 import { Icon } from './icons'
 import { PanelKeys } from './KeyControls'
-import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
+import { InfoTip, ModeGate, PanelSection, RangeField, SettingRow } from './PanelSection'
+import { pathsBut } from './uiMode'
 import { showToast } from './toast'
 import { Button, Checkbox, ColorField, Radio, RadioGroup, Select, Switch, TextField } from './primitives'
 
@@ -147,6 +150,11 @@ function MarkerImageField({ marker, update }: { marker: MarkerSettings; update(p
  * « Trace » section of the Trace tab: the draw-on and the glow first; colouring, smoothing, line width and dashes as
  * rows (name and value, control on demand).
  */
+/** What the track section shows from « Confirmé » on: every setting of the track but its width, which every mode shows. */
+const TRACK_BEYOND_WIDTH: SettingPath[] = ['trackTail', 'trackColorBy', 'trackLegendAnchor', 'trackRibbon', ...pathsBut('trackStyle', DEFAULT_TRACK_STYLE, 'width')]
+/** What the marker section shows from « Confirmé » on: every setting of the marker but its shape. */
+const MARKER_BEYOND_SHAPE = pathsBut('marker', DEFAULT_MARKER, 'kind')
+
 /** Heading of a part of a section (« Ligne », « Halo », « Vol »). */
 const GROUP = 'border-t border-edge pt-2 font-body text-hint font-semibold tracking-wider text-text-2 uppercase first:border-t-0 first:pt-0'
 
@@ -179,6 +187,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
 
   return (
     <PanelSection title={t('marker.track.title')} keys={['trackColorBy', 'trackLegendAnchor', 'trackStyle', 'trackTail', 'trackRibbon']} hidden={hidden}>
+      <ModeGate min="confirme" paths={TRACK_BEYOND_WIDTH}>
       <h3 className={GROUP}>{t('marker.track.lineGroup')}</h3>
       <div className="flex items-center gap-1">
         <Switch checked={style.drawOn || bilan} disabled={bilan} onChange={(on) => updateStyle({ drawOn: on })}>{t('marker.track.drawOn')}</Switch>
@@ -294,6 +303,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
           onChange={(smoothingM) => updateStyle({ smoothingM })}
         />
       </SettingRow>
+      </ModeGate>
       <SettingRow label={t('marker.track.width')} value={`${formatShort(style.width)} px`} paths={['trackStyle.width']}>
         <RangeField
           label={t('marker.track.width')}
@@ -303,6 +313,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
           onChange={(width) => updateStyle({ width })}
         />
       </SettingRow>
+      <ModeGate min="confirme" paths={TRACK_BEYOND_WIDTH}>
       <SettingRow label={t('marker.track.dash')} value={TRACK_DASH_LABELS[style.dash]} paths={['trackStyle.dash']}>
         <ChipChoice
           label={t('marker.track.dash')}
@@ -382,6 +393,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
           </div>
         </>
       )}
+      </ModeGate>
     </PanelSection>
   )
 }
@@ -443,7 +455,9 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
   return (
     <PanelSection title={t('marker.section.title')} keys={['marker', 'markerValue']} hidden={hidden}>
       {/* from the first marker key on, the keys give the marker its look */}
+      <ModeGate min="expert" paths={['film.markerKeys']}>
       {markerKeyCount > 0 && <p className="type-hint">{t('marker.section.keyed', { count: markerKeyCount })}</p>}
+      </ModeGate>
       <ChipChoice
         label={t('marker.section.shape')}
         options={MARKER_KINDS}
@@ -451,6 +465,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
         labels={MARKER_KIND_LABELS}
         onChange={(kind) => updateMarker({ kind })}
       />
+      <ModeGate min="confirme" paths={MARKER_BEYOND_SHAPE}>
       {marker.kind === 'boule' && (
         <ChipChoice
           label={t('marker.section.style')}
@@ -521,6 +536,8 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
         <Switch checked={marker.stick} onChange={(on) => updateMarker({ stick: on })}>{t('marker.section.stick')}</Switch>
         <InfoTip text={t('marker.section.stickTip')} />
       </div>
+      </ModeGate>
+      <ModeGate min="expert" paths={['film.markerKeys']}>
       <div className="field">
         <div className="flex items-center gap-1">
           <span className="type-label">{t('marker.section.changes')}</span>
@@ -541,6 +558,8 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           <p className="type-hint">{t('marker.section.junctionHint')}</p>
         </div>
       )}
+      </ModeGate>
+      <ModeGate min="expert" paths={['markerValue', 'marker.shape', 'marker.label', 'marker.labelText']}>
       <details>
         <summary className="fold-head">
           {t('marker.section.more')}
@@ -586,6 +605,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           </div>
         </div>
       </details>
+      </ModeGate>
     </PanelSection>
   )
 }

@@ -8,7 +8,7 @@ import type { Theme } from './appearance'
 import { DiagnosticRow } from './DiagnosticDialog'
 import { PanelSection } from './PanelSection'
 import { setPreferences, usePreferences } from './preferences'
-import { PERF_ITEMS, PREVIEW_QUALITIES, STATUS_CHIPS } from './shell'
+import { PERF_ITEMS, PREVIEW_QUALITIES, STATUS_CHIPS, UI_MODES } from './shell'
 import type { PerfItem, PreviewQuality, StatusChip } from './shell'
 import { usePreviewMeasure } from '../scene/previewQuality'
 import { Button, Chip, ColorField, Radio, RadioGroup, Switch } from './primitives'
@@ -146,6 +146,17 @@ export function PreferencesPanel() {
   return (
     <>
       <p className="type-hint pt-3">{t('settings.preferences.intro')}</p>
+      <PanelSection title={t('shell.mode.title')}>
+        <RadioGroup aria-label={t('shell.mode.title')} value={prefs.uiMode} onChange={(uiMode) => setPreferences({ uiMode })}>
+          {UI_MODES.map((mode) => (
+            <Radio key={mode} value={mode}>
+              {t(`shell.mode.${mode}`)}
+            </Radio>
+          ))}
+        </RadioGroup>
+        <p className="type-hint">{t(`shell.mode.${prefs.uiMode}.hint`)}</p>
+        <p className="type-hint">{t('shell.mode.settingsHint')}</p>
+      </PanelSection>
       <PanelSection title={t('settings.preferences.appearance.title')}>
         <Choice legend={t('settings.preferences.appearance.theme')} labels={THEME_LABELS} keys={THEMES} value={appearance.theme} onChange={(theme) => setAppearance({ theme })} />
         <AppearanceColor
