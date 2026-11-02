@@ -731,7 +731,7 @@ pointer (`appearance.css`).
   the app runs in Expert behind the question). « Débutant » only: `BasemapChoice` (« Satellite » / « Carte » tiles: `imagerySourceId` takes
   the first source of the kind that covers the first track, `groupImagerySources`) and `AmbianceSection` (`SettingsPanel.tsx`: « Météo du jour » =
   `clouds.mode` `'meteo'` + `sunFromTrack`; « Grand beau » = `'aucun'` + `sunHour` at noon; « Coucher de soleil » = `'meteo'` + `sunHour` at sunset,
-  from `sunChipHour`; one `transaction`). Tests: `App.test.tsx` (rail, first launch), `SettingsPanel.test.tsx`, `CameraPanel.test.tsx`,
+  from `sunChipHour`; one `transaction`). The values of a chip are not a reason to show « Météo » and « Lumière »: `ambianceOf` (`uiMode.ts`) names the chip whose values the settings are, for the lit chip and for `HIDDEN_TABS` (`chips`: `clouds.mode`, `sunFromTrack`, `sunHour`); values that are no chip's show the tabs. Tests: `App.test.tsx` (rail, first launch), `SettingsPanel.test.tsx`, `CameraPanel.test.tsx`,
   `OverlayPanel.test.tsx`, `Timeline.test.tsx`, `TopBar.test.tsx`, `PreferencesPanel.test.tsx`, `searchSections.test.ts`, `shell.test.ts`.
 - **Render weight** (`src/ui/renderCost.ts`, pure, tested; `RenderWeight` and `TabWeightDot` in `PanelSection.tsx`): which settings lengthen
   the export, as a pictogram (three bars like a signal icon: filled navy, the rest periwinkle; the heaviest tier in chartreuse on a navy

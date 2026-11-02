@@ -98,6 +98,51 @@ describe('App shell', () => {
   })
 })
 
+describe('Tabs and the « Ambiance » chips', () => {
+  it('« Grand beau » in Débutant keeps Météo and Lumière hidden; values that match no chip bring the tabs back', async () => {
+    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    Element.prototype.scrollIntoView = () => {}
+    const segments = [{ points: [6.8, 6.81, 6.82].map((lon) => ({ lon, lat: 45.9 })) }]
+    useAppStore.setState({ tracks: [buildTrack({ name: 'Sortie', source: 'gpx', segments })] })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<App />))
+    const rail = () => [...document.querySelectorAll('[role="tab"]')].map((el) => el.getAttribute('data-testid')!.replace('tab-', ''))
+    await act(async () => setPreferences({ uiMode: 'debutant' }))
+    const { settings, setSetting } = useAppStore.getState()
+    // what the chip sets (no place yet: the plain day, noon at 12 h)
+    await act(async () => {
+      setSetting('clouds', { ...settings.clouds, mode: 'aucun' })
+      setSetting('sunFromTrack', false)
+      setSetting('sunHour', 12)
+    })
+    expect(rail()).not.toContain('meteo')
+    expect(rail()).not.toContain('lumiere')
+    // the sun at an hour no chip sets: the values are no chip's any more, both tabs show them
+    await act(async () => setSetting('sunHour', 11))
+    expect(rail()).toContain('lumiere')
+    expect(rail()).toContain('meteo')
+    await act(async () => setSetting('sunHour', 12))
+    // clouds set by hand to something no chip sets
+    await act(async () => setSetting('clouds', { ...settings.clouds, mode: 'manuel' }))
+    expect(rail()).toContain('meteo')
+    await act(async () => setSetting('clouds', { ...settings.clouds, mode: 'aucun' }))
+    expect(rail()).not.toContain('meteo')
+    // any other setting of the tab brings it back, a chip or not
+    await act(async () => setSetting('snow', { ...settings.snow, mode: 'aucune' }))
+    expect(rail()).toContain('meteo')
+    await act(async () => {
+      setSetting('snow', settings.snow)
+      setSetting('clouds', settings.clouds)
+      setSetting('sunFromTrack', settings.sunFromTrack)
+      setSetting('sunHour', settings.sunHour)
+      setPreferences({ uiMode: 'expert' })
+    })
+    act(() => root.unmount())
+    document.body.innerHTML = ''
+  })
+})
+
 describe('First launch: « Combien de réglages voulez-vous voir ? »', () => {
   const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]')
   const launch = async () => {

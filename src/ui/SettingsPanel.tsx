@@ -5,7 +5,7 @@ import { formatDate } from '../i18n/format'
 import { hasParamKeys } from '../film/paramKeys'
 import { trackPathOf } from '../flyover/path'
 import { playsBilan, playsInSequence } from '../flyover/sequence'
-import { SUN_CHIP_LABELS, SUN_CHIPS, SUN_HOUR_RANGE, clockHourOfSolar, solarDay, sunChipHour, sunDayMs } from '../flyover/sun'
+import { PLAIN_DAY, SUN_CHIP_LABELS, SUN_CHIPS, SUN_HOUR_RANGE, clockHourOfSolar, solarDay, sunChipHour, sunDayMs } from '../flyover/sun'
 import type { SolarDay } from '../flyover/sun'
 import { FOREST_DENSITY_RANGE } from '../osm/forest'
 import { getSettingsHistory } from '../project/history'
@@ -20,6 +20,8 @@ import { SNOW_LINE_RANGE, snowLineAtProgress, type SnowMode, type SnowUnknown } 
 import { useWeatherStore, weatherSeriesOf } from '../weather/store'
 import { NightSettings } from './NightSettings'
 import { PanelKeys } from './KeyControls'
+import { AMBIANCES, AMBIANCE_CLOUDS, ambianceDay, ambianceHours, ambianceOf } from './uiMode'
+import type { Ambiance } from './uiMode'
 import { InfoTip, ModeGate, PanelSection, RangeField, SettingRow } from './PanelSection'
 import { TILE, TILE_GRID, TILE_LABEL, TILE_NAME } from './CameraPanel'
 import { Icon } from './icons'
@@ -57,7 +59,6 @@ function formatDay(date: string): string {
 }
 
 /** Day used for the chips and the day bar before a track is loaded. */
-const PLAIN_DAY: SolarDay = { sunrise: 6, sunset: 18, noon: 12, polar: null }
 
 /** Position of a solar hour along the slider. */
 const hourAt = (hour: number) => `${(Math.min(Math.max(hour, 0), SUN_HOUR_RANGE.max) / SUN_HOUR_RANGE.max) * 100}%`
@@ -638,7 +639,7 @@ function useSolarDay(): SolarDay {
   const sunDate = useAppStore((s) => s.settings.sunDate)
   const startTime = useFilmTrack()?.stats.startTime
   const [today] = useState(() => Date.now())
-  return useMemo(() => (origin ? solarDay(origin.lat, origin.lon, sunDayMs(sunDate, startTime, today)) : PLAIN_DAY), [origin, sunDate, startTime, today])
+  return useMemo(() => ambianceDay(origin, sunDate, startTime, today), [origin, sunDate, startTime, today])
 }
 
 /**
@@ -674,15 +675,11 @@ function BasemapChoice() {
   )
 }
 
-/** What each chip of « Ambiance » sets: the clouds, and the sun (the recorded time, or a solar hour of the day). */
-const AMBIANCES = ['weather', 'sunny', 'sunset'] as const
-type Ambiance = (typeof AMBIANCES)[number]
-
 /**
  * « Ambiance » in « Débutant », where the Météo and Lumière tabs are left out: one choice sets the clouds and the sun of
  * the film. « Météo du jour »: clouds of the weather, sun at the recorded time. « Grand beau »: no clouds, sun at
  * noon. « Coucher de soleil »: clouds of the weather, sun at sunset. One undo step; none is chosen once the
- * settings are anything else (they show in the tabs, which appear then).
+ * settings are anything else. While they are one chip's, the tabs they belong to stay hidden (`ambianceOf`, `useModeTabs`).
  */
 function AmbianceSection() {
   const t = useT()
@@ -691,17 +688,16 @@ function AmbianceSection() {
   const sunHour = useAppStore((s) => s.settings.sunHour)
   const setSetting = useAppStore((s) => s.setSetting)
   const day = useSolarDay()
-  const hours: Record<Ambiance, number | null> = { weather: sunHour, sunny: sunChipHour('midi', day), sunset: sunChipHour('coucher', day) }
-  const mode: Record<Ambiance, CloudMode> = { weather: 'meteo', sunny: 'aucun', sunset: 'meteo' }
-  const chosen = AMBIANCES.find((a) => clouds.mode === mode[a] && (a === 'weather' ? sunFromTrack : !sunFromTrack && sunHour === hours[a]))
+  const hours = ambianceHours(day)
+  const chosen = ambianceOf({ clouds, sunFromTrack, sunHour }, day)
   const pick = (ambiance: Ambiance | '') => {
     if (!ambiance) return
     const hour = hours[ambiance]
     if (hour === null) return
     getSettingsHistory().transaction(() => {
-      setSetting('clouds', { ...clouds, mode: mode[ambiance] })
-      setSetting('sunFromTrack', ambiance === 'weather')
-      if (ambiance !== 'weather') setSetting('sunHour', hour)
+      setSetting('clouds', { ...clouds, mode: AMBIANCE_CLOUDS[ambiance] })
+      setSetting('sunFromTrack', hour === undefined)
+      if (hour !== undefined) setSetting('sunHour', hour)
     })
   }
   return (
