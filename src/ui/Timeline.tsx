@@ -889,6 +889,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const contentWidth = timelineContentWidth(width, total, pxPerS, pad)
   const freeCandidates = candidates.filter((c) => !stopAt(shownClock.stops, c.atM))
   const places: RulerPlace[] = candidates.map((c) => ({ timeS: shownClock.timeAtProgress(c.atM / lengthM), atM: c.atM, label: c.label }))
+  // the places have a row of their own under the times of the ruler, so that their names never cover them
+  const rulerHeight = places.length > 0 ? (centred ? 'h-10' : 'h-9 touch:h-11') : centred ? 'h-6' : 'h-5 touch:h-7'
 
   // --- edits -------------------------------------------------------------------------------------------------
   const isStop = (item: TimelineItem) => clock.stops.some((s) => s.id === item)
@@ -1883,7 +1885,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           id={`${id}-lanes`}
         >
           <div className={`w-28 flex-none border-r border-white/10 touch:w-32 ${centred ? 'hidden' : ''}`} data-testid="timeline-heads">
-            <div className={`${HEAD} h-5 items-center touch:h-7`} data-testid="timeline-head" />
+            <div className={`${HEAD} ${rulerHeight} items-center`} data-testid="timeline-head" />
             {/* the lanes carry the same names; the camera and speed keys have their ◀ ◇ ▶ under theirs */}
             {lanes.map((lane) => {
               const folded = isFolded(lane.id)
@@ -1936,7 +1938,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               <RulerSlider
                 frozen={frozenPlayback}
                 clock={clock}
-                className={`relative cursor-pointer border-b border-white/10 focus-visible:-outline-offset-2! ${centred ? 'h-6' : 'h-5 touch:h-7'}`}
+                className={`relative cursor-pointer border-b border-white/10 focus-visible:-outline-offset-2! ${rulerHeight}`}
                 onKeyDown={onRulerKeyDown}
               >
                 {workSpan && (
@@ -1976,7 +1978,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                       key={`${p.atM}-${p.label}`}
                       data-testid="timeline-place"
                       title={t('timeline.place.title', { label: p.label, distance: formatDistance(p.atM) })}
-                      className="absolute bottom-0 z-1 flex h-3 cursor-pointer items-end gap-0.5 overflow-hidden pr-1 text-caption leading-none whitespace-nowrap text-accent-light"
+                      className="absolute bottom-0 z-1 flex h-4 cursor-pointer items-end gap-0.5 overflow-hidden pr-1 text-caption leading-none whitespace-nowrap text-accent-light"
                       style={{ left: xOf(p.timeS) - 3 }}
                       onPointerDown={(e) => {
                         if (e.button !== 0) return
