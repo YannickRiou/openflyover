@@ -386,12 +386,12 @@ export function overlayTimedState(
 }
 
 /**
- * A full-screen photo at full opacity at film time `timeS` whose picture is decoded (`ready`): its crop always fills the
- * frame (`kenBurnsCrop`) and a photo is a JPEG, without transparency, so nothing under it shows and the export need not
- * render the 3D view. Clips are left out: a WebM may carry an alpha channel.
+ * A full-screen photo or clip at full opacity at film time `timeS` whose picture or frame is decoded (`ready`): its crop
+ * always fills the frame (`kenBurnsCrop`), a photo is a JPEG and the export decodes a clip's frames without alpha (over
+ * black, `createExportVideos`), so nothing under it shows and the export need not render the 3D view.
  */
-export function photoCoversFrame(media: readonly FilmMedia[], timeS: number, ready: (src: string) => boolean): boolean {
-  return media.some((item) => item.kind === 'image' && item.layout === 'plein-ecran' && filmTextOpacity(item, timeS) >= 1 && ready(item.src))
+export function mediaCoversFrame(media: readonly FilmMedia[], timeS: number, ready: (item: FilmMedia) => boolean): boolean {
+  return media.some((item) => item.layout === 'plein-ecran' && filmTextOpacity(item, timeS) >= 1 && ready(item))
 }
 
 /** Part of a picture drawn over the frame (source rectangle of `drawImage`). */

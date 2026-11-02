@@ -2778,9 +2778,10 @@ exports) gets it from the terrain source of the settings.
   **Views not rendered again**: a frame whose overlay alone changed over a view that stays (same sub-frame progresses,
   and the view does not move with time or the film time stands still) is composed over `sceneCopy`, a copy of the view
   and its sky taken when the hold starts (only then: `schedule[i + 1] === progress`, so the flight pays no copy); and a
-  frame covered by a full-screen photo at full opacity, its picture decoded (`sceneHiddenAt` → `photoCoversFrame`: the
-  crop fills the frame and a photo is a JPEG, so the image is the same bit for bit) renders no view at all, the next
-  frame rendering again (`previous` reset). Clips are left out (a WebM may carry alpha). `timings.rendered` counts the
+  frame covered by a full-screen photo or clip at full opacity, its picture or frame decoded (`sceneHiddenAt` →
+  `mediaCoversFrame`: the crop fills the frame, a photo is a JPEG and the export's `CanvasSink` decodes clips without
+  alpha, over black, so the image is the same bit for bit) renders no view at all, the next frame rendering again
+  (`previous` reset). `timings.rendered` counts the
   views rendered, so « n images (m rendues) » shows the gain.
   Videos: exact and reproducible frame, never real-time playback; `createExportVideos` opens each visible
   video with mediabunny (`CanvasSink`, rotation applied, 3 rotating canvases) and `createClipReader` gives the last

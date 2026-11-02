@@ -704,8 +704,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         await loadFrameMedia(frameTimeS, progress)
         const at = { progress, time: overlayTime(filmClock, progress, frameTimeS) }
         const overlay = deps.overlay()
-        // a full-screen photo covers the whole frame: the view under it is not rendered (the image is the same)
-        const hidden = overlay !== undefined && sceneHiddenAt(at.time.timeS)
+        // a full-screen photo or clip covers the whole frame: the view under it is not rendered (the image is the same)
+        const hidden = overlay !== undefined && sceneHiddenAt(at.time.timeS, progress)
         // the same view as the last one, only the overlay changed: composed over the copy kept at the start of the hold
         const reused = !hidden && !sceneChanged && sceneCopyValid && sceneCopy !== null
         if (hidden || reused) {

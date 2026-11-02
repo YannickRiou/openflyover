@@ -232,7 +232,8 @@ function openClip(asset: MediaAsset): OpenedClip {
     const input = new Input({ source: new BlobSource(clipBlob(asset)), formats: [MP4, QTFF, WEBM] })
     const sink = input.getPrimaryVideoTrack().then((track) => {
       if (!track) throw new Error(t('film.error.noFrame'))
-      // a frame shown and the one after it are held, and mediabunny reuses its canvases in turn
+      // a frame shown and the one after it are held, and mediabunny reuses its canvases in turn; no alpha: a frame is
+      // drawn over black, so a full-screen clip hides the 3D view (`mediaCoversFrame`: the export renders none under it)
       return new CanvasSink(track, { poolSize: 3 })
     })
     return { input, sink }

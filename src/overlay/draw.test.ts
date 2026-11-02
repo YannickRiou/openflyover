@@ -24,7 +24,7 @@ import {
   layoutWidgets,
   overlayTime,
   overlayTimedState,
-  photoCoversFrame,
+  mediaCoversFrame,
   progressTime,
   titleCardOpacity,
   titleCardOpacityOf,
@@ -253,22 +253,23 @@ describe('film time', () => {
   })
 })
 
-describe('photoCoversFrame', () => {
+describe('mediaCoversFrame', () => {
   const photo = (patch: Partial<FilmMedia> = {}): FilmMedia => ({ ...MEDIA_DEFAULTS, id: 'p', startS: 10, durationS: 4, kind: 'image', src: 'a', layout: 'plein-ecran', ...patch })
   const ready = () => true
 
-  it('a full-screen photo at full opacity, its picture decoded: the view under it does not show', () => {
-    expect(photoCoversFrame([photo()], 12, ready)).toBe(true)
+  it('a full-screen photo or clip at full opacity, decoded: the view under it does not show', () => {
+    expect(mediaCoversFrame([photo()], 12, ready)).toBe(true)
+    // the export decodes a clip's frames over black, without alpha
+    expect(mediaCoversFrame([photo({ kind: 'video' })], 12, ready)).toBe(true)
     // fading in or out, outside its window, not decoded: the view shows through
-    expect(photoCoversFrame([photo()], 10.1, ready)).toBe(false)
-    expect(photoCoversFrame([photo()], 13.9, ready)).toBe(false)
-    expect(photoCoversFrame([photo()], 15, ready)).toBe(false)
-    expect(photoCoversFrame([photo()], 12, () => false)).toBe(false)
+    expect(mediaCoversFrame([photo()], 10.1, ready)).toBe(false)
+    expect(mediaCoversFrame([photo()], 13.9, ready)).toBe(false)
+    expect(mediaCoversFrame([photo()], 15, ready)).toBe(false)
+    expect(mediaCoversFrame([photo()], 12, () => false)).toBe(false)
   })
 
-  it('a photo card or a clip never hides the view (a WebM may be transparent)', () => {
-    expect(photoCoversFrame([photo({ layout: 'carte' })], 12, ready)).toBe(false)
-    expect(photoCoversFrame([photo({ kind: 'video' })], 12, ready)).toBe(false)
+  it('a photo card never hides the view', () => {
+    expect(mediaCoversFrame([photo({ layout: 'carte' })], 12, ready)).toBe(false)
   })
 })
 
