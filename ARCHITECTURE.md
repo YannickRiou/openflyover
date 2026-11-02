@@ -315,6 +315,16 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      a tie; roots stay), and `prefetch` starts nothing. The tiles of the current selection (drawn, shadow casters, their
      ancestors) are never evicted. A computer sets no retention and no cap: nothing changes there. Estimate behind 120:
      ~2.6 MB a tile (imagery texture 512² with mipmaps ~1.4 MB, its canvas ~1 MB, DEM grid, geometry) = ~310 MB at the cap.
+   - **Tiles of the film fetched before its first frame** (`export/tilePreload.ts`, #401). Before the frames of a film,
+     `filmTilesToPreload` lists the terrain and imagery tiles with the offline planner (`planOfflineTiles`, corridor
+     `PRELOAD_CORRIDOR_M` = 2 km, the follow camera at its lowest as « Préparer hors ligne », the export's LOD height), the
+     tiles wider than the corridor first, then the others by the nearest point of the track, cut at `PRELOAD_MAX_BYTES`
+     (estimated with each source's typical tile size: 250 MB phone, 400 MB tablet, 1 GB computer); `preloadTiles` fetches them
+     8 at a time (`fetchTileBlob`, a tile of an offline pack is skipped, a failure only counted). They go into the browser's
+     HTTP cache only (every source sends `Cache-Control`; Esri, refused in offline packs, is fetched like any view): the engine
+     still asks for each tile during the render and finds it there, or fetches it again. The panel shows « Préparation des
+     tuiles du film : n / N » (`reportTiles`), its time is `timings.preloadMs` (« préchargement des tuiles » in the split) and
+     the remaining time starts after it (`startedAt` moved on).
    - **The cap is hard: the level of detail gives way** (phone, tablet). A low view looking at the horizon in a portrait
      film needs 220–390 tiles by itself (iPhone 12: 147 → 224 loaded during the « descente », tab killed), so the
      selection is made to fit: `solveLodLevel` multiplies `errorTargetPx` by `LOD_STEP` (1.1) per level, 0 to

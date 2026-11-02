@@ -214,8 +214,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const startTime = useAppStore((s) => s.tracks[0]?.stats.startTime)
   const setSetting = useAppStore((s) => s.setSetting)
   // only what the panel draws: `cancelRequested`, `request`… changing does not redraw it
-  const { phase, frame, frameCount, etaS, result, error, timings } = useExportStore(
-    useShallow((s) => ({ phase: s.phase, frame: s.frame, frameCount: s.frameCount, etaS: s.etaS, result: s.result, error: s.error, timings: s.timings })),
+  const { phase, frame, frameCount, etaS, result, error, timings, tiles } = useExportStore(
+    useShallow((s) => ({ phase: s.phase, frame: s.frame, frameCount: s.frameCount, etaS: s.etaS, result: s.result, error: s.error, timings: s.timings, tiles: s.tiles })),
   )
   const id = useId()
   /** « Habillage seul »: the overlay alone, transparent WebM to lay over one's own footage */
@@ -283,6 +283,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const presetBitrate = targetBitrate({ ...encodeOptions, encoding: { ...encoding, bitrateMbps: null } }, codec?.codec ?? 'avc')
   // phones and tablets keep the film in memory: its bitrate has a ceiling (the line shows the real one)
   const bitrateCapped = bitrate < targetBitrate(encodeOptions, codec?.codec ?? 'avc', Infinity)
+  // the tiles of the film fetched before its first frame (`export/tilePreload.ts`)
+  const preloading = phase === 'rendering' && frame === 0 && tiles !== null && tiles.total > 0
   const secondsPerImage =
     timings.rendered > 0 ? (timings.renderMs + timings.waitMs + timings.encodeMs) / timings.rendered / 1000 : null
 
@@ -673,15 +675,16 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           <progress
             className="progress-bar"
             aria-label={t('export.panel.progressAria')}
-            max={Math.max(1, frameCount)}
-            value={phase === 'finalizing' ? frameCount : frame}
+            {...(preloading ? { max: tiles.total, value: tiles.done } : { max: Math.max(1, frameCount), value: phase === 'finalizing' ? frameCount : frame })}
           />
           <p className="type-hint">
             {phase === 'finalizing'
               ? t('export.panel.announceFinalizing')
               : phase === 'starting'
                 ? t('export.panel.preparing')
-                : [
+                : preloading
+                  ? t('export.panel.preloading', { done: formatNumber(tiles.done), total: formatNumber(tiles.total) })
+                  : [
                     t('export.panel.progress', { frame: formatNumber(frame), total: formatNumber(frameCount) }),
                     secondsPerImage !== null && t('export.panel.speedPerImage', { value: formatNumber(secondsPerImage, 1) }),
                     etaS !== null && t('export.panel.eta', { time: formatClock(etaS) }),
