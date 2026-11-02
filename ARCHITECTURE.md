@@ -259,6 +259,13 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
 4. **Imagery** (`imagery.ts`): for the terrain tile (z,x,y) and `zoomOffset = k`, fetch the `2^k × 2^k` sub-tiles
    at z+k and draw them into a `tileSize·2^k` canvas → `CanvasTexture` (sRGB, mipmaps, max anisotropy).
    If z+k > the source's maxZoom: take the deepest available tile and crop it.
+   The engine asks for `k` = « Détail de l'imagerie » only on a tile at its deepest zoom (`zoomLimit`), `k` = 0 on the
+   others (`imageryOffsetOf`): a tile that can still split is drawn only while its 64 grid cells look under 3 px, so its
+   own 256 px give at least 4/3 image pixels per screen pixel and a finer level is averaged away by the mipmaps; at the
+   deepest zoom the cells grow as the camera comes closer and the finer level shows. Measured on the sample, three 1080p
+   views: the same image as `k` on every tile (PSNR 49 dB to identical, same fine detail), 59 % fewer Esri tiles over a
+   1080p export; « Normal » (`k` = 0 everywhere) loses 15–39 % of the fine detail. The offline and preload plan
+   (`planOfflineTiles`) asks for the same levels.
    Each sub-tile is drawn as soon as it arrives (the fetcher's LRU closes evicted bitmaps: one that waited for its
    siblings could no longer be drawn; a closed one is asked for once more). A **plain white sub-tile** of a regional source
    (`source.coverage`: IGN answers one, HTTP 200, outside France from z13, `docs/sources.md`; 8 × 8 samples of the
@@ -321,7 +328,9 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      `PRELOAD_CORRIDOR_M` = 2 km, the follow camera at its lowest as « Préparer hors ligne », the export's LOD height), the
      tiles wider than the corridor first, then the others by the nearest point of the track, cut at `PRELOAD_MAX_BYTES`
      (estimated with each source's typical tile size: 250 MB phone, 400 MB tablet, 1 GB computer); `preloadTiles` fetches them
-     8 at a time (`fetchTileBlob`, a tile of an offline pack is skipped, a failure only counted). They go into the browser's
+     24 at a time in their order, each server within its `maxRequests` (`maxRequestsFor`: Esri 6, the connections a browser
+     gives an HTTP/1.1 server; its waiting requests would hold places the relief's could use) (`fetchTileBlob`, a tile of an
+     offline pack is skipped, a failure only counted). 8 at once, shared, took a third longer (cold cache, 1080p sample). They go into the browser's
      HTTP cache only (every source sends `Cache-Control`; Esri, refused in offline packs, is fetched like any view): the engine
      still asks for each tile during the render and finds it there, or fetches it again. The panel shows « Préparation des
      tuiles du film : n / N » (`reportTiles`), its time is `timings.preloadMs` (« préchargement des tuiles » in the split) and
@@ -349,8 +358,7 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      tiles without the cap, 120 at most with it (loaded + loading, every update), level 5–6 once settled (×3.1–3.8),
      about ten one-step changes over 150 frames; the nearest tile stays z15, the farthest drops from z11 to z9, and
      ~40 tiles are drawn in view instead of ~137. Computer: budget unbounded, level 0, selections bit-identical.
-     Not done: a lower imagery zoom offset for far tiles (the offset is per engine and chosen at load time; a tile
-     coming closer would keep its coarse texture), not loading the culled children on a phone (~45 % of the budget in
+     Not done: not loading the culled children on a phone (~45 % of the budget in
      that view goes to tiles out of the frustum, but they are the shadow casters).
    - Bounding sphere: from the geometry if loaded, otherwise from the tile bounds with heights [-500, 9000] m.
    - Material: `MeshStandardMaterial({ map, roughness: 1, metalness: 0 })`, `side: FrontSide`.

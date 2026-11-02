@@ -9,6 +9,8 @@ export default {
   'v50.ambiance.text': 'En mode Débutant, deux vignettes (Satellite, Carte) choisissent le fond, et trois puces (Météo du jour, Grand beau, Coucher de soleil) règlent les nuages et le soleil. Les réglages détaillés restent dans les modes Confirmé et Expert.',
   'v50.layout.title': 'L’habillage s’adapte à chaque format',
   'v50.layout.text': 'Un film exporté en 9:16, en 4:5 ou en 1:1 place seul les compteurs, le profil, la mini-carte, les logos et les cartes de titre\u00a0: rien ne se chevauche, rien n’est coupé. Dans les formats verticaux, ils laissent libres les zones que Reels, TikTok et Shorts recouvrent. Aucun réglage à faire. «\u00a0Position libre\u00a0» se règle maintenant en pourcentage de la zone de sécurité.',
+  'v50.tiles.title': 'Des exports qui attendent moins les tuiles',
+  'v50.tiles.text': 'Le détail « Fin » des photos n\'est plus chargé que là où il se voit, près de la caméra : même image, beaucoup moins de photos à télécharger. Les tuiles du film arrivent aussi en plus grand nombre à la fois, sans jamais solliciter un service plus que le navigateur ne le permet. Sur le site comme dans l\'app.',
   'v47.draw.title': 'Tracer un itinéraire sur la carte',
   'v47.draw.text': '« Ajouter » › « Tracer sur la carte… » : cliquez les points de votre sortie. Le tracé suit les sentiers (IGN en France, OpenStreetMap ailleurs), ou reste en ligne droite si vous le choisissez. Un clic de plus, et le film se prépare, sans fichier GPX.',
   'v47.ribbon.title': 'Un ruban de données en 3D',

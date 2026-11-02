@@ -101,6 +101,8 @@ export const IMAGERY_SOURCES: ImagerySource[] = [
     tileSize: 256,
     // Esri requires "Powered by Esri" plus the data credits (copyrightText of the service).
     attribution: 'Powered by Esri — Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community',
+    // HTTP/1.1 only (checked 2026-11-03): the browser's 6 connections, never more
+    maxRequests: 6,
   },
   // --- National aerial photos, never picked automatically (verified 2026-10-15) ---
   {
@@ -247,6 +249,15 @@ export function getImagerySource(id: string): ImagerySource {
  * {s} is chosen deterministically from the key so the same tile always maps to the same URL
  * (the fetcher de-duplicates and caches by URL).
  */
+const hostOf = (url: string) => /^https?:\/\/([^/]+)/.exec(url)?.[1] ?? ''
+
+/** Most requests at once to the server of `url`: `maxRequests` of the source it belongs to, no limit otherwise. */
+export function maxRequestsFor(url: string): number {
+  const host = hostOf(url)
+  const source = [...TERRAIN_SOURCES, ...IMAGERY_SOURCES].find((s) => s.maxRequests !== undefined && hostOf(s.urlTemplate) === host)
+  return source?.maxRequests ?? Infinity
+}
+
 export function buildTileUrl(source: TileSourceBase, key: TileKey): string {
   // 2 ** z rather than 1 << z: the shift wraps to 32 bits (negative at z = 31).
   const flippedY = 2 ** key.z - 1 - key.y
