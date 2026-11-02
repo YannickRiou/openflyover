@@ -3486,10 +3486,10 @@ exports) gets it from the terrain source of the settings.
   grid puts vertices inside the water: a river follows its valley and the opacity fades toward the bank (`fade` = distance to the closest
   edge / 40 m, capped at 1). **The sea** has no grid: `buildSeaMesh` triangulates the polygon with its holes as it is (flat water
   needs no vertex inside), with `fade` 1 everywhere: where the relief rises above the plane the land hides the water, so the
-  shore is the relief's own. **A line river** (`riverStrip.ts`, tested `buildRiverStrip`): the polyline resampled every 60 m
-  (`STRIP_STEP_M`, so the ribbon follows its valley), three vertices per sample (left bank, middle, right bank, banks mitred
+  shore is the relief's own. **A line river** (`riverStrip.ts`, tested `buildRiverStrip`): the polyline resampled every 10 m
+  (`STRIP_STEP_M`, the track's step, so the ribbon follows its valley: 60 m pieces cut through a steep slope and the stream showed in broken bits), three vertices per sample (left bank, middle, right bank, banks mitred
   at bends up to twice the half-width), `fade` 1 in the middle and 0 on the banks (`EDGE_FADE`), triangles counter-clockwise like
-  the lakes'. The ribbons of a track total at most a few thousand samples.
+  the lakes'. The ribbons of a track total at most 20,000 samples (`MAX_LINE_LENGTH_M`, 200 km, at 10 m), mostly far fewer.
 - **Draping** (`WaterLayer`, in `TerrainLayer`): like the track, `engine.sampleHeight` × exaggeration + 2 m, re-draped
   (debounced, flushed by the export via `registerDrapeFlush`) on each `engine.onChange`. A lake is flat at the 90th percentile of the
   heights of its vertices away from the shore (`fade` ≥ 0.5; the median of all of them when fewer than 4: `lakeLevel` in
@@ -3521,7 +3521,7 @@ exports) gets it from the terrain source of the settings.
   lacs et rivières)" (reflective water: sea, lakes and rivers; « Lacs et rivières reflétants » before 4.0, same field, so the
   render history and the old projects are unchanged) checkbox and "Intensité de l'eau" (water intensity) slider in the "Fond de carte" section.
 - **Limits**: the reflection is that of the average sky (SH probe), neither of mountains nor of clouds; lakes at DEM level (no OSM
-  level); a very steep river keeps 60 m steps; only the 8 km corridor is queried (4 km for the lines); the sea is flat (no tide, no swell, no depth colour) and its shore is
+  level); only the 8 km corridor is queried (4 km for the lines); the sea is flat (no tide, no swell, no depth colour) and its shore is
   the OSM coast cut by the relief, so a DEM below 0.5 m just inside the OSM coast is flooded (tidal flats, estuaries up to the
   limit OSM maps as coast); a river mapped in a gap of its own riverbank polygon is drawn over it; a stream is a 2.5 m ribbon,
   widened up to 4 × from high (4.1), so from the orbit it is a thin, faint line (the fade towards its banks is kept); rivers, ribbons and the sea never freeze (moving water; only the

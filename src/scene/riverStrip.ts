@@ -10,8 +10,11 @@ import type { WaterMesh } from './waterMesh'
 
 const M_PER_DEG = 111_320
 
-/** Longest piece of ribbon between two samples (metres): the relief is sampled at each. */
-export const STRIP_STEP_M = 60
+/**
+ * Longest piece of ribbon between two samples (metres): the relief is sampled at each. The track's step
+ * (`DENSIFY_STEP_M`): longer pieces cut through the slope of a steep stream, which then shows in broken bits.
+ */
+export const STRIP_STEP_M = 10
 /** Opacity factor in the middle of the ribbon, and on its banks. */
 export const CENTRE_FADE = 1
 export const EDGE_FADE = 0

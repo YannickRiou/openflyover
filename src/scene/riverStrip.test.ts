@@ -12,7 +12,7 @@ const local = (strip: ReturnType<typeof buildRiverStrip>, v: number) => [(strip.
 
 describe('buildRiverStrip', () => {
   it('is a ribbon of the given width around the line, three vertices per sample', () => {
-    const strip = buildRiverStrip(east(3, 100), 12)
+    const strip = buildRiverStrip(east(3, 100), 12, 60)
     // two 100 m pieces cut in two to stay under 60 m: 5 samples
     expect(strip.fade).toHaveLength(15)
     for (let i = 0; i < 5; i++) {
