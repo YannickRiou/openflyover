@@ -50,6 +50,9 @@ describe('previewBudget', () => {
   it('« Auto » follows the measured rung, « Légère » is rung 1 and « Complète » rung 0 whatever the measure', () => {
     expect(previewRung('auto', 0)).toBe(0)
     expect(previewRung('auto', 2)).toBe(2)
+    // a film being made in the « File de rendus » window: light at least
+    expect(previewRung('full', 0, true)).toBe(1)
+    expect(previewRung('auto', 2, true)).toBe(2)
     expect(previewRung('light', 0)).toBe(1)
     expect(previewRung('light', 2)).toBe(1)
     expect(previewRung('full', 2)).toBe(0)
