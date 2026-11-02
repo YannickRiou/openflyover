@@ -128,6 +128,12 @@ describe('planOfflineTiles', () => {
       Math.max(...planOfflineTiles(input({ imageryZoomOffset: offset })).tiles.filter((t) => t.sourceId === 'ign-ortho').map((t) => Number(/TILEMATRIX=(\d+)/.exec(t.url)?.[1])))
     expect(imageryZooms(0)).toBe(17)
     expect(imageryZooms(1)).toBe(18)
+    // the finer imagery only on the deepest relief tiles, as the engine draws it: elsewhere the relief's own zoom
+    const fine = planOfflineTiles(input({ imageryZoomOffset: 1 }))
+    const coarse = planOfflineTiles(input({ imageryZoomOffset: 0 }))
+    const ignZooms = (plan: typeof fine) => new Set(plan.tiles.filter((t) => t.sourceId === 'ign-ortho').map((t) => Number(/TILEMATRIX=(\d+)/.exec(t.url)?.[1])))
+    expect([...ignZooms(fine)].filter((z) => z < 17)).toEqual([...ignZooms(coarse)].filter((z) => z < 17))
+    expect(fine.imageryTiles).toBeLessThan(coarse.imageryTiles + 4 * (fine.terrainByZoom[17] ?? 0))
     // OpenTopoMap stops at 17: deeper terrain tiles reuse (crop) the same imagery tiles
     const topo = planOfflineTiles(input({ imagery: getImagerySource('opentopomap'), imageryZoomOffset: 2 }))
     expect(topo.imageryTiles).toBeLessThan(topo.terrainTiles * 16)

@@ -170,6 +170,11 @@ export interface TileSourceBase {
   attribution: string
   /** where the source has data; undefined = worldwide */
   coverage?: LonLatBounds
+  /**
+   * most requests at once to its server: one that only speaks HTTP/1.1 gets 6 connections from the browser, and more
+   * requests would only wait in our queues, ahead of the other sources' (`maxRequestsFor`); undefined = no limit of ours
+   */
+  maxRequests?: number
 }
 
 /** How elevation is encoded in RGB tiles. */

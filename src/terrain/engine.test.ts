@@ -343,6 +343,10 @@ describe('createTerrainEngine', () => {
     const drawn = visible.filter((m) => view.intersectsSphere(m.geometry.boundingSphere!))
     expect(drawn.length).toBeLessThan(visible.length)
     expect(engine.stats.visibleTiles).toBe(drawn.length)
+    // the finer imagery level only on the tiles at the deepest zoom: a root draws its own level
+    const offsets = new Map((deps.loadImageryTexture as ReturnType<typeof vi.fn>).mock.calls.map(([key, , , options]) => [key.z, options.zoomOffset]))
+    expect(offsets.get(ROOT_ZOOM)).toBe(0)
+    expect(offsets.get(ROOT_ZOOM + 1)).toBe(1)
     expect(engine.stats.loadedTiles).toBe(meshesOf(engine).length)
   })
 

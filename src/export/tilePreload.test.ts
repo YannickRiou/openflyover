@@ -78,6 +78,29 @@ describe('preloadTiles', () => {
     expect(progress.at(-1)).toBe(20)
   })
 
+  it('keeps a server within its own limit, the others taking the free places', async () => {
+    const urls = Array.from({ length: 40 }, (_, i) => `https://${i % 2 ? 'slow' : 'fast'}/${i}`)
+    const running = { slow: 0, fast: 0 }
+    const most = { slow: 0, fast: 0, all: 0 }
+    const result = await preloadTiles(urls, {
+      download: async (url) => {
+        const host = url.includes('slow') ? 'slow' : 'fast'
+        running[host]++
+        most[host] = Math.max(most[host], running[host])
+        most.all = Math.max(most.all, running.slow + running.fast)
+        await new Promise((r) => setTimeout(r, host === 'slow' ? 5 : 1))
+        running[host]--
+      },
+      isCanceled: () => false,
+      concurrency: 6,
+      maxRequestsOf: (url) => (url.includes('slow') ? 2 : Infinity),
+    })
+    expect(result).toEqual({ done: 40, failed: 0 })
+    expect(most.slow).toBe(2)
+    expect(most.fast).toBe(4)
+    expect(most.all).toBe(6)
+  })
+
   it('stops asking once the export is canceled', async () => {
     const urls = Array.from({ length: 50 }, (_, i) => `https://t/${i}`)
     let calls = 0
