@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v50.margins.title': 'Ränder nach Wahl',
+  'v50.margins.text': 'Das Kästchen „Sicherheitsränder“ des Exports hält das Overlay von den Rändern fern und in 9:16 und 4:5 außerhalb der Bereiche von Reels, TikTok und Shorts. Es hakt sich selbst an, wenn Sie eine Plattform wählen. Ohne Haken rückt das Overlay an die Ränder und das ganze Bild gehört dem Film.',
   'v50.modes.title': 'Drei Modi der Oberfläche',
   'v50.modes.text': 'Einsteiger, Fortgeschritten oder Experte: Wählen Sie, wie viele Einstellungen Sie sehen, in der oberen Leiste oder in den Einstellungen. Der Film ist in den drei Modi derselbe. Eine geänderte Einstellung bleibt immer sichtbar, und Ctrl+K findet auch die ausgeblendeten.',
   'v50.ambiance.title': 'Kartenhintergrund und Stimmung mit einem Klick',

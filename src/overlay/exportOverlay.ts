@@ -138,6 +138,7 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
     stage: sequence ? stageCardAt(sequence, time, settings.film, (k) => stageWeatherOf(sequence, k, tracks[0]?.id)) : null,
     day: !sequence && settings.film.dayCards?.enabled && time.dayCardsS ? dayCardAt(dayFiguresOf(filmTrackOf(tracks, settings.race) ?? tracks[0], useWeatherStore.getState().series), time, settings.film.dayCards) : null,
     markerColor: leadMarkerColors(settings.marker, (trackUnderMarker(tracks, settings.race, progress)?.track ?? filmTrackOf(tracks, settings.race))?.color ?? '#FFFFFF').ball,
+    margins: settings.video.margins,
     credits: overlayCredits(sources),
     shortCredits: overlayShortCredits(sources),
     permanentCredits: overlayPermanentCredits(sources),

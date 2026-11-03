@@ -164,7 +164,7 @@ export interface ExportState {
   /** frames encoded so far / total */
   frame: number
   frameCount: number
-  /** performance.now() when rendering started */
+  /** performance.now() when rendering started, moved to the first frame once the film is prepared (soundtrack, encoder, tiles) */
   startedAt: number
   /** estimated remaining time in seconds, null until the first frame */
   etaS: number | null

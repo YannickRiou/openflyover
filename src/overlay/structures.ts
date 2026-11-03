@@ -7,7 +7,7 @@
  */
 import { formatDuration, formatNumber } from '../ui/format'
 import type { OverlayFrame } from './data'
-import { COUNTER_LABELS, PROFILE_MIN_SPAN_M, SAFE_MARGIN, cardFigures, cardStats, counterText, endLine, fillText, measure, minimapWidget, openingText, truncate, wrapLines } from './draw'
+import { COUNTER_LABELS, PROFILE_MIN_SPAN_M, cardFigures, cardStats, counterText, endLine, fillText, measure, minimapWidget, openingText, truncate, wrapLines } from './draw'
 import type { Painter, TextStyle, Widget } from './draw'
 import { COUNTER_IDS } from './settings'
 import type { CounterId, LaidOutWidget, OverlaySettings, StyledWidget } from './settings'
@@ -214,7 +214,7 @@ function cinema(i: StructureInput): Structure {
   const { p, of, frame, settings, slot, live, markerColor } = i
   const { ctx, u, size } = p
   const barH = CINEMA_BAR * size.height
-  const margin = size.width * SAFE_MARGIN
+  const margin = size.width * p.margin
   const topMiddle = barH / 2
   const bottomMiddle = size.height - barH / 2
 
@@ -371,7 +371,7 @@ function journal(i: StructureInput): Structure {
   const pad = 2.6 * u
   const x0 = pad
   const innerW = sheetW - 2 * pad
-  const areaX = Math.max(W * SAFE_MARGIN, sheetW + 2 * u)
+  const areaX = Math.max(W * p.margin, sheetW + 2 * u)
 
   const ownTitle = slot('title') && settings.title.enabled
   const ownEnd = slot('end') && settings.end.enabled
@@ -472,7 +472,7 @@ function journal(i: StructureInput): Structure {
   }
 
   return {
-    area: { x: areaX, y: H * SAFE_MARGIN, w: W * (1 - SAFE_MARGIN) - areaX, h: H * (1 - 2 * SAFE_MARGIN) },
+    area: { x: areaX, y: H * p.margin, w: W * (1 - p.margin) - areaX, h: H * (1 - 2 * p.margin) },
     draw() {
       ctx.save()
       ctx.fillStyle = theme.panel?.fill ?? JOURNAL_PAPER
@@ -505,7 +505,7 @@ function tableau(i: StructureInput): Structure {
   const H = size.height
   const bandH = TABLEAU_BAND * H
   const bandY = H - bandH
-  const margin = W * SAFE_MARGIN
+  const margin = W * p.margin
   const edge = 0.35 * u
   const bandFill = theme.panel?.fill ?? 'rgba(12, 18, 23, 0.84)'
 
@@ -572,7 +572,7 @@ function tableau(i: StructureInput): Structure {
     const blockW = Math.max(...lines.map((line) => measure(pt, line, style))) + 2 * padX
     const lineH = style.sizePx * 1.6
     const blockH = lineH * lines.length
-    const y = H * SAFE_MARGIN
+    const y = H * p.margin
     ctx.fillStyle = pt.theme.accent
     ctx.fillRect(0, y, blockW, blockH)
     lines.forEach((line, k) => fillText(pt, line, padX, baselineAt(y + lineH * (k + 0.5), style.sizePx), style))
@@ -599,7 +599,7 @@ function tableau(i: StructureInput): Structure {
     const map: Widget | null = minimapWidget(flat, frame, withMinimap(settings, s * fit, false), live, markerColor)
     if (!map) return
     const cx = W - margin - radius
-    const cy = H * SAFE_MARGIN + radius
+    const cy = H * p.margin + radius
     ctx.save()
     ctx.beginPath()
     ctx.arc(cx, cy, radius, 0, Math.PI * 2)
@@ -616,7 +616,7 @@ function tableau(i: StructureInput): Structure {
   }
 
   return {
-    area: { x: margin, y: H * SAFE_MARGIN, w: W - 2 * margin, h: bandY - 1.5 * u - H * SAFE_MARGIN },
+    area: { x: margin, y: H * p.margin, w: W - 2 * margin, h: bandY - 1.5 * u - H * p.margin },
     draw() {
       ctx.save()
       ctx.fillStyle = bandFill

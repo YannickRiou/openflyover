@@ -122,6 +122,8 @@ export const LOGO_MAX_SIZE_PX = 512
 export const LOGOS_MAX = 4
 /** Safe area: 5 % of the frame on each side. */
 export const SAFE_MARGIN = 0.05
+/** With the margins off (`video.margins`): 2 % of the frame on each side, so nothing touches the edge. */
+export const EDGE_MARGIN = 0.02
 /** Largest free position of a widget from its anchor, either way (share of the safe area): beyond it the widget is off the frame. */
 export const OFFSET_MAX = 1
 

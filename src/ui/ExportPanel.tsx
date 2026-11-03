@@ -199,7 +199,7 @@ function DockHead({ id, modified, busy, onClose }: { id: string; modified?: (key
 }
 
 /**
- * "Exporter" drawer, « Vidéo » mode, in sections: « Format » (aspect tiles, resolution, frame rate), « Encodage »
+ * "Exporter" drawer, « Vidéo » mode, in sections: « Format » (platforms, safety margins, aspect tiles, resolution, frame rate), « Encodage »
  * (bitrate of the quality or chosen by hand, codec and container, key frames, sound), « Rendu » (the quality's render
  * tier), then the overlay alone, the estimate, start / cancel, progress, error and download. The still image is in the
  * « Affiche » mode.
@@ -219,8 +219,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const startTime = useAppStore((s) => s.tracks[0]?.stats.startTime)
   const setSetting = useAppStore((s) => s.setSetting)
   // only what the panel draws: `cancelRequested`, `request`… changing does not redraw it
-  const { phase, frame, frameCount, etaS, result, error, timings, tiles } = useExportStore(
-    useShallow((s) => ({ phase: s.phase, frame: s.frame, frameCount: s.frameCount, etaS: s.etaS, result: s.result, error: s.error, timings: s.timings, tiles: s.tiles })),
+  const { phase, frame, frameCount, etaS, result, error, tiles } = useExportStore(
+    useShallow((s) => ({ phase: s.phase, frame: s.frame, frameCount: s.frameCount, etaS: s.etaS, result: s.result, error: s.error, tiles: s.tiles })),
   )
   const id = useId()
   /** « Habillage seul »: the overlay alone, transparent WebM to lay over one's own footage */
@@ -290,8 +290,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const bitrateCapped = bitrate < targetBitrate(encodeOptions, codec?.codec ?? 'avc', Infinity)
   // the tiles of the film fetched before its first frame (`export/tilePreload.ts`)
   const preloading = phase === 'rendering' && frame === 0 && tiles !== null && tiles.total > 0
-  const secondsPerImage =
-    timings.rendered > 0 ? (timings.renderMs + timings.waitMs + timings.encodeMs) / timings.rendered / 1000 : null
+  // the pace of the remaining time (all the time spent since the first frame): the two figures of the line agree
+  const secondsPerImage = etaS !== null && frameCount > frame ? etaS / (frameCount - frame) : null
 
   // Download the film automatically once it is ready (the link stays available), and say so.
   useEffect(() => {
@@ -408,6 +408,12 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </div>
         <p className="type-hint">{t('export.panel.platformsHint')}</p>
       </fieldset>
+      <div className="field">
+        <Checkbox checked={video.margins} disabled={busy} onChange={(margins) => update({ margins })}>
+          {t('export.panel.margins')}
+        </Checkbox>
+        <p className="type-hint">{t('export.panel.marginsHint')}</p>
+      </div>
       <ModeGate min="confirme" paths={['video.aspect', 'video.resolution', 'video.fps']}>
       <fieldset className="field min-w-0" disabled={busy}>
         <legend id={`${id}-proportions`} className="type-label">

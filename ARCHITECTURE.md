@@ -335,7 +335,8 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      HTTP cache only (every source sends `Cache-Control`; Esri, refused in offline packs, is fetched like any view): the engine
      still asks for each tile during the render and finds it there, or fetches it again. The panel shows « Préparation des
      tuiles du film : n / N » (`reportTiles`), its time is `timings.preloadMs` (« préchargement des tuiles » in the split) and
-     the remaining time starts after it (`startedAt` moved on).
+     the remaining time starts at the first frame (`startedAt` set again there, after the soundtrack, the encoder and the
+     tiles, all made once). The panel's « ≈ x s / image » is that same pace (`etaS` over the frames left), so the two agree.
    - **The cap is hard: the level of detail gives way** (phone, tablet). A low view looking at the horizon in a portrait
      film needs 220–390 tiles by itself (iPhone 12: 147 → 224 loaded during the « descente », tab killed), so the
      selection is made to fit: `solveLodLevel` multiplies `errorTargetPx` by `LOD_STEP` (1.1) per level, 0 to
@@ -2938,7 +2939,11 @@ exports) gets it from the terrain source of the settings.
   **Platform presets** (`PLATFORM_PRESETS`, chips above « Format »): YouTube 4K (16:9, 4K, 30 i/s, H.264, 40 Mbit/s), YouTube HD
   (1080p, 12), Reels / TikTok / Shorts (9:16, 1080p, 10), Instagram / Facebook (4:5, 1080p, 8) and square (1:1, 8): one click sets
   aspect, resolution, fps, `codec: 'avc'` and a bitrate by hand (`withPlatformPreset`, one undo step; the quality, key frames, sound
-  and name stay; `platformPresetOf` lights the chip the settings match exactly). A phone or tablet still caps the size
+  and name stay; `platformPresetOf` lights the chip the settings match exactly), and `margins: true`.
+  **Safety margins** (`video.margins`, « Marges de sécurité », false by default): the overlay keeps `SAFE_MARGIN` (5 %) from each
+  edge and, in 9:16 / 4:5, out of `phoneInterfaceFor`; off, `EDGE_MARGIN` (2 %) and no interface areas. `overlayExtras` passes it to
+  `drawOverlay` (`OverlayExtras.margins`), which sets `Painter.margin` for the widgets and the style structures. `withVideoDefaults`:
+  a setting saved without it gets `true` when it matches a platform preset (its film was made for one), else `false`. A phone or tablet still caps the size
   (`exportResolutionNote`). **File name template** (`video.nameTemplate`, `''` = the track's name, ≤ `NAME_TEMPLATE_MAX` = 120):
   `expandNameTemplate` with `{project}` `{track}` `{format}` `{resolution}` `{fps}` `{date}` (the recording's date, else today), an
   unknown word left as typed; for a single film (the batches keep « projet – format »). **Time before the first film**:
@@ -3035,7 +3040,8 @@ exports) gets it from the terrain source of the settings.
   session (`filmRate`, measured by the store at the end of a film; nothing before the first).
 - **Main thread**: once per frame the loop yields (`yieldToEventLoop`: `scheduler.yield()`, else a message port); the
   progress reaches the store at most every 250 ms (`throttledReporter`, last frame forced); the overlay preview
-  (`OverlayCanvas`) and the timeline are frozen while an export runs and redrawn at its end.
+  (`OverlayCanvas`) is emptied while an export or a batch runs (the view shows its frames, a frozen overlay beside
+  it would confuse) and drawn again at its end; the timeline is frozen and redrawn at its end.
 - **Encoding pipeline**: the encoder takes the canvas synchronously in `addFrame` (`VideoSampleSource` +
   `new VideoSample(canvas)` before any await; ffmpeg path: `getImageData`), so frame i is encoded while frame i+1
   settles and renders (one `addFrame` in flight). Right after the last render of an image the loop waits for the GPU
