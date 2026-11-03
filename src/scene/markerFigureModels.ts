@@ -3,10 +3,13 @@
  * runners, the skiers, the swimmer, the kayak, the horse, the paraglider, the motorbike, the car and the plane. Same rules
  * as the cyclist: primitives of `markerModelKit`, one flat colour, a dark outline, +Z forward, `pose(phase)` without memory.
  */
-import { Group, Vector3 } from 'three'
+import { CylinderGeometry, Group, Mesh, Quaternion, Vector3 } from 'three'
+import type { MeshBasicMaterial } from 'three'
 import type { MarkerFigure } from './markerSettings'
 import { ball, bar, begin, drum, ellipsoid, extrusion, inkBall, joint, limb, pane, rod, stroke, tyre } from './markerModelKit'
 import type { Build, MarkerModel } from './markerModelKit'
+import { contactShadow, createPalette } from './markerLab'
+import type { Palette, PartName } from './markerLab'
 
 const v = (x = 0, y = 0, z = 0) => new Vector3(x, y, z)
 const SIDES = [-1, 1] as const
@@ -35,6 +38,9 @@ interface Spec {
   armBend?: (side: number) => Vector3
   /** Sets the targets of the feet and hands (and moves the trunk) for `phase`. */
   motion(phase: number, s: State, rest: Rest): void
+  /** lab: one colour per part, and a soft shadow on the ground */
+  palette?: Palette
+  shadow?: boolean
   /** More parts that follow the figure; returns what moves them after each pose. */
   extras?(build: Build, s: State): ((s: State) => void) | void
 }
@@ -64,20 +70,49 @@ function createBiped(spec: Spec): MarkerModel {
   const legBend = spec.legBend ?? v(0, 0.1, 1)
   const armBend = spec.armBend ?? ((side: number) => v(0.5 * side, -0.8, -0.6))
 
+  const paint = (name: PartName) => {
+    if (spec.palette) build.fill = spec.palette.parts[name]
+  }
+  paint('jacket')
   const torso = limb(build, 0.088, 0.108)
+  paint('trousers')
   const hipBall = ball(build, 0.088)
+  paint('jacket')
   const shoulders = rod(build, 0.062)
+  paint('trousers')
   const pelvis = rod(build, 0.07)
+  paint('skin')
   const neck = rod(build, 0.045)
-  const ends = [ball(build, 0.062), ball(build, 0.062), ball(build, 0.07), ball(build, 0.07)]
+  paint('jacket')
+  const ends = [ball(build, 0.062), ball(build, 0.062)]
+  paint('trousers')
+  ends.push(ball(build, 0.07), ball(build, 0.07))
   const sockets = SIDES.map(() => ball(build, 0.07))
+  paint('skin')
   const headBall = ball(build, 0.088)
+  paint('hat')
   const hats = spec.hat === 'none' ? [] : HATS[spec.hat].map(([size, offset]) => ({ mesh: ellipsoid(build, size.x, size.y, size.z), offset }))
 
-  const arms = SIDES.map((side) => ({ side, upper: limb(build, 0.052, 0.04), lower: limb(build, 0.04, 0.032), elbow: ball(build, 0.04), hand: ball(build, 0.038) }))
-  const legs = SIDES.map((side) => ({ side, thigh: limb(build, 0.07, 0.052), shin: limb(build, 0.052, 0.038), knee: ball(build, 0.052), foot: ellipsoid(build, 0.05, 0.045, 0.09), sole: inkBall(build, 0.052, 0.012, 0.092) }))
+  paint('jacket')
+  const arms = SIDES.map((side) => {
+    paint('jacket')
+    const upper = limb(build, 0.052, 0.04)
+    const lower = limb(build, 0.04, 0.032)
+    const elbow = ball(build, 0.04)
+    paint('skin')
+    return { side, upper, lower, elbow, hand: ball(build, 0.038) }
+  })
+  const legs = SIDES.map((side) => {
+    paint('trousers')
+    const thigh = limb(build, 0.07, 0.052)
+    const shin = limb(build, 0.052, 0.038)
+    const knee = ball(build, 0.052)
+    paint('boots')
+    return { side, thigh, shin, knee, foot: ellipsoid(build, 0.05, 0.045, 0.09), sole: inkBall(build, 0.052, 0.012, 0.092) }
+  })
   const goggles = spec.hat === 'helmet' || spec.hat === 'swim' ? inkBall(build, 0.082, 0.026, 0.03) : null
   const after = spec.extras?.(build, s)
+  if (spec.palette && spec.shadow) contactShadow(build.root)
 
   const a = v()
   const b = v()
@@ -128,8 +163,10 @@ function createBiped(spec: Spec): MarkerModel {
       after?.(s)
     },
     setColor(r, g, bl) {
-      build.fill.color.setRGB(r, g, bl)
+      if (spec.palette) spec.palette.setColor(r, g, bl)
+      else (build.fill as MeshBasicMaterial).color.setRGB(r, g, bl)
     },
+    setLight: spec.palette ? (r, g, bl) => spec.palette!.setLight(r, g, bl) : undefined,
   }
   model.pose(0)
   return model
@@ -184,6 +221,57 @@ function pack(size: Vector3, along: number, behind: number) {
 
 function createHiker(): MarkerModel {
   return createBiped({ ...STAND, hat: 'hat', motion: WALK, extras: pack(v(0.14, 0.24, 0.1), 0.62, 0.17) })
+}
+
+/** Lab (variant A): the hiker with several colours, trekking poles, a bigger swing of the arms and a twist of the trunk. */
+function createHikerA(): MarkerModel {
+  const palette = createPalette()
+  const lively = (phase: number, s: State, rest: Rest) => {
+    const up = 0.016 * Math.cos(2 * phase)
+    s.hip.y = rest.hip.y + up
+    s.shoulder.y = rest.shoulder.y + up
+    s.shoulder.z = rest.shoulder.z + 0.05
+    s.head.y = rest.head.y + up * 1.3
+    s.head.z = rest.head.z + 0.07
+    s.hip.x = 0.018 * Math.sin(phase)
+    s.shoulder.x = -0.014 * Math.sin(phase)
+    s.head.x = -0.01 * Math.sin(phase)
+    SIDES.forEach((side, i) => {
+      const angle = phase + (i === 0 ? Math.PI : 0)
+      s.foot[i].set(0.1 * side, ANKLE + 0.1 * Math.max(0, Math.cos(angle)), rest.hip.z + 0.28 * Math.sin(angle))
+      // the hand swings further and rises as it goes forward: the elbow bends
+      const forward = Math.max(0, -Math.sin(angle))
+      s.hand[i].set(0.21 * side, s.shoulder.y - 0.5 + 0.12 * forward, s.shoulder.z + 0.04 - 0.3 * Math.sin(angle))
+    })
+  }
+  return createBiped({
+    ...STAND,
+    hat: 'hat',
+    palette,
+    shadow: true,
+    motion: lively,
+    extras(build) {
+      build.fill = palette.parts.pack
+      const mesh = ellipsoid(build, 0.15, 0.25, 0.11)
+      const roll = ellipsoid(build, 0.16, 0.06, 0.07)
+      build.fill = palette.parts.pole
+      const poles = SIDES.map(() => ({ shaft: rod(build, 0.012, true), grip: ball(build, 0.022) }))
+      const top = v()
+      const tip = v()
+      return (st) => {
+        mesh.position.lerpVectors(st.hip, st.shoulder, 0.62).add(v(0, 0, -0.17))
+        roll.position.copy(mesh.position).add(v(0, 0.3, -0.01))
+        poles.forEach(({ shaft, grip }, i) => {
+          top.copy(st.hand[i]).add(v(0, 0.05, 0.02))
+          // planted a little ahead of the hand on the way forward, trailing behind it on the way back
+          tip.copy(st.hand[i]).add(v(0.04 * (i === 0 ? -1 : 1), -1.0, -0.22 + 0.5 * (st.hand[i].z - st.shoulder.z)))
+          tip.y = 0.02
+          shaft.link(top, tip)
+          grip.position.copy(top)
+        })
+      }
+    },
+  })
 }
 
 function createMountaineer(): MarkerModel {
@@ -398,6 +486,74 @@ function createParaglider(): MarkerModel {
   })
 }
 
+/** A line (rope) that is moved after each pose; dark, thin, no outline. */
+function movingLine(build: Build, radius: number) {
+  const mesh = new Mesh(new CylinderGeometry(radius, radius, 1, 6, 1), build.ink)
+  build.root.add(mesh)
+  const dir = v()
+  const turn = new Quaternion()
+  return (a: Vector3, b: Vector3) => {
+    dir.subVectors(b, a)
+    const length = Math.max(dir.length(), 1e-6)
+    mesh.position.addVectors(a, b).multiplyScalar(0.5)
+    mesh.quaternion.copy(turn.setFromUnitVectors(v(0, 1, 0), dir.divideScalar(length)))
+    mesh.scale.set(1, length, 1)
+  }
+}
+
+/** Lab (variant A): the paraglider with a striped wing that rolls a little, a harness, legs and brakes that move. */
+function createParagliderA(): MarkerModel {
+  const palette = createPalette()
+  return createBiped({
+    hip: v(0, 0.45, 0),
+    shoulder: v(0, 0.95, -0.12),
+    head: v(0, 1.13, -0.08),
+    hat: 'helmet',
+    palette,
+    legBend: v(0, 1, 0.3),
+    armBend: (side) => v(0.6 * side, 0, -0.5),
+    motion(phase, s) {
+      SIDES.forEach((side, i) => {
+        s.foot[i].set(0.1 * side, 0.1 + 0.03 * Math.sin(phase * 0.7 + i), 0.5 + 0.07 * Math.sin(phase + i * Math.PI))
+        s.hand[i].set(0.22 * side, 1.4 - 0.05 * Math.max(0, Math.sin(phase * 0.5 + i * Math.PI)), -0.02)
+      })
+    },
+    extras(build, s) {
+      build.fill = palette.parts.pack
+      ellipsoid(build, 0.17, 0.08, 0.22, v(0, 0.38, -0.02))
+      // the harness: a back plate behind the pilot
+      ellipsoid(build, 0.16, 0.3, 0.07, v(0, 0.72, -0.2))
+      const slabs: Mesh[] = []
+      for (let k = -2; k <= 2; k++) {
+        build.fill = k % 2 === 0 ? palette.parts.wing : palette.parts.wingLight
+        slabs.push(ellipsoid(build, 0.34, 0.05, 0.55))
+      }
+      const lines = [-2, -1, 1, 2].map(() => movingLine(build, 0.006))
+      const ends = [-2, -1, 1, 2].map((k) => v(0.16 * Math.sign(k), 0.98, -0.12))
+      const place = (st: State) => {
+        const roll = 0.05 * Math.sin(st.phase * 0.5)
+        const sway = 0.03 * Math.sin(st.phase * 0.5)
+        slabs.forEach((slab, idx) => {
+          const k = idx - 2
+          const x = k * 0.62
+          const y = 2.35 - 0.06 * k * k
+          // the wing rolls about the pilot's head: rotate the slab positions about a point below it
+          const cx = x * Math.cos(roll) - (y - 1.1) * Math.sin(roll)
+          const cy = (y - 1.1) * Math.cos(roll) + x * Math.sin(roll) + 1.1
+          slab.position.set(cx + sway, cy, 0.08)
+          slab.rotation.z = -k * 0.12 + roll
+        })
+        ;[-2, -1, 1, 2].forEach((k, j) => {
+          const idx = k + 2
+          lines[j](v(slabs[idx].position.x, slabs[idx].position.y - 0.03, 0.08), ends[j])
+        })
+      }
+      place(s)
+      return place
+    },
+  })
+}
+
 /** A two-wheeled machine: wheels, then what each machine adds. The returned model has no rider. */
 function wheels(build: Build, radius: number, tube: number, z: number): void {
   for (const at of [-z, z]) tyre(build, radius - tube, tube).position.set(0, radius, at)
@@ -448,7 +604,7 @@ function plain(size: number, parts: (build: Build) => ((phase: number) => void) 
       move?.(phase)
     },
     setColor(r, g, b) {
-      build.fill.color.setRGB(r, g, b)
+      ;(build.fill as MeshBasicMaterial).color.setRGB(r, g, b)
     },
   }
   model.pose(0)
@@ -512,4 +668,10 @@ export const FIGURE_MODELS: Partial<Record<MarkerFigure, () => MarkerModel>> = {
   moto: createMotorbike,
   voiture: createCar,
   avion: createPlane,
+}
+
+/** Lab variant A: the figures redrawn with colours, shading and a shadow. */
+export const LAB_MODELS_A: Partial<Record<MarkerFigure, () => MarkerModel>> = {
+  randonneur: createHikerA,
+  parapente: createParagliderA,
 }

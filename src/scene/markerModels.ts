@@ -10,7 +10,9 @@ import type { BufferGeometry } from 'three'
 import type { MarkerFigure } from './markerSettings'
 import { MODEL_HEIGHT, UP, ball, begin, inkBall, joint, limb, rod, tyre } from './markerModelKit'
 import type { MarkerModel } from './markerModelKit'
-import { FIGURE_MODELS } from './markerFigureModels'
+import { FIGURE_MODELS, LAB_MODELS_A } from './markerFigureModels'
+import { labMode } from './markerLab'
+import { createGlbHiker } from './markerGlb'
 
 export { MODEL_HEIGHT, joint }
 export type { MarkerModel }
@@ -126,7 +128,7 @@ export function createCyclist(options: { bags?: boolean; battery?: boolean; fat?
       }
     },
     setColor(r, g, b) {
-      build.fill.color.setRGB(r, g, b)
+      (build.fill as MeshBasicMaterial).color.setRGB(r, g, b)
     },
   }
   model.pose(0)
@@ -149,6 +151,8 @@ export function hasMarkerModel(figure: MarkerFigure): boolean {
 
 /** A new model of `figure`, null when it has none. */
 export function createMarkerModel(figure: MarkerFigure): MarkerModel | null {
+  if (labMode === 'a' && LAB_MODELS_A[figure]) return LAB_MODELS_A[figure]!()
+  if (labMode === 'b' && figure === 'randonneur') return createGlbHiker()
   return BUILDERS[figure]?.() ?? null
 }
 
