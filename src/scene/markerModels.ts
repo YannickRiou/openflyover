@@ -11,6 +11,7 @@ import type { MarkerFigure } from './markerSettings'
 import { MODEL_HEIGHT, UP, ball, begin, inkBall, joint, limb, rod, tyre } from './markerModelKit'
 import type { MarkerModel } from './markerModelKit'
 import { FIGURE_MODELS } from './markerFigureModels'
+import { bikepackingBike, electricBike, mountainBike, roadBike } from './markerGlbRiders'
 import { createCarQuaternius, createHikerAdventurer, createMotorbikeCartoon, createParagliderWing, createPlaneLight, createRunnerAdventurer, createTrailRunnerAdventurerF } from './markerGlbFigures'
 
 export { MODEL_HEIGHT, joint }
@@ -136,10 +137,10 @@ export function createCyclist(options: { bags?: boolean; battery?: boolean; fat?
 
 /** The figures that have a 3D model, and what builds it. */
 const BUILDERS: Partial<Record<MarkerFigure, () => MarkerModel>> = {
-  cycliste: createCyclist,
-  vtt: () => createCyclist({ fat: true }),
-  vae: () => createCyclist({ battery: true }),
-  bikepacking: () => createCyclist({ bags: true }),
+  cycliste: () => roadBike(() => createCyclist()),
+  vtt: () => mountainBike(() => createCyclist({ fat: true })),
+  vae: () => electricBike(() => createCyclist({ battery: true })),
+  bikepacking: () => bikepackingBike(() => createCyclist({ bags: true })),
   ...FIGURE_MODELS,
   // a glTF wing (credited in `modelCredits.json`), the flat figurine while it loads
   parapente: createParagliderWing,

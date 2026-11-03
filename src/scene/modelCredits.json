@@ -22,9 +22,13 @@
     "file": "models/adventurer.glb",
     "figures": [
       "randonneur",
-      "coureur"
+      "coureur",
+      "cycliste",
+      "vtt",
+      "vae",
+      "bikepacking"
     ],
-    "modifications": "Walk and Run animations only, geometry quantised, flat colours and outline added in the app"
+    "modifications": "Walk and Run animations only, geometry quantised, posed on the bikes bone by bone, flat colours and outline added in the app"
   },
   {
     "id": "adventurer-f",
@@ -77,5 +81,33 @@
       "avion"
     ],
     "modifications": "converted from Blender to glTF, animation removed, propeller turns with the phase, flat colours and outline added in the app"
+  },
+  {
+    "id": "bicycle",
+    "title": "SquareFrameBicycle (Public Transport)",
+    "author": "Quaternius",
+    "license": "CC0 1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sourceUrl": "https://opengameart.org/content/lowpoly-public-transport",
+    "file": "models/bicycle.glb",
+    "figures": [
+      "cycliste",
+      "vae",
+      "bikepacking"
+    ],
+    "modifications": "converted from Blender to glTF, wheels turn with the phase, flat colours and outline added in the app; the battery and the bags are made in code"
+  },
+  {
+    "id": "bicycle-round",
+    "title": "Bicycle (Public Transport)",
+    "author": "Quaternius",
+    "license": "CC0 1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sourceUrl": "https://opengameart.org/content/lowpoly-public-transport",
+    "file": "models/bicycle-round.glb",
+    "figures": [
+      "vtt"
+    ],
+    "modifications": "converted from Blender to glTF, wheels turn with the phase and are made thicker, flat colours and outline added in the app"
   }
 ]

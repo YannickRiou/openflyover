@@ -255,7 +255,7 @@ License: CC BY 3.0. By Poly by Google, https://poly.pizza/m/3Z7vJ96JIEB, licence
 
 ### 3D model « Adventurer » (public/models/adventurer.glb)
 
-License: CC0 1.0. By Quaternius, https://poly.pizza/m/5EGWBMpuXq, licence https://creativecommons.org/publicdomain/zero/1.0/. Modified: Walk and Run animations only, geometry quantised, flat colours and outline added in the app.
+License: CC0 1.0. By Quaternius, https://poly.pizza/m/5EGWBMpuXq, licence https://creativecommons.org/publicdomain/zero/1.0/. Modified: Walk and Run animations only, geometry quantised, posed on the bikes bone by bone, flat colours and outline added in the app.
 
 ### 3D model « Adventurer » (public/models/adventurer-f.glb)
 
@@ -272,6 +272,14 @@ License: CC0 1.0. By AliceCassie, https://poly.pizza/m/j20srJUjpB, licence https
 ### 3D model « Lowpoly light plane » (public/models/plane.glb)
 
 License: CC0 1.0. By iPoly3D, https://opengameart.org/content/lowpoly-light-plane, licence https://creativecommons.org/publicdomain/zero/1.0/. Modified: converted from Blender to glTF, animation removed, propeller turns with the phase, flat colours and outline added in the app.
+
+### 3D model « SquareFrameBicycle (Public Transport) » (public/models/bicycle.glb)
+
+License: CC0 1.0. By Quaternius, https://opengameart.org/content/lowpoly-public-transport, licence https://creativecommons.org/publicdomain/zero/1.0/. Modified: converted from Blender to glTF, wheels turn with the phase, flat colours and outline added in the app; the battery and the bags are made in code.
+
+### 3D model « Bicycle (Public Transport) » (public/models/bicycle-round.glb)
+
+License: CC0 1.0. By Quaternius, https://opengameart.org/content/lowpoly-public-transport, licence https://creativecommons.org/publicdomain/zero/1.0/. Modified: converted from Blender to glTF, wheels turn with the phase and are made thicker, flat colours and outline added in the app.
 
 ## npm packages (139)
 
