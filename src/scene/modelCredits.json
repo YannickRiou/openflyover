@@ -31,9 +31,10 @@
       "ski-rando",
       "kayak",
       "nageur",
-      "alpiniste"
+      "alpiniste",
+      "cavalier"
     ],
-    "modifications": "Walk and Run animations only, geometry quantised, posed on the bikes, the skis, in the kayak, in the water and on the mountain bone by bone, flat colours and outline added in the app"
+    "modifications": "Walk and Run animations only, geometry quantised, posed on the bikes, the skis, in the kayak, in the water, on the mountain and on the horse bone by bone, flat colours and outline added in the app"
   },
   {
     "id": "adventurer-f",
@@ -127,5 +128,18 @@
       "kayak"
     ],
     "modifications": "flat colours and outline added in the app; the paddle, the skis and the poles are made in code"
+  },
+  {
+    "id": "horse",
+    "title": "Horse",
+    "author": "Quaternius",
+    "license": "CC0 1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sourceUrl": "https://poly.pizza/m/qvTrSG9pZF",
+    "file": "models/horse.glb",
+    "figures": [
+      "cavalier"
+    ],
+    "modifications": "Gallop animation only, geometry quantised, flat colours and outline added in the app"
   }
 ]

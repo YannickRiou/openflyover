@@ -35,6 +35,7 @@ describe('model credits', () => {
     expect(modelCreditsInUse(figurine, [{ activityType: 'skiing' as const }]).map((c) => c.id)).toEqual(['adventurer'])
     expect(modelCreditsInUse(figurine, [{ activityType: 'swimming' as const }]).map((c) => c.id)).toEqual(['adventurer'])
     expect(modelCreditsInUse(figurine, [{ activityType: 'mountaineering' as const }]).map((c) => c.id)).toEqual(['adventurer'])
+    expect(modelCreditsInUse(figurine, [{ activityType: 'horseback_riding' as const }]).map((c) => c.id)).toEqual(['adventurer', 'horse'])
     expect(modelCreditsInUse(figurine, [{ activityType: 'driving' as const }]).map((c) => c.id)).toEqual(['car'])
     expect(modelCreditsInUse(figurine, [{ activityType: 'motorcycle' as const }]).map((c) => c.id)).toEqual(['motorcycle'])
     expect(modelCreditsInUse(figurine, [{ activityType: 'fly' as const }]).map((c) => c.id)).toEqual(['plane'])
