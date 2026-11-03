@@ -1,6 +1,6 @@
 /**
  * « Mesurer le coût des couches » (Réglages › Diagnostic): the time of an image of the film with each layer off in turn
- * (clouds, shadows, atmosphere, forest, water, contour lines, 3D labels, 3D marker model, overlay) and with half the pixels, measured on the
+ * (clouds, shadows, atmosphere, forest, water, contour lines, 3D labels, 3D marker model, motion blur, overlay) and with half the pixels, measured on the
  * device itself. A phone has no GPU timer (Safari), so this is the only way to know which layer to lighten there.
  * Each measure is a short window of the film exported without encoding (`probe`, `layerCostRun.ts`); this file is pure
  * (tested): the list of layers, the sequencing with injected dependencies, and the lines of the report (in French, as the
@@ -33,6 +33,8 @@ export const LAYER_VARIANTS: readonly LayerVariant[] = [
     label: 'sans étiquettes 3D',
     apply: (s) => (noLabels(s.labels) ? null : { ...s, labels: { ...s.labels, waypoints: false, kmStep: 0, endpoints: false, photos: false, photoPins: false } }),
   },
+  // each image is rendered up to `maxSubFrames` times with the shutter open: this is the share of the cost that multiplies
+  { id: 'shutter', label: 'sans flou de bougé (un seul rendu par image)', apply: (s) => (s.lens.shutter > 0 ? { ...s, lens: { ...s.lens, shutter: 0 } } : null) },
   // the figurine's glTF character (skinned, outlined: about thirty draw calls) against its flat stand-in
   { id: 'marker3d', label: 'sans modèle 3D du marqueur', apply: (s) => (s.marker.kind === 'figurine' && s.marker.model3d ? { ...s, marker: { ...s.marker, model3d: false } } : null) },
   { id: 'overlay', label: "sans habillage", apply: (s) => (s.overlay.enabled ? { ...s, overlay: { ...s.overlay, enabled: false } } : null) },
