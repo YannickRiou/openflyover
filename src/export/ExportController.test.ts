@@ -12,7 +12,7 @@ import { createLocalFrame } from '../geo/ellipsoid'
 import { buildTrack } from '../import/stats'
 import { useAppStore } from '../state/store'
 import { runExport } from './ExportController'
-import { NO_ENCODING_KEY } from './diagnostic'
+import { GPU_WAIT_KEY, NO_ENCODING_KEY } from './diagnostic'
 import { composeFrame, renderSettledFrame } from './capture'
 import { overlayExtras, sceneHiddenAt } from '../overlay/exportOverlay'
 import type { RenderFrameDeps } from './capture'
@@ -204,7 +204,7 @@ describe('runExport', () => {
 
   it('counts the renders and the time of each step, and reaches the store a few times a second only', async () => {
     const reportFrame = vi.spyOn(useExportStore.getState(), 'reportFrame')
-    const { frameCount } = await exportFilm(destination())
+    const { frameCount } = await exportFilm(destination(), { waitsForGpu: true })
     const { timings } = useExportStore.getState()
     expect(timings.rendered).toBeGreaterThan(0)
     expect(timings.encodeMs).toBeCloseTo(timings.gpuWaitMs + timings.composeMs + timings.frameMs + timings.encodeWaitMs, 5)
@@ -232,6 +232,34 @@ describe('runExport', () => {
     vi.mocked(mixFilmAudio).mockImplementation(async () => null)
   })
 
+  it('a computer does not wait for the GPU before composing a frame, a phone or a tablet does, and a flag brings the wait back', async () => {
+    await exportFilm(destination(), { budget: DESKTOP_BUDGET })
+    expect(readPixels).not.toHaveBeenCalled()
+    const computer = useExportStore.getState().timings
+    expect(computer.rendered).toBeGreaterThan(0)
+    expect(computer.gpuWaitMs).toBe(0)
+    expect(computer.encodeMs).toBeCloseTo(computer.composeMs + computer.frameMs + computer.encodeWaitMs, 5)
+
+    for (const traits of [{ coarsePointer: true, shortSidePx: 393 }, { coarsePointer: true, shortSidePx: 820 }]) {
+      readPixels.mockClear()
+      await exportFilm(destination(), { budget: budgetFor(traits) })
+      expect(readPixels).toHaveBeenCalledTimes(useExportStore.getState().timings.rendered)
+    }
+
+    // the tab's storage (no browser in this test file)
+    readPixels.mockClear()
+    Object.defineProperty(globalThis, 'sessionStorage', {
+      value: { getItem: (key: string) => (key === GPU_WAIT_KEY ? '1' : null), setItem: () => undefined, removeItem: () => undefined },
+      configurable: true,
+    })
+    try {
+      await exportFilm(destination(), { budget: DESKTOP_BUDGET })
+    } finally {
+      delete (globalThis as { sessionStorage?: unknown }).sessionStorage
+    }
+    expect(readPixels).toHaveBeenCalledTimes(useExportStore.getState().timings.rendered)
+  })
+
   it('renders no view under a full-screen photo: the frame is composed all the same, the next view rendered again', async () => {
     const overlay = () => vi.fn()
     await exportFilm(destination(), { overlay })
@@ -239,7 +267,7 @@ describe('runExport', () => {
     vi.clearAllMocks()
     // the photo covers the film from 0.5 s to 1.5 s
     vi.mocked(sceneHiddenAt).mockImplementation((timeS) => timeS >= 0.5 && timeS < 1.5)
-    const { frameCount } = await exportFilm(destination(), { overlay })
+    const { frameCount } = await exportFilm(destination(), { overlay, waitsForGpu: true })
     vi.mocked(sceneHiddenAt).mockImplementation(() => false)
     expect(vi.mocked(renderSettledFrame).mock.calls.length).toBeLessThan(all - 5)
     expect(session.addFrame).toHaveBeenCalledTimes(frameCount)
@@ -384,6 +412,7 @@ describe('runExport', () => {
         engine: () => engine as unknown as TerrainEngine,
         frame: () => createLocalFrame(6.78, 45.85),
         budget: DESKTOP_BUDGET,
+        waitsForGpu: true,
       })
     } finally {
       useAppStore.setState({ tracks })
