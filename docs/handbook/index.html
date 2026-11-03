@@ -558,7 +558,7 @@ details.callout[open] > summary { margin-bottom: 6px; }
 
 <section>
   <div class="sec-head"><span class="num">02</span><h2 id="genesis">Genesis and history</h2></div>
-  <p>OpenFlyover makes a 3D flyover film from a GPX, FIT or IGC track recorded on an outing (hike, run, ride, ski tour). The track is laid on real terrain covered with aerial photos; a virtual camera flies along it; the person edits the film on a timeline and exports a video, a still image or a printable poster. Everything runs on the user's machine: no account, no API key, no paid service, no application server.</p>
+  <p>OpenFlyover makes a 3D flyover film from a GPX, FIT, IGC or KML track recorded on an outing (hike, run, ride, ski tour). The track is laid on real terrain covered with aerial photos; a virtual camera flies along it; the person edits the film on a timeline and exports a video, a still image or a printable poster. Everything runs on the user's machine: no account, no API key, no paid service, no application server.</p>
   <h3 class="sub" id="timeline-history">Sixteen days of git history</h3>
   <p>The history in this repository runs from 5 to 20 October 2026: 648 commits when this page was last verified (608 at version 2.2.0). The first commit already contains the whole skeleton (geo maths, import, terrain engine, scene, store, sample track); everything else grew on it in the phases below. The phase names come from the headings of <a href="../../ARCHITECTURE.md">ARCHITECTURE.md</a> (« phase 2 » to « phase 7 ») and from the commit messages.</p>
   <figure class="figure">
@@ -1260,7 +1260,7 @@ const setSetting = useAppStore((s) =&gt; s.setSetting)
   <p>Each domain below has the same shape: what it does, the one idea to hold on to, where the code is, what tests it, and the usual way to change it. The deep design of each is in <code>ARCHITECTURE.md</code>; links go to the right section.</p>
 
   <h3 class="sub" id="d-import">Import and geography</h3>
-  <p><strong>What.</strong> Turns a GPX, FIT or IGC file (or a Strava activity, or a planned route) into a <code>Track</code>, and converts between geographic, Earth-centred, local and tile coordinates. <strong>Key idea.</strong> A track is plain data, built once; everything downstream (path, camera, overlay, weather) derives from it and caches per track object.</p>
+  <p><strong>What.</strong> Turns a GPX, FIT, IGC or KML file (or a Strava activity, or a planned route) into a <code>Track</code>, and converts between geographic, Earth-centred, local and tile coordinates. <strong>Key idea.</strong> A track is plain data, built once; everything downstream (path, camera, overlay, weather) derives from it and caches per track object.</p>
   <ul>
     <li><strong>GPX</strong> (<code>import/gpx.ts</code>, <code>parseGpx</code>): the browser's <code>DOMParser</code>, matching elements on <code>localName</code> so any extension vocabulary (Garmin, Cluetrust) works. A time without a time zone is read as UTC (a review fix).</li>
     <li><strong>FIT</strong> (<code>import/fit.ts</code>, <code>parseFit</code>): an in-house binary decoder written from the public FIT description; reads record, hr, session, sport and activity messages; positions are semicircles converted to degrees. Loaded only when the first <code>.fit</code> arrives (dynamic import).</li>
@@ -1487,7 +1487,7 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
   <p>Scenario ids (read the <code>SCENARIOS</code> array): <code>accueil</code>, <code>onglets</code>, <code>langue</code>, <code>diagnostic</code>, <code>couleur</code>, <code>reglage-repli</code>, <code>poids-de-rendu</code>, <code>qualite-export</code>, <code>image-cle</code>, <code>timeline</code>, <code>inspecteur</code>, <code>menus</code>, <code>heure</code>, <code>cartes</code>, <code>cles-etiquettes</code>, <code>reperes</code>, <code>region</code>, <code>projet</code>, <code>export</code>, <code>historique</code>, <code>mobile</code>. For a quick run without the export scenario: <code>OPENFLYOVER_E2E_SKIP_EXPORT=1 npm run e2e</code>. CI does <em>not</em> run the e2e suite (comment at the top of <code>ci.yml</code>): run it yourself before a release or a large interface change. A scenario selects elements by role, label or <code>data-testid</code> (<code>tab-trace</code>, <code>tab-panel-…</code>, <code>timeline-block</code>…): keep those attributes when you edit a component.</p>
 
   <h3 class="sub" id="manual-checks">Manual checks on a real machine</h3>
-  <p>Development usually runs on a simulated GPU (software rendering): it is too slow to judge smoothness, export speed or sound, and no test looks at the picture. Before a release that touches rendering, export, the timeline or the desktop app, run the short list below on a computer with a real graphics card (Chrome or Edge, then Firefox for the fallbacks), with the browser console open: no red error is expected. At the end of an export the <code>[export]</code> line in the console gives the times (rendering, waiting for tiles, encoding). Keep a timestamped GPX, FIT or IGC track, a track without times, JPEG photos with GPS, an MP4 shot during the same outing, a 3-minute MP3 and a file larger than 50 MB at hand. Write what you find in the pull request or the issue.</p>
+  <p>Development usually runs on a simulated GPU (software rendering): it is too slow to judge smoothness, export speed or sound, and no test looks at the picture. Before a release that touches rendering, export, the timeline or the desktop app, run the short list below on a computer with a real graphics card (Chrome or Edge, then Firefox for the fallbacks), with the browser console open: no red error is expected. At the end of an export the <code>[export]</code> line in the console gives the times (rendering, waiting for tiles, encoding). Keep a timestamped GPX, FIT, IGC or KML track, a track without times, JPEG photos with GPS, an MP4 shot during the same outing, a 3-minute MP3 and a file larger than 50 MB at hand. Write what you find in the pull request or the issue.</p>
   <div class="table-wrap"><table class="wide">
     <thead><tr><th>Area</th><th>Check</th></tr></thead>
     <tbody>
@@ -2164,7 +2164,7 @@ const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (
 
     <h3 id="gl-project">Project vocabulary (English, with the French UI word)</h3>
     <div class="gloss">
-      <div class="term"><h4>Track</h4><p>The imported recording (GPX, FIT or IGC) as a <code>Track</code>. Rail tab « Trace ».</p></div>
+      <div class="term"><h4>Track</h4><p>The imported recording (GPX, FIT, IGC or KML) as a <code>Track</code>. Rail tab « Trace ».</p></div>
       <div class="term"><h4>Progress</h4><p>0 to 1: fraction of the track's distance where the marker is.</p></div>
       <div class="term"><h4>Film time</h4><p>Seconds at ×1 from the very first frame, opening included. <code>playback.timeS</code>.</p></div>
       <div class="term"><h4>Film clock</h4><p>The pure mapping from film time to phase and progress (<code>film/clock.ts</code>).</p></div>

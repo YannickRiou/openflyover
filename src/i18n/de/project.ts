@@ -35,7 +35,7 @@ const messages: Messages['project'] = {
   'file.noDecompress': 'Dieser Browser kann Projekte nicht entpacken: in einem aktuellen Browser oder in der App öffnen.',
   'file.damaged': 'Projektdatei beschädigt: Die komprimierten Daten sind nicht lesbar.',
   'actions.filterProject': 'OpenFlyover-Projekt',
-  'actions.filterTracks': 'GPX-, FIT- oder IGC-Tracks',
+  'actions.filterTracks': 'GPX-, FIT-, IGC- oder KML-Tracks',
   'actions.filterBoth': 'Tracks und Projekte',
   'actions.saved': 'Projekt gespeichert: {fileName}',
   'actions.saveFailed': 'Das Projekt kann nicht gespeichert werden: {reason}',

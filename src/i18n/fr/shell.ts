@@ -1,6 +1,6 @@
 export default {
   loading: 'Chargement…',
-  'drop.title': 'Déposez vos traces GPX, FIT ou IGC',
+  'drop.title': 'Déposez vos traces GPX, FIT, IGC ou KML',
   'drop.hint': 'ou un projet .opnflvr',
   'tab.trace': 'Trace',
   'tab.carte': 'Carte',
@@ -64,7 +64,7 @@ export default {
   'tour.welcome.title': 'Bienvenue dans OpenFlyover',
   'tour.welcome.body': 'Cette visite présente l’essentiel en quelques étapes. Vous pouvez l’arrêter à tout moment.',
   'tour.import.title': 'Commencez par une trace',
-  'tour.import.body': 'Importez un fichier GPX, FIT ou IGC, ou chargez l’exemple pour essayer.',
+  'tour.import.body': 'Importez un fichier GPX, FIT, IGC ou KML, ou chargez l’exemple pour essayer.',
   'tour.tabs.title': 'Les réglages sont rangés en onglets',
   'tour.tabs.body': 'Chaque onglet règle un aspect du film : trace, carte, météo, lumière, caméra, habillage. Ctrl+K trouve un réglage par son nom.',
   'tour.panel.title': 'Le panneau des réglages',

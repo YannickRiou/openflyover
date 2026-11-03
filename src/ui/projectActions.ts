@@ -326,7 +326,7 @@ export async function pickFiles(options: OpenFilesOptions): Promise<File[]> {
 
 /** « Choisir un fichier », « Ajouter » : GPX / FIT files to import (dialog on the desktop). */
 export async function chooseTracksToImport(): Promise<void> {
-  importTrackFiles(await pickFiles({ filters: [{ name: t('project.actions.filterTracks'), extensions: ['gpx', 'fit', 'igc'] }], multiple: true }))
+  importTrackFiles(await pickFiles({ filters: [{ name: t('project.actions.filterTracks'), extensions: ['gpx', 'fit', 'igc', 'kml', 'kmz'] }], multiple: true }))
 }
 
 /** « Ouvrir un projet… » : one project file (dialog on the desktop). */
@@ -338,7 +338,7 @@ export async function chooseProjectToOpen(): Promise<void> {
 /** « Ouvrir » : file picker (dialog on the desktop) for tracks and a project. */
 export async function chooseFilesToOpen(): Promise<void> {
   const files = await pickFiles({
-    filters: [{ name: t('project.actions.filterBoth'), extensions: ['gpx', 'fit', 'igc', PROJECT_EXTENSION, 'json'] }],
+    filters: [{ name: t('project.actions.filterBoth'), extensions: ['gpx', 'fit', 'igc', 'kml', 'kmz', PROJECT_EXTENSION, 'json'] }],
     multiple: true,
     rewritable: true,
   })

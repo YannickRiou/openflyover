@@ -10,7 +10,7 @@ const messages: Messages['home'] = {
   'empty.links': 'Enlaces',
   'empty.guide': 'Primeros pasos',
   'empty.download': 'Aplicación de escritorio (Windows, macOS, Linux)',
-  'empty.hint': 'Arrastra uno o varios tracks GPX, FIT o IGC a cualquier parte de la ventana.',
+  'empty.hint': 'Arrastra uno o varios tracks GPX, FIT, IGC o KML a cualquier parte de la ventana.',
   'empty.importing': 'Importando…',
   'empty.chooseFile': 'Elegir un archivo',
   'empty.sample': 'Probar con el ejemplo',
