@@ -91,6 +91,12 @@ describe('measureLayerCost', () => {
     expect(LAYER_VARIANTS.find((v) => v.id === 'clouds')!.apply({ ...BASE, clouds: { ...BASE.clouds, mode: 'aucun' } })).toBeNull()
   })
 
+  it('measures the motion blur only when it is on', () => {
+    const variant = LAYER_VARIANTS.find((v) => v.id === 'shutter')!
+    expect(variant.apply({ ...BASE, lens: { ...BASE.lens, shutter: 0.1 } })?.lens.shutter).toBe(0)
+    expect(variant.apply({ ...BASE, lens: { ...BASE.lens, shutter: 0 } })).toBeNull()
+  })
+
   it('measures the 3D model of a figurine marker only when there is one', () => {
     const variant = LAYER_VARIANTS.find((v) => v.id === 'marker3d')!
     const figurine = { ...BASE.marker, kind: 'figurine' as const, model3d: true }
