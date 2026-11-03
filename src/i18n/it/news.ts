@@ -15,6 +15,8 @@ const messages: Messages['news'] = {
   'v50.tiles.text': 'Il dettaglio « Fine » delle foto ora si carica solo dove si vede, vicino alla telecamera: la stessa immagine, molte meno foto da scaricare. Le tile del film arrivano anche più alla volta, senza mai chiedere a un servizio più di quanto consente il browser. Sul sito come nell\'app.',
   'v50.vivid.title': 'Foto dell’IGN più vivaci',
   'v50.vivid.text': 'Con le foto dell’IGN, il cursore «Colori vivaci» (Mappa, dalla modalità Intermedio) dà più brillantezza e contrasto alle foto, e rende l’erba secca un po’ più verde. Con 0 %, le foto restano così come sono. Gli altri sfondi non cambiano.',
+  'v50.phoneFormat.title': 'Il formato con un tocco sul telefono',
+  'v50.phoneFormat.text': 'Sul telefono, la barra in alto ha un pulsante che mostra il formato attuale. Un tocco apre l’elenco dei formati (Libero, 16:9, 9:16…) con quello scelto spuntato. Non serve più aprire “Esporta” per cambiarlo.',
   'v47.draw.title': 'Disegnare un itinerario sulla mappa',
   'v47.draw.text': '«Aggiungi» › «Disegna sulla mappa…»: fai clic sui punti della tua uscita. La linea segue i sentieri (IGN in Francia, OpenStreetMap altrove) o resta retta se lo scegli. Un clic in più e il film è pronto da preparare, senza file GPX.',
   'v47.ribbon.title': 'Un nastro di dati in 3D',

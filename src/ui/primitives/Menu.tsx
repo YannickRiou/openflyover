@@ -1,6 +1,7 @@
 import { Dropdown } from '@heroui/react/dropdown'
 import { useRef, useState } from 'react'
 import type { ReactElement, ReactNode } from 'react'
+import { Icon } from '../icons'
 import { openDialog, panelClass, useNoBrowserMenu } from './overlay'
 import type { OverlayPlacement, OverlayPoint } from './overlay'
 
@@ -15,6 +16,8 @@ export interface MenuItem {
   /** drawn before the text */
   icon?: ReactNode
   disabled?: boolean
+  /** The chosen one of a list of choices: the row is lit and ends with a check. Set it on every row of such a menu. */
+  selected?: boolean
   /** Called when it is picked (click, tap, Enter, Space); the menu closes after it. */
   onSelect(): void
 }
@@ -48,12 +51,25 @@ export function Menu({ label, items, trigger, point, onClose, placement = 'botto
   useNoBrowserMenu(Boolean(point))
   if (!trigger && !point) return null
 
+  const choices = items.some((item) => item.selected !== undefined)
   const menu = (
-    <Dropdown.Menu aria-label={label} autoFocus={point ? 'first' : undefined} className="flex flex-col p-1 outline-none" onAction={point ? () => onClose?.() : undefined}>
+    <Dropdown.Menu
+      aria-label={label}
+      autoFocus={point ? 'first' : undefined}
+      className="flex flex-col p-1 outline-none"
+      selectionMode={choices ? 'single' : undefined}
+      selectedKeys={choices ? items.filter((item) => item.selected).map((item) => item.id) : undefined}
+      onAction={point ? () => onClose?.() : undefined}
+    >
       {items.map((item) => (
         <Dropdown.Item key={item.id} id={item.id} textValue={item.label} isDisabled={item.disabled} className="overlay-item" onAction={item.onSelect}>
           {item.icon}
           {item.label}
+          {item.selected && (
+            <span className="ml-auto flex" aria-hidden="true">
+              <Icon name="check" size={18} />
+            </span>
+          )}
         </Dropdown.Item>
       ))}
     </Dropdown.Menu>

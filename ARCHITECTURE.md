@@ -660,8 +660,9 @@ pointer (`appearance.css`).
   (rail and timeline kept).
 - **Phone and tablet** (`BOTTOM_SHEET_QUERY` and `COMPACT_QUERY` in `shell.ts`, same strings as the CSS):
   - *Compact* (`max-width: 699px` or `max-height: 499px`, a phone either way up): top bar reduced to the logo, the
-    project name, « Plus d'actions » (⋯, `MoreMenu` in `TopBar.tsx`: undo, redo, open, save) and « Exporter » with its
-    label; no format picker (the drawer tiles) nor « ? »; in landscape the timeline starts folded (`Timeline`: strip
+    project name, the format button (`FormatMenu` in `TopBar.tsx`, in the place of the `FormatSwitcher` row: the icon of the
+    chosen format, a bottom sheet of the formats; both call `pickFormat`), « Plus d'actions » (⋯, `MoreMenu` in `TopBar.tsx`:
+    undo, redo, open, save) and « Exporter » with its label; no « ? »; in landscape the timeline starts folded (`Timeline`: strip
     with play and time) and unfolds as a sheet over the view; panel and drawer sheets fold it (`sheetOpen`), its
     unfolding folds them (`onUnfold` → shell event `fold`): one sheet at a time. Dialogs (`Modal`) are full screen. Safe areas
     (`viewport-fit=cover` in `index.html`, `env(safe-area-inset-*)` on the shell rows and sides), `100dvh`, no page
