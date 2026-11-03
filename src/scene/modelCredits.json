@@ -29,9 +29,11 @@
       "bikepacking",
       "skieur",
       "ski-rando",
-      "kayak"
+      "kayak",
+      "nageur",
+      "alpiniste"
     ],
-    "modifications": "Walk and Run animations only, geometry quantised, posed on the bikes, the skis and in the kayak bone by bone, flat colours and outline added in the app"
+    "modifications": "Walk and Run animations only, geometry quantised, posed on the bikes, the skis, in the kayak, in the water and on the mountain bone by bone, flat colours and outline added in the app"
   },
   {
     "id": "adventurer-f",

@@ -3,7 +3,7 @@
  * « Adventurer » character (Quaternius, CC0) posed bone by bone on its saddle and handlebar, its legs following the
  * pedals with the phase. The flat figure stands in until both files are there, and if one never comes.
  */
-import { BoxGeometry, Box3, CylinderGeometry, Group, Matrix4, Mesh, MeshBasicMaterial, Vector3 } from 'three'
+import { BoxGeometry, Box3, CylinderGeometry, Group, Matrix4, Mesh, MeshBasicMaterial, SphereGeometry, Vector3 } from 'three'
 import type { Material, Object3D, SkinnedMesh } from 'three'
 import type { Color, Texture } from 'three'
 import { createVehicle } from './markerGlbFigures'
@@ -40,6 +40,8 @@ export interface Rig {
   neck(direction: Vector3): void
   /** the arm on `side` ('L' is the character's left, +X) reaches `hand`, the elbow pushed towards `bend` */
   arm(side: 'L' | 'R', hand: Vector3, bend: Vector3): void
+  /** where the head is (the base of the skull), in the units of the figure */
+  head(out: Vector3): Vector3
   /** the leg on `side` reaches `ankle`, the knee pushed towards `bend`; the foot goes with the ankle */
   leg(side: 'L' | 'R', ankle: Vector3, bend: Vector3): void
 }
@@ -48,6 +50,8 @@ export interface Rig {
 export interface Parts {
   /** a box of `size`, centred on its origin, in the colour of the material `name` */
   box(name: string, color: string, size: [number, number, number]): Mesh
+  /** a ball of `radius`, centred on its origin */
+  ball(name: string, color: string, radius: number): Mesh
   /** a thin cylinder that `link` stretches from one point to another */
   rod(name: string, color: string, radius: number): { mesh: Mesh; link(from: Vector3, to: Vector3): void }
 }
@@ -131,6 +135,7 @@ export function createFigure({ stand: standIn, main, vehicle: vehicleSpec, hide 
         aim('Chest', lean(degrees - 6))
       },
       neck: (direction) => aim('Neck', direction),
+      head: (out) => local('Head', out),
       arm(side, hand, bend) {
         local(`UpperArm${side}`, shoulder)
         joint(shoulder, hand, lengths.upperArm, lengths.lowerArm, bend, elbow)
@@ -152,6 +157,13 @@ export function createFigure({ stand: standIn, main, vehicle: vehicleSpec, hide 
     const parts: Parts = {
       box(name, color, size) {
         const mesh = new Mesh(new BoxGeometry(...size), new MeshBasicMaterial({ color, name }))
+        mesh.material = painter.flat(mesh.material as Source)
+        root.add(mesh)
+        outlineRigid(root, [mesh], painter)
+        return mesh
+      },
+      ball(name, color, radius) {
+        const mesh = new Mesh(new SphereGeometry(radius, 16, 12), new MeshBasicMaterial({ color, name }))
         mesh.material = painter.flat(mesh.material as Source)
         root.add(mesh)
         outlineRigid(root, [mesh], painter)
@@ -441,6 +453,79 @@ export const skiTourer = (stand: () => MarkerModel): MarkerModel =>
           rig.arm(side, hand.set(0.2 * sx, 0.91, 0.07 + 0.2 - 0.18 * Math.sin(angle)), bend.set(sx * 0.6, -1, -0.2))
           gear.place(i, ankle, hand)
         })
+      }
+    },
+  })
+
+/** The swimmer: the character lies in the water and does the crawl, its feet beating behind it, its cap in the colour of the track. */
+export const swimmer = (stand: () => MarkerModel): MarkerModel =>
+  createFigure({
+    stand,
+    main: 'Cap',
+    hide: ['Backpack'],
+    setup({ rig, parts }) {
+      const cap = parts.ball('Cap', '#ffffff', 0.12)
+      cap.scale.set(1, 0.9, 1.1)
+      const head = new Vector3()
+      const hip = new Vector3(0, 0.1, -0.38)
+      const ankle = new Vector3()
+      const hand = new Vector3()
+      const kneeBend = new Vector3(0, 1, -0.2)
+      const elbowBend = new Vector3(0.2, 1, 0)
+      const look = new Vector3(0, 0.25, 1)
+      return (phase) => {
+        rig.seat(hip)
+        rig.spine(90)
+        rig.neck(look)
+        for (const [side, sx] of SIDES) {
+          const a = phase + (side === 'L' ? Math.PI : 0)
+          // the kick: the feet beat up and down behind the body
+          rig.leg(side, ankle.set(0.07 * sx, 0.1 + 0.09 * Math.sin(2 * a), -1.2), kneeBend)
+          // the crawl: the hand reaches in front, pulls back under the body, comes back over the water
+          const reach = Math.cos(a)
+          rig.arm(side, hand.set(0.2 * sx, 0.1 + (Math.sin(a) > 0 ? 0.26 * Math.sin(a) : 0.12 * Math.sin(a)), 0.3 + 0.32 * reach), elbowBend)
+        }
+        cap.position.copy(rig.head(head)).add(look.clone().multiplyScalar(0.1))
+      }
+    },
+  })
+
+/** The mountaineer: a walker with a helmet in the colour of the track, an ice axe in its right hand, its backpack on its back. */
+export const mountaineer = (stand: () => MarkerModel): MarkerModel =>
+  createFigure({
+    stand,
+    main: 'Helmet',
+    setup({ rig, parts }) {
+      const helmet = parts.ball('Helmet', '#ffffff', 0.13)
+      helmet.scale.set(1, 0.85, 1.05)
+      const shaft = parts.rod('IceAxe', BLACK, 0.02)
+      const crossbar = parts.box('IceAxe', BLACK, [0.28, 0.04, 0.04])
+      const head = new Vector3()
+      const hip = new Vector3()
+      const ankle = new Vector3()
+      const hand = new Vector3()
+      const tip = new Vector3()
+      const knee = new Vector3(0, 0.1, 1)
+      const bend = new Vector3()
+      const look = new Vector3(0, 1, 0.2)
+      const offset = new Vector3()
+      return (phase) => {
+        const bounce = 0.01 * Math.cos(2 * phase)
+        rig.seat(hip.set(0, 0.84 + bounce, 0))
+        rig.spine(7)
+        rig.neck(look)
+        for (const [side, sx] of SIDES) {
+          const angle = phase + (side === 'L' ? Math.PI : 0)
+          rig.leg(side, ankle.set(0.1 * sx, ANKLE + 0.1 * Math.max(0, Math.cos(angle)), 0.2 * Math.sin(angle)), knee)
+          rig.arm(side, hand.set(0.2 * sx, 1.36 + bounce - 0.5, 0.09 - 0.1 * Math.sin(angle)), bend.set(sx * 0.6, -1, -0.2))
+          if (side === 'R') {
+            // the ice axe held by the head, its spike on the ground in front
+            tip.set(hand.x, 0.04, hand.z + 0.1)
+            shaft.link(hand, tip)
+            crossbar.position.copy(hand).add(offset.set(0, 0.03, 0))
+          }
+        }
+        helmet.position.copy(rig.head(head)).add(offset.set(0, 0.1, 0.01))
       }
     },
   })
