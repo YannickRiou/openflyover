@@ -38,5 +38,44 @@
       "traileur"
     ],
     "modifications": "Walk and Run animations only, geometry quantised, flat colours and outline added in the app"
+  },
+  {
+    "id": "car",
+    "title": "Car",
+    "author": "Quaternius",
+    "license": "CC0 1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sourceUrl": "https://poly.pizza/m/Cz6yDaUcM9",
+    "file": "models/car.glb",
+    "figures": [
+      "voiture"
+    ],
+    "modifications": "wheels turn with the phase, flat colours and outline added in the app"
+  },
+  {
+    "id": "motorcycle",
+    "title": "Cartoony Purple Motorcycle",
+    "author": "AliceCassie",
+    "license": "CC0 1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sourceUrl": "https://poly.pizza/m/j20srJUjpB",
+    "file": "models/motorcycle.glb",
+    "figures": [
+      "moto"
+    ],
+    "modifications": "flat colours and outline added in the app"
+  },
+  {
+    "id": "plane",
+    "title": "Lowpoly light plane",
+    "author": "iPoly3D",
+    "license": "CC0 1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sourceUrl": "https://opengameart.org/content/lowpoly-light-plane",
+    "file": "models/plane.glb",
+    "figures": [
+      "avion"
+    ],
+    "modifications": "converted from Blender to glTF, animation removed, propeller turns with the phase, flat colours and outline added in the app"
   }
 ]

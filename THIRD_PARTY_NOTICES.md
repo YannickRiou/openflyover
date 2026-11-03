@@ -261,6 +261,18 @@ License: CC0 1.0. By Quaternius, https://poly.pizza/m/5EGWBMpuXq, licence https:
 
 License: CC0 1.0. By Quaternius, https://poly.pizza/m/ZwF0K7WBmu, licence https://creativecommons.org/publicdomain/zero/1.0/. Modified: Walk and Run animations only, geometry quantised, flat colours and outline added in the app.
 
+### 3D model « Car » (public/models/car.glb)
+
+License: CC0 1.0. By Quaternius, https://poly.pizza/m/Cz6yDaUcM9, licence https://creativecommons.org/publicdomain/zero/1.0/. Modified: wheels turn with the phase, flat colours and outline added in the app.
+
+### 3D model « Cartoony Purple Motorcycle » (public/models/motorcycle.glb)
+
+License: CC0 1.0. By AliceCassie, https://poly.pizza/m/j20srJUjpB, licence https://creativecommons.org/publicdomain/zero/1.0/. Modified: flat colours and outline added in the app.
+
+### 3D model « Lowpoly light plane » (public/models/plane.glb)
+
+License: CC0 1.0. By iPoly3D, https://opengameart.org/content/lowpoly-light-plane, licence https://creativecommons.org/publicdomain/zero/1.0/. Modified: converted from Blender to glTF, animation removed, propeller turns with the phase, flat colours and outline added in the app.
+
 ## npm packages (139)
 
 Production dependencies of `package.json` and their transitive dependencies (some are only partly or not at all in a given build).
