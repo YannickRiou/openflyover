@@ -15,6 +15,8 @@ export default {
   'v50.tiles.text': 'Le détail « Fin » des photos n\'est plus chargé que là où il se voit, près de la caméra : même image, beaucoup moins de photos à télécharger. Les tuiles du film arrivent aussi en plus grand nombre à la fois, sans jamais solliciter un service plus que le navigateur ne le permet. Sur le site comme dans l\'app.',
   'v50.vivid.title': 'Des photos de l’IGN plus vives',
   'v50.vivid.text': 'Avec les photos de l’IGN, le curseur « Couleurs vives » (Carte, à partir du mode Confirmé) donne plus d’éclat et de contraste aux photos, et verdit un peu les herbes sèches. À 0 %, les photos restent telles quelles. Les autres fonds ne changent pas.',
+  'v50.phoneFormat.title': 'Le format en un geste sur téléphone',
+  'v50.phoneFormat.text': 'Sur téléphone, la barre du haut a un bouton qui montre le format actuel. Un toucher ouvre la liste des formats (Libre, 16:9, 9:16…), le format choisi est coché. Plus besoin d’ouvrir « Exporter » pour le changer.',
   'v47.draw.title': 'Tracer un itinéraire sur la carte',
   'v47.draw.text': '« Ajouter » › « Tracer sur la carte… » : cliquez les points de votre sortie. Le tracé suit les sentiers (IGN en France, OpenStreetMap ailleurs), ou reste en ligne droite si vous le choisissez. Un clic de plus, et le film se prépare, sans fichier GPX.',
   'v47.ribbon.title': 'Un ruban de données en 3D',

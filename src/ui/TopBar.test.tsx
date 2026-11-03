@@ -65,6 +65,31 @@ describe('TopBar: the output format', () => {
   })
 })
 
+describe('TopBar: the output format on a phone', () => {
+  it('is a button with the chosen format that opens the list: the checked row is the format, a pick sets it', async () => {
+    useAppStore.getState().setFreeFraming(false)
+    useAppStore.getState().setSetting('video', { ...useAppStore.getState().settings.video, aspect: '16:9' })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<TopBar onOpen={() => {}} exportOpen={false} onToggleExport={() => {}} onHelp={() => {}} />))
+    // (the media queries do not apply here: the row and the button are both in the page, the stylesheet shows one)
+    const button = host.querySelector<HTMLButtonElement>('button[aria-label^="Format de sortie ("]')!
+    expect(button.getAttribute('aria-label')).toBe('Format de sortie (Paysage 16:9)')
+    await act(async () => button.click())
+    const rows = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')]
+    expect(rows[0].textContent).toBe('Libre')
+    expect(rows.filter((r) => r.getAttribute('aria-checked') === 'true').map((r) => r.textContent)).toEqual(['Paysage 16:9'])
+    await act(async () => rows[2].click())
+    expect(useAppStore.getState().settings.video.aspect).toBe('9:16')
+    expect(button.getAttribute('aria-label')).toMatch(/\(.*9:16\)/)
+    await act(async () => button.click())
+    await act(async () => document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')[0].click())
+    expect(useAppStore.getState().freeFraming).toBe(true)
+    expect(button.getAttribute('aria-label')).toBe('Format de sortie (Libre)')
+    act(() => root.unmount())
+  })
+})
+
 describe('TopBar: the mode of the interface', () => {
   it('is a radio group named « Mode de l’interface »: a mode is chosen for the device, and the bar says which', async () => {
     usePreferences.setState({ uiMode: 'expert' })

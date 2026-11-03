@@ -335,7 +335,8 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      HTTP cache only (every source sends `Cache-Control`; Esri, refused in offline packs, is fetched like any view): the engine
      still asks for each tile during the render and finds it there, or fetches it again. The panel shows « Préparation des
      tuiles du film : n / N » (`reportTiles`), its time is `timings.preloadMs` (« préchargement des tuiles » in the split) and
-     the remaining time starts after it (`startedAt` moved on).
+     the remaining time starts at the first frame (`startedAt` set again there, after the soundtrack, the encoder and the
+     tiles, all made once). The panel's « ≈ x s / image » is that same pace (`etaS` over the frames left), so the two agree.
    - **The cap is hard: the level of detail gives way** (phone, tablet). A low view looking at the horizon in a portrait
      film needs 220–390 tiles by itself (iPhone 12: 147 → 224 loaded during the « descente », tab killed), so the
      selection is made to fit: `solveLodLevel` multiplies `errorTargetPx` by `LOD_STEP` (1.1) per level, 0 to
@@ -660,8 +661,9 @@ pointer (`appearance.css`).
   (rail and timeline kept).
 - **Phone and tablet** (`BOTTOM_SHEET_QUERY` and `COMPACT_QUERY` in `shell.ts`, same strings as the CSS):
   - *Compact* (`max-width: 699px` or `max-height: 499px`, a phone either way up): top bar reduced to the logo, the
-    project name, « Plus d'actions » (⋯, `MoreMenu` in `TopBar.tsx`: undo, redo, open, save) and « Exporter » with its
-    label; no format picker (the drawer tiles) nor « ? »; in landscape the timeline starts folded (`Timeline`: strip
+    project name, the format button (`FormatMenu` in `TopBar.tsx`, in the place of the `FormatSwitcher` row: the icon of the
+    chosen format, a bottom sheet of the formats; both call `pickFormat`), « Plus d'actions » (⋯, `MoreMenu` in `TopBar.tsx`:
+    undo, redo, open, save) and « Exporter » with its label; no « ? »; in landscape the timeline starts folded (`Timeline`: strip
     with play and time) and unfolds as a sheet over the view; panel and drawer sheets fold it (`sheetOpen`), its
     unfolding folds them (`onUnfold` → shell event `fold`): one sheet at a time. Dialogs (`Modal`) are full screen. Safe areas
     (`viewport-fit=cover` in `index.html`, `env(safe-area-inset-*)` on the shell rows and sides), `100dvh`, no page

@@ -17,6 +17,8 @@ const messages: Messages['news'] = {
   'v50.tiles.text': 'The « Fine » imagery detail is now only loaded where it shows, near the camera: the same image, far fewer photos to download. The tiles of the film also come more at a time, never asking a service for more than the browser allows. On the website as in the app.',
   'v50.vivid.title': 'Livelier IGN photos',
   'v50.vivid.text': 'With the IGN photos, the “Vivid colours” slider (Map, from the Intermediate mode) gives them more brightness and contrast, and turns dry grass a little greener. At 0%, the photos stay as they are. Other basemaps do not change.',
+  'v50.phoneFormat.title': 'The format in one tap on a phone',
+  'v50.phoneFormat.text': 'On a phone, the top bar has a button that shows the current format. One tap opens the list of formats (Free, 16:9, 9:16…) with the chosen one checked. No need to open “Export” to change it.',
   'v47.draw.title': 'Draw a route on the map',
   'v47.draw.text': '“Add” › “Draw on the map…”: click the points of your outing. The line follows the paths (IGN in France, OpenStreetMap elsewhere), or stays straight if you choose. One more click and the film is ready to build, with no GPX file.',
   'v47.ribbon.title': 'A 3D data ribbon',

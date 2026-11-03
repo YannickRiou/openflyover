@@ -46,26 +46,40 @@ const FORMAT_LABEL =
   'group-data-[disabled=true]:cursor-not-allowed hover:bg-white/10 hover:text-white data-[selected=true]:bg-white data-[selected=true]:text-ink ' +
   'data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-offset-1 data-[focus-visible=true]:outline-accent-light'
 
-/** Output format of the preview and of the export: « Libre » (preview only) or one of the video aspects. */
-function FormatSwitcher({ disabled }: { disabled: boolean }) {
-  const t = useT()
+/** Sets the output format: one of the video aspects, or « Libre » (`null`: the framing is free, the aspect of the video is kept). */
+function pickFormat(id: string | null) {
+  const store = useAppStore.getState()
+  const next = VIDEO_ASPECTS.find((a) => a.id === id)
+  if (next && next.id !== store.settings.video.aspect) store.setSetting('video', { ...store.settings.video, aspect: next.id })
+  store.setFreeFraming(!next)
+}
+
+/** The chosen format: `FREE` for « Libre », else the id of the aspect. */
+function useFormat() {
   const aspect = useAppStore((s) => s.settings.video.aspect)
   const free = useAppStore((s) => s.freeFraming)
-  const pick = (id: string | null) => {
-    const store = useAppStore.getState()
-    const next = VIDEO_ASPECTS.find((a) => a.id === id)
-    if (next && next.id !== store.settings.video.aspect) store.setSetting('video', { ...store.settings.video, aspect: next.id })
-    store.setFreeFraming(!next)
-  }
+  return free ? FREE : aspect
+}
+
+/** Icon of a format: a frame of its ratio, the corners of a frame for « Libre ». */
+function FormatIcon({ id }: { id: string }) {
+  const a = VIDEO_ASPECTS.find((v) => v.id === id)
+  return a ? <AspectIcon x={a.x} y={a.y} /> : <Icon name="maximize" />
+}
+
+/** Output format of the preview and of the export: « Libre » (preview only) or one of the video aspects. Not on a phone: see `FormatMenu`. */
+function FormatSwitcher({ disabled }: { disabled: boolean }) {
+  const t = useT()
+  const format = useFormat()
 
   return (
     <RadioGroup
       look="plain"
       className="flex flex-row flex-nowrap gap-0.5 rounded-md border border-white/15 p-0.5 phone-any:hidden"
       aria-label={t('topbar.format.aria')}
-      value={free ? FREE : aspect}
+      value={format}
       disabled={disabled}
-      onChange={(id) => pick(id === FREE ? null : id)}
+      onChange={(id) => pickFormat(id === FREE ? null : id)}
     >
       <Tip text={t('topbar.format.freeTip')}>
         <Radio value={FREE} className="group block data-[disabled=true]:opacity-40" labelClassName={FORMAT_LABEL}>
@@ -82,6 +96,37 @@ function FormatSwitcher({ disabled }: { disabled: boolean }) {
         </Tip>
       ))}
     </RadioGroup>
+  )
+}
+
+/** The output format on a phone, in the place of the row of `FormatSwitcher`: a button with the chosen format opens the list as a sheet. */
+function FormatMenu({ disabled }: { disabled: boolean }) {
+  const t = useT()
+  const format = useFormat()
+  const choices = [{ id: FREE, label: t('topbar.format.free') }, ...VIDEO_ASPECTS.map((a) => ({ id: a.id, label: a.label }))]
+  const current = choices.find((c) => c.id === format)
+  return (
+    <Menu
+      label={t('topbar.format.aria')}
+      sheet
+      items={choices.map((c) => ({
+        id: c.id,
+        label: c.label,
+        icon: <FormatIcon id={c.id} />,
+        selected: c.id === format,
+        onSelect: () => pickFormat(c.id === FREE ? null : c.id),
+      }))}
+      trigger={
+        <Button
+          variant="icon"
+          className="btn-chrome hidden w-control phone-any:inline-flex"
+          aria-label={`${t('topbar.format.aria')} (${current?.label})`}
+          disabled={disabled}
+        >
+          <FormatIcon id={format} />
+        </Button>
+      }
+    />
   )
 }
 
@@ -163,7 +208,7 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
         <img className="mr-1 size-7 flex-none" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={28} height={28} title="OpenFlyover" />
         <h1 className="sr-only">OpenFlyover</h1>
         <TextField
-          className="min-w-16 flex-[0_1_220px] bar-condensed:flex-auto"
+          className="min-w-16 flex-[0_1_220px] bar-condensed:flex-auto phone-any:min-w-0"
           inputClassName={NAME_INPUT}
           value={name}
           placeholder={placeholder}
@@ -203,6 +248,7 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
       </div>
 
       <FormatSwitcher disabled={busy} />
+      <FormatMenu disabled={busy} />
 
       <div className="flex items-center justify-self-end gap-2">
         <ModeSwitcher />
