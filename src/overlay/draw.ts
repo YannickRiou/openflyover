@@ -25,7 +25,7 @@ import type { WeatherSummary } from '../weather/series'
 import { OPEN_METEO_SHORT, recordedAtProgress } from './data'
 import type { BilanCumul, LeaderboardRow, OverlayFrame, OverlayTrack } from './data'
 import type { CardExtras, CardFigure, CardWindow, CounterId, CreditsPosition, EndCardSettings, LaidOutWidget, LogoSettings, TitleCardSettings, OverlayAnchor, OverlayFontId, OverlayOverrides, OverlaySettings, PlacedWidget, StyledWidget, WidgetOffset } from './settings'
-import { CARD_FADE_OUT, CARD_FIGURES, COUNTER_IDS, BILAN_CARD_FIGURES, DEFAULT_TEXT_BACKING, END_CARD_FIGURES, SAFE_MARGIN, fitWindow, inStyleSlot, placedSettings, widgetOverrides } from './settings'
+import { CARD_FADE_OUT, CARD_FIGURES, COUNTER_IDS, BILAN_CARD_FIGURES, DEFAULT_TEXT_BACKING, END_CARD_FIGURES, EDGE_MARGIN, SAFE_MARGIN, fitWindow, inStyleSlot, placedSettings, widgetOverrides } from './settings'
 import { OVERLAY_FONT_FAMILIES, resolveOverlayTheme, softTextOf } from './themes'
 import type { OverlayTheme } from './themes'
 import { styleStructure } from './structures'
@@ -125,6 +125,9 @@ export interface OverlayExtras {
   stage?: StageCard | null
   /** card of the day starting in a multi-day track (`dayCardAt`), drawn inside its window */
   day?: DayCard | null
+  /** keep the margins of the format (`video.margins`): 5 % on each side, and in the vertical formats the areas the feeds
+   * cover; false: the widgets go near the edges (`EDGE_MARGIN`). Default true */
+  margins?: boolean
   /** colour of the 3D marker ('#rrggbb'): the position dot of the profile and the mini-map, until they have their own */
   markerColor?: string
   /** legend of the track colouring (`trackLegend`) and its place, drawn even while the overlay is off */
@@ -687,6 +690,8 @@ export interface Painter {
   /** device pixels per user unit: shadow blur and offsets ignore the transform */
   px: number
   size: OverlaySize
+  /** share of the width and of the height kept free on each side (`SAFE_MARGIN`, or `EDGE_MARGIN` with the margins off) */
+  margin: number
 }
 
 export interface TextStyle {
@@ -896,7 +901,7 @@ export function drawValueTag(ctx: OverlayContext2D, size: OverlaySize, settings:
   const resolved = resolveOverlayTheme(settings.style, settings.overrides)
   // no panel, no backing of the style: the shadows are drawn here
   const theme = { ...resolved, panel: null, textShadow: undefined, textBacking: undefined }
-  const p: Painter = { ctx, theme, u, px: 1, size }
+  const p: Painter = { ctx, theme, u, px: 1, size, margin: SAFE_MARGIN }
   ctx.clearRect(0, 0, size.width, size.height)
   const light = (color: string) => {
     const m = /^#?([0-9a-f]{6})$/i.exec(color.trim())
@@ -1417,7 +1422,7 @@ function cardWidget(
   const align = alignOf(anchor)
   const pad = theme.panel ? 3 * u * scale : 0
   const barW = theme.panel ? theme.accentBar * u : 0
-  const maxW = Math.min(size.width * (1 - 2 * SAFE_MARGIN), size.width * 0.72) - 2 * pad - barW
+  const maxW = Math.min(size.width * (1 - 2 * p.margin), size.width * 0.72) - 2 * pad - barW
 
   // title: wrapped on up to three lines, shrunk when longer
   const title: TextStyle = {
@@ -1665,7 +1670,7 @@ export const cardHasGraphics = (c: CardExtras): boolean => Boolean(c.image) || B
 /** Width the profile and mini-map of a card take: that of its figures in one row, within the card. */
 function figuresWidth(p: Painter, m: ReturnType<typeof cellMetrics>, cells: readonly Cell[], size: number): number {
   const w = cells.reduce((sum, c) => sum + cellWidth(p, m, c), 0) + Math.max(0, cells.length - 1) * 3.2 * p.u * size
-  return Math.min(w, p.size.width * 0.72, p.size.width * (1 - 2 * SAFE_MARGIN))
+  return Math.min(w, p.size.width * 0.72, p.size.width * (1 - 2 * p.margin))
 }
 
 /** Profile and mini-map of the whole track inside a card: no panel of their own, the whole route covered, no marker. */
@@ -1739,12 +1744,12 @@ function drawEndSources(p: Painter, sources: readonly string[], opacity: number,
   const { ctx, theme, u, size } = p
   const style: TextStyle = { family: theme.bodyFamily, weight: 500, sizePx: 1.3 * u, color: theme.text }
   const shadowed = { ...p, theme: { ...theme, textShadow: theme.textShadow ?? { color: 'rgba(0, 0, 0, 0.6)', blur: 0.5 } } }
-  const left = area ? area.x : size.width * SAFE_MARGIN
-  const width = (area ? area.w : size.width * (1 - 2 * SAFE_MARGIN)) * 0.9
+  const left = area ? area.x : size.width * p.margin
+  const width = (area ? area.w : size.width * (1 - 2 * p.margin)) * 0.9
   const lines = sources.flatMap((line) => wrapLines(shadowed, line, width, style))
   const lineH = style.sizePx * 1.5
   const title = t('overlay.draw.credits.title')
-  const centre = left + (area ? area.w : size.width * (1 - 2 * SAFE_MARGIN)) / 2
+  const centre = left + (area ? area.w : size.width * (1 - 2 * p.margin)) / 2
   const blockH = (lines.length + 1) * lineH
   const half = Math.max(...lines.map((line) => measure(shadowed, line, style))) / 2
   // above the bottom bar or band of the style, which carries its own texts
@@ -1769,8 +1774,8 @@ function drawShortCredits(p: Painter, items: readonly string[], position: Credit
   const { ctx, theme, u, size } = p
   const style: TextStyle = { family: theme.bodyFamily, weight: 600, sizePx: 1.05 * u, color: '#FFFFFF', uppercase: true, tracking: 0.08 }
   const shadowed = { ...p, theme: { ...theme, textShadow: { color: 'rgba(0, 0, 0, 0.8)', blur: 0.5 } } }
-  const left = area ? area.x : size.width * SAFE_MARGIN
-  const edgeRight = area ? area.x + area.w : size.width * (1 - SAFE_MARGIN)
+  const left = area ? area.x : size.width * p.margin
+  const edgeRight = area ? area.x + area.w : size.width * (1 - p.margin)
   const lines = wrapLines(shadowed, items.join(' · '), edgeRight - left, style)
   const lineH = style.sizePx * 1.4
   const right = position.endsWith('right')
@@ -1836,8 +1841,8 @@ function drawCredits(p: Painter, credits: readonly string[], position: CreditsPo
   const padX = 0.6 * u
   const padY = 0.3 * u
   const lineH = style.sizePx * 1.3
-  const left = area ? area.x : size.width * SAFE_MARGIN
-  const edgeRight = area ? area.x + area.w : size.width * (1 - SAFE_MARGIN)
+  const left = area ? area.x : size.width * p.margin
+  const edgeRight = area ? area.x + area.w : size.width * (1 - p.margin)
   const lines = wrapLines(plain, credits.join(' · '), edgeRight - left - 2 * padX, style)
   const w = Math.max(...lines.map((line) => measure(plain, line, style))) + 2 * padX
   const h = lines.length * lineH + 2 * padY
@@ -1864,7 +1869,7 @@ function textWidget(p: Painter, settings: OverlaySettings): Widget | null {
   const { theme, u } = p
   const style: TextStyle = { family: theme.bodyFamily, weight: 500, sizePx: 2.4 * u * text.size, color: theme.text }
   const pad = theme.panel ? 1.4 * u * text.size : 0
-  const maxW = p.size.width * (1 - 2 * SAFE_MARGIN) - 2 * pad
+  const maxW = p.size.width * (1 - 2 * p.margin) - 2 * pad
   const line = truncate(p, content, maxW, style)
   const w = measure(p, line, style)
   const align = alignOf(text.anchor)
@@ -1952,8 +1957,8 @@ function photoCardWidget(p: Painter, item: FilmMedia, image: OverlayImage, opaci
   const captionH = text ? gap + caption.sizePx * 0.95 : 0
   let h = 26 * u * s
   let w = (h * image.width) / image.height
-  const maxW = Math.min(40 * u * s, size.width * (1 - 2 * SAFE_MARGIN) - 2 * pad)
-  const maxH = size.height * (1 - 2 * SAFE_MARGIN) - 2 * pad - captionH
+  const maxW = Math.min(40 * u * s, size.width * (1 - 2 * p.margin) - 2 * pad)
+  const maxH = size.height * (1 - 2 * p.margin) - 2 * pad - captionH
   const fit = Math.min(1, maxW / w, maxH / h)
   w *= fit
   h *= fit
@@ -2162,6 +2167,7 @@ export function drawOverlay(
     u: Math.min(size.width, size.height) / 100,
     px: transform ? Math.hypot(transform.a, transform.b) || 1 : 1,
     size,
+    margin: extras.margins === false ? EDGE_MARGIN : SAFE_MARGIN,
   }
 
   ctx.save()
@@ -2203,7 +2209,7 @@ export function drawOverlay(
   const of = (key: StyledWidget): Painter =>
     settings[key].overrides ? { ...p, theme: resolveOverlayTheme(settings.style, widgetOverrides(settings, key)) } : p
   // a widget at a free position: its share of the safe area, in pixels of this frame; `id` tells the layout pass which one it is
-  const safe = { w: size.width * (1 - 2 * SAFE_MARGIN), h: size.height * (1 - 2 * SAFE_MARGIN) }
+  const safe = { w: size.width * (1 - 2 * p.margin), h: size.height * (1 - 2 * p.margin) }
   const placed = (key: PlacedWidget, w: Widget | null, index = 0): Widget | null => {
     const free = placedSettings(settings, key, index).free
     return w && { ...w, id: key === 'logo' ? `logo${index}` : key, ...(free && { offset: { x: free.x * safe.w, y: free.y * safe.h } }) }
@@ -2254,14 +2260,15 @@ export function drawOverlay(
   // texts after the widgets of their anchor
   const maxWidths = filmTextMaxWidths(
     texts.map(({ item }) => item.anchor),
-    structure ? structure.area.w : size.width * (1 - 2 * SAFE_MARGIN),
+    structure ? structure.area.w : size.width * (1 - 2 * p.margin),
     2 * p.u,
   )
   texts.forEach(({ item, opacity }, i) => add(filmTextWidget(p, item, opacity, maxWidths[i])))
 
   // inside the safe area (what the style's structure leaves of it), and in the vertical formats clear of the platforms' interface
-  const clear = clearOfInterface(structure?.area ?? { x: size.width * SAFE_MARGIN, y: size.height * SAFE_MARGIN, w: safe.w, h: safe.h }, size)
-  const positions = layoutWidgets(widgets, size, 2 * p.u, structure?.area)
+  const area = structure?.area ?? { x: size.width * p.margin, y: size.height * p.margin, w: safe.w, h: safe.h }
+  const clear = extras.margins === false ? { area, avoid: [], top: 0, bottom: 0, vertical: false } : clearOfInterface(area, size)
+  const positions = layoutWidgets(widgets, size, 2 * p.u, area)
   // the widgets of the settings no longer in their stack's place but where the layout pass puts them for this frame
   const fits = adaptedLayout(settings, frame.track, widgets, () => {
     const every: Widget[] = []
@@ -2286,9 +2293,9 @@ export function drawOverlay(
   if (dip) drawDip(p, dip)
   // the card of a stage over the dip, which it lives in: laid out on its own
   if (stage && stageOpacity > 0.001) {
-    const card = stageWidget(p, stage, stageOpacity, filmTextMaxWidths([stage.anchor], structure ? structure.area.w : size.width * (1 - 2 * SAFE_MARGIN), 2 * p.u)[0])
+    const card = stageWidget(p, stage, stageOpacity, filmTextMaxWidths([stage.anchor], structure ? structure.area.w : size.width * (1 - 2 * p.margin), 2 * p.u)[0])
     if (card && card.opacity > 0.001) {
-      const [at] = layoutWidgets([card], size, 2 * p.u, structure?.area)
+      const [at] = layoutWidgets([card], size, 2 * p.u, area)
       ctx.save()
       ctx.globalAlpha = card.opacity
       card.draw(at.x, at.y)
@@ -2298,7 +2305,7 @@ export function drawOverlay(
   // the card of a day, laid out on its own like a stage's
   if (day && dayOpacity > 0.001) {
     const card = dayWidget(day.overrides ? { ...p, theme: resolveOverlayTheme(settings.style, { ...settings.overrides, ...day.overrides }) } : p, day, dayOpacity)
-    const [at] = layoutWidgets([card], size, 2 * p.u, structure?.area)
+    const [at] = layoutWidgets([card], size, 2 * p.u, area)
     ctx.save()
     ctx.globalAlpha = card.opacity
     card.draw(at.x, at.y)

@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v50.margins.title': 'Margini a scelta',
+  'v50.margins.text': 'La casella “Margini di sicurezza” dell’esportazione tiene la grafica lontana dai bordi e, in 9:16 e 4:5, fuori dalle zone di Reels, TikTok e Shorts. Si spunta da sola quando si sceglie una piattaforma. Senza spunta la grafica si avvicina ai bordi e tutta l’immagine serve al film.',
   'v50.modes.title': 'Tre modalità dell’interfaccia',
   'v50.modes.text': 'Principiante, Intermedio o Esperto: scegliete quante impostazioni vedere, nella barra in alto o in Impostazioni. Il film è lo stesso nelle tre modalità. Un’impostazione modificata resta sempre visibile, e Ctrl+K trova anche quelle nascoste.',
   'v50.ambiance.title': 'Uno sfondo della mappa e un’atmosfera con un clic',

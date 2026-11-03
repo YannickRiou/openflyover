@@ -229,6 +229,7 @@ describe('settings and misc', () => {
         nameTemplate: '',
         normalizeLoudness: false,
         loudnessLufs: -14,
+        margins: false,
       },
       poster: {
         format: 'a4-portrait',

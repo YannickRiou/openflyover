@@ -199,7 +199,7 @@ function DockHead({ id, modified, busy, onClose }: { id: string; modified?: (key
 }
 
 /**
- * "Exporter" drawer, « Vidéo » mode, in sections: « Format » (aspect tiles, resolution, frame rate), « Encodage »
+ * "Exporter" drawer, « Vidéo » mode, in sections: « Format » (platforms, safety margins, aspect tiles, resolution, frame rate), « Encodage »
  * (bitrate of the quality or chosen by hand, codec and container, key frames, sound), « Rendu » (the quality's render
  * tier), then the overlay alone, the estimate, start / cancel, progress, error and download. The still image is in the
  * « Affiche » mode.
@@ -408,6 +408,12 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </div>
         <p className="type-hint">{t('export.panel.platformsHint')}</p>
       </fieldset>
+      <div className="field">
+        <Checkbox checked={video.margins} disabled={busy} onChange={(margins) => update({ margins })}>
+          {t('export.panel.margins')}
+        </Checkbox>
+        <p className="type-hint">{t('export.panel.marginsHint')}</p>
+      </div>
       <ModeGate min="confirme" paths={['video.aspect', 'video.resolution', 'video.fps']}>
       <fieldset className="field min-w-0" disabled={busy}>
         <legend id={`${id}-proportions`} className="type-label">
