@@ -15,6 +15,8 @@ import {
   DEFAULT_TRACK_STYLE,
   figureOfActivity,
   MARKER_BALL_STYLE_LABELS,
+  MARKER_MODEL_COLOR_LABELS,
+  MARKER_MODEL_COLORS,
   MARKER_BALL_STYLES,
   MARKER_FIGURE_CHOICES,
   MARKER_FIGURE_LABELS,
@@ -493,6 +495,15 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
         <Checkbox checked={marker.model3d} onChange={(on) => updateMarker(on ? { model3d: true, animated: true } : { model3d: false })}>
           {t('marker.section.model3d')}
         </Checkbox>
+      )}
+      {figurine && marker.model3d && (
+        <ChipChoice
+          label={t('marker.section.modelColors')}
+          options={MARKER_MODEL_COLORS}
+          value={marker.modelColors}
+          labels={MARKER_MODEL_COLOR_LABELS}
+          onChange={(modelColors) => updateMarker({ modelColors })}
+        />
       )}
       {marker.kind === 'image' && <MarkerImageField marker={marker} update={updateMarker} />}
       {marker.kind === 'boule' && (

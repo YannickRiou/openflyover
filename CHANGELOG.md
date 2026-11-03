@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **The 3D markers keep their own colours**: a new « Couleurs du modèle 3D » choice in the marker settings (« Naturelles » by default, or « De la trace »). The horse is brown, the car blue, the skis red and the jacket green instead of everything being in the colour of the track, so the marker no longer merges with the track line. « De la trace » puts the colour of the track on the main part (jacket, hull, skis, body) as before. With several tracks in parallel, each racer keeps the colour of its track; a colour chosen by hand for the figure still wins.
+
 ## 5.1.0 (November 2026)
 
 - **All the figurines of the marker in 3D**: with « Modèle 3D » on, the 17 figurines are real models, flat-coloured and outlined as before: the hiker, the runner and the trail runner (« Adventurer » and « Adventurer F »), the four bikes with a rider posed on the saddle, the kayaker in a canoe, the downhill skier and the ski tourer on skis, the swimmer, the mountaineer, the horse rider on a galloping horse, the car, the motorbike, the plane and the paraglider's coloured wing. The body, the hull, the skis or the frame take the colour of the track and the wheels, the propeller, the legs and the paddle move with the film. They load on demand (the flat figurine shows meanwhile and if a file cannot load) and the export waits for them. The models are CC0 (Quaternius, Kenney, AliceCassie, iPoly3D) except the wing (CC BY 3.0, Poly by Google): the author, the page and the licence of each are named in the credits of the film, in the description of the video and in `THIRD_PARTY_NOTICES.md`. The outline of each part is a darker shade of its own colour, with no gaps.

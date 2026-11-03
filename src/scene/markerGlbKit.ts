@@ -78,17 +78,22 @@ export function createPainter({ main, shade, light: lighter, colors = {} }: { ma
   const cache = new Map<Material, MeshBasicMaterial>()
   const track = new Color('#ffffff')
   const light = new Color('#ffffff')
+  /** every part keeps its own colour, the main one included */
+  let natural = false
   const paint = () => {
     for (const { material, base, role, shells } of parts) {
-      if (role === 'main') material.color.copy(track)
+      if (natural || role === 'fixed') material.color.copy(base).multiply(light)
+      else if (role === 'main') material.color.copy(track)
       else if (role === 'shade') material.color.copy(track).multiplyScalar(0.7)
-      else if (role === 'light') material.color.copy(track).lerp(light, 0.45)
-      else material.color.copy(base).multiply(light)
+      else material.color.copy(track).lerp(light, 0.45)
       for (const shell of shells) shell.color.copy(material.color).multiplyScalar(OUTLINE_SHADE)
     }
   }
   return {
     paint,
+    setNatural: (on: boolean) => {
+      natural = on
+    },
     setTrack: (r: number, g: number, b: number) => track.setRGB(r, g, b),
     setLight: (r: number, g: number, b: number) => light.setRGB(r, g, b),
     /** the flat material standing for a material of the file (one per material) */

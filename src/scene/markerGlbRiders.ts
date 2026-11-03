@@ -269,6 +269,11 @@ export function createFigure({ stand: standIn, main, vehicle: vehicleSpec, hide 
       painter.setLight(r, g, b)
       painter.paint()
     },
+    setNatural(natural) {
+      vehicle?.setNatural?.(natural)
+      painter.setNatural(natural)
+      painter.paint()
+    },
   }
 }
 
@@ -348,7 +353,7 @@ const ROAD_BIKE: Omit<VehicleSpec, 'stand'> = {
   length: 1.8,
   yaw: Math.PI,
   spin: [{ match: /Wheel/, axis: 'y', turns: 2.5 }],
-  colors: { 'Material.002': '#2b2d30', 'Material.003': '#1f2022' },
+  colors: { 'Material.001': '#c8372d', 'Material.002': '#2b2d30', 'Material.003': '#1f2022' },
 }
 const ANCHORS: BikeAnchors = { saddle: new Vector3(0, 1.85, 1.25), bottomBracket: new Vector3(0, 0.15, 0.75), grip: new Vector3(0.7, 2.12, -1.15) }
 const FRAME_FRONT = new Vector3(0, 1.15, -1.05)
@@ -358,7 +363,7 @@ export const roadBike = (stand: () => MarkerModel): MarkerModel => createBikeRid
 /** « Bicycle » (same pack), a rounder frame on fat tyres, the trunk more upright. */
 export const mountainBike = (stand: () => MarkerModel): MarkerModel =>
   createBikeRider({
-    bike: { ...ROAD_BIKE, file: 'models/bicycle-round.glb', main: 'Bike', spin: [{ match: /Wheel/, axis: 'y', turns: 2.5, thick: 2.4 }], colors: { Wheel: '#2b2d30', 'Material.003': '#1f2022' } },
+    bike: { ...ROAD_BIKE, file: 'models/bicycle-round.glb', main: 'Bike', spin: [{ match: /Wheel/, axis: 'y', turns: 2.5, thick: 2.4 }], colors: { Bike: '#2f7d4a', Wheel: '#2b2d30', 'Material.003': '#1f2022' } },
     anchors: ANCHORS,
     lean: 28,
     stand,
@@ -441,7 +446,7 @@ export const kayaker = (stand: () => MarkerModel): MarkerModel =>
 
 /** The two skis under the feet, and the two poles from the hands to the snow. */
 function skiGear(parts: Parts, length: number, behind: number) {
-  const skis = SIDES.map(() => parts.box('Ski', '#ffffff', [0.1, 0.04, length]))
+  const skis = SIDES.map(() => parts.box('Ski', '#c8372d', [0.1, 0.04, length]))
   const poles = SIDES.map(() => parts.rod('Pole', BLACK, 0.018))
   const ground = new Vector3()
   return {
@@ -515,7 +520,7 @@ export const swimmer = (stand: () => MarkerModel): MarkerModel =>
     main: 'Cap',
     hide: ['Backpack'],
     setup({ rig, parts }) {
-      const cap = parts.ball('Cap', '#ffffff', 0.12)
+      const cap = parts.ball('Cap', '#e6b422', 0.12)
       cap.scale.set(1, 0.9, 1.1)
       const head = new Vector3()
       const hip = new Vector3(0, 0.1, -0.38)
@@ -547,7 +552,7 @@ export const mountaineer = (stand: () => MarkerModel): MarkerModel =>
     stand,
     main: 'Helmet',
     setup({ rig, parts }) {
-      const helmet = parts.ball('Helmet', '#ffffff', 0.13)
+      const helmet = parts.ball('Helmet', '#e6b422', 0.13)
       helmet.scale.set(1, 0.85, 1.05)
       const shaft = parts.rod('IceAxe', BLACK, 0.02)
       const crossbar = parts.box('IceAxe', BLACK, [0.28, 0.04, 0.04])
