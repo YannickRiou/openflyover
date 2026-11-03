@@ -613,7 +613,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       prefetchKeepFrames: Math.max(0, ...exportPrefetchAhead) + 2 * PREFETCH_EVERY,
     }
     // the tiles of the whole film first, at full speed, into the HTTP cache (#401): the frames then wait for the GPU, not
-    // the network; its time is counted apart, and the remaining time starts after it
+    // the network; its time is counted apart
     if (deps.engine()) {
       const p0 = performance.now()
       const app = useAppStore.getState()
@@ -645,9 +645,10 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         if (isCanceled()) throw new ExportCanceledError()
         timings.preloadMs = performance.now() - p0
         writeBreadcrumb(`export : tuiles préchargées en ${(timings.preloadMs / 1000).toFixed(1)} s (${failed} échecs)`)
-        useExportStore.setState({ startedAt: exportStore().startedAt + timings.preloadMs })
       }
     }
+    // the remaining time counts from the first frame: the soundtrack, the encoder and the tiles are made once, before it
+    useExportStore.setState({ startedAt: performance.now() })
 
     for (let i = 0; i < schedule.length; i++) {
       if (isCanceled()) throw new ExportCanceledError()

@@ -219,8 +219,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const startTime = useAppStore((s) => s.tracks[0]?.stats.startTime)
   const setSetting = useAppStore((s) => s.setSetting)
   // only what the panel draws: `cancelRequested`, `request`… changing does not redraw it
-  const { phase, frame, frameCount, etaS, result, error, timings, tiles } = useExportStore(
-    useShallow((s) => ({ phase: s.phase, frame: s.frame, frameCount: s.frameCount, etaS: s.etaS, result: s.result, error: s.error, timings: s.timings, tiles: s.tiles })),
+  const { phase, frame, frameCount, etaS, result, error, tiles } = useExportStore(
+    useShallow((s) => ({ phase: s.phase, frame: s.frame, frameCount: s.frameCount, etaS: s.etaS, result: s.result, error: s.error, tiles: s.tiles })),
   )
   const id = useId()
   /** « Habillage seul »: the overlay alone, transparent WebM to lay over one's own footage */
@@ -290,8 +290,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const bitrateCapped = bitrate < targetBitrate(encodeOptions, codec?.codec ?? 'avc', Infinity)
   // the tiles of the film fetched before its first frame (`export/tilePreload.ts`)
   const preloading = phase === 'rendering' && frame === 0 && tiles !== null && tiles.total > 0
-  const secondsPerImage =
-    timings.rendered > 0 ? (timings.renderMs + timings.waitMs + timings.encodeMs) / timings.rendered / 1000 : null
+  // the pace of the remaining time (all the time spent since the first frame): the two figures of the line agree
+  const secondsPerImage = etaS !== null && frameCount > frame ? etaS / (frameCount - frame) : null
 
   // Download the film automatically once it is ready (the link stays available), and say so.
   useEffect(() => {
