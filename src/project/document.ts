@@ -125,6 +125,7 @@ export const SETTING_CHECKS: { [K in keyof Settings]?: (value: Settings[K]) => b
   imagerySourceId: (id) => IMAGERY_SOURCES.some((s) => s.id === id),
   imageryDate: isImageryDate,
   imageryZoomOffset: (v) => v === 0 || v === 1 || v === 2,
+  imageryVivid: (v) => v >= 0 && v <= 1,
   exaggeration: (v) => v > 0,
   sunHour: (v) => v >= 0 && v <= 24,
   sunDate: isSunDate,

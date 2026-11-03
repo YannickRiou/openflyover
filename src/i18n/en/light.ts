@@ -129,6 +129,8 @@ const messages: Messages['light'] = {
   'ambiance.sunset': 'Sunset',
   'map.imagery': 'Imagery',
   'map.imageryAuto': 'Esri World Imagery is the default source, everywhere. In France and Switzerland, IGN and swisstopo are more detailed: pick them here.',
+  'map.vivid': 'Vivid colours',
+  'map.vividTip': 'IGN photos livelier and more contrasted, dry yellow grass a little greener. 0%: the photos as they are.',
   'map.imageryDate': 'Photo date',
   'map.imageryDateLatest': 'The most recent',
   'map.imageryDateLatestOn': 'The most recent ({date})',

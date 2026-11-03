@@ -13,6 +13,8 @@ const messages: Messages['news'] = {
   'v50.layout.text': 'Una película exportada en 9:16, 4:5 o 1:1 coloca por sí sola los contadores, el perfil, el minimapa, los logos y las tarjetas de título: nada se solapa, nada se corta. En los formatos verticales, además, dejan libres las zonas que cubren Reels, TikTok y Shorts. No hay ningún ajuste que tocar. «Posición libre» se ajusta ahora en porcentaje de la zona de seguridad.',
   'v50.tiles.title': 'Exportaciones que esperan menos las teselas',
   'v50.tiles.text': 'El detalle « Fino » de las fotos solo se carga donde se ve, cerca de la cámara: la misma imagen, muchas menos fotos que descargar. Las teselas de la película también llegan más a la vez, sin pedir nunca a un servicio más de lo que permite el navegador. En la web como en la aplicación.',
+  'v50.vivid.title': 'Fotos del IGN más vivas',
+  'v50.vivid.text': 'Con las fotos del IGN, el control «Colores vivos» (Mapa, a partir del modo Intermedio) les da más brillo y contraste, y vuelve la hierba seca algo más verde. Con 0 %, las fotos quedan tal cual. Los demás fondos no cambian.',
   'v47.draw.title': 'Dibujar una ruta en el mapa',
   'v47.draw.text': '«Añadir» › «Dibujar en el mapa…»: haga clic en los puntos de su salida. La línea sigue los senderos (IGN en Francia, OpenStreetMap en el resto) o queda recta si lo elige. Un clic más y la película se prepara, sin archivo GPX.',
   'v47.ribbon.title': 'Una cinta de datos en 3D',

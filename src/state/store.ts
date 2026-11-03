@@ -54,6 +54,8 @@ export interface Settings {
   /** « Date des photos » of IGN BD ORTHO and Esri: '' = the latest, 'ign:<year>', 'esri:<release>' (terrain/imageryDates.ts) */
   imageryDate: string
   imageryZoomOffset: 0 | 1 | 2
+  /** « Couleurs vives » of the IGN photos, 0 to 1 (terrain/vividShader.ts): kept, but unused, with any other imagery */
+  imageryVivid: number
   exaggeration: number
   /** physically based sky, sun light and aerial perspective */
   atmosphere: boolean
@@ -214,6 +216,7 @@ export const DEFAULT_SETTINGS: Settings = {
   imagerySourceId: 'arcgis-world-imagery',
   imageryDate: '',
   imageryZoomOffset: 1,
+  imageryVivid: 1,
   exaggeration: 1,
   atmosphere: true,
   shadows: true,

@@ -46,6 +46,7 @@ import {
 } from './quadtree'
 import { applyContours } from './contourShader'
 import { applySnow } from './snowShader'
+import { applyVivid } from './vividShader'
 import { buildTileUrl } from './sources'
 import type { TileJob, TileResult } from './tileJob'
 import { buildTileOffThread } from './tileWorker'
@@ -307,6 +308,7 @@ export function createTerrainEngine(
     })
     applySnow(material)
     applyContours(material)
+    applyVivid(material)
     return material
   }
 

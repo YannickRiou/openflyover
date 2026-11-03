@@ -729,7 +729,7 @@ export function MapSettings() {
   return (
     <>
       {/* the imagery source is left out of the marker: the import picks it per region (IGN, swisstopo) */}
-      <PanelSection title={t('light.map.background')} keys={['terrainSourceId', 'imageryZoomOffset', 'water', 'forest']}>
+      <PanelSection title={t('light.map.background')} keys={['terrainSourceId', 'imageryZoomOffset', 'imageryVivid', 'water', 'forest']}>
         {mode === 'debutant' && <BasemapChoice />}
         {/* the import picks the imagery by region: its choice is shown from « Confirmé » on whatever its value */}
         <ModeGate min="confirme">
@@ -751,6 +751,22 @@ export function MapSettings() {
         </ModeGate>
 
         <ImageryDateControl />
+
+        {/* only the IGN photos are livened (terrain/vividShader.ts); the value is kept with another imagery */}
+        {settings.imagerySourceId === 'ign-ortho' && (
+          <SettingRow label={t('light.map.vivid')} value={formatPercent(settings.imageryVivid)} paths={['imageryVivid']} min="confirme">
+            <RangeField
+              label={t('light.map.vivid')}
+              tip={t('light.map.vividTip')}
+              min={0}
+              max={1}
+              step={0.05}
+              value={settings.imageryVivid}
+              format={formatPercent}
+              onChange={(vivid) => setSetting('imageryVivid', vivid)}
+            />
+          </SettingRow>
+        )}
 
         <ModeGate min="confirme" paths={['water']}>
           <WaterControl />
