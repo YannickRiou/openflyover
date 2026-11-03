@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **The search for the region no longer waits for the other searches**: with several tracks, the region of the « situation » shot waited behind the landmarks, the water, the forests and the glaciers of every track, which are asked one at a time. With five tracks it came after about twenty-five searches. It now goes right after the one already running. The result is the same, and the other searches only wait for the two small requests of the region. One track: nothing changes.
 - **A paragliding flight stays in the air when tracks are chained**: « Enchaîner en un seul parcours » rebuilt the track without the stretches flown above the ground found at import, so the line of a flight was laid on the relief. Each recording now keeps its flights in the chained track.
 
 ## 5.0.1 (November 2026)

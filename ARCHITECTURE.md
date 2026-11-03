@@ -1695,7 +1695,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   one region in the store), else the automatic choice, unchanged: the smallest administrative boundary that contains
   the track's box and is at least 5 times larger (`chooseRegion`, `autoId`); a saved place no longer offered falls
   back to it. Then the geometry of the chosen area only, rings stitched with `stitchRings` (a closed way is one ring)
-  and simplified to 2,000 points, same queue and cache as the landmarks); `FlyoverRig` and the export frame it
+  and simplified to 2,000 points, same cache as the landmarks and the same queue, but with `urgent` set: both queries go before the ones still waiting (never before the one on the wire), so a film of several stages does not make the region wait behind every stage's landmarks, water, forests and glaciers); `FlyoverRig` and the export frame it
   (`useRegionStore.frame`), and the camera is placed again when it arrives, except during a video export: the export
   holds the region it started with (`holdRegion`, none if it was still loading) and an answer arriving meanwhile is
   applied at its end, so neither the framing nor the highlight changes mid-film. No boundary, offline or a failed query
@@ -2583,7 +2583,7 @@ exports) gets it from the terrain source of the settings.
   `out tags bb` (ways and relations reduced to their bounding box, positioned at its middle; the box is kept for places as
   `OsmFeature.area`, with the raw `population` tag). The `around:` form on a
   polyline exceeds the public server's timeout; the distance to the track is computed locally, so changing the types or the
-  distance never triggers a new request. Queue (one request at a time, kept at one on purpose: `docs/sources.md`; `onStart` tells a caller when its request is really sent), memory cache (the 32 most recently used, `MEMORY_CACHE_ENTRIES`) +
+  distance never triggers a new request. Queue (one request at a time, kept at one on purpose: `docs/sources.md`; first come first served, except `urgent` queries (the region's) which go before the ones still waiting; `onStart` tells a caller when its request is really sent), memory cache (the 32 most recently used, `MEMORY_CACHE_ENTRIES`) +
   `getPlatform().storage` for 30 days per request fingerprint, one retry on 429 / 504 (`Retry-After`, otherwise 15 s) then the other instance; a 200 response carrying an
   error `remark` (timeout exceeded) is an error. Each fetch is aborted after `QUERY_TIMEOUT_S` + 10 s (4.1: a server that never answers no longer holds the queue; the next endpoint is tried; the body is not covered).
 - **Pure post-processing** (`src/osm/landmarks.ts`): projection onto the path → distance and offset, filter by type and distance

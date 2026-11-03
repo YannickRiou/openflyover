@@ -5,11 +5,13 @@ import { useLabelSources } from '../scene/labelSources'
 import { recordsOf } from '../import/records'
 import { DEFAULT_LANDMARK_SETTINGS } from './landmarks'
 import type { LandmarkSettings } from './landmarks'
-import { OverpassError } from './overpass'
+import { OverpassError, clearOverpassMemoryCache, fetchTrackFeatures } from './overpass'
+import type { OverpassDeps } from './overpass'
 import {
   candidateId,
   chooseRegion,
   containingRegions,
+  fetchRegion,
   holdRegion,
   parseRegionCandidates,
   parseRegionGeometry,
@@ -389,5 +391,67 @@ describe('region candidates', () => {
     expect(region).toMatchObject({ id: 'way/5', name: 'Réserve' })
     expect(region.rings).toHaveLength(1)
     expect(region.rings[0]).toHaveLength(3)
+  })
+})
+
+describe('fetchRegion and the Overpass queue', () => {
+  const box = { west: 6.7, south: 45.7, east: 6.9, north: 45.95 }
+  /** Savoie-like admin area around the box, with a square outer ring. */
+  const AREA = { west: 5.5, south: 45.0, east: 7.5, north: 46.5 }
+  const ring = [
+    { lon: AREA.west, lat: AREA.south },
+    { lon: AREA.east, lat: AREA.south },
+    { lon: AREA.east, lat: AREA.north },
+    { lon: AREA.west, lat: AREA.north },
+    { lon: AREA.west, lat: AREA.south },
+  ]
+  const CANDIDATES = {
+    elements: [
+      {
+        type: 'relation',
+        id: 100,
+        tags: { boundary: 'administrative', admin_level: '4', name: 'Savoie' },
+        bounds: { minlat: AREA.south, minlon: AREA.west, maxlat: AREA.north, maxlon: AREA.east },
+      },
+    ],
+  }
+  const GEOMETRY = { elements: [{ type: 'relation', id: 100, tags: { name: 'Savoie' }, members: [{ type: 'way', role: 'outer', geometry: ring }] }] }
+
+  /** Fake server: answers the region queries and the landmarks (empty), records the kind of each request in the order sent. */
+  function fakeServer() {
+    const sent: string[] = []
+    const fetch = vi.fn(async (_url: string, init?: RequestInit) => {
+      const query = String((init?.body as URLSearchParams).get('data'))
+      const kind = query.includes('is_in') ? 'region candidates' : query.includes('rel(100)') ? 'region geometry' : 'landmarks'
+      sent.push(kind)
+      await Promise.resolve()
+      const body = kind === 'region candidates' ? CANDIDATES : kind === 'region geometry' ? GEOMETRY : { elements: [] }
+      return new Response(JSON.stringify(body))
+    })
+    const deps: OverpassDeps = { fetch: fetch as unknown as typeof globalThis.fetch, sleep: async () => {}, storage: null, now: () => 0 }
+    return { sent, deps }
+  }
+
+  beforeEach(() => clearOverpassMemoryCache())
+
+  it('finds the region of a single track: the area around it and its simplified outline', async () => {
+    const { sent, deps } = fakeServer()
+    const answer = await fetchRegion(box, null, undefined, undefined, deps)
+    expect(sent).toEqual(['region candidates', 'region geometry'])
+    expect(answer.autoId).toBe('relation/100')
+    expect(answer.candidates.map(candidateId)).toEqual(['relation/100'])
+    expect(answer.region).toMatchObject({ id: 'relation/100', name: 'Savoie', bounds: AREA })
+    expect(answer.region?.rings).toEqual([[[5.5, 45], [7.5, 45], [7.5, 46.5], [5.5, 46.5]]])
+  })
+
+  it('does not wait for the requests of every track: its two queries go right after the one on the wire', async () => {
+    const { sent, deps } = fakeServer()
+    // five tracks, as many landmark requests already queued (the first one is on the wire)
+    const tracks = ['a', 'b', 'c', 'd', 'e'].map((id, i) => makeTrack(id, 6.7 + i * 0.1))
+    const landmarks = tracks.map((track) => fetchTrackFeatures(track, undefined, deps))
+    const region = fetchRegion(box, null, undefined, undefined, deps)
+    await Promise.all([...landmarks, region])
+    expect((await region).region?.id).toBe('relation/100')
+    expect(sent).toEqual(['landmarks', 'region candidates', 'region geometry', 'landmarks', 'landmarks', 'landmarks', 'landmarks'])
   })
 })

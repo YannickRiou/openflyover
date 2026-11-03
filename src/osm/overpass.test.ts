@@ -372,6 +372,25 @@ describe('fetchTrackFeatures', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it('sends an urgent query before the ones still waiting, never before the one on the wire', async () => {
+    let release!: (r: Response) => void
+    const first = new Promise<Response>((resolve) => (release = resolve))
+    const fetchMock = vi.fn()
+    fetchMock.mockReturnValueOnce(first).mockImplementation(async () => json({ elements: [] }))
+    const deps: OverpassDeps = { fetch: fetchMock as unknown as typeof fetch, sleep: async () => {}, storage: null, now: () => 0 }
+    const sentOrder = () => fetchMock.mock.calls.map((c) => (c[1] as RequestInit).body as URLSearchParams).map((b) => b.get('data'))
+    const all = [
+      cachedOverpassQuery('A', parseOverpass, undefined, deps),
+      cachedOverpassQuery('B', parseOverpass, undefined, deps),
+      cachedOverpassQuery('C', parseOverpass, undefined, deps),
+      cachedOverpassQuery('U1', parseOverpass, undefined, deps, false, undefined, true),
+      cachedOverpassQuery('U2', parseOverpass, undefined, deps, false, undefined, true),
+    ]
+    release(json({ elements: [] }))
+    await Promise.all(all)
+    expect(sentOrder()).toEqual(['A', 'U1', 'U2', 'B', 'C'])
+  })
+
   it('tells when a queued query is actually sent, never for a result already cached', async () => {
     let release!: (r: Response) => void
     const first = new Promise<Response>((resolve) => (release = resolve))
