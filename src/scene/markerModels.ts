@@ -11,7 +11,7 @@ import type { MarkerFigure } from './markerSettings'
 import { MODEL_HEIGHT, UP, ball, begin, inkBall, joint, limb, rod, tyre } from './markerModelKit'
 import type { MarkerModel } from './markerModelKit'
 import { FIGURE_MODELS } from './markerFigureModels'
-import { createHikerAdventurer, createParagliderWing, createRunnerAdventurer, createTrailRunnerAdventurerF } from './markerGlbFigures'
+import { createCarQuaternius, createHikerAdventurer, createMotorbikeCartoon, createParagliderWing, createPlaneLight, createRunnerAdventurer, createTrailRunnerAdventurerF } from './markerGlbFigures'
 
 export { MODEL_HEIGHT, joint }
 export type { MarkerModel }
@@ -146,6 +146,9 @@ const BUILDERS: Partial<Record<MarkerFigure, () => MarkerModel>> = {
   randonneur: createHikerAdventurer,
   coureur: createRunnerAdventurer,
   traileur: createTrailRunnerAdventurerF,
+  voiture: createCarQuaternius,
+  moto: createMotorbikeCartoon,
+  avion: createPlaneLight,
 }
 
 /** True when `figure` has a 3D model. */
