@@ -43,3 +43,8 @@ void loadLanguage(usePreferences.getState().language)
       </StrictMode>,
     ),
   )
+
+// TEMPORARY bench hook (not committed)
+void Promise.all([import('./export/store'), import('./state/store')]).then(([e, a]) => {
+  ;(window as any).__bench = { exportStore: e.useExportStore, appStore: a.useAppStore }
+})

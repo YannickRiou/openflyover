@@ -484,21 +484,24 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
 
   let session: VideoEncodeSession | null = null
   /** the frame being encoded while the next one renders (`addFrame` reads the canvas before it awaits anything) */
-  let encoding: Promise<void> | null = null
+  const inFlight: Promise<void>[] = []
   /** wait for the frame being encoded: the encoder's back-pressure, counted apart */
-  const encoded = async () => {
-    if (!encoding) return
-    const t0 = performance.now()
-    try {
-      await encoding
-    } finally {
-      encoding = null
-      const spent = performance.now() - t0
-      timings.encodeWaitMs += spent
-      timings.encodeMs += spent
+  const encoded = async (all = false) => {
+    const depth = (globalThis as any).__prof?.depth ?? 1
+    const limit = all ? 0 : depth - 1
+    while (inFlight.length > limit) {
+      const t0 = performance.now()
+      try {
+        await inFlight.shift()
+      } finally {
+        const spent = performance.now() - t0
+        timings.encodeWaitMs += spent
+        timings.encodeMs += spent
+      }
     }
   }
   try {
+    performance.mark('of:begin')
     useAppStore.getState().setPlaying(false)
     // a region arriving now would change the framing mid-film (camera and highlight): it waits for the end
     holdRegion(true)
@@ -531,10 +534,12 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       return
     }
 
+    performance.mark('of:fonts')
     const settings = useAppStore.getState().settings
     // the soundtrack from the first frame: film time 0 comes after the frames held at the start
     // an image sequence has no sound
     const audio = request.sequence ? null : await filmSoundtrack(settings.film, Math.round(request.holdStartS * fps) / fps, schedule.length / fps, request.encoding?.loudnessLufs ?? null)
+    performance.mark('of:audio')
     if (isCanceled()) throw new ExportCanceledError()
     // WebCodecs, else the system's ffmpeg (desktop app on Linux); the test without encoding ends on its message
     session = noEncoding
@@ -542,6 +547,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       : request.sequence
         ? createSequenceEncoder(compositor, request.sequence.folder, request.baseName)
         : await createExportEncoder(compositor, { ...request, audio })
+    performance.mark('of:encoder')
     writeBreadcrumb(
       noEncoding
         ? 'export : test sans encodage'
@@ -647,13 +653,17 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         writeBreadcrumb(`export : tuiles préchargées en ${(timings.preloadMs / 1000).toFixed(1)} s (${failed} échecs)`)
       }
     }
+    performance.mark('of:preloaded')
     // the remaining time counts from the first frame: the soundtrack, the encoder and the tiles are made once, before it
     useExportStore.setState({ startedAt: performance.now() })
 
+    const PROF = (globalThis as any).__prof as { frames: Record<string, number>[]; on: boolean } | undefined
     for (let i = 0; i < schedule.length; i++) {
       if (isCanceled()) throw new ExportCanceledError()
+      const pf: Record<string, number> = { i, t0: performance.now() }
       // once per frame the page handles its input and paints (the export never waits otherwise when tiles are cached)
-      await yieldToEventLoop()
+      if (!(PROF as any)?.noYield || i % ((PROF as any).yieldEvery ?? 1) === 0) await yieldToEventLoop()
+      pf.yield = performance.now() - pf.t0
       if (exportTileKeepFrames > 0) {
         retention.frame = i
         deps.engine()?.setRetention?.(retention)
@@ -693,7 +703,9 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         // a tab killed for memory leaves no page event: the last step tells where
         if (isExportStep(timings.rendered)) writeBreadcrumb(`export : image ${i + 1} / ${schedule.length}`)
         // pictures and video frames decoded before the render: composing must follow it in the same task
+        const pm = performance.now()
         await loadFrameMedia(frameTimeS, progress)
+        pf.media = performance.now() - pm
         const at = { progress, time: overlayTime(filmClock, progress, frameTimeS) }
         const overlay = deps.overlay()
         // a full-screen photo or clip covers the whole frame: the view under it is not rendered (the image is the same)
@@ -714,6 +726,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
           }
         } else {
           waitingFrame = i
+          const pr = performance.now()
+          const adv0 = timings.renderMs, wt0 = timings.waitMs
           for (let j = 0; j < renders.length; j++) {
             setShutterSubFrame(j, renders.length)
             frameTimeS = renders[j].timeS
@@ -721,14 +735,19 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
             if (outcome !== 'complete') throw tilesFailed(outcome, i + 1)
           }
           frameTimeS = times[i]
+          pf.render = performance.now() - pr
+          pf.advMs = timings.renderMs - adv0
+          pf.tileWait = timings.waitMs - wt0
+          pf.nrender = renders.length
           // the next frame's tiles load while the GPU draws this one (the wait below blocks the page, not the network nor
           // the tile workers): on a phone that wait is a fifth of a second per image
           prefetchAhead(i, NEXT_FRAME)
           // same task as the last render: the drawing buffer still holds the frame; the render is waited for apart, so that
           // composing and the video frame are not charged for it
           const g0 = performance.now()
-          waitForGpu(glContext)
+          if (!(PROF as any)?.noGpuWait) waitForGpu(glContext)
           const waited = performance.now() - g0
+          pf.gpuWait = waited
           timings.gpuWaitMs += waited
           timings.encodeMs += waited
           const t0 = performance.now()
@@ -748,6 +767,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
             } else sceneCopyValid = false
           }
           composed = performance.now() - t0
+          pf.compose = composed
           timings.composeMs += composed
           timings.encodeMs += composed
           timings.rendered++
@@ -757,19 +777,28 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       }
       // the previous frame out of the way, this one handed over: its canvas is read now, its encoding goes on while
       // the next frame renders
+      const pe = performance.now()
       await encoded()
+      pf.encWait = performance.now() - pe
       const t0 = performance.now()
       const frame = await handover.take()
-      encoding = session.addFrame(i, frame)
+      const added = session.addFrame(i, frame)
+      added.catch(() => undefined)
+      inFlight.push(added)
       handover.release(frame)
       const taken = performance.now() - t0
+      pf.take = taken
       timings.frameMs += taken
       timings.encodeMs += taken
       // a composed image, not a hold: what composing it and handing it over cost, for the choice of the method
       if (composed !== null) handover.record(composed + taken)
+      const prp = performance.now()
       report(i + 1, performance.now(), timings, i === schedule.length - 1)
+      pf.report = performance.now() - prp
+      pf.t1 = performance.now()
+      PROF?.frames.push(pf)
     }
-    await encoded()
+    await encoded(true)
 
     exportStore().finalizing()
     const { blob, sizeBytes } = await session.finish()
@@ -807,7 +836,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     })
   } catch (error) {
     // the frame in flight is dropped with the session; the history reads the timings of the store
-    encoding?.catch(() => undefined)
+    for (const p of inFlight) p.catch(() => undefined)
     readGpuTimer()
     report(exportStore().frame, performance.now(), timings, true)
     await abandon(error, request, session, isCanceled())
