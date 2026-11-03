@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 5.0.1 (November 2026)
 
 - **The output format is one tap away on a phone**: the top bar of a phone now has a button with the current format (« Libre » or a frame of the ratio), in the place where the row of formats shows on a wide screen. A tap opens the list of the formats as a sheet, with the chosen one checked. It is locked during an export, like the row. To make room, the language button shows only its flag on a phone and the project name field is narrower. On a wide screen nothing changes.
 - **The remaining time of an export agrees with its pace**: it counted the preparation of the film (soundtrack, encoder) as if it came back at every image, and « ≈ x s / image » only counted the render, the wait for tiles and the encoding, not the rest of the time between two images. Both now come from the time spent since the first image: « 421 / 870 · ≈ 1,2 s / image · reste 9 min » adds up.
