@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **A paragliding flight stays in the air when tracks are chained**: « Enchaîner en un seul parcours » rebuilt the track without the stretches flown above the ground found at import, so the line of a flight was laid on the relief. Each recording now keeps its flights in the chained track.
+
 ## 5.0.1 (November 2026)
 
 - **The output format is one tap away on a phone**: the top bar of a phone now has a button with the current format (« Libre » or a frame of the ratio), in the place where the row of formats shows on a wide screen. A tap opens the list of the formats as a sheet, with the chosen one checked. It is locked during an export, like the row. To make room, the language button shows only its flag on a phone and the project name field is narrower. On a wide screen nothing changes.
