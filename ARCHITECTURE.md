@@ -3986,7 +3986,8 @@ photo. The glaciers mapped by OpenStreetMap are therefore drawn with the snow lo
   is neither drawn (`TrackLines`, one line per segment) nor counted (`computeStats`, `buildTrackPath`); the marker
   crosses it in one go. Two overlapping recordings are refused (a group outing: ghost race).
 - New id, stats and bounds recomputed (`buildTrack`), color, source, activity and time offset of the first one,
-  waypoints of all; name = common words ("Tour du Mont-Blanc" for "… J1", "… J2") otherwise "première → dernière" (first → last).
+  waypoints of all, flights of all (paragliding: `Flight` distances moved on by the length of the tracks before, so a flight
+  stays in the air instead of being laid on the ground); name = common words ("Tour du Mont-Blanc" for "… J1", "… J2") otherwise "première → dernière" (first → last).
   The duration counts the nights between the days.
 - Store: `replaceTracks(list)` (same frame origin, playback at the start); `setTrackColor(id, color)` (list chip, playback not interrupted); `flyTrack(id)` (the track moves to the top: it is the one flown over). Tracks are not in the history
   (like deletion): the "Traces enchaînées" message carries "Annuler", which restores the separate tracks; it

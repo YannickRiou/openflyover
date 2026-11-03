@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Track, TrackPoint } from '../core/types'
 import { CHAIN_OFFER_MAX_GAP_MS, chainName, chainOrder, chainTracks, followEachOther, replaceByChain } from './chain'
+import { buildTrackPath } from '../flyover/path'
 import { buildTrack, computeStats } from './stats'
 
 const HOUR = 3600 * 1000
@@ -82,6 +83,20 @@ describe('chainTracks', () => {
 
   it('refuses a single track', () => {
     expect(() => chainTracks([track('Seule', 45.0, DAY1)])).toThrow(/deux traces/)
+  })
+
+  it('keeps the flights of every track, moved along by the length of the tracks before it', () => {
+    const morning = track('Vol 1', 45.0, DAY1, { flights: [{ startM: 100, endM: 900, offsetM: 12, maxHeightM: 300, maxHeightAtM: 500 }] })
+    const afternoon = track('Vol 2', 45.1, DAY1 + 4 * HOUR, { flights: [{ startM: 200, endM: 1000, offsetM: 8 }] })
+    const chained = chainTracks([afternoon, morning])
+    const shift = morning.stats.distanceM
+    expect(chained.flights).toEqual([
+      { startM: 100, endM: 900, offsetM: 12, maxHeightM: 300, maxHeightAtM: 500 },
+      { startM: 200 + shift, endM: 1000 + shift, offsetM: 8 },
+    ])
+    // the jump between the two recordings is not counted: the second starts where the first ends
+    expect(buildTrackPath(chained).dist[3]).toBeCloseTo(shift, 6)
+    expect(chainTracks([track('A', 45.0, DAY1), track('B', 45.1, DAY1 + 4 * HOUR)]).flights).toBeUndefined()
   })
 
   it('keeps the waypoints of every track and the clock offset of the first', () => {
