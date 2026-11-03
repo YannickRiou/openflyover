@@ -5,6 +5,7 @@ import type { Root } from 'react-dom/client'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { TrackPoint } from '../core/types'
 import { buildTrack } from '../import/stats'
+import { useExportStore } from '../export/store'
 import { resetAppStore, useAppStore } from '../state/store'
 import { OverlayCanvas } from './OverlayCanvas'
 
@@ -42,5 +43,31 @@ describe('live overlay canvas', () => {
     const canvas = host.querySelector('canvas')!
     expect(canvas.width).toBe(780)
     expect(canvas.height).toBe(1688)
+  })
+
+  it('is emptied while an export runs and drawn again when it ends', async () => {
+    const points: TrackPoint[] = Array.from({ length: 10 }, (_, i) => ({ lon: 6, lat: 45 + i * 0.001, ele: 1000 + i }))
+    useAppStore.getState().addTracks([buildTrack({ name: 'Sortie', source: 'gpx', segments: [{ points }] })])
+    const calls: string[] = []
+    const getContext = HTMLCanvasElement.prototype.getContext
+    HTMLCanvasElement.prototype.getContext = (() => new Proxy({}, { get: (_, key) => () => (calls.push(String(key)), key === 'measureText' ? { width: 10 } : key === 'getTransform' ? { a: 1, b: 0 } : undefined), set: () => true })) as unknown as typeof getContext
+    const host = document.body.appendChild(document.createElement('div'))
+    root = createRoot(host)
+    await act(async () => root!.render(<OverlayCanvas />))
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 10)))
+    expect(calls.length).toBeGreaterThan(2)
+    calls.length = 0
+    await act(async () => useExportStore.setState({ phase: 'rendering' }))
+    expect(calls).toContain('clearRect')
+    calls.length = 0
+    // the progress moves on every frame of an export: nothing is drawn
+    await act(async () => useAppStore.getState().setProgress(0.5))
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 10)))
+    expect(calls).toEqual([])
+    await act(async () => useExportStore.setState({ phase: 'done' }))
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 10)))
+    expect(calls.length).toBeGreaterThan(2)
+    HTMLCanvasElement.prototype.getContext = getContext
+    useExportStore.setState({ phase: 'idle' })
   })
 })

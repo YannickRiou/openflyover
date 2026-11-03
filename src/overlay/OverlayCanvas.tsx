@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { deviceBudget } from '../core/deviceBudget'
+import { useBatchStore } from '../export/batch'
 import { isExportBusy, useExportStore } from '../export/store'
 import { useMusicPreview } from '../film/audio'
 import { getMediaBitmaps, mediaToLoad } from '../film/media'
@@ -21,13 +22,17 @@ import { createOverlayFilmCache, overlayExtras, photoAssets } from './exportOver
  * frame after any change of what it reads (store subscriptions, no React render per frame). Video clips are video
  * elements playing along during the playback, seeked to the film time when scrubbing (none during an export, which
  * decodes its own frames). Rendered while there is a track.
- * Frozen during an export (the progress changes every frame there, and the export composes its own overlay).
+ * Hidden during an export or a batch (the preview shows its frames: a frozen overlay beside a moving view is
+ * confusing, and the export composes its own overlay), drawn again once it ends.
  */
 export function OverlayCanvas() {
   // the full credits close every film: there is always something to draw
   const enabled = useAppStore((s) => s.tracks.length > 0)
   return enabled ? <OverlayPreview /> : null
 }
+
+/** An export or a batch is running (the same notion as the shell's `exporting`, App.tsx). */
+const exporting = () => isExportBusy(useExportStore.getState().phase) || useBatchStore.getState().phase === 'running'
 
 /** Photos decoded this long before they appear (seconds of film time). */
 const PHOTO_AHEAD_S = 2
@@ -82,16 +87,27 @@ function OverlayPreview() {
       // decode the photos coming up before they fade in
       for (const id of mediaToLoad(settings.film.media, time.timeS, PHOTO_AHEAD_S)) bitmaps.get(id)
       const sound = { ...playback, muted: useMusicPreview.getState().muted }
-      const video = isExportBusy(useExportStore.getState().phase)
-        ? undefined
-        : (item: FilmMedia, clipS: number) => videos.frame(item, clipS, sound, clipRateAt(item, data.whole.path, clockRef.current, time.timeS))
+      const video = (item: FilmMedia, clipS: number) => videos.frame(item, clipS, sound, clipRateAt(item, data.whole.path, clockRef.current, time.timeS))
       drawOverlay(ctx, frame, overlay, { width, height }, { logos: logos.logos(), ...photoAssets(), video, cardImage }, overlayExtras(time, playback.progress))
       // clips not drawn by this frame are paused
       videos.settle()
     }
-    // frozen during an export, which draws its own overlay frame by frame: the preview is redrawn once it ends
+    // hidden during an export, which draws its own overlay frame by frame: the preview is redrawn once it ends
     const schedule = () => {
-      if (!raf && !disposed && !isExportBusy(useExportStore.getState().phase)) raf = requestAnimationFrame(draw)
+      if (!raf && !disposed && !exporting()) raf = requestAnimationFrame(draw)
+    }
+    // an export or a batch starts: the canvas is emptied, and the clips paused as a last draw would have done
+    let hidden = exporting()
+    const syncHidden = () => {
+      const now = exporting()
+      if (now === hidden) return
+      hidden = now
+      if (!now) return schedule()
+      cancelAnimationFrame(raf)
+      raf = 0
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      videos.settle()
     }
 
     scheduleRef.current = schedule
@@ -127,9 +143,9 @@ function OverlayPreview() {
     const unsubscribeRegion = useRegionStore.subscribe((state, prev) => {
       if (state.region !== prev.region) schedule()
     })
-    const unsubscribeExport = useExportStore.subscribe((state, prev) => {
-      if (isExportBusy(state.phase) !== isExportBusy(prev.phase)) schedule()
-    })
+    const unsubscribeExport = useExportStore.subscribe(syncHidden)
+    // the export store is idle for a moment between two films of a batch: the batch keeps the preview hidden
+    const unsubscribeBatch = useBatchStore.subscribe(syncHidden)
     const unsubscribeSound = useMusicPreview.subscribe(schedule)
     const unsubscribePhotos = bitmaps.subscribe(schedule)
     const unsubscribeVideos = videos.subscribe(schedule)
@@ -156,6 +172,7 @@ function OverlayPreview() {
       unsubscribeGlacier()
       unsubscribeRegion()
       unsubscribeExport()
+      unsubscribeBatch()
       unsubscribeSound()
       unsubscribePhotos()
       unsubscribeVideos()

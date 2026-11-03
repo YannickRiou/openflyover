@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **The overlay hides during an export**: the 3D preview shows the frames being rendered, but the overlay (counters, profile, mini-map) stayed frozen on the frame from before the export, which was confusing. It now disappears while an export or a batch runs, and comes back when it ends, done, canceled or failed. The exported films are unchanged.
 - **« Marges de sécurité » in the export, for every format**: a box under « Pour une plateforme » sets whether the overlay keeps its margins. Ticked, it stays 5 % away from the edges and, in 9:16 and 4:5, out of the areas that Reels, TikTok and Shorts cover, as in 5.0.0. Unticked (the default), every element moves to 2 % of the edge and the whole picture is used: for a film shared somewhere other than a social network. Choosing a platform ticks it (the « Reel 30 s » film too); it can be unticked afterwards. A project saved before keeps its margins when its format is a platform's, otherwise they are off. The preview shows the same layout as the export.
 
 ## 5.0.0 (November 2026)
