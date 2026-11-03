@@ -64,6 +64,13 @@ export interface ExportRequest {
   overlayOnly?: boolean
   /** an image sequence (one PNG per frame, no sound) written in this folder instead of a video (`sequenceEncoder.ts`) */
   sequence?: { folder: WritableFolder }
+  /** only the frames of this part of the film (film seconds, `ScheduleOptions.window`) */
+  window?: { fromS: number; toS: number }
+  /**
+   * a measure, not a film (`layerCost.ts`): no tiles fetched ahead, no soundtrack, nothing in the history of renders.
+   * The caller also sets « Export de test sans encodage » so that nothing is encoded.
+   */
+  probe?: boolean
 }
 
 export interface ExportResult {

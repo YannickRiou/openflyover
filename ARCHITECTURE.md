@@ -3061,6 +3061,19 @@ exports) gets it from the terrain source of the settings.
   (`gpuMs`): the GPU is then the limit. `gpuWaitMs` stays 0, the wait of the GPU goes into `encodeWaitMs`, and `gpuMs`
   still gives the GPU's time. Session flag `openflyover.export.gpuWait` = `'1'` (`GPU_WAIT_KEY`, this tab) brings the
   wait back to time the GPU.
+- **« Mesurer le coût des couches »** (Réglages › Diagnostic; `export/layerCost.ts` pure and tested, `layerCostRun.ts` the
+  run on the device, loaded when the button is pressed): the time of an image with each layer off in turn (clouds, shadows,
+  atmosphere, forest, water, contour lines, 3D labels, overlay) and with half the pixels on each side, as a « Coût des
+  couches » section added to the report (French, copied like the rest). It exists because Safari has no GPU timer
+  (`hasGpuTimer`), so on an iPhone this is the only way to know which layer to lighten. Each measure is
+  `WINDOW_FRAMES` (12) frames in the middle of the flight (`ExportRequest.window`, `ScheduleOptions.window`: the schedule keeps
+  the frames whose film time is inside, never fewer than two), exported without encoding (the tab flag « Export de test
+  sans encodage » set for the run) with `ExportRequest.probe`: no tile fetched ahead, no soundtrack, nothing in the render
+  history. The ms per image count the frames after the first. The reference is run twice (the first only warms the tiles and
+  the shaders up); a layer that is off already is not measured. The run holds the batch store `running` (no autosave, no edit),
+  suspends the undo history, and puts the same `settings` object, the flag and the export store back whatever happens (a
+  cancel keeps what was measured, a failure throws after that). Nothing runs at start-up and nothing changes on a computer
+  unless the button is pressed.
 - **What the report tells a phone, which has no console** (`diagnostic.ts`, « Appareil » and « Export » sections): the
   terrain workers (`terrain/tileWorkerStatus.ts`, noted by `tileWorker.ts`: `untried`, `active` with the number of
   workers and of tiles they built, `unsupported`, `dropped`; the status module is apart so that reading it loads no worker),

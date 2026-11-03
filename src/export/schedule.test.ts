@@ -166,6 +166,22 @@ describe('video formats', () => {
   })
 })
 
+describe('a window of the film (the measure of the cost of the layers)', () => {
+  it('keeps the frames whose film time is inside, holds included only when the window reaches them', () => {
+    const options = { durationS: 10, fps: 2, holdStartS: 1, holdEndS: 1 }
+    const all = buildFrameTimes(options)
+    const inside = buildFrameTimes({ ...options, window: { fromS: 4, toS: 5.5 } })
+    expect(inside).toEqual(all.filter((t) => t >= 4 && t <= 5.5))
+    expect(inside.length).toBeGreaterThanOrEqual(2)
+    // the window starting at 0 takes the frames held at the start, the one ending at the duration those at the end
+    expect(buildFrameTimes({ ...options, window: { fromS: 0, toS: 0 } }).length).toBeGreaterThanOrEqual(2)
+    // the schedule follows: one progress per frame of the window
+    expect(buildFrameSchedule({ ...options, window: { fromS: 4, toS: 5.5 } })).toHaveLength(inside.length)
+    // fewer than two frames inside: the whole film, never a film of one image
+    expect(buildFrameTimes({ ...options, window: { fromS: 4.1, toS: 4.2 } })).toEqual(all)
+  })
+})
+
 describe('buildFrameSchedule', () => {
   it('ramps from 0 to 1 over duration × fps frames', () => {
     const frames = buildFrameSchedule({ durationS: 2, fps: 10 })
