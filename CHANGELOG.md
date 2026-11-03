@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **The overlay hides during an export**: the 3D preview shows the frames being rendered, but the overlay (counters, profile, mini-map) stayed frozen on the frame from before the export, which was confusing. It now disappears while an export or a batch runs, and comes back when it ends, done, canceled or failed. The exported films are unchanged.
+
 ## 5.0.0 (November 2026)
 
 - **IGN photos near a border no longer stop the export**: where the IGN has no detailed photo (beyond the border, the Spanish side of a Pyrenees track), the server answers « introuvable » and the export stopped after 8 attempts. That ground is now drawn from the IGN's coarser overview, as the white tiles already were.

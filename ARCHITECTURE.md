@@ -3034,7 +3034,8 @@ exports) gets it from the terrain source of the settings.
   session (`filmRate`, measured by the store at the end of a film; nothing before the first).
 - **Main thread**: once per frame the loop yields (`yieldToEventLoop`: `scheduler.yield()`, else a message port); the
   progress reaches the store at most every 250 ms (`throttledReporter`, last frame forced); the overlay preview
-  (`OverlayCanvas`) and the timeline are frozen while an export runs and redrawn at its end.
+  (`OverlayCanvas`) is emptied while an export or a batch runs (the view shows its frames, a frozen overlay beside
+  it would confuse) and drawn again at its end; the timeline is frozen and redrawn at its end.
 - **Encoding pipeline**: the encoder takes the canvas synchronously in `addFrame` (`VideoSampleSource` +
   `new VideoSample(canvas)` before any await; ffmpeg path: `getImageData`), so frame i is encoded while frame i+1
   settles and renders (one `addFrame` in flight). Right after the last render of an image the loop waits for the GPU
