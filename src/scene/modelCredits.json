@@ -26,9 +26,12 @@
       "cycliste",
       "vtt",
       "vae",
-      "bikepacking"
+      "bikepacking",
+      "skieur",
+      "ski-rando",
+      "kayak"
     ],
-    "modifications": "Walk and Run animations only, geometry quantised, posed on the bikes bone by bone, flat colours and outline added in the app"
+    "modifications": "Walk and Run animations only, geometry quantised, posed on the bikes, the skis and in the kayak bone by bone, flat colours and outline added in the app"
   },
   {
     "id": "adventurer-f",
@@ -109,5 +112,18 @@
       "vtt"
     ],
     "modifications": "converted from Blender to glTF, wheels turn with the phase and are made thicker, flat colours and outline added in the app"
+  },
+  {
+    "id": "canoe",
+    "title": "Canoe (Nature Kit)",
+    "author": "Kenney",
+    "license": "CC0 1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sourceUrl": "https://kenney.nl/assets/nature-kit",
+    "file": "models/canoe.glb",
+    "figures": [
+      "kayak"
+    ],
+    "modifications": "flat colours and outline added in the app; the paddle, the skis and the poles are made in code"
   }
 ]
