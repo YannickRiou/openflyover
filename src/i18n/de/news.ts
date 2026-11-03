@@ -17,6 +17,8 @@ const messages: Messages['news'] = {
   'v50.tiles.text': 'Das Bilddetail « Fein » wird nur noch dort geladen, wo man es sieht, nahe der Kamera: dasselbe Bild, viel weniger Fotos zum Herunterladen. Die Kacheln des Films kommen außerdem mehr auf einmal, ohne einen Dienst je stärker zu fragen, als der Browser erlaubt. Auf der Website wie in der App.',
   'v50.vivid.title': 'Lebendigere IGN-Fotos',
   'v50.vivid.text': 'Bei den IGN-Fotos gibt der Regler „Lebhafte Farben“ (Karte, ab dem Modus Fortgeschritten) den Fotos mehr Leuchtkraft und Kontrast und macht trockenes Gras etwas grüner. Bei 0 % bleiben die Fotos unverändert. Andere Grundkarten ändern sich nicht.',
+  'v50.phoneFormat.title': 'Das Format mit einem Fingertipp am Telefon',
+  'v50.phoneFormat.text': 'Am Telefon hat die obere Leiste eine Schaltfläche, die das aktuelle Format zeigt. Ein Tipp öffnet die Liste der Formate (Frei, 16:9, 9:16…), das gewählte ist abgehakt. „Exportieren“ muss dafür nicht mehr geöffnet werden.',
   'v47.draw.title': 'Route auf der Karte zeichnen',
   'v47.draw.text': '„Hinzufügen“ › „Auf der Karte zeichnen…“: Klicken Sie die Punkte Ihrer Tour. Die Linie folgt den Wegen (IGN in Frankreich, sonst OpenStreetMap) oder bleibt gerade, wenn Sie es wählen. Ein weiterer Klick, und der Film wird vorbereitet, ohne GPX-Datei.',
   'v47.ribbon.title': 'Ein 3D-Datenband',

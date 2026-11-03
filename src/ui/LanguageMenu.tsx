@@ -59,7 +59,7 @@ export function LanguageMenu() {
           onClick={() => setOpen(!open)}
         >
           <Flag code={current.code} />
-          {current.code.toUpperCase()}
+          <span className="phone-any:hidden">{current.code.toUpperCase()}</span>
         </Button>
       </Tip>
       {open && (
