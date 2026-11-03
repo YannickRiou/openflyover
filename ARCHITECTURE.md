@@ -3565,11 +3565,30 @@ color }`, interval 10–500 m, default off, 50 m, 60 %, white; checked by `isVal
   after `<color_fragment>`, so they come after the snow and take the sun, the shadows, the exposure and the grading like the
   photo. Altitude = scene height ÷ exaggeration + the drop of the curved ground, like the snow: the interval is in real
   metres. Line = distance in pixels to the nearest multiple (`fwidth`), about 1 px wide (2 px and stronger for every fifth
-  one), faded out where lines come closer than ~3 px (`contourPx` 0.2–0.4). Both patches share one program
-  (`openflyover-terrain-snow-contours`); `contourOpacity` = 0 skips the code, so nothing changes when off.
+  one), faded out where lines come closer than ~3 px (`contourPx` 0.2–0.4). The patches share one program
+  (`openflyover-terrain-snow-contours-vivid`, with the vivid colours below); `contourOpacity` = 0 skips the code, so
+  nothing changes when off.
 - **Uniforms** (`contourUniforms`): set each frame by `scene/ContourLayer.tsx` from the settings, a pure function of them:
   the export draws what the preview shows.
 - **Left out**: altitude labels on the lines.
+
+## Vivid colours (« Couleurs vives »)
+
+A slider in « Carte › Fond de carte » that makes the IGN aerial photos livelier (`settings.imageryVivid`, 0 to 1, default 1;
+checked 0..1 by `SETTING_CHECKS`; shown from « Confirmé », only while `imagerySourceId` is `ign-ortho`). Not for `ign-plan`
+(a drawn map) nor for any other imagery: they are drawn as they are, and the value is kept in the project.
+
+- **Shader** (`src/terrain/vividShader.ts`): `applyVivid(material)` wraps the `onBeforeCompile` of the tile material (last,
+  after `applyContours`, in `terrain/engine.ts`) and adds its code right after `<map_fragment>`, so the snow is blended over
+  the livened photo. The colour is turned into sRGB, worked on there, and turned back to linear. Steps, with `s` the
+  strength: the hue of clear yellows leans to yellow-green (up to 20° × `s`, weighted by saturation and by the distance to
+  yellow, so pale rocks and scree barely move); saturation × (1 + 0.6 `s`) and brightness × (1 − 0.1 `s`); contrast
+  × (1 + 0.15 `s`) around the luma 0.4; clamped. `vividColour` is the same formula in TypeScript, tested; the GLSL follows it
+  step by step.
+- **Uniform** (`vividUniforms.imageryVivid`): set each frame by `TerrainLayer` (`setVividUniforms`) to the setting with the
+  IGN photos, else 0. At 0 the code is skipped (`if (imageryVivid > 0.0)`), so the photo is exactly its own colour; a tile
+  without a photo (`USE_MAP` off) keeps its flat colour. Moving the slider only changes the uniform: no tile is rebuilt or
+  loaded again.
 
 ## Snow (« Neige »)
 

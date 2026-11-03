@@ -27,6 +27,7 @@ export const WHATS_NEW: readonly NewsVersion[] = [
       { icon: 'cloud-sun', get title() { return t('news.v50.ambiance.title') }, get text() { return t('news.v50.ambiance.text') } },
       { icon: 'maximize', get title() { return t('news.v50.layout.title') }, get text() { return t('news.v50.layout.text') } },
       { icon: 'gauge', get title() { return t('news.v50.tiles.title') }, get text() { return t('news.v50.tiles.text') } },
+      { icon: 'image', get title() { return t('news.v50.vivid.title') }, get text() { return t('news.v50.vivid.text') } },
     ],
   },
   {

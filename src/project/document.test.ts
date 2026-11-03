@@ -187,6 +187,14 @@ describe('serializeProject / parseProject', () => {
     ])
   })
 
+  it('reads « Couleurs vives » between 0 and 1, and opens a project without it at 100 %', () => {
+    const read = (settings: object) => parseProject(JSON.stringify({ ...doc(), settings })).settings.imageryVivid
+    expect(read({ imageryVivid: 0.4 })).toBe(0.4)
+    expect(read({ imageryVivid: 0 })).toBe(0)
+    expect(read({ imageryVivid: 2 })).toBe(1)
+    expect(read({})).toBe(1)
+  })
+
   it('handles any key of DEFAULT_SETTINGS, including keys added later', () => {
     const defaults = DEFAULT_SETTINGS as unknown as Record<string, unknown>
     defaults.futureColour = 'speed'

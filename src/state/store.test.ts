@@ -154,6 +154,7 @@ describe('settings and misc', () => {
       imagerySourceId: 'arcgis-world-imagery',
       imageryDate: '',
       imageryZoomOffset: 1,
+      imageryVivid: 1,
       exaggeration: 1.5,
       atmosphere: false,
       shadows: true,
