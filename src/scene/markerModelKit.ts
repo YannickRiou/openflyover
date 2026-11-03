@@ -29,6 +29,8 @@ export interface MarkerModel {
    * the exposure and the light of the scene it is multiplied by (white scaled like `setColor`'s fill).
    */
   setLight?(r: number, g: number, b: number): void
+  /** `true`: a glTF model keeps its own colours, its main part too (`MarkerSettings.modelColors`); `false` (default): that part takes the colour of the track */
+  setNatural?(natural: boolean): void
 }
 
 export const UP = new Vector3(0, 1, 0)

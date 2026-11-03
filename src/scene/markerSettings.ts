@@ -148,6 +148,10 @@ export type MarkerFigureChoice = (typeof MARKER_FIGURE_CHOICES)[number]
 export const MARKER_BALL_STYLES = ['plat', 'halo', 'pulsation'] as const
 export type MarkerBallStyle = (typeof MARKER_BALL_STYLES)[number]
 
+/** Colours of a 3D model: its own (a brown horse, a blue car), or the colour of the track on its main part (the jacket, the hull, the skis). */
+export const MARKER_MODEL_COLORS = ['natural', 'track'] as const
+export type MarkerModelColors = (typeof MARKER_MODEL_COLORS)[number]
+
 /** Outline of a figure badge: disc, map pin (its tip on the track), rounded square, or the figure alone, outlined. */
 export const MARKER_SHAPES = ['rond', 'epingle', 'carre', 'contour'] as const
 export type MarkerShape = (typeof MARKER_SHAPES)[number]
@@ -168,6 +172,8 @@ export interface MarkerSettings {
   animated: boolean
   /** a 'figurine' that has a 3D model (`markerModels.ts`) is drawn as that model, facing along the track; the others keep their pictogram */
   model3d: boolean
+  /** colours of that model: its own (default, so the marker does not merge with the track line) or the track's on its main part; the lead marker's only, the racers keep the colour of their track */
+  modelColors: MarkerModelColors
   /**
    * '#rrggbb' of the ball and of the ring of a figure or picture badge, '' = the colour of the track. The lead
    * marker's only: the racers keep the colour of their own track.
@@ -199,6 +205,7 @@ export const DEFAULT_MARKER: MarkerSettings = {
   size: 1,
   animated: false,
   model3d: false,
+  modelColors: 'natural',
   color: '#FFFFFF',
   ballStyle: 'plat',
   figureColor: '#1C2A33',
@@ -395,6 +402,11 @@ export const MARKER_BALL_STYLE_LABELS: Record<MarkerBallStyle, string> = {
   get pulsation() { return t('marker.ball.pulsation') },
 }
 
+export const MARKER_MODEL_COLOR_LABELS: Record<MarkerModelColors, string> = {
+  get natural() { return t('marker.modelColors.natural') },
+  get track() { return t('marker.modelColors.track') },
+}
+
 export const MARKER_SHAPE_LABELS: Record<MarkerShape, string> = {
   get rond() { return t('marker.shape.rond') },
   get epingle() { return t('marker.shape.epingle') },
@@ -445,6 +457,7 @@ export function isValidMarker(marker: MarkerSettings): boolean {
     isTrackOrHexColor(marker.figureColor) &&
     oneOf(MARKER_SHAPES, marker.shape) &&
     typeof marker.model3d === 'boolean' &&
+    oneOf(MARKER_MODEL_COLORS, marker.modelColors) &&
     oneOf(MARKER_LABEL_MODES, marker.label) &&
     marker.labelText.length <= MARKER_LABEL_MAX_CHARS
   )

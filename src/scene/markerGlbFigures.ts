@@ -187,6 +187,10 @@ function createCharacter({ file, clip: clipName, hide, stand: standIn, ...colors
       painter.setLight(r, g, b)
       painter.paint()
     },
+    setNatural(natural) {
+      painter.setNatural(natural)
+      painter.paint()
+    },
   }
 }
 
@@ -303,6 +307,10 @@ export function createVehicle({ file, main, length, yaw, spin = [], extras, colo
     },
     setLight(r, g, b) {
       painter.setLight(r, g, b)
+      painter.paint()
+    },
+    setNatural(natural) {
+      painter.setNatural(natural)
       painter.paint()
     },
   }

@@ -134,10 +134,11 @@ full customization through a single project document, WebCodecs video export, Ta
 
 The first screen (shell, panels, welcome card) loads the app, React and the HeroUI / React Aria primitives, without three.js:
 1.9 MB, 559 kB gzip over 22 files in 4.5.0, stylesheet included (the app 441 kB, `primitives` 291 kB, React 219 kB,
-French and the i18n code 177 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 582 kB
+French and the i18n code 177 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 583 kB
 gzip (`scripts/check-bundle-size.mjs`, after the build): raise it on purpose in the pull request that needs it (580 → 582
 for the diagnostic report's phone rows: the terrain workers' status, the GPU timer, the wait for the GPU, which the
-first screen holds because the export's guard builds the report).
+first screen holds because the export's guard builds the report; 582 → 583 for the credits of the 3D models, the
+marker settings and their labels in French).
 Nothing in the first screen may import `three` or `@react-three/fiber` statically: the status bar reads the renderer through
 `scene/perfProbe.ts` (a plain module the scene fills when its canvas is created). Only French (the
 reference, the fallback of a missing message) is in the first screen; English, Spanish, Italian and German are one chunk each
