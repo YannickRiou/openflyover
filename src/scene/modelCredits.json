@@ -21,8 +21,22 @@
     "sourceUrl": "https://poly.pizza/m/5EGWBMpuXq",
     "file": "models/adventurer.glb",
     "figures": [
-      "randonneur"
+      "randonneur",
+      "coureur"
     ],
-    "modifications": "Walk animation only, geometry quantised, flat colours and outline added in the app"
+    "modifications": "Walk and Run animations only, geometry quantised, flat colours and outline added in the app"
+  },
+  {
+    "id": "adventurer-f",
+    "title": "Adventurer",
+    "author": "Quaternius",
+    "license": "CC0 1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sourceUrl": "https://poly.pizza/m/ZwF0K7WBmu",
+    "file": "models/adventurer-f.glb",
+    "figures": [
+      "traileur"
+    ],
+    "modifications": "Walk and Run animations only, geometry quantised, flat colours and outline added in the app"
   }
 ]
