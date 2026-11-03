@@ -132,8 +132,10 @@ full customization through a single project document, WebCodecs video export, Ta
 
 The first screen (shell, panels, welcome card) loads the app, React and the HeroUI / React Aria primitives, without three.js:
 1.9 MB, 559 kB gzip over 22 files in 4.5.0, stylesheet included (the app 441 kB, `primitives` 291 kB, React 219 kB,
-French and the i18n code 177 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 580 kB
-gzip (`scripts/check-bundle-size.mjs`, after the build): raise it on purpose in the pull request that needs it.
+French and the i18n code 177 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 582 kB
+gzip (`scripts/check-bundle-size.mjs`, after the build): raise it on purpose in the pull request that needs it (580 → 582
+for the diagnostic report's phone rows: the terrain workers' status, the GPU timer, the wait for the GPU, which the
+first screen holds because the export's guard builds the report).
 Nothing in the first screen may import `three` or `@react-three/fiber` statically: the status bar reads the renderer through
 `scene/perfProbe.ts` (a plain module the scene fills when its canvas is created). Only French (the
 reference, the fallback of a missing message) is in the first screen; English, Spanish, Italian and German are one chunk each
@@ -3074,7 +3076,7 @@ exports) gets it from the terrain source of the settings.
 - **What the report tells a phone, which has no console** (`diagnostic.ts`, « Appareil » and « Export » sections): the
   terrain workers (`terrain/tileWorkerStatus.ts`, noted by `tileWorker.ts`: `untried`, `active` with the number of
   workers and of tiles they built, `unsupported`, `dropped`; the status module is apart so that reading it loads no worker),
-  whether the GPU time can be measured (`hasGpuTimer`: `EXT_disjoint_timer_query_webgl2`, absent on Safari, hence on an
+  whether the GPU time can be measured (`hasGpuTimer` in diagnostic.ts, which is on the first screen: `EXT_disjoint_timer_query_webgl2`, absent on Safari, hence on an
   iPhone, where only the wait for the GPU tells its share), and whether the export waits for the GPU (`waitsForGpuFor`).
   **`?export-gpu-wait=on|off|default`** in the page address (`applyGpuWaitParam`, called by `main.tsx`) sets
   `GPU_WAIT_KEY` for this tab: two exports of the same film on the same build, one with the wait and one without, compare
