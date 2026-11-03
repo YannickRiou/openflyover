@@ -335,7 +335,8 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      HTTP cache only (every source sends `Cache-Control`; Esri, refused in offline packs, is fetched like any view): the engine
      still asks for each tile during the render and finds it there, or fetches it again. The panel shows « Préparation des
      tuiles du film : n / N » (`reportTiles`), its time is `timings.preloadMs` (« préchargement des tuiles » in the split) and
-     the remaining time starts after it (`startedAt` moved on).
+     the remaining time starts at the first frame (`startedAt` set again there, after the soundtrack, the encoder and the
+     tiles, all made once). The panel's « ≈ x s / image » is that same pace (`etaS` over the frames left), so the two agree.
    - **The cap is hard: the level of detail gives way** (phone, tablet). A low view looking at the horizon in a portrait
      film needs 220–390 tiles by itself (iPhone 12: 147 → 224 loaded during the « descente », tab killed), so the
      selection is made to fit: `solveLodLevel` multiplies `errorTargetPx` by `LOD_STEP` (1.1) per level, 0 to
