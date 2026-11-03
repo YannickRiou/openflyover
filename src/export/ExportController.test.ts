@@ -389,6 +389,18 @@ describe('runExport', () => {
     expect(seen.at(-1)).toBeNull()
   })
 
+  it('a measure of the cost of the layers ends normally, with no file, when the test without encoding is on', async () => {
+    const map = new Map([[NO_ENCODING_KEY, '1']])
+    vi.stubGlobal('sessionStorage', { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => void map.set(k, v), removeItem: (k: string) => void map.delete(k) })
+    try {
+      await exportFilm(destination(), {}, { probe: true, holdStartS: 0, holdEndS: 0, window: { fromS: 0.5, toS: 1 } })
+      expect(createExportEncoder).not.toHaveBeenCalled()
+      expect(useExportStore.getState()).toMatchObject({ phase: 'done', error: null })
+    } finally {
+      vi.stubGlobal('sessionStorage', undefined)
+    }
+  })
+
   it('« Export de test sans encodage » renders every frame, encodes none and ends on its message', async () => {
     const map = new Map([[NO_ENCODING_KEY, '1']])
     vi.stubGlobal('sessionStorage', { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => void map.set(k, v), removeItem: (k: string) => void map.delete(k) })

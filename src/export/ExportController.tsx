@@ -243,8 +243,11 @@ async function runOverlayOnly(request: ExportRequest, deps: RunDeps, schedule: n
   }
 }
 
-/** « Export de test sans encodage »: no encoder, frames dropped, and the end is an error with the frames rendered. */
-function noEncodingSession(rendered: () => number): VideoEncodeSession {
+/**
+ * « Export de test sans encodage »: no encoder, frames dropped, and the end is an error with the frames rendered. A measure
+ * of the cost of the layers (`probe`) is the exception: it ends normally, with no file, for the run that waits for it.
+ */
+function noEncodingSession(rendered: () => number, probe: boolean): VideoEncodeSession {
   return {
     codec: { container: 'mp4', codec: 'avc' },
     audioCodec: null,
@@ -253,6 +256,7 @@ function noEncodingSession(rendered: () => number): VideoEncodeSession {
     extension: '',
     addFrame: async () => undefined,
     finish: async () => {
+      if (probe) return { blob: null, sizeBytes: 0 }
       throw new Error(t('export.controller.testNoFile', { n: rendered() }))
     },
     cancel: async () => undefined,
@@ -547,7 +551,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     if (isCanceled()) throw new ExportCanceledError()
     // WebCodecs, else the system's ffmpeg (desktop app on Linux); the test without encoding ends on its message
     session = noEncoding
-      ? noEncodingSession(() => timings.rendered)
+      ? noEncodingSession(() => timings.rendered, request.probe === true)
       : request.sequence
         ? createSequenceEncoder(compositor, request.sequence.folder, request.baseName)
         : await createExportEncoder(compositor, { ...request, audio })
