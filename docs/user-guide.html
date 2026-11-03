@@ -392,7 +392,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
   <ol class="steps">
     <li><div><strong>Drop a file.</strong> Drag one or more <code>.gpx</code> or <code>.fit</code> files anywhere into the window. The home screen ("Votre sortie, vue du ciel") says in one sentence what the app does, shows what is new in the latest version ("Nouveau en …", a click opens "Nouveautés"), links to this guide ("Premiers pas") and, on the website, to the desktop app; it also offers "Choisir un fichier" (choose a file), "Essayer avec l'exemple" (a real hike in the Ariège Pyrenees, the Étang d'Ayguelongue and the Pic de l'Homme), "Ouvrir un projet…" and, under "Récents", your latest projects. Until a track is loaded, the rail shows only "Projet"; the other tabs and "Exporter" appear with the first track.</div></li>
     <li><div><strong>Let the view frame it.</strong> The camera frames the track. In France or Switzerland the imagery switches to IGN or swisstopo aerial photos, unless you already chose a source.</div></li>
-    <li><div><strong>Add more if needed.</strong> "+ Ajouter" (add) in the track list adds tracks: "Fichiers GPX ou FIT…" or "Activités Strava…". "Ouvrir" (<kbd>Ctrl+O</kbd>) accepts a track or a saved project; when a project with tracks is open, opening or dropping a GPX or FIT file asks "Que faire de ce fichier ?": add the track to this project, start a new project with it, or cancel.</div></li>
+    <li><div><strong>Add more if needed.</strong> "+ Ajouter" (add) in the track list adds tracks: "Fichiers GPX ou FIT…" or "Activités Strava…". "Ouvrir" (<kbd>Ctrl+O</kbd>) accepts a track or a saved project; when a project with tracks is open, opening or dropping a GPX, FIT or IGC file asks "Que faire de ce fichier ?": add the track to this project, start a new project with it, or cancel.</div></li>
   </ol>
   <h3 class="sub">Several tracks</h3>
   <p>The flyover, weather, landmarks and climbs follow the <strong>first</strong> track; the arrow on another track makes it the flown-over one, and its colour chip changes its colour. With two tracks or more, "Plusieurs traces" (several tracks) chooses how the film plays them:</p>
@@ -635,7 +635,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
     </div>
     <div>
       <h4>Several formats</h4>
-      <p>"Plusieurs formats" exports several format × resolution pairs, plus the still image and poster if wanted, in one go ("Tout exporter"). Chrome, Edge and the desktop app write them into one folder. There, "Un film par trace" with "Choisir le dossier des traces…" makes the films for every GPX or FIT file of a folder.</p>
+      <p>"Plusieurs formats" exports several format × resolution pairs, plus the still image and poster if wanted, in one go ("Tout exporter"). Chrome, Edge and the desktop app write them into one folder. There, "Un film par trace" with "Choisir le dossier des traces…" makes the films for every GPX, FIT or IGC file of a folder.</p>
     </div>
     <div>
       <h4>Render queue</h4>
@@ -671,7 +671,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
     <li>Name the project in the top bar (otherwise it takes the name of the first track). A dot on the save icon flags unsaved changes.</li>
     <li>"Enregistrer" (<kbd>Ctrl+S</kbd>) saves a <code>&lt;name&gt;.opnflvr</code> file (OpenFlyover's own compressed format; older <code>.json</code> projects still open) with the tracks, photos, videos, music and all settings. After the first save, or after opening a project file, "Enregistrer" rewrites the same file without asking (Chrome, Edge and the desktop app; Firefox, Safari and iPhone download a new copy each time); "Enregistrer sous…" (<kbd>Ctrl+Shift+S</kbd>, "Projet" tab) always asks where. In the desktop app, double-clicking a <code>.opnflvr</code> file opens it. "Ouvrir" (<kbd>Ctrl+O</kbd>) reloads it; an invalid setting reverts to its default and a message says so.</li>
     <li><strong>Mes projets</strong> ("Projet" tab): as soon as a project has a track, the app keeps it there by itself and saves it a few seconds after each change, and at once when you leave the app or switch to another one. The list shows a small picture of the 3D view and reopens a project in one click. The next time you start the app (or a phone reloads the page after closing it in the background), the project you left comes back, with the message "Projet … rouvert"; remove the tracks or open another project to start again. A project deleted from the list while open is no longer kept ("Garder dans Mes projets" brings it back).</li>
-    <li><strong>New project, close</strong> ("Projet" tab): "Fermer le projet" takes you back to the home screen with the default settings; a project kept in "Mes projets" is saved first and shows in "Récents". If your changes are saved nowhere, the tab asks first: "Enregistrer", "Fermer sans enregistrer" or "Annuler". "Nouveau projet" does the same, then asks for GPX or FIT files to import. Removing the last track (the cross of its card) closes the project the same way, with the same question when changes are saved nowhere, and "Annuler" in the message puts the track and the project back (the history of Ctrl+Z is not restored, it starts empty).</li>
+    <li><strong>New project, close</strong> ("Projet" tab): "Fermer le projet" takes you back to the home screen with the default settings; a project kept in "Mes projets" is saved first and shows in "Récents". If your changes are saved nowhere, the tab asks first: "Enregistrer", "Fermer sans enregistrer" or "Annuler". "Nouveau projet" does the same, then asks for GPX, FIT or IGC files to import. Removing the last track (the cross of its card) closes the project the same way, with the same question when changes are saved nowhere, and "Annuler" in the message puts the track and the project back (the history of Ctrl+Z is not restored, it starts empty).</li>
     <li><strong>Presets</strong> ("Projet" tab) save one family of settings under a name: map style, track and marker, overlay and 3D labels, or camera shot ("Prise de vue"). Applying one keeps the project's own title, lines, credits and logo images.</li>
     <li>Undo and redo cover every setting: <kbd>Ctrl+Z</kbd>, <kbd>Ctrl+Shift+Z</kbd> or <kbd>Ctrl+Y</kbd>. One slider drag is one step.</li>
   </ul>
@@ -690,7 +690,7 @@ footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 16
   <p>When a new version is online, "Nouvelle version disponible" appears: "Recharger" switches to it.</p>
   <h3 class="sub">Send a track to the app</h3>
   <ul>
-    <li><strong>Android</strong>, once installed: in Strava, Garmin Connect, Komoot or Files, share the GPX or FIT file
+    <li><strong>Android</strong>, once installed: in Strava, Garmin Connect, Komoot or Files, share the GPX, FIT or IGC file
     ("Partager") and pick OpenFlyover. The app opens with the track imported.</li>
     <li><strong>iPhone</strong>: iOS cannot share a file to a web app. Save the file to Files first ("Enregistrer dans
     Fichiers"), then "Choisir un fichier" in OpenFlyover.</li>

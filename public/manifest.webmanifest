@@ -23,7 +23,7 @@
       "files": [
         {
           "name": "tracks",
-          "accept": [".gpx", ".fit", "application/gpx+xml", "application/vnd.ant.fit", "application/xml", "text/xml", "application/octet-stream"]
+          "accept": [".gpx", ".fit", ".igc", "application/gpx+xml", "application/vnd.ant.fit", "application/xml", "text/xml", "application/octet-stream"]
         }
       ]
     }

@@ -10,7 +10,7 @@ const messages: Messages['home'] = {
   'empty.links': 'Links',
   'empty.guide': 'Getting started',
   'empty.download': 'Desktop app (Windows, macOS, Linux)',
-  'empty.hint': 'Drag one or more GPX or FIT tracks anywhere in the window.',
+  'empty.hint': 'Drag one or more GPX, FIT or IGC tracks anywhere in the window.',
   'empty.importing': 'Importing…',
   'empty.chooseFile': 'Choose a file',
   'empty.sample': 'Try the sample',

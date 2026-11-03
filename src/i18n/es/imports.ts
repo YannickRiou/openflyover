@@ -23,9 +23,14 @@ const messages: Messages['imports'] = {
   'fit.decodeError': 'ningún punto y un error de decodificación ({error})',
   'fit.noPosition': 'ningún registro con posición',
   'fit.defaultName': 'Actividad FIT',
+  'igc.invalid': 'Archivo IGC no válido: {reason}',
+  'igc.notIgc': 'no es un archivo IGC (ningún registro de vuelo «B»)',
+  'igc.noPoint': 'ningún punto de vuelo utilizable',
+  'igc.defaultName': 'Vuelo',
+  'igc.defaultPoint': 'Punto {n}',
   'chainError.needTwo': 'Se necesitan al menos dos tracks para encadenarlos.',
   'chainError.overlap': '«{a}» y «{b}» se grabaron al mismo tiempo: no se pueden encadenar.',
-  unsupported: 'Formato no admitido: {shown} (formatos aceptados: .gpx, .fit)',
+  unsupported: 'Formato no admitido: {shown} (formatos aceptados: .gpx, .fit, .igc)',
 }
 
 export default messages

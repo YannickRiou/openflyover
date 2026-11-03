@@ -23,9 +23,14 @@ const messages: Messages['imports'] = {
   'fit.decodeError': 'no point and a decoding error ({error})',
   'fit.noPosition': 'no record with a position',
   'fit.defaultName': 'FIT activity',
+  'igc.invalid': 'Invalid IGC file: {reason}',
+  'igc.notIgc': 'this is not an IGC file (no “B” flight record)',
+  'igc.noPoint': 'no usable flight point',
+  'igc.defaultName': 'Flight',
+  'igc.defaultPoint': 'Point {n}',
   'chainError.needTwo': 'At least two tracks are needed to chain them.',
   'chainError.overlap': '“{a}” and “{b}” were recorded at the same time: they cannot be chained.',
-  unsupported: 'Unsupported format: {shown} (accepted formats: .gpx, .fit)',
+  unsupported: 'Unsupported format: {shown} (accepted formats: .gpx, .fit, .igc)',
 }
 
 export default messages

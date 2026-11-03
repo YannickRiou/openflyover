@@ -41,7 +41,7 @@ const messages: Messages['project'] = {
   'file.noDecompress': 'Este navegador no puede descomprimir proyectos: ábrelo en un navegador reciente o en la aplicación.',
   'file.damaged': 'Archivo de proyecto dañado: los datos comprimidos son ilegibles.',
   'actions.filterProject': 'Proyecto OpenFlyover',
-  'actions.filterTracks': 'Tracks GPX o FIT',
+  'actions.filterTracks': 'Tracks GPX, FIT o IGC',
   'actions.filterBoth': 'Tracks y proyectos',
   'actions.saved': 'Proyecto guardado: {fileName}',
   'actions.saveFailed': 'No se ha podido guardar el proyecto: {reason}',
