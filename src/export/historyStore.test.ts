@@ -63,6 +63,10 @@ describe('render recorder', () => {
     expect(useExportHistory.getState().entries[0]).toMatchObject({ outcome: 'error', error: 'WebGL perdu', encoded: 40, frames: 100 })
   })
 
+  it('does not record a measure of the cost of the layers', () => {
+    run((s) => s.complete(RESULT), { ...REQUEST, probe: true })
+    expect(useExportHistory.getState().entries).toHaveLength(0)
+  })
   it('records a cancel, but not one before the first frame', () => {
     run((s) => s.canceled())
     expect(useExportHistory.getState().entries[0].outcome).toBe('canceled')

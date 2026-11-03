@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
+import { errorMessage } from '../core/errors'
+import { useBatchStore } from '../export/batch'
 import { closeDiagnostic, copyText, noEncodingTest, setNoEncodingTest, showDiagnostic, useDiagnosticStore } from '../export/diagnostic'
 import { currentReport } from '../export/guard'
+import { isExportBusy, useExportStore } from '../export/store'
 import { useT } from '../i18n'
+import { useAppStore } from '../state/store'
 import { SettingRow } from './PanelSection'
 import { Button, Checkbox, Modal } from './primitives'
+import { showToast } from './toast'
 
 /** The report: monospace text on a field background, selectable and wrapped (it is read, then copied). */
 const REPORT =
@@ -14,6 +19,27 @@ export function DiagnosticRow() {
   const t = useT()
   // debug only: kept in the tab's sessionStorage, never in the project
   const [noEncoding, setNoEncoding] = useState(noEncodingTest)
+  // « Mesurer le coût des couches »: the run is loaded when asked for (export/layerCostRun.ts), nothing of it at start-up
+  const [cost, setCost] = useState<{ label: string; index: number; total: number } | null>(null)
+  const canceled = useRef(false)
+  const exporting = useExportStore((s) => isExportBusy(s.phase)) || useBatchStore((s) => s.phase === 'running')
+  const hasTrack = useAppStore((s) => s.tracks.length > 0)
+  const measure = async () => {
+    canceled.current = false
+    setCost({ label: '', index: 0, total: 0 })
+    try {
+      const { runLayerCost } = await import('../export/layerCostRun')
+      const run = await runLayerCost(
+        () => canceled.current,
+        (label, index, total) => setCost({ label, index, total }),
+      )
+      if (run) showDiagnostic(run.text)
+    } catch (error) {
+      showToast({ kind: 'error', text: t('settings.diagnostic.layerCostFailed', { error: errorMessage(error) }) })
+    } finally {
+      setCost(null)
+    }
+  }
   return (
     <section aria-label={t('settings.diagnostic.title')}>
       <SettingRow label={t('settings.diagnostic.title')} value={t('settings.diagnostic.value')}>
@@ -30,6 +56,21 @@ export function DiagnosticRow() {
         >
           {t('settings.diagnostic.noEncoding')}
         </Checkbox>
+        <p className="type-hint">{t('settings.diagnostic.layerCostHint')}</p>
+        {cost ? (
+          <>
+            <p className="type-hint" role="status">
+              {cost.total === 0 ? t('settings.diagnostic.layerCostStarting') : t('settings.diagnostic.layerCostRunning', { index: cost.index, total: cost.total, label: cost.label })}
+            </p>
+            <Button onClick={() => (canceled.current = true)}>{t('settings.diagnostic.layerCostCancel')}</Button>
+          </>
+        ) : (
+          <Button onClick={() => void measure()} disabled={exporting || !hasTrack}>
+            {t('settings.diagnostic.layerCost')}
+          </Button>
+        )}
+        {!cost && !hasTrack && <p className="type-hint">{t('settings.diagnostic.layerCostNoTrack')}</p>}
+        {!cost && exporting && <p className="type-hint">{t('settings.diagnostic.layerCostBusy')}</p>}
       </SettingRow>
     </section>
   )
