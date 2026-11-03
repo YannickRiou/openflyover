@@ -104,6 +104,17 @@ export function createGpuTimer(gl: unknown): GpuTimer | null {
   }
 }
 
+/** The browser measures the GPU time of a render (`EXT_disjoint_timer_query_webgl2`): not Safari, hence not an iPhone. */
+export function hasGpuTimer(gl: unknown): boolean {
+  const ctx = gl as Partial<Pick<WebGL2RenderingContext, 'createQuery' | 'getExtension'>> | null
+  if (!ctx || typeof ctx.createQuery !== 'function' || typeof ctx.getExtension !== 'function') return false
+  try {
+    return ctx.getExtension('EXT_disjoint_timer_query_webgl2') !== null
+  } catch {
+    return false
+  }
+}
+
 const pixel = new Uint8Array(4)
 
 /**

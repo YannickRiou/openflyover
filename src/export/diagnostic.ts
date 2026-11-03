@@ -7,7 +7,7 @@
  */
 import { create } from 'zustand'
 import { deviceBudget } from '../core/deviceBudget'
-import type { DeviceBudget } from '../core/deviceBudget'
+import type { DeviceBudget, DeviceKind } from '../core/deviceBudget'
 import { currentPreviewBudget } from '../scene/previewQuality'
 import type { Track } from '../core/types'
 import { isAudioAsset, isVideoAsset, useMediaStore, usedMedia } from '../film/media'
@@ -18,7 +18,10 @@ import type { VideoEncoderKind } from '../platform'
 import { isIdentityGrading } from '../scene/grading'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
+import { tileWorkerStatus } from '../terrain/tileWorkerStatus'
+import type { TileWorkerStatus } from '../terrain/tileWorkerStatus'
 import { deviceBitrateCap, targetBitrate } from './encoder'
+import { hasGpuTimer } from './gpuTimer'
 import { OUTCOME_LABELS, handoverLabel, settingsDetails, shadowSummary, summariseSettings, timingsSummary } from './history'
 import { effectiveRender } from './qualityTier'
 import { buildFrameSchedule, videoEncoding, videoSize } from './schedule'
@@ -35,9 +38,10 @@ const MAX_VALUE = 200
 export const NO_ENCODING_KEY = 'openflyover.export.noEncoding'
 
 /**
- * sessionStorage key to keep, on a computer too, the wait for the GPU before each frame is composed (this tab only): it
- * tells how long the GPU takes (`gpuWaitMs`, the « Répartition ») at the price of an export about three times slower
- * on a graphics card of 2016 (#434). Set it to '1' from the console.
+ * sessionStorage key of the wait for the GPU before each frame of an export is composed (this tab only, never in the
+ * project): '1' keeps it on a computer too (it tells how long the GPU takes, `gpuWaitMs`, at the price of an export about
+ * three times slower on a graphics card of 2016, #434), '0' drops it on a phone or tablet. Set from the console or, where
+ * there is none (a phone), by `?export-gpu-wait=on|off|default` in the page address (`applyGpuWaitParam`).
  */
 export const GPU_WAIT_KEY = 'openflyover.export.gpuWait'
 
@@ -51,12 +55,35 @@ function tabStorage(): TestStorage | undefined {
   }
 }
 
-/** The wait for the GPU before composing a frame is asked for (`GPU_WAIT_KEY`). */
-export function gpuWaitRequested(storage: TestStorage | undefined = tabStorage()): boolean {
+export type GpuWaitSetting = 'on' | 'off' | null
+
+/** What this tab asks for the wait for the GPU before composing a frame (`GPU_WAIT_KEY`); null: the device's default. */
+export function gpuWaitSetting(storage: TestStorage | undefined = tabStorage()): GpuWaitSetting {
   try {
-    return storage?.getItem(GPU_WAIT_KEY) === '1'
+    const value = storage?.getItem(GPU_WAIT_KEY)
+    return value === '1' ? 'on' : value === '0' ? 'off' : null
   } catch {
-    return false
+    return null
+  }
+}
+
+/** Whether an export waits for the GPU before composing each frame: as asked, else yes on a phone or tablet, no on a computer. */
+export function waitsForGpuFor(kind: DeviceKind, setting: GpuWaitSetting): boolean {
+  return setting === null ? kind !== 'desktop' : setting === 'on'
+}
+
+/**
+ * `?export-gpu-wait=on|off|default` in the page address sets `GPU_WAIT_KEY` for this tab, to compare two exports on a
+ * phone, which has no console: nothing without the parameter, so a computer never changes by itself.
+ */
+export function applyGpuWaitParam(search: string, storage: TestStorage | undefined = tabStorage()): void {
+  const value = new URLSearchParams(search).get('export-gpu-wait')
+  if (value !== 'on' && value !== 'off' && value !== 'default') return
+  try {
+    if (value === 'default') storage?.removeItem(GPU_WAIT_KEY)
+    else storage?.setItem(GPU_WAIT_KEY, value === 'on' ? '1' : '0')
+  } catch {
+    // no storage: the default stays
   }
 }
 
@@ -99,6 +126,8 @@ export interface GpuInfo {
   renderer: string
   /** MSAA of the canvas in use */
   antialias: boolean
+  /** the browser measures the GPU time of a render (`hasGpuTimer`): not Safari, hence not an iPhone */
+  timerQueries?: boolean
 }
 
 export type ReportRequest = Pick<
@@ -129,6 +158,10 @@ export interface DiagnosticInput {
   request?: ReportRequest
   /** « Export de test sans encodage » is on */
   noEncoding?: boolean
+  /** the terrain workers (`tileWorkerStatus`) */
+  tileWorkers?: TileWorkerStatus
+  /** what this tab asks for the wait for the GPU (`gpuWaitSetting`) */
+  gpuWait?: GpuWaitSetting
 }
 
 const yes = (v: boolean) => (v ? 'oui' : 'non')
@@ -136,6 +169,14 @@ const comma = (n: number, digits = 1) => n.toFixed(digits).replace('.', ',')
 const mb = (bytes: number) => `${comma(bytes / 1e6)} Mo`
 const mbits = (bits: number) => (Number.isFinite(bits) ? `${comma(bits / 1e6)} Mbit/s` : 'aucun plafond')
 const cut = (text: string) => (text.length > MAX_VALUE ? `${text.slice(0, MAX_VALUE - 1)}…` : text)
+
+/** « actifs (3), 120 tuiles construites », « non pris en charge », … */
+function workersLabel({ state, workers, built }: TileWorkerStatus): string {
+  if (state === 'active') return `actifs (${workers}), ${built} tuile${built > 1 ? 's' : ''} construite${built > 1 ? 's' : ''}`
+  if (state === 'unsupported') return 'non pris en charge par ce navigateur : les tuiles sont construites par la page'
+  if (state === 'dropped') return 'abandonnés après une erreur ou un résultat différent : les tuiles sont construites par la page'
+  return 'pas encore utilisés'
+}
 
 function deviceRows(input: DiagnosticInput): ReportRow[] {
   const { budget, gpu, screen, viewport } = input
@@ -151,6 +192,8 @@ function deviceRows(input: DiagnosticInput): ReportRow[] {
     ['Carte graphique', gpu?.renderer || 'inconnue'],
     ['Texture max', gpu ? `${gpu.maxTextureSize} px` : 'inconnue'],
     ['Anticrénelage du canevas', gpu ? yes(gpu.antialias) : 'inconnu'],
+    ['Temps de la carte graphique mesurable', gpu?.timerQueries === undefined ? 'inconnu' : yes(gpu.timerQueries)],
+    ['Workers du terrain', input.tileWorkers ? workersLabel(input.tileWorkers) : 'inconnus'],
   ]
   // every field of the budget, by its name in the code, the kind first
   const { kind, ...limits } = budget
@@ -162,7 +205,7 @@ function deviceRows(input: DiagnosticInput): ReportRow[] {
   return rows
 }
 
-function exportRows({ request, settings, budget, canStreamToDisk, noEncoding }: DiagnosticInput): ReportRow[] {
+function exportRows({ request, settings, budget, canStreamToDisk, noEncoding, gpuWait }: DiagnosticInput): ReportRow[] {
   const size = request ?? videoSize(settings.video.aspect, settings.video.resolution, budget.maxExportShortSide)
   const fps = request?.fps ?? settings.video.fps
   const quality = request?.quality ?? settings.video.quality
@@ -196,6 +239,11 @@ function exportRows({ request, settings, budget, canStreamToDisk, noEncoding }: 
   }
   rows.push(['Destination', request ? (request.destination ? 'fichier sur le disque' : 'mémoire') : canStreamToDisk ? 'disque (au choix)' : 'mémoire'])
   if (noEncoding) rows.push(['Encodage', 'désactivé (test)'])
+  const waits = waitsForGpuFor(budget.kind, gpuWait ?? null)
+  rows.push([
+    'Attente de la carte graphique',
+    `${yes(waits)} (${gpuWait ? 'demandée dans cet onglet' : budget.kind === 'desktop' ? 'ordinateur : par défaut' : 'téléphone ou tablette : par défaut'})`,
+  ])
   if (request && !request.still) {
     let frames = 0
     try {
@@ -347,6 +395,7 @@ export function readGpuInfo(gl: WebGLRenderingContext | WebGL2RenderingContext):
     maxTextureSize: Number(gl.getParameter(gl.MAX_TEXTURE_SIZE)) || 0,
     renderer: String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? ''),
     antialias: gl.getContextAttributes()?.antialias ?? false,
+    timerQueries: hasGpuTimer(gl),
   }
 }
 
@@ -399,6 +448,8 @@ export function collectDiagnostic(request?: ReportRequest, now = Date.now()): Di
     media: useMediaStore.getState().table,
     request,
     noEncoding: noEncodingTest(),
+    tileWorkers: tileWorkerStatus(),
+    gpuWait: gpuWaitSetting(),
   })
 }
 

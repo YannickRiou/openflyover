@@ -246,18 +246,25 @@ describe('runExport', () => {
       expect(readPixels).toHaveBeenCalledTimes(useExportStore.getState().timings.rendered)
     }
 
-    // the tab's storage (no browser in this test file)
-    readPixels.mockClear()
-    Object.defineProperty(globalThis, 'sessionStorage', {
-      value: { getItem: (key: string) => (key === GPU_WAIT_KEY ? '1' : null), setItem: () => undefined, removeItem: () => undefined },
-      configurable: true,
-    })
+    // the tab's storage (no browser in this test file): '1' keeps the wait on a computer, '0' drops it on a phone
+    const tab = (value: string) =>
+      Object.defineProperty(globalThis, 'sessionStorage', {
+        value: { getItem: (key: string) => (key === GPU_WAIT_KEY ? value : null), setItem: () => undefined, removeItem: () => undefined },
+        configurable: true,
+      })
     try {
+      readPixels.mockClear()
+      tab('1')
       await exportFilm(destination(), { budget: DESKTOP_BUDGET })
+      expect(readPixels).toHaveBeenCalledTimes(useExportStore.getState().timings.rendered)
+      readPixels.mockClear()
+      tab('0')
+      await exportFilm(destination(), { budget: budgetFor({ coarsePointer: true, shortSidePx: 393 }) })
+      expect(readPixels).not.toHaveBeenCalled()
+      expect(useExportStore.getState().timings.gpuWaitMs).toBe(0)
     } finally {
       delete (globalThis as { sessionStorage?: unknown }).sessionStorage
     }
-    expect(readPixels).toHaveBeenCalledTimes(useExportStore.getState().timings.rendered)
   })
 
   it('renders no view under a full-screen photo: the frame is composed all the same, the next view rendered again', async () => {

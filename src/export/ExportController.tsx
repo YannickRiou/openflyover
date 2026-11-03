@@ -59,7 +59,7 @@ import {
   type DrawOverlay,
   type FrameOutcome,
 } from './capture'
-import { gpuWaitRequested, noEncodingTest } from './diagnostic'
+import { gpuWaitSetting, noEncodingTest, waitsForGpuFor } from './diagnostic'
 import { ExportCanceledError, type VideoEncodeSession } from './encoder'
 import { createSequenceEncoder, sequencePattern } from './sequenceEncoder'
 import { createGpuTimer, waitForGpu } from './gpuTimer'
@@ -115,7 +115,7 @@ interface RunDeps {
   signal: AbortSignal
   /** memory budget of the device (default: this one) */
   budget?: Pick<DeviceBudget, 'kind' | 'exportTileKeepFrames' | 'exportPrefetchAhead'>
-  /** wait for the GPU to finish each render before composing it (default: on a phone or tablet, or when asked for: `gpuWaitRequested`) */
+  /** wait for the GPU to finish each render before composing it (default: `waitsForGpuFor`, on a phone or tablet unless this tab asks otherwise) */
   waitsForGpu?: boolean
   /** fetches a tile of the film before its first frame (default: into the HTTP cache, `tilePreload.ts`) */
   preloadTile?: (url: string) => Promise<unknown>
@@ -286,8 +286,9 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   // A computer queues the composition behind the render: the GPU keeps the order of its commands, so the frame is complete
   // when it is read, and the page goes on preparing the next one meanwhile. Waiting for the GPU first made every image
   // pay the CPU work and the GPU work one after the other (404 ms an image instead of 139 on the reference film, #434).
-  // Kept on a phone or tablet, where nobody measured the difference, and when asked for to time the GPU.
-  const waitsForGpu = deps.waitsForGpu ?? (kind !== 'desktop' || gpuWaitRequested())
+  // Kept on a phone or tablet, where nobody measured the difference, and when asked for to time the GPU (`GPU_WAIT_KEY`,
+  // which can also drop it on a phone: `?export-gpu-wait=off`).
+  const waitsForGpu = deps.waitsForGpu ?? waitsForGpuFor(kind, gpuWaitSetting())
   const lodHeight = exportLodHeight(height)
   const filmClock = deps.clock()
   const three = deps.get()

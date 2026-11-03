@@ -87,6 +87,9 @@ describe('buildTileOffThread', () => {
   it('resolves with undefined where there is no Worker (the page builds the tile)', async () => {
     const { buildTileOffThread } = await import('./tileWorker')
     expect(await buildTileOffThread(job(stubCanvas()))).toBeUndefined()
+    // what the diagnostic report tells
+    const { tileWorkerStatus } = await import('./tileWorkerStatus')
+    expect(tileWorkerStatus()).toEqual({ state: 'unsupported', workers: 0, built: 0 })
   })
 
   /** A Worker that answers like `tile.worker.ts`, or as `reply` says. */
@@ -138,8 +141,11 @@ describe('buildTileOffThread', () => {
     const { made, bitmap } = stubWorkers(({ id }) => ({ id, result }))
     await pageBuilds(tile([1, NaN, 3]))
     const { buildTileOffThread } = await import('./tileWorker')
+    const { tileWorkerStatus } = await import('./tileWorkerStatus')
+    expect(tileWorkerStatus()).toEqual({ state: 'untried', workers: 0, built: 0 })
     expect(await buildTileOffThread(job(bitmap))).toBe(result)
     expect(made).toHaveLength(4) // at most four, whatever the machine
+    expect(tileWorkerStatus()).toEqual({ state: 'active', workers: 4, built: 1 })
   })
 
   it('builds the first tile on the page too, once, and keeps the pool when they agree', async () => {
@@ -198,6 +204,8 @@ describe('buildTileOffThread', () => {
     expect(made.every((w) => w.terminated)).toBe(true)
     expect(await buildTileOffThread(job(bitmap))).toBeUndefined()
     expect(made).toHaveLength(4) // no new workers
+    const { tileWorkerStatus } = await import('./tileWorkerStatus')
+    expect(tileWorkerStatus()).toEqual({ state: 'dropped', workers: 0, built: 0 })
 
     // a worker that errors resolves the tile it holds
     vi.resetModules()
