@@ -3,7 +3,7 @@
  * « Adventurer » character (Quaternius, CC0) posed bone by bone on its saddle and handlebar, its legs following the
  * pedals with the phase. The flat figure stands in until both files are there, and if one never comes.
  */
-import { BoxGeometry, Box3, CylinderGeometry, Group, Matrix4, Mesh, MeshBasicMaterial, SphereGeometry, Vector3 } from 'three'
+import { AnimationMixer, BoxGeometry, Box3, CylinderGeometry, Group, Matrix4, Mesh, MeshBasicMaterial, SphereGeometry, Vector3 } from 'three'
 import type { Material, Object3D, SkinnedMesh } from 'three'
 import type { Color, Texture } from 'three'
 import { createVehicle } from './markerGlbFigures'
@@ -56,6 +56,11 @@ export interface Parts {
   rod(name: string, color: string, radius: number): { mesh: Mesh; link(from: Vector3, to: Vector3): void }
 }
 
+/** The animal of a figure: where a bone of it is (the units of the figure), once its pose is set. */
+export interface Animal {
+  at(bone: string, out: Vector3): Vector3
+}
+
 export interface FigureSpec {
   /** the flat figure that stands in while the files load, and if one never does */
   stand: () => MarkerModel
@@ -65,14 +70,16 @@ export interface FigureSpec {
   vehicle?: Omit<VehicleSpec, 'stand'>
   /** meshes of the character left out, by the name of their group (the bags are on the bike) */
   hide?: string[]
+  /** a rigged animal under the rider (a horse), animated by a clip of its file: one cycle of it is one turn of the phase */
+  animal?: { file: string; clip: string; length: number }
   /** once everything is loaded: the pose of each frame, from the phase */
-  setup(context: { rig: Rig; vehicle: Vehicle | null; parts: Parts }): (phase: number) => void
+  setup(context: { rig: Rig; vehicle: Vehicle | null; animal: Animal | null; parts: Parts }): (phase: number) => void
 }
 
 const AXIS_Y = new Vector3(0, 1, 0)
 
 /** A rider, the « Adventurer » (Quaternius, CC0), posed bone by bone, on a vehicle or with props. */
-export function createFigure({ stand: standIn, main, vehicle: vehicleSpec, hide = [], setup }: FigureSpec): MarkerModel {
+export function createFigure({ stand: standIn, main, vehicle: vehicleSpec, hide = [], animal: animalSpec, setup }: FigureSpec): MarkerModel {
   const stand = standIn()
   const root = new Group()
   root.add(stand.root)
@@ -85,8 +92,51 @@ export function createFigure({ stand: standIn, main, vehicle: vehicleSpec, hide 
   }
   const painter = createPainter({ main, shade: 'Green', light: 'LightGreen' })
   let posture: ((phase: number) => void) | null = null
+  let animate: ((phase: number) => void) | null = null
 
-  const loaded = Promise.all([loadFile('models/adventurer.glb'), import('three/addons/utils/SkeletonUtils.js'), vehicle?.loaded]).then(([{ scene }, { clone }]) => {
+  const loaded = Promise.all([loadFile('models/adventurer.glb'), import('three/addons/utils/SkeletonUtils.js'), vehicle?.loaded, animalSpec ? loadFile(animalSpec.file) : undefined]).then(([{ scene }, { clone }, , animalFile]) => {
+    let animal: Animal | null = null
+    if (animalSpec && animalFile) {
+      const beast = clone(animalFile.scene) as Group
+      const frame = new Group()
+      frame.add(beast)
+      beast.updateMatrixWorld(true)
+      const box = new Box3().setFromObject(beast, true)
+      const size = box.getSize(new Vector3())
+      const scale = animalSpec.length / Math.max(size.x, size.z)
+      frame.scale.setScalar(scale)
+      frame.position.set(-((box.min.x + box.max.x) / 2) * scale, -box.min.y * scale, -((box.min.z + box.max.z) / 2) * scale)
+      root.add(frame)
+      const beastSkinned: SkinnedMesh[] = []
+      beast.traverse((node: Object3D) => {
+        if (!(node as SkinnedMesh).isMesh) return
+        const mesh = node as SkinnedMesh
+        mesh.material = painter.flat(mesh.material as Source)
+        mesh.frustumCulled = false
+        if (mesh.isSkinnedMesh) beastSkinned.push(mesh)
+      })
+      root.updateMatrixWorld(true)
+      outlineSkinned(root, beastSkinned, painter)
+      const clip = animalFile.animations.find((a) => a.name.endsWith(`|${animalSpec.clip}`) || a.name === animalSpec.clip)
+      if (!clip) throw new Error(`no « ${animalSpec.clip} » animation in ${animalSpec.file}`)
+      const mixer = new AnimationMixer(beast)
+      const action = mixer.clipAction(clip)
+      action.play()
+      const bone = new Matrix4()
+      animate = (phase) => {
+        action.time = (((phase / (2 * Math.PI)) % 1) + 1) % 1 * clip.duration
+        mixer.update(0)
+      }
+      animal = {
+        at(name, out) {
+          let found: Object3D | undefined
+          beast.traverse((o) => {
+            if (o.name === name) found = o
+          })
+          return out.copy(found!.getWorldPosition(out)).applyMatrix4(bone.copy(root.matrixWorld).invert())
+        },
+      }
+    }
     const man = clone(scene) as Group
     const holder = new Group()
     holder.add(man)
@@ -187,7 +237,7 @@ export function createFigure({ stand: standIn, main, vehicle: vehicleSpec, hide 
         }
       },
     }
-    posture = setup({ rig, vehicle, parts })
+    posture = setup({ rig, vehicle, animal, parts })
     root.remove(stand.root)
     if (vehicle) vehicle.root.visible = true
     painter.paint()
@@ -201,6 +251,7 @@ export function createFigure({ stand: standIn, main, vehicle: vehicleSpec, hide 
     pose(phase) {
       stand.pose(phase)
       vehicle?.pose(phase)
+      animate?.(phase)
       if (posture) {
         // the matrices of the frame, before the bones are turned
         root.updateWorldMatrix(true, true)
@@ -526,6 +577,35 @@ export const mountaineer = (stand: () => MarkerModel): MarkerModel =>
           }
         }
         helmet.position.copy(rig.head(head)).add(offset.set(0, 0.1, 0.01))
+      }
+    },
+  })
+
+/** The horse rider: « Horse » (Quaternius, CC0) at a gallop, the character astride its back, its hands forward on the reins. */
+export const horseRider = (stand: () => MarkerModel): MarkerModel =>
+  createFigure({
+    stand,
+    main: 'Main',
+    hide: ['Backpack'],
+    animal: { file: 'models/horse.glb', clip: 'Gallop', length: 2.3 },
+    setup({ rig, animal }) {
+      const back = new Vector3()
+      const seat = new Vector3()
+      const ankle = new Vector3()
+      const hand = new Vector3()
+      const knee = new Vector3()
+      const bend = new Vector3()
+      const look = new Vector3(0, 1, 0.15)
+      return () => {
+        // the rider follows the back of the horse
+        animal!.at('Torso2', back)
+        rig.seat(seat.set(0, back.y + 0.1, back.z))
+        rig.spine(10)
+        rig.neck(look)
+        for (const [side, sx] of SIDES) {
+          rig.leg(side, ankle.set(0.3 * sx, seat.y - 0.46, seat.z + 0.04), knee.set(sx * 0.4, 0.3, 1))
+          rig.arm(side, hand.set(0.1 * sx, seat.y + 0.18, seat.z + 0.46), bend.set(sx * 0.6, -1, -0.2))
+        }
       }
     },
   })
