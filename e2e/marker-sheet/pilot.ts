@@ -1,4 +1,4 @@
-import { AmbientLight, AnimationMixer, Box3, Color, DirectionalLight, DoubleSide, Group, HemisphereLight, Mesh, MeshStandardMaterial, Object3D, OrthographicCamera, Scene, Vector3, WebGLRenderer } from '/node_modules/three/build/three.module.js'
+import { AmbientLight, Box3, Color, DirectionalLight, DoubleSide, Group, HemisphereLight, Mesh, MeshStandardMaterial, Object3D, OrthographicCamera, Quaternion, Scene, Vector3, WebGLRenderer } from '/node_modules/three/build/three.module.js'
 import { GLTFLoader } from '/node_modules/three/examples/jsm/loaders/GLTFLoader.js'
 import { clone } from '/node_modules/three/examples/jsm/utils/SkeletonUtils.js'
 
@@ -33,34 +33,50 @@ const tint = q.get('tint') !== '0'
   // the span is the longest horizontal side: along X (turn if it is along Z), `flip` turns the glider round
   wingHolder.rotation.y = (size.z > size.x ? Math.PI / 2 : 0) + num('flip', 0) * Math.PI
 
-  // --- the pilot: Adventurer 1.7 m, a walking pose to start from, then the legs and arms posed seated
+  // --- the pilot: Adventurer in its rest pose, every body segment turned towards a target direction (the pilot faces +Z)
   const man = clone(manGltf.scene) as Group
-  const mixer = new AnimationMixer(man)
-  const clip = manGltf.animations.find((a) => /walk/i.test(a.name)) ?? manGltf.animations[0]
-  const action = mixer.clipAction(clip)
-  action.play()
-  action.time = num('phase', 0.1) * clip.duration
-  mixer.update(0)
   man.updateMatrixWorld(true)
   const bones: Record<string, Object3D> = {}
   man.traverse((o) => { if ((o as { isBone?: boolean }).isBone) bones[o.name] = o })
-  const rot = (name: string, x: number, y = 0, z = 0) => {
-    const b = bones[name.replace('.', '')]
-    if (!b) return
-    b.rotateX(x)
-    b.rotateY(y)
-    b.rotateZ(z)
+  const B = (name: string) => bones[name.replace('.', '')]
+  const wp = (o: Object3D) => o.getWorldPosition(new Vector3())
+  const wq = (o: Object3D) => o.getWorldQuaternion(new Quaternion())
+  /** direction of each bone towards its child at rest, in the bone's own frame: the axis `aim` turns */
+  const axisOf: Record<string, Vector3> = {}
+  const rest = (name: string, child: string) => {
+    const bone = B(name)
+    axisOf[name] = wp(B(child)).sub(wp(bone)).normalize().applyQuaternion(wq(bone).invert())
   }
-  const sit = num('sit', 1.45)
-  for (const side of ['L', 'R']) {
-    rot(`UpperLeg.${side}`, -sit)
-    rot(`LowerLeg.${side}`, num('knee', 1.25))
-    rot(`Foot.${side}`, num('foot', 0.4))
+  for (const [n, c] of [['Hips', 'Abdomen'], ['Abdomen', 'Torso'], ['Torso', 'Chest'], ['Chest', 'Neck'], ['Neck', 'Head'], ['UpperLeg.L', 'LowerLeg.L'], ['UpperLeg.R', 'LowerLeg.R'], ['UpperArm.L', 'LowerArm.L'], ['UpperArm.R', 'LowerArm.R'], ['LowerArm.L', 'Wrist.L'], ['LowerArm.R', 'Wrist.R']] as const) rest(n, c)
+  // the legs end at the knee-to-foot bone, which has no child: it goes the same way as the thigh at rest
+  axisOf['LowerLeg.L'] = axisOf['UpperLeg.L'].clone().applyQuaternion(wq(B('UpperLeg.L'))).applyQuaternion(wq(B('LowerLeg.L')).invert())
+  axisOf['LowerLeg.R'] = axisOf['UpperLeg.R'].clone().applyQuaternion(wq(B('UpperLeg.R'))).applyQuaternion(wq(B('LowerLeg.R')).invert())
+  const aim = (name: string, dir: Vector3) => {
+    const bone = B(name)
+    bone.updateWorldMatrix(true, true)
+    const q = wq(bone)
+    const from = axisOf[name].clone().applyQuaternion(q)
+    const turn = new Quaternion().setFromUnitVectors(from, dir.clone().normalize())
+    const parent = wq(bone.parent!)
+    bone.quaternion.copy(parent.invert().multiply(turn.multiply(q)))
+    bone.updateWorldMatrix(false, true)
   }
-  rot('Abdomen', num('lean', -0.25))
-  for (const side of ['L', 'R']) {
-    rot(`UpperArm.${side}`, num('armx', 0), 0, (side === 'L' ? 1 : -1) * num('armz', 0))
-    rot(`LowerArm.${side}`, num('elbow', 0))
+  const rad = (d: number) => (d * Math.PI) / 180
+  const lean = num('lean', 30)
+  const spine = (deg: number) => new Vector3(0, Math.cos(rad(deg)), -Math.sin(rad(deg)))
+  aim('Hips', spine(lean + 8))
+  aim('Abdomen', spine(lean + 3))
+  aim('Torso', spine(lean - 2))
+  aim('Chest', spine(lean - 6))
+  aim('Neck', new Vector3(0, 1, num('headz', 0.35)))
+  for (const side of [1, -1]) {
+    const n = side === 1 ? 'L' : 'R'
+    const thigh = rad(num('thigh', 22))
+    const shin = rad(num('shin', 65))
+    aim(`UpperLeg.${n}`, new Vector3(side * num('legout', 0.12), -Math.sin(thigh), Math.cos(thigh)))
+    aim(`LowerLeg.${n}`, new Vector3(side * 0.04, -Math.sin(shin), Math.cos(shin)))
+    aim(`UpperArm.${n}`, new Vector3(side * num('armout', 0.35), -num('armdown', 0.6), 0.72))
+    aim(`LowerArm.${n}`, new Vector3(side * 0.1, num('handup', 0.35), 0.93))
   }
   man.updateMatrixWorld(true)
   man.traverse((o) => { (o as Mesh).frustumCulled = false })
@@ -72,8 +88,8 @@ const tint = q.get('tint') !== '0'
   manHolder.updateMatrixWorld(true)
   // the hips go to the harness
   const hips = new Vector3()
-  bones.Hips.getWorldPosition(hips)
-  const harness = new Vector3(0, num('seat', 0.55), num('seatz', 0))
+  B('Hips').getWorldPosition(hips)
+  const harness = new Vector3(0, num('seat', 0.33), num('seatz', -0.12))
   manHolder.position.copy(harness).sub(hips)
 
   const scene = new Scene()
