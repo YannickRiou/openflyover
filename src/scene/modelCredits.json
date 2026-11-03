@@ -11,5 +11,18 @@
       "parapente"
     ],
     "modifications": "texture reduced to 512 px and 64 colours, centred and scaled, outline added"
+  },
+  {
+    "id": "adventurer",
+    "title": "Adventurer",
+    "author": "Quaternius",
+    "license": "CC0 1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sourceUrl": "https://poly.pizza/m/5EGWBMpuXq",
+    "file": "models/adventurer.glb",
+    "figures": [
+      "randonneur"
+    ],
+    "modifications": "Walk animation only, geometry quantised, flat colours and outline added in the app"
   }
 ]

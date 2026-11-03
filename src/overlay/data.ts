@@ -552,8 +552,8 @@ export interface CreditSources {
   forests?: boolean
   /** OpenStreetMap glaciers are drawn */
   glaciers?: boolean
-  /** the glTF models of the figurines in the film that ask for a credit (CC BY, `scene/modelCredits.ts`) */
-  models?: readonly { title: string; author: string; license: string; sourceUrl: string }[]
+  /** the glTF models of the figurines in the film (`scene/modelCredits.ts`); `required`: the licence asks for the credit (CC BY), the others are cited in the end credits and the description only */
+  models?: readonly { title: string; author: string; license: string; sourceUrl: string; required: boolean }[]
 }
 
 /** One credit: its sentence and the page that states the attribution (for the description of a video). */
@@ -602,7 +602,7 @@ export function creditEntries(sources: CreditSources): CreditEntry[] {
     { line: t('overlay.draw.credits.imagery', { source: imagery.attribution }), url: SOURCE_PAGES[imagery.id] ?? '' },
     ...(sources.weather ? [{ line: openMeteoAttribution(), url: OPEN_METEO_PAGE }] : []),
     ...(sources.landmarks ? [{ line: osmCreditLine(sources), url: OSM_PAGE }] : []),
-    ...(sources.models ?? []).map((model) => ({ line: t('overlay.draw.credits.model', model), url: model.sourceUrl })),
+    ...(sources.models ?? []).map((model) => ({ line: t('overlay.draw.credits.model', { title: model.title, author: model.author, license: model.license }), url: model.sourceUrl })),
   ]
 }
 
@@ -643,7 +643,7 @@ export function overlayShortCredits(sources: CreditSources): string[] {
     SHORT_CREDITS[terrain.id] ?? terrain.attribution,
     ...(sources.landmarks ? [OSM_SHORT] : []),
     ...(sources.weather ? [OPEN_METEO_SHORT] : []),
-    ...(sources.models ?? []).map((model) => t('overlay.draw.credits.model', model)),
+    ...(sources.models ?? []).filter((model) => model.required).map((model) => t('overlay.draw.credits.model', { title: model.title, author: model.author, license: model.license })),
   ]
   // OpenTopoMap's credit already names OpenStreetMap
   const namesOsm = items.some((item) => item.startsWith(`${OSM_SHORT},`))

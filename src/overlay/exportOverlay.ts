@@ -109,7 +109,7 @@ export function currentCreditSources(): CreditSources {
     water,
     forests,
     glaciers,
-    models: modelCreditsInUse(settings.marker, useAppStore.getState().tracks).filter(needsAttribution),
+    models: modelCreditsInUse(settings.marker, useAppStore.getState().tracks).map((credit) => ({ ...credit, required: needsAttribution(credit) })),
   }
 }
 

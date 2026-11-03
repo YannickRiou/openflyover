@@ -182,7 +182,8 @@ function pack(size: Vector3, along: number, behind: number) {
   }
 }
 
-function createHiker(): MarkerModel {
+/** The flat hiker, also the stand-in of the glTF one (`markerGlbFigures.ts`). */
+export function createHikerFlat(): MarkerModel {
   return createBiped({ ...STAND, hat: 'hat', motion: WALK, extras: pack(v(0.14, 0.24, 0.1), 0.62, 0.17) })
 }
 
@@ -500,7 +501,7 @@ function createPlane(): MarkerModel {
 
 /** The figures of this file and what builds each one. */
 export const FIGURE_MODELS: Partial<Record<MarkerFigure, () => MarkerModel>> = {
-  randonneur: createHiker,
+  randonneur: createHikerFlat,
   alpiniste: createMountaineer,
   coureur: createRunner,
   traileur: createTrailRunner,
