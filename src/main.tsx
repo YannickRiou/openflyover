@@ -6,6 +6,7 @@ import './index.css'
 import './ui/appearance.css'
 import App from './App.tsx'
 import { loadLanguage } from './i18n'
+import { applyGpuWaitParam } from './export/diagnostic'
 import { installExportGuard, reportInterruptedExport } from './export/guard'
 import { installExportHistory } from './export/historyStore'
 import { installOfflineTiles } from './offline/store'
@@ -27,6 +28,8 @@ installExportHistory()
 // screen kept on during an export; an export the browser cut short (tab killed) is reported at the next start
 reportInterruptedExport()
 installExportGuard()
+// `?export-gpu-wait=on|off|default`: compare two exports on a phone, which has no console (diagnostic.ts)
+applyGpuWaitParam(location.search)
 // website: service worker, update prompt, iOS install hint, tracks shared to the installed app
 installWebApp((files) => void openFiles(files))
 

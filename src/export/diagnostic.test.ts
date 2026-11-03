@@ -5,13 +5,16 @@ import { buildTrack } from '../import/stats'
 import { DEFAULT_SETTINGS } from '../state/store'
 import type { Settings } from '../state/store'
 import {
+  applyGpuWaitParam,
   buildReport,
   copyText,
   formatReport,
+  gpuWaitSetting,
   noEncodingTest,
   parseReport,
   resultSection,
   setNoEncodingTest,
+  waitsForGpuFor,
   withLastExport,
   withResult,
 } from './diagnostic'
@@ -96,6 +99,7 @@ describe('diagnostic report', () => {
       'Rendu effectif': 'nuages low, 4 rendus par image au plus',
       'Débit vidéo (H.264)': '4,1 Mbit/s',
       Destination: 'mémoire',
+      'Attente de la carte graphique': 'oui (téléphone ou tablette : par défaut)',
       'Durée du film': '63,0 s, 1890 images',
       'Taille estimée': '32,6 Mo',
     })
@@ -115,6 +119,55 @@ describe('diagnostic report', () => {
     setNoEncodingTest(false, storage)
     expect(noEncodingTest(storage)).toBe(false)
     expect(noEncodingTest(undefined)).toBe(false)
+  })
+
+  it('tells whether the GPU time can be measured and what the terrain workers did, for a phone without a console', () => {
+    const phone = (gpu: DiagnosticInput['gpu'], tileWorkers: DiagnosticInput['tileWorkers']) => rowsOf(privateInput({ gpu, tileWorkers }), 'Appareil')
+    const gpu = { maxTextureSize: 16384, renderer: 'Apple GPU', antialias: false }
+    expect(phone({ ...gpu, timerQueries: false }, { state: 'active', workers: 3, built: 1200 })).toMatchObject({
+      'Temps de la carte graphique mesurable': 'non',
+      'Workers du terrain': 'actifs (3), 1200 tuiles construites',
+    })
+    expect(phone({ ...gpu, timerQueries: true }, { state: 'unsupported', workers: 0, built: 0 })).toMatchObject({
+      'Temps de la carte graphique mesurable': 'oui',
+      'Workers du terrain': 'non pris en charge par ce navigateur : les tuiles sont construites par la page',
+    })
+    expect(phone({ ...gpu }, { state: 'dropped', workers: 0, built: 8 })['Workers du terrain']).toMatch(/^abandonnés/)
+    expect(phone(null, { state: 'untried', workers: 0, built: 0 })).toMatchObject({ 'Temps de la carte graphique mesurable': 'inconnu', 'Workers du terrain': 'pas encore utilisés' })
+    expect(rowsOf(privateInput(), 'Appareil')['Workers du terrain']).toBe('inconnus')
+  })
+
+  it('waits for the GPU before composing on a phone or tablet, not on a computer, unless the tab asks otherwise', () => {
+    expect(waitsForGpuFor('phone', null)).toBe(true)
+    expect(waitsForGpuFor('tablet', null)).toBe(true)
+    expect(waitsForGpuFor('desktop', null)).toBe(false)
+    expect(waitsForGpuFor('desktop', 'on')).toBe(true)
+    expect(waitsForGpuFor('phone', 'off')).toBe(false)
+    expect(rowsOf(privateInput(), 'Export')['Attente de la carte graphique']).toBe('oui (téléphone ou tablette : par défaut)')
+    expect(rowsOf(privateInput({ budget: DESKTOP_BUDGET }), 'Export')['Attente de la carte graphique']).toBe('non (ordinateur : par défaut)')
+    expect(rowsOf(privateInput({ gpuWait: 'off' }), 'Export')['Attente de la carte graphique']).toBe('non (demandée dans cet onglet)')
+    expect(rowsOf(privateInput({ budget: DESKTOP_BUDGET, gpuWait: 'on' }), 'Export')['Attente de la carte graphique']).toBe('oui (demandée dans cet onglet)')
+  })
+
+  it('« ?export-gpu-wait=on|off|default » sets the tab\'s choice, and nothing without it', () => {
+    const map = new Map<string, string>()
+    const storage = { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => void map.set(k, v), removeItem: (k: string) => void map.delete(k) }
+    expect(gpuWaitSetting(storage)).toBeNull()
+    applyGpuWaitParam('?other=1', storage)
+    applyGpuWaitParam('', storage)
+    applyGpuWaitParam('?export-gpu-wait=maybe', storage)
+    expect(gpuWaitSetting(storage)).toBeNull()
+    applyGpuWaitParam('?export-gpu-wait=off', storage)
+    expect(gpuWaitSetting(storage)).toBe('off')
+    applyGpuWaitParam('?a=1&export-gpu-wait=on', storage)
+    expect(gpuWaitSetting(storage)).toBe('on')
+    // another parameter leaves the choice as it is, « default » takes it back
+    applyGpuWaitParam('?a=1', storage)
+    expect(gpuWaitSetting(storage)).toBe('on')
+    applyGpuWaitParam('?export-gpu-wait=default', storage)
+    expect(gpuWaitSetting(storage)).toBeNull()
+    expect(gpuWaitSetting(undefined)).toBeNull()
+    expect(() => applyGpuWaitParam('?export-gpu-wait=on', undefined)).not.toThrow()
   })
 
   it('tells every setting that weighs on memory, the tracks and the media by kind and size', () => {

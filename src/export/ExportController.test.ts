@@ -232,6 +232,30 @@ describe('runExport', () => {
     vi.mocked(mixFilmAudio).mockImplementation(async () => null)
   })
 
+  it('keeps the tiles of the film for the frames when the browser\'s data saver is on', async () => {
+    const track = buildTrack({
+      name: 'test',
+      source: 'gpx',
+      segments: [{ points: Array.from({ length: 12 }, (_, i) => ({ lon: 6.78, lat: 45.9 - i * 0.009, ele: 1000 })) }],
+    })
+    const { tracks, bounds } = useAppStore.getState()
+    useAppStore.setState({ tracks: [track], bounds: track.bounds })
+    const preloadTile = vi.fn(async () => undefined)
+    const engine = { prefetch: () => 0, update: vi.fn(), sampleHeight: () => 0, onChange: () => () => {}, stats: { pendingTiles: 0, pendingVisibleTiles: 0 } }
+    const original = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+    Object.defineProperty(globalThis, 'navigator', { value: { connection: { saveData: true } }, configurable: true })
+    try {
+      await exportFilm(destination(), { engine: () => engine as unknown as TerrainEngine, budget: DESKTOP_BUDGET, preloadTile })
+    } finally {
+      if (original) Object.defineProperty(globalThis, 'navigator', original)
+      else delete (globalThis as { navigator?: unknown }).navigator
+      useAppStore.setState({ tracks, bounds })
+    }
+    expect(preloadTile).not.toHaveBeenCalled()
+    expect(useExportStore.getState().phase).toBe('done')
+    expect(useExportStore.getState().timings.preloadMs).toBeUndefined()
+  })
+
   it('a computer does not wait for the GPU before composing a frame, a phone or a tablet does, and a flag brings the wait back', async () => {
     await exportFilm(destination(), { budget: DESKTOP_BUDGET })
     expect(readPixels).not.toHaveBeenCalled()
@@ -246,18 +270,25 @@ describe('runExport', () => {
       expect(readPixels).toHaveBeenCalledTimes(useExportStore.getState().timings.rendered)
     }
 
-    // the tab's storage (no browser in this test file)
-    readPixels.mockClear()
-    Object.defineProperty(globalThis, 'sessionStorage', {
-      value: { getItem: (key: string) => (key === GPU_WAIT_KEY ? '1' : null), setItem: () => undefined, removeItem: () => undefined },
-      configurable: true,
-    })
+    // the tab's storage (no browser in this test file): '1' keeps the wait on a computer, '0' drops it on a phone
+    const tab = (value: string) =>
+      Object.defineProperty(globalThis, 'sessionStorage', {
+        value: { getItem: (key: string) => (key === GPU_WAIT_KEY ? value : null), setItem: () => undefined, removeItem: () => undefined },
+        configurable: true,
+      })
     try {
+      readPixels.mockClear()
+      tab('1')
       await exportFilm(destination(), { budget: DESKTOP_BUDGET })
+      expect(readPixels).toHaveBeenCalledTimes(useExportStore.getState().timings.rendered)
+      readPixels.mockClear()
+      tab('0')
+      await exportFilm(destination(), { budget: budgetFor({ coarsePointer: true, shortSidePx: 393 }) })
+      expect(readPixels).not.toHaveBeenCalled()
+      expect(useExportStore.getState().timings.gpuWaitMs).toBe(0)
     } finally {
       delete (globalThis as { sessionStorage?: unknown }).sessionStorage
     }
-    expect(readPixels).toHaveBeenCalledTimes(useExportStore.getState().timings.rendered)
   })
 
   it('renders no view under a full-screen photo: the frame is composed all the same, the next view rendered again', async () => {
