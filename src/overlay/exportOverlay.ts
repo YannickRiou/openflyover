@@ -32,6 +32,7 @@ import { getLanguage } from '../i18n'
 import type { Sequence } from '../flyover/sequence'
 import { createCardImages, createLogos } from './assets'
 import { cumulativeAscent, dayCardAt, leaderboardRows, overlayCredits, overlayFilmFrameAt, overlayPermanentCredits, overlayShortCredits, prepareOverlayFilm, recordedAtProgress, stageCardAt } from './data'
+import { modelCreditsInUse, needsAttribution } from '../scene/modelCredits'
 import type { CreditSources, LeaderboardRow, OverlayFilm } from './data'
 import { bilanStampAt, drawOverlay, mediaCoversFrame } from './draw'
 import type { OverlayAssets, OverlayExtras, OverlayTime, OverlayTrackLegend } from './draw'
@@ -108,6 +109,7 @@ export function currentCreditSources(): CreditSources {
     water,
     forests,
     glaciers,
+    models: modelCreditsInUse(settings.marker, useAppStore.getState().tracks).filter(needsAttribution),
   }
 }
 

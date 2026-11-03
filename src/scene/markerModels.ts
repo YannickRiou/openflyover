@@ -11,6 +11,7 @@ import type { MarkerFigure } from './markerSettings'
 import { MODEL_HEIGHT, UP, ball, begin, inkBall, joint, limb, rod, tyre } from './markerModelKit'
 import type { MarkerModel } from './markerModelKit'
 import { FIGURE_MODELS } from './markerFigureModels'
+import { createParagliderWing } from './markerGlbFigures'
 
 export { MODEL_HEIGHT, joint }
 export type { MarkerModel }
@@ -140,6 +141,8 @@ const BUILDERS: Partial<Record<MarkerFigure, () => MarkerModel>> = {
   vae: () => createCyclist({ battery: true }),
   bikepacking: () => createCyclist({ bags: true }),
   ...FIGURE_MODELS,
+  // a glTF wing (credited in `modelCredits.json`), the flat figurine while it loads
+  parapente: createParagliderWing,
 }
 
 /** True when `figure` has a 3D model. */

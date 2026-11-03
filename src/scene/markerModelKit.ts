@@ -24,6 +24,11 @@ export interface MarkerModel {
   pose(phase: number): void
   /** Colour of the flat fill, already scaled by the exposure and the light of the scene. */
   setColor(r: number, g: number, b: number): void
+  /**
+   * A model with colours of its own (a glTF, `markerGlbFigures.ts`) ignores the colour of the track: this is the factor of
+   * the exposure and the light of the scene it is multiplied by (white scaled like `setColor`'s fill).
+   */
+  setLight?(r: number, g: number, b: number): void
 }
 
 export const UP = new Vector3(0, 1, 0)

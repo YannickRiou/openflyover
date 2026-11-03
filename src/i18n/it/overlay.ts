@@ -36,6 +36,7 @@ const messages: Messages['overlay'] = {
   'draw.weatherRow.wind': 'Vento',
   'draw.credits.relief': 'Rilievo: {source}',
   'draw.credits.imagery': 'Immagini: {source}',
+  'draw.credits.model': 'Modello 3D: «{title}», {author} ({license}), modificato',
   'draw.race.finished': 'Arrivo',
   'draw.race.lead': 'Testa',
   'style.editorial': 'Editoriale',

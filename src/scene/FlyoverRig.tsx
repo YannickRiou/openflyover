@@ -320,6 +320,10 @@ export function FlyoverRig() {
         const colors = leadMarkerColors({ ...blend.to, figureColor: own }, under?.color ?? '#FFFFFF')
         const fill = litColor(colors.badgeFill, exposureGain, modelFill)
         model.setColor(fill.r, fill.g, fill.b)
+        if (model.setLight) {
+          const light = litColor('#FFFFFF', exposureGain, modelFill)
+          model.setLight(light.r, light.g, light.b)
+        }
         model.pose(wanted.animated ? figureStride(clock, timeS) : MODEL_REST_PHASE)
         trackDirection(path, distanceAt(timeS), view.marker, frame, settings.exaggeration, modelAhead)
         // the same place and size on screen as the sprite, pulled towards the camera so the slope under it never sinks it
