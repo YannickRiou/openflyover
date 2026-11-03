@@ -384,8 +384,37 @@ export async function runOverpassQuery<T = OsmFeature[]>(
   throw lastError
 }
 
-/** One request at a time for the whole application (usage policy: no parallel queries). */
-let queue: Promise<unknown> = Promise.resolve()
+/**
+ * One request at a time for the whole application (usage policy: no parallel queries). Queries wait in the order they
+ * were asked; an `urgent` one goes before those that are still waiting (never before the one on the wire).
+ */
+const waiting: { urgent: boolean; start: () => void }[] = []
+let busy = false
+
+function sendNext(): void {
+  const next = busy ? undefined : waiting.shift()
+  if (!next) return
+  busy = true
+  next.start()
+}
+
+function enqueue<T>(job: () => Promise<T>, urgent: boolean): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const start = () =>
+      Promise.resolve()
+        .then(job)
+        .then(resolve, reject)
+        .finally(() => {
+          busy = false
+          // an urgent answer is followed by the urgent query that depends on it (the region's geometry): let it join first
+          if (urgent) setTimeout(sendNext, 0)
+          else sendNext()
+        })
+    const at = urgent ? waiting.findIndex((w) => !w.urgent) : -1
+    waiting.splice(at < 0 ? waiting.length : at, 0, { urgent, start })
+    sendNext()
+  })
+}
 /** Results kept in memory, the most recently used (a session may open many tracks; the storage keeps them all). */
 export const MEMORY_CACHE_ENTRIES = 32
 /** Insertion order is the use order: the first key is the least recently used. */
@@ -453,6 +482,7 @@ export function fetchTrackFeatures(
  * one queued Overpass query (shared by the landmarks and the water, `water.ts`; always the query with `refresh`). A
  * failed or aborted query is not cached. `onStart` is called when the query is actually sent (after the ones queued
  * before it), never for a result already in a cache: a status chip tells « en attente » from « chargement ».
+ * `urgent`: the query goes before the ones still waiting (the region, which a shot of the film waits for).
  */
 export function cachedOverpassQuery<T>(
   query: string,
@@ -461,6 +491,7 @@ export function cachedOverpassQuery<T>(
   deps: OverpassDeps = defaultDeps(),
   refresh = false,
   onStart?: () => void,
+  urgent = false,
 ): Promise<T[]> {
   const key = hashQuery(query)
   if (refresh) memoryCache.delete(key)
@@ -477,19 +508,15 @@ export function cachedOverpassQuery<T>(
     return promise
   }
   pending.add(key)
-  const promise = queue
-    .catch(() => undefined)
-    .then(() => {
-      running.add(key)
-      for (const callback of startWaiters.get(key) ?? []) callback()
-      startWaiters.delete(key)
-      return runOverpassQuery(query, signal, deps, OVERPASS_ENDPOINTS, parse).finally(() => running.delete(key))
-    })
-    .then((features) => {
-      writeCache(deps.storage, key, features, deps.now())
-      return features
-    })
-  queue = promise.catch(() => undefined)
+  const promise = enqueue(() => {
+    running.add(key)
+    for (const callback of startWaiters.get(key) ?? []) callback()
+    startWaiters.delete(key)
+    return runOverpassQuery(query, signal, deps, OVERPASS_ENDPOINTS, parse).finally(() => running.delete(key))
+  }, urgent).then((features) => {
+    writeCache(deps.storage, key, features, deps.now())
+    return features
+  })
   remember(key, promise)
   if (onStart) whenStarted(key, onStart)
   const settled = () => {
@@ -558,5 +585,6 @@ export function clearOverpassMemoryCache(): void {
   pending.clear()
   running.clear()
   startWaiters.clear()
-  queue = Promise.resolve()
+  waiting.length = 0
+  busy = false
 }

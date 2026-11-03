@@ -231,14 +231,14 @@ export async function fetchRegion(
   deps?: OverpassDeps,
 ): Promise<RegionAnswer> {
   const centre = { lon: (track.west + track.east) / 2, lat: (track.south + track.north) / 2 }
-  const all = await cachedOverpassQuery(regionCandidatesQuery(centre), parseRegionCandidates, signal, deps)
+  const all = await cachedOverpassQuery(regionCandidatesQuery(centre), parseRegionCandidates, signal, deps, false, undefined, true)
   const candidates = containingRegions(all, track)
   const auto = chooseRegion(all, track)
   const chosen = candidates.find((c) => candidateId(c) === regionId) ?? auto
   const listed = { candidates, autoId: auto ? candidateId(auto) : null }
   onListed?.(listed)
   if (!chosen) return { ...listed, region: null }
-  const [region] = await cachedOverpassQuery(regionGeometryQuery(chosen.id, chosen.type), parseRegionGeometry, signal, deps)
+  const [region] = await cachedOverpassQuery(regionGeometryQuery(chosen.id, chosen.type), parseRegionGeometry, signal, deps, false, undefined, true)
   return { ...listed, region: region ?? null }
 }
 

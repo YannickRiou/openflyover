@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **The search for the region no longer waits for the other searches**: with several tracks, the region of the « situation » shot waited behind the landmarks, the water, the forests and the glaciers of every track, which are asked one at a time. With five tracks it came after about twenty-five searches. It now goes right after the one already running. The result is the same, and the other searches only wait for the two small requests of the region. One track: nothing changes.
+
 ## 5.0.1 (November 2026)
 
 - **The output format is one tap away on a phone**: the top bar of a phone now has a button with the current format (« Libre » or a frame of the ratio), in the place where the row of formats shows on a wide screen. A tap opens the list of the formats as a sheet, with the chosen one checked. It is locked during an export, like the row. To make room, the language button shows only its flag on a phone and the project name field is narrower. On a wide screen nothing changes.
