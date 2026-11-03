@@ -26,7 +26,8 @@ describe('model credits', () => {
     const figurine = { ...DEFAULT_MARKER, kind: 'figurine' as const, model3d: true, figure: 'auto' as const }
     const paragliding = [{ activityType: 'paragliding' as const }]
     expect(modelCreditsInUse(figurine, paragliding).map((c) => c.id)).toEqual(['parachute'])
-    expect(modelCreditsInUse(figurine, [{ activityType: 'running' as const }])).toEqual([])
+    expect(modelCreditsInUse(figurine, [{ activityType: 'hiking' as const }]).map((c) => c.id)).toEqual(['adventurer'])
+    expect(modelCreditsInUse(figurine, [{ activityType: 'driving' as const }])).toEqual([])
     expect(modelCreditsInUse({ ...figurine, model3d: false }, paragliding)).toEqual([])
     expect(modelCreditsInUse({ ...figurine, figure: 'parapente' }, [])).toHaveLength(1)
   })

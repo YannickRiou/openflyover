@@ -5,11 +5,11 @@
  * is there, and if it never comes, the figure is the flat figurine, so a marker is never missing. `whenMarkerModelsLoaded`
  * lets the export wait for it.
  */
-import { BackSide, BufferGeometry, Box3, Group, Mesh, MeshBasicMaterial, Vector3 } from 'three'
-import type { Material, Texture } from 'three'
+import { AnimationMixer, BackSide, BufferGeometry, Box3, Color, Group, Matrix4, Mesh, MeshBasicMaterial, SkinnedMesh, Vector3 } from 'three'
+import type { AnimationAction, AnimationClip, Material, Object3D, Texture } from 'three'
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
-import { createParagliderFlat } from './markerFigureModels'
-import { OUTLINE } from './markerModelKit'
+import { createHikerFlat, createParagliderFlat } from './markerFigureModels'
+import { MODEL_HEIGHT, OUTLINE } from './markerModelKit'
 import type { MarkerModel } from './markerModelKit'
 import { wakeScene } from './renderOnDemand'
 
@@ -18,8 +18,12 @@ const OUTLINE_COLOR = '#1C2A33'
 /** Height of the paraglider's wing and lines, in model units (the flat figurine is 2.4 tall, 3.2 wide). */
 const PARAGLIDER_HEIGHT = 2.4
 
-/** The scene of a glTF file, loaded once per file. */
-const files = new Map<string, Promise<Group>>()
+/** What a glTF file holds that a marker needs, loaded once per file. */
+interface Loaded {
+  scene: Group
+  animations: AnimationClip[]
+}
+const files = new Map<string, Promise<Loaded>>()
 /** Loads under way (and done): what `whenMarkerModelsLoaded` waits for. */
 const pending = new Set<Promise<unknown>>()
 
@@ -28,10 +32,13 @@ export async function whenMarkerModelsLoaded(): Promise<void> {
   await Promise.allSettled([...pending])
 }
 
-function loadScene(file: string): Promise<Group> {
+function loadFile(file: string): Promise<Loaded> {
   let scene = files.get(file)
   if (!scene) {
-    scene = import('three/addons/loaders/GLTFLoader.js').then(async ({ GLTFLoader }) => (await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}${file}`)).scene)
+    scene = import('three/addons/loaders/GLTFLoader.js').then(async ({ GLTFLoader }) => {
+      const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}${file}`)
+      return { scene: gltf.scene, animations: gltf.animations }
+    })
     files.set(file, scene)
     // a file that failed is asked again by the next marker
     scene.catch(() => files.delete(file))
@@ -78,7 +85,7 @@ export function createParagliderWing(): MarkerModel {
   let wing: { group: Group; materials: MeshBasicMaterial[] } | null = null
   let light: [number, number, number] = [1, 1, 1]
 
-  const loaded = loadScene('models/parachute.glb').then((scene) => {
+  const loaded = loadFile('models/parachute.glb').then(({ scene }) => {
     scene.updateMatrixWorld(true)
     const box = new Box3().setFromObject(scene)
     const size = box.getSize(new Vector3())
@@ -115,6 +122,116 @@ export function createParagliderWing(): MarkerModel {
     setLight(r, g, b) {
       light = [r, g, b]
       if (wing) for (const m of wing.materials) m.color.setRGB(r, g, b)
+    },
+  }
+}
+
+/** The glTF materials of the Adventurer that take the colour of the track (the jacket), and its lighter shade (the sleeves). */
+const HIKER_MAIN = 'Green'
+const HIKER_LIGHT = 'LightGreen'
+
+/**
+ * The hiker: « Adventurer » (Quaternius, CC0), a rigged character with a backpack, walking: one stride of its Walk clip is
+ * one turn of the phase, as the other figurines. Its jacket takes the colour of the track, the rest its own colours, flat
+ * and outlined like the other markers. The flat hiker stands in until the file is there.
+ */
+export function createHikerAdventurer(): MarkerModel {
+  const stand = createHikerFlat()
+  const root = new Group()
+  root.add(stand.root)
+  const parts: { material: MeshBasicMaterial; base: Color; role: 'main' | 'light' | 'fixed' }[] = []
+  const track = new Color('#ffffff')
+  const light = new Color('#ffffff')
+  let mixer: AnimationMixer | null = null
+  let action: AnimationAction | null = null
+  let phase = 0
+
+  const paint = () => {
+    for (const { material, base, role } of parts) {
+      if (role === 'main') material.color.copy(track)
+      else if (role === 'light') material.color.copy(track).lerp(light, 0.45)
+      else material.color.copy(base).multiply(light)
+    }
+  }
+  const pose = () => {
+    if (!action || !mixer) return
+    const turn = ((phase / (2 * Math.PI)) % 1 + 1) % 1
+    action.time = turn * action.getClip().duration
+    mixer.update(0)
+  }
+
+  const loaded = Promise.all([loadFile('models/adventurer.glb'), import('three/addons/utils/SkeletonUtils.js')]).then(([{ scene, animations }, { clone }]) => {
+    const model = clone(scene) as Group
+    const pivot = new Group()
+    pivot.add(model)
+    // standing on the track point, MODEL_HEIGHT tall, centred, facing +Z
+    model.updateMatrixWorld(true)
+    const box = new Box3().setFromObject(model, true)
+    const scale = MODEL_HEIGHT / box.getSize(new Vector3()).y
+    pivot.scale.setScalar(scale)
+    pivot.position.set(-((box.min.x + box.max.x) / 2) * scale, -box.min.y * scale, -((box.min.z + box.max.z) / 2) * scale)
+    root.add(pivot)
+    pivot.updateMatrixWorld(true)
+
+    const cache = new Map<Material, MeshBasicMaterial>()
+    const skinned: SkinnedMesh[] = []
+    model.traverse((node: Object3D) => {
+      if (!(node as Mesh).isMesh) return
+      const mesh = node as Mesh
+      const source = mesh.material as Material & { color: Color; name: string; map?: Texture | null }
+      let flat = cache.get(source)
+      if (!flat) {
+        flat = new MeshBasicMaterial({ map: source.map ?? null })
+        cache.set(source, flat)
+        parts.push({ material: flat, base: source.color.clone(), role: source.name === HIKER_MAIN ? 'main' : source.name === HIKER_LIGHT ? 'light' : 'fixed' })
+      }
+      mesh.material = flat
+      mesh.frustumCulled = false
+      if ((mesh as SkinnedMesh).isSkinnedMesh) skinned.push(mesh as SkinnedMesh)
+    })
+    // the outline: the same skinned mesh drawn from behind, pushed out along its normals (in the units of the mesh, which the
+    // file may scale: the width of the outline is measured in the marker's own units)
+    root.updateMatrixWorld(true)
+    const inRoot = new Matrix4()
+    for (const mesh of skinned) {
+      const shell = new SkinnedMesh(mesh.geometry, new MeshBasicMaterial({ color: OUTLINE_COLOR, side: BackSide }))
+      shell.bind(mesh.skeleton, mesh.bindMatrix)
+      shell.frustumCulled = false
+      inRoot.copy(root.matrixWorld).invert().multiply(mesh.matrixWorld)
+      const out = (OUTLINE / Math.max(new Vector3().setFromMatrixScale(inRoot).x, 1e-6)).toFixed(6)
+      ;(shell.material as MeshBasicMaterial).onBeforeCompile = (shader) => {
+        shader.vertexShader = shader.vertexShader.replace('#include <skinning_vertex>', `#include <skinning_vertex>\ntransformed += normalize( objectNormal ) * ${out};`)
+      }
+      mesh.parent?.add(shell)
+    }
+    const clip = animations.find((a) => /walk/i.test(a.name)) ?? animations[0]
+    if (!clip) throw new Error('no animation in models/adventurer.glb')
+    mixer = new AnimationMixer(model)
+    action = mixer.clipAction(clip)
+    action.play()
+    root.remove(stand.root)
+    paint()
+    pose()
+    wakeScene()
+  })
+  loaded.catch((error: unknown) => console.warn('[marqueur] modèle 3D du randonneur indisponible, figurine plate gardée :', error))
+  pending.add(loaded)
+
+  return {
+    root,
+    pose(next) {
+      phase = next
+      stand.pose(next)
+      pose()
+    },
+    setColor(r, g, b) {
+      track.setRGB(r, g, b)
+      stand.setColor(r, g, b)
+      paint()
+    },
+    setLight(r, g, b) {
+      light.setRGB(r, g, b)
+      paint()
     },
   }
 }
