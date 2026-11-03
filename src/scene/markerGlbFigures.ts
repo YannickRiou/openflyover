@@ -5,48 +5,19 @@
  * is there, and if it never comes, the figure is the flat figurine, so a marker is never missing. `whenMarkerModelsLoaded`
  * lets the export wait for it.
  */
-import { AnimationMixer, BackSide, BufferAttribute, BufferGeometry, Box3, Color, Group, Matrix4, Mesh, MeshBasicMaterial, SkinnedMesh, Vector3 } from 'three'
-import type { AnimationAction, AnimationClip, Material, Object3D, Texture } from 'three'
+import { AnimationMixer, BackSide, BufferGeometry, Box3, Color, Group, Matrix4, Mesh, MeshBasicMaterial, Quaternion, SkinnedMesh, Vector3 } from 'three'
+import type { AnimationAction, Material, Object3D, Texture } from 'three'
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 import { createParagliderFlat, FIGURE_MODELS } from './markerFigureModels'
 import { MODEL_HEIGHT, OUTLINE } from './markerModelKit'
 import type { MarkerModel } from './markerModelKit'
+import { createPainter, loadFile, outlineRigid, outlineSkinned, pending } from './markerGlbKit'
 import { wakeScene } from './renderOnDemand'
 
 /** Dark of the outline of the wing, a neutral black (a blue ink looked cold on the coloured models). */
 const OUTLINE_COLOR = '#1d1a18'
-/** The outline of a character is its part in a darker shade of its own colour: the share of the colour kept. */
-const OUTLINE_SHADE = 0.28
 /** Height of the paraglider's wing and lines, in model units (the flat figurine is 2.4 tall, 3.2 wide). */
 const PARAGLIDER_HEIGHT = 2.4
-
-/** What a glTF file holds that a marker needs, loaded once per file. */
-interface Loaded {
-  scene: Group
-  animations: AnimationClip[]
-}
-const files = new Map<string, Promise<Loaded>>()
-/** Loads under way (and done): what `whenMarkerModelsLoaded` waits for. */
-const pending = new Set<Promise<unknown>>()
-
-/** Resolve once every model asked for has loaded or failed (the export starts on the real model, not its stand-in). */
-export async function whenMarkerModelsLoaded(): Promise<void> {
-  await Promise.allSettled([...pending])
-}
-
-function loadFile(file: string): Promise<Loaded> {
-  let scene = files.get(file)
-  if (!scene) {
-    scene = import('three/addons/loaders/GLTFLoader.js').then(async ({ GLTFLoader }) => {
-      const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}${file}`)
-      return { scene: gltf.scene, animations: gltf.animations }
-    })
-    files.set(file, scene)
-    // a file that failed is asked again by the next marker
-    scene.catch(() => files.delete(file))
-  }
-  return scene
-}
 
 /** One mesh of a file, drawn unlit with its texture, and its outline. */
 function flatCopy(source: Mesh, materials: MeshBasicMaterial[], scale: number): Mesh[] {
@@ -128,79 +99,6 @@ export function createParagliderWing(): MarkerModel {
   }
 }
 
-/** The normals of `geometry` averaged over the vertices at the same place (a file splits them at hard edges): for the outline. */
-function smoothNormals(geometry: BufferGeometry): BufferAttribute {
-  const position = geometry.getAttribute('position')
-  const index = geometry.index
-  const key = (i: number) => `${Math.round(position.getX(i) * 2000)},${Math.round(position.getY(i) * 2000)},${Math.round(position.getZ(i) * 2000)}`
-  const sums = new Map<string, Vector3>()
-  const a = new Vector3()
-  const b = new Vector3()
-  const c = new Vector3()
-  const n = new Vector3()
-  const corner = (i: number) => (index ? index.getX(i) : i)
-  for (let f = 0; f < (index ? index.count : position.count); f += 3) {
-    const [i, j, k] = [corner(f), corner(f + 1), corner(f + 2)]
-    a.fromBufferAttribute(position, i)
-    b.fromBufferAttribute(position, j)
-    c.fromBufferAttribute(position, k)
-    // not normalised: the larger the face, the more it weighs
-    n.subVectors(c, b).cross(a.sub(b))
-    for (const v of [i, j, k]) {
-      const id = key(v)
-      const sum = sums.get(id)
-      if (sum) sum.add(n)
-      else sums.set(id, n.clone())
-    }
-  }
-  const normals = new Float32Array(position.count * 3)
-  const out = new Vector3()
-  for (let v = 0; v < position.count; v++) out.copy(sums.get(key(v)) ?? n.set(0, 1, 0)).normalize().toArray(normals, v * 3)
-  return new BufferAttribute(normals, 3)
-}
-
-/**
- * The colours of a glTF figure, flat: the materials named `main` take the colour of the track (`shade`: a darker tone of it,
- * `light`: a lighter one), the others keep their own, all scaled by the exposure and the light of the scene. The outline of
- * each part is that part's colour darkened (`OUTLINE_SHADE`).
- */
-function createPainter({ main, shade, light: lighter }: { main: string; shade?: string; light?: string }) {
-  const parts: { material: MeshBasicMaterial; base: Color; role: 'main' | 'shade' | 'light' | 'fixed'; shells: MeshBasicMaterial[] }[] = []
-  const cache = new Map<Material, MeshBasicMaterial>()
-  const track = new Color('#ffffff')
-  const light = new Color('#ffffff')
-  const paint = () => {
-    for (const { material, base, role, shells } of parts) {
-      if (role === 'main') material.color.copy(track)
-      else if (role === 'shade') material.color.copy(track).multiplyScalar(0.7)
-      else if (role === 'light') material.color.copy(track).lerp(light, 0.45)
-      else material.color.copy(base).multiply(light)
-      for (const shell of shells) shell.color.copy(material.color).multiplyScalar(OUTLINE_SHADE)
-    }
-  }
-  return {
-    paint,
-    setTrack: (r: number, g: number, b: number) => track.setRGB(r, g, b),
-    setLight: (r: number, g: number, b: number) => light.setRGB(r, g, b),
-    /** the flat material standing for a material of the file (one per material) */
-    flat(source: Material & { color: Color; name: string; map?: Texture | null }): MeshBasicMaterial {
-      let flat = cache.get(source)
-      if (!flat) {
-        flat = new MeshBasicMaterial({ map: source.map ?? null })
-        cache.set(source, flat)
-        parts.push({ material: flat, base: source.color.clone(), role: source.name === main ? 'main' : source.name === shade ? 'shade' : source.name === lighter ? 'light' : 'fixed', shells: [] })
-      }
-      return flat
-    },
-    /** the material of the outline of a mesh drawn with `flat` */
-    shell(flat: MeshBasicMaterial): MeshBasicMaterial {
-      const shell = new MeshBasicMaterial({ side: BackSide })
-      parts.find((part) => part.material === flat)?.shells.push(shell)
-      return shell
-    },
-  }
-}
-
 /** What differs between the characters of a file: its materials that take the colour of the track, and the clip played. */
 interface CharacterSpec {
   file: string
@@ -259,25 +157,7 @@ function createCharacter({ file, clip: clipName, hide, stand: standIn, ...colors
       mesh.frustumCulled = false
       if ((mesh as SkinnedMesh).isSkinnedMesh) skinned.push(mesh as SkinnedMesh)
     })
-    // the outline: the same skinned mesh drawn from behind, pushed out along its normals (in the units of the mesh, which the
-    // file may scale: the width of the outline is measured in the marker's own units)
-    root.updateMatrixWorld(true)
-    const inRoot = new Matrix4()
-    for (const mesh of skinned.filter((m) => m.visible)) {
-      // smooth normals across the edges split by the file: a normal split at a hard edge would tear the shell open there
-      const smooth = mesh.geometry.clone()
-      smooth.setAttribute('normal', smoothNormals(mesh.geometry))
-      const shellMaterial = painter.shell(mesh.material as MeshBasicMaterial)
-      const shell = new SkinnedMesh(smooth, shellMaterial)
-      shell.bind(mesh.skeleton, mesh.bindMatrix)
-      shell.frustumCulled = false
-      inRoot.copy(root.matrixWorld).invert().multiply(mesh.matrixWorld)
-      const out = (OUTLINE / Math.max(new Vector3().setFromMatrixScale(inRoot).x, 1e-6)).toFixed(6)
-      shellMaterial.onBeforeCompile = (shader) => {
-        shader.vertexShader = shader.vertexShader.replace('#include <skinning_vertex>', `#include <skinning_vertex>\ntransformed += normalize( objectNormal ) * ${out};`)
-      }
-      mesh.parent?.add(shell)
-    }
+    outlineSkinned(root, skinned, painter)
     const clip = animations.find((a) => a.name.endsWith(`|${clipName}`))
     if (!clip) throw new Error(`no « ${clipName} » animation in ${file}`)
     mixer = new AnimationMixer(model)
@@ -318,10 +198,19 @@ interface Spinner {
   axis: 'x' | 'y' | 'z'
   /** turns of the part for one turn of the phase */
   turns: number
+  /** the part is made this many times thicker along its axis (a fat tyre) */
+  thick?: number
+}
+
+/** A vehicle, and where a point of its file lands in its own frame (null until it is loaded): for the rider to sit on. */
+export interface Vehicle extends MarkerModel {
+  place(point: Vector3): Vector3 | null
+  /** settles when the file is loaded (or failed) */
+  loaded: Promise<void>
 }
 
 /** What differs between the vehicles: the file, the materials taking the colour of the track, the size and the way it faces. */
-interface VehicleSpec {
+export interface VehicleSpec {
   file: string
   /** material in the colour of the track (the body) */
   main: string
@@ -330,6 +219,10 @@ interface VehicleSpec {
   /** turn about the vertical axis, so that the front looks along +Z */
   yaw: number
   spin?: Spinner[]
+  /** parts added in code to the model, in the units of the file (a battery, a bag): coloured by `Material.name` as the file's own */
+  extras?: (model: Group) => void
+  /** base colour of the materials of the file that have none, by name */
+  colors?: Record<string, string>
   /** the flat figure that stands in while the file loads, and if it never does */
   stand: () => MarkerModel
 }
@@ -338,18 +231,23 @@ interface VehicleSpec {
  * A rigid glTF vehicle: its body in the colour of the track, the rest in its own colours, flat and outlined like the
  * other markers, its wheels or propeller turning with the phase. The flat figure stands in until the file is there.
  */
-function createVehicle({ file, main, length, yaw, spin = [], stand: standIn }: VehicleSpec): MarkerModel {
+export function createVehicle({ file, main, length, yaw, spin = [], extras, colors, stand: standIn }: VehicleSpec): Vehicle {
   const stand = standIn()
   const root = new Group()
   root.add(stand.root)
-  const painter = createPainter({ main })
-  const spinners: { node: Object3D; axis: Spinner['axis']; turns: number }[] = []
+  const painter = createPainter({ main, colors })
+  const axes = { x: new Vector3(1, 0, 0), y: new Vector3(0, 1, 0), z: new Vector3(0, 0, 1) }
+  const spinners: { node: Object3D; axis: Vector3; base: Quaternion; turns: number }[] = []
+  /** from the units of the file to the vehicle's own frame, once loaded */
+  let placement: Matrix4 | null = null
+  const turn = new Quaternion()
 
   const loaded = loadFile(file).then(({ scene }) => {
     const model = scene.clone(true)
     const pivot = new Group()
     pivot.rotation.y = yaw
     pivot.add(model)
+    extras?.(model)
     const meshes: Mesh[] = []
     model.traverse((node) => {
       if ((node as Mesh).isMesh) meshes.push(node as Mesh)
@@ -364,7 +262,8 @@ function createVehicle({ file, main, length, yaw, spin = [], stand: standIn }: V
         geometry.translate(-centre.x, -centre.y, -centre.z)
         mesh.geometry = geometry
         mesh.position.add(centre.multiply(mesh.scale).applyQuaternion(mesh.quaternion))
-        spinners.push({ node: mesh, axis: rule.axis, turns: rule.turns })
+        if (rule.thick) mesh.scale[rule.axis] *= rule.thick
+        spinners.push({ node: mesh, axis: axes[rule.axis], base: mesh.quaternion.clone(), turns: rule.turns })
       }
       mesh.material = painter.flat(mesh.material as Material & { color: Color; name: string; map?: Texture | null })
       mesh.frustumCulled = false
@@ -380,22 +279,8 @@ function createVehicle({ file, main, length, yaw, spin = [], stand: standIn }: V
     group.position.set(-((box.min.x + box.max.x) / 2) * scale, -box.min.y * scale, -((box.min.z + box.max.z) / 2) * scale)
     root.add(group)
     group.updateMatrixWorld(true)
-    // the outline: the mesh again, from behind, pushed out along smooth normals (a child of the mesh: it turns with it)
-    const inRoot = new Matrix4()
-    root.updateMatrixWorld(true)
-    for (const mesh of meshes) {
-      const smooth = mesh.geometry.clone()
-      smooth.setAttribute('normal', smoothNormals(mesh.geometry))
-      const shellMaterial = painter.shell(mesh.material as MeshBasicMaterial)
-      inRoot.copy(root.matrixWorld).invert().multiply(mesh.matrixWorld)
-      const out = (OUTLINE / Math.max(new Vector3().setFromMatrixScale(inRoot).x, 1e-6)).toFixed(6)
-      shellMaterial.onBeforeCompile = (shader) => {
-        shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `vec3 transformed = position + normalize( normal ) * ${out};`)
-      }
-      const shell = new Mesh(smooth, shellMaterial)
-      shell.frustumCulled = false
-      mesh.add(shell)
-    }
+    placement = group.matrix.clone().multiply(pivot.matrix)
+    outlineRigid(root, meshes, painter)
     root.remove(stand.root)
     painter.paint()
     wakeScene()
@@ -405,9 +290,11 @@ function createVehicle({ file, main, length, yaw, spin = [], stand: standIn }: V
 
   return {
     root,
+    loaded,
+    place: (point) => (placement ? point.clone().applyMatrix4(placement) : null),
     pose(phase) {
       stand.pose(phase)
-      for (const { node, axis, turns } of spinners) node.rotation[axis] = phase * turns
+      for (const { node, axis, base, turns } of spinners) node.quaternion.copy(base).multiply(turn.setFromAxisAngle(axis, phase * turns))
     },
     setColor(r, g, b) {
       painter.setTrack(r, g, b)
