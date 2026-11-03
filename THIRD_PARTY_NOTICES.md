@@ -255,7 +255,7 @@ License: CC BY 3.0. By Poly by Google, https://poly.pizza/m/3Z7vJ96JIEB, licence
 
 ### 3D model « Adventurer » (public/models/adventurer.glb)
 
-License: CC0 1.0. By Quaternius, https://poly.pizza/m/5EGWBMpuXq, licence https://creativecommons.org/publicdomain/zero/1.0/. Modified: Walk and Run animations only, geometry quantised, posed on the bikes, the skis and in the kayak bone by bone, flat colours and outline added in the app.
+License: CC0 1.0. By Quaternius, https://poly.pizza/m/5EGWBMpuXq, licence https://creativecommons.org/publicdomain/zero/1.0/. Modified: Walk and Run animations only, geometry quantised, posed on the bikes, the skis, in the kayak, in the water and on the mountain bone by bone, flat colours and outline added in the app.
 
 ### 3D model « Adventurer » (public/models/adventurer-f.glb)
 
