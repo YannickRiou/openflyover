@@ -21,7 +21,6 @@ import type { Settings } from '../state/store'
 import { tileWorkerStatus } from '../terrain/tileWorkerStatus'
 import type { TileWorkerStatus } from '../terrain/tileWorkerStatus'
 import { deviceBitrateCap, targetBitrate } from './encoder'
-import { hasGpuTimer } from './gpuTimer'
 import { OUTCOME_LABELS, handoverLabel, settingsDetails, shadowSummary, summariseSettings, timingsSummary } from './history'
 import { effectiveRender } from './qualityTier'
 import { buildFrameSchedule, videoEncoding, videoSize } from './schedule'
@@ -387,6 +386,20 @@ export function parseReport(raw: string | null | undefined): DiagnosticReport | 
 // ---------------------------------------------------------------------------
 // Live reading
 // ---------------------------------------------------------------------------
+
+/**
+ * The browser measures the GPU time of a render (`EXT_disjoint_timer_query_webgl2`, `gpuTimer.ts`): not Safari, hence not an
+ * iPhone. Here and not in `gpuTimer.ts`, which loads with the export: this file is on the first screen.
+ */
+export function hasGpuTimer(gl: unknown): boolean {
+  const ctx = gl as Partial<Pick<WebGL2RenderingContext, 'createQuery' | 'getExtension'>> | null
+  if (!ctx || typeof ctx.createQuery !== 'function' || typeof ctx.getExtension !== 'function') return false
+  try {
+    return ctx.getExtension('EXT_disjoint_timer_query_webgl2') !== null
+  } catch {
+    return false
+  }
+}
 
 /** What the canvas's WebGL context tells about the GPU. */
 export function readGpuInfo(gl: WebGLRenderingContext | WebGL2RenderingContext): GpuInfo {
