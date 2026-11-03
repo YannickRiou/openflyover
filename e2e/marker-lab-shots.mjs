@@ -26,11 +26,15 @@ const server = await createServer({
 })
 await server.listen()
 const base = server.resolvedUrls.local[0]
+// SOFTWARE_GL=1: no graphics card on this machine, WebGL through SwiftShader (the looks are right, the costs are not)
+const SOFTWARE = process.env.SOFTWARE_GL === '1'
 const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: 'shell',
-  args: ['--no-sandbox', '--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=gl', '--lang=fr', '--window-size=1600,1000'],
-  env: { ...process.env, MESA_D3D12_DEFAULT_ADAPTER_NAME: 'NVIDIA', GALLIUM_DRIVER: 'd3d12', LD_LIBRARY_PATH: '/usr/lib/wsl/lib' },
+  args: SOFTWARE
+    ? ['--no-sandbox', '--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--lang=fr', '--window-size=1600,1000']
+    : ['--no-sandbox', '--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=gl', '--lang=fr', '--window-size=1600,1000'],
+  env: SOFTWARE ? process.env : { ...process.env, MESA_D3D12_DEFAULT_ADAPTER_NAME: 'NVIDIA', GALLIUM_DRIVER: 'd3d12', LD_LIBRARY_PATH: '/usr/lib/wsl/lib' },
   defaultViewport: { width: 1600, height: 1000 },
 })
 const stats = {}

@@ -4,7 +4,7 @@
  * stride of the clip is one turn of the phase. Same toon shading, same outline and same contact shadow as variant A.
  */
 import { AnimationMixer, Box3, Color, Group, Matrix4, Mesh, MeshBasicMaterial, SkinnedMesh, Vector3 } from 'three'
-import type { AnimationAction, Material, Object3D } from 'three'
+import type { AnimationAction, Material, Object3D, Texture } from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { clone } from 'three/addons/utils/SkeletonUtils.js'
 import { MODEL_HEIGHT, OUTLINE } from './markerModelKit'
@@ -12,11 +12,19 @@ import type { MarkerModel } from './markerModelKit'
 import { contactShadow, outlineMaterial, toonMaterial } from './markerLab'
 import { wakeScene } from './renderOnDemand'
 
-/** The candidates: the file, the glTF materials that take the colour of the track, a shade of it, and the ones left out (a weapon). */
-const CANDIDATES: Record<string, { file: string; main: string[]; shade: string[]; light: string[]; hide: string[] }> = {
+/**
+ * The candidates: the file, the glTF materials that take the colour of the track, a shade of it, and the ones left out (a
+ * weapon). `hideNodes`: parts left out by node name; `mainNodes`: parts that get a flat material in the colour of the track
+ * (a model with one texture for everything: the cape).
+ */
+const CANDIDATES: Record<string, { file: string; main: string[]; shade: string[]; light: string[]; hide: string[]; hideNodes?: string[]; mainNodes?: string[] }> = {
   adventurer: { file: 'adventurer-walk.glb', main: ['Green'], shade: [], light: ['LightGreen'], hide: [] },
   adventurerF: { file: 'adventurer-f-walk.glb', main: ['LightGreen'], shade: ['Green'], light: [], hide: [] },
   rogue: { file: 'rogue-walk.glb', main: ['Shirt'], shade: [], light: ['UnderShirt'], hide: ['Material.006'] },
+  // KayKit « Rogue »: one texture for everything, the weapons are separate nodes, the cape takes the colour of the track
+  kaykit: { file: 'kaykit-rogue-walk.glb', main: [], shade: [], light: [], hide: [], hideNodes: ['Knife_Offhand', '1H_Crossbow', '2H_Crossbow', 'Knife', 'Throwable'], mainNodes: ['Rogue_Cape'] },
+  // Quaternius « Universal Animation Library » mannequin: two plain materials, all of it in the colour of the track
+  ual: { file: 'ual-mannequin-walk.glb', main: ['M_Main'], shade: ['M_Joints'], light: [], hide: [] },
 }
 const choice = (() => {
   try {
@@ -29,6 +37,8 @@ const CANDIDATE = CANDIDATES[choice] ?? CANDIDATES.adventurer
 const MAIN = new Set(CANDIDATE.main)
 const SHADE = new Set(CANDIDATE.shade)
 const MAIN_LIGHT = new Set(CANDIDATE.light)
+const HIDE_NODES = new Set(CANDIDATE.hideNodes ?? [])
+const MAIN_NODES = new Set(CANDIDATE.mainNodes ?? [])
 const URL = `${import.meta.env.BASE_URL}lab/${CANDIDATE.file}`
 
 let loading: ReturnType<GLTFLoader['loadAsync']> | null = null
@@ -79,19 +89,22 @@ export function createGlbHiker(): MarkerModel {
     const skinned: SkinnedMesh[] = []
     model.traverse((node: Object3D) => {
       if (!(node instanceof Mesh)) return
-      const source = node.material as Material & { color?: Color; name: string }
-      let toon = cache.get(source)
+      const source = node.material as Material & { color?: Color; name: string; map?: Texture | null }
+      const own = MAIN_NODES.has(node.name)
+      let toon = own ? undefined : cache.get(source)
       if (!toon) {
         const base = source.color ?? new Color('#999999')
         toon = toonMaterial('#ffffff')
         // the glTF colours are already linear
         toon.color.copy(base)
-        const role = MAIN.has(source.name) ? 'main' : SHADE.has(source.name) ? 'shade' : MAIN_LIGHT.has(source.name) ? 'light' : 'fixed'
+        // a textured part keeps its picture (the colour of the track only tints a flat part)
+        if (source.map && !own) toon.map = source.map
+        const role = own || MAIN.has(source.name) ? 'main' : SHADE.has(source.name) ? 'shade' : MAIN_LIGHT.has(source.name) ? 'light' : 'fixed'
         toons.push({ material: toon, base: base.clone(), role })
-        cache.set(source, toon)
+        if (!own) cache.set(source, toon)
       }
       node.material = toon
-      if (CANDIDATE.hide.includes(source.name)) node.visible = false
+      if (CANDIDATE.hide.includes(source.name) || HIDE_NODES.has(node.name)) node.visible = false
       node.frustumCulled = false
       if (node instanceof SkinnedMesh) skinned.push(node)
     })
