@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
-import { filmTilesToPreload, preloadTiles } from './tilePreload'
+import { dataSaverOn, filmTilesToPreload, preloadTiles } from './tilePreload'
 
 /** A track of 10 km going south from Chamonix. */
 const points = Array.from({ length: 101 }, (_, i) => ({ lon: 6.87, lat: 45.92 - i * 0.0009 }))
@@ -47,6 +47,16 @@ describe('filmTilesToPreload', () => {
     expect(cut.urls.length).toBeLessThan(all.urls.length)
     expect(cut.estimatedBytes).toBeLessThanOrEqual(all.estimatedBytes / 4)
     expect(all.urls.slice(0, cut.urls.length)).toEqual(cut.urls)
+  })
+})
+
+describe('dataSaverOn', () => {
+  it('is the browser\'s data saver, false where the browser does not tell (Safari) or reads fail', () => {
+    expect(dataSaverOn({ navigator: { connection: { saveData: true } } })).toBe(true)
+    expect(dataSaverOn({ navigator: { connection: { saveData: false } } })).toBe(false)
+    expect(dataSaverOn({ navigator: {} })).toBe(false)
+    expect(dataSaverOn({})).toBe(false)
+    expect(dataSaverOn({ navigator: { get connection(): never { throw new Error('denied') } } })).toBe(false)
   })
 })
 

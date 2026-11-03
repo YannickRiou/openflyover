@@ -69,7 +69,7 @@ import { compositorAttributes, createExportEncoder } from './nativeEncoder'
 import { isExportStep, setExportProbe, writeBreadcrumb } from './guard'
 import { effectiveRender } from './qualityTier'
 import { buildFrameSchedule, buildFrameTimes, exportLodHeight } from './schedule'
-import { PRELOAD_MAX_BYTES, filmTilesToPreload, preloadTiles } from './tilePreload'
+import { PRELOAD_MAX_BYTES, dataSaverOn, filmTilesToPreload, preloadTiles } from './tilePreload'
 import {
   EMPTY_TIMINGS,
   REPORT_INTERVAL_MS,
@@ -622,7 +622,9 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     }
     // the tiles of the whole film first, at full speed, into the HTTP cache (#401): the frames then wait for the GPU, not
     // the network; its time is counted apart
-    if (deps.engine()) {
+    const dataSaver = dataSaverOn()
+    if (dataSaver) writeBreadcrumb('export : préchargement ignoré (économiseur de données)')
+    if (deps.engine() && !dataSaver) {
       const p0 = performance.now()
       const app = useAppStore.getState()
       const preload = app.bounds && app.tracks.length > 0 ? filmTilesToPreload({
