@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 5.1.1 (November 2026)
 
 - **The 3D markers keep their own colours**: a new « Couleurs du modèle 3D » choice in the marker settings (« Naturelles » by default, or « De la trace »). The horse is brown, the car blue, the skis red and the jacket green instead of everything being in the colour of the track, so the marker no longer merges with the track line. « De la trace » puts the colour of the track on the main part (jacket, hull, skis, body) as before. With several tracks in parallel, each racer keeps the colour of its track; a colour chosen by hand for the figure still wins.
 
