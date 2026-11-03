@@ -2,7 +2,7 @@ import type { Messages } from '../messages'
 
 const messages: Messages['shell'] = {
   loading: 'Wird geladen…',
-  'drop.title': 'GPX-, FIT- oder IGC-Dateien ablegen',
+  'drop.title': 'GPX-, FIT-, IGC- oder KML-Dateien ablegen',
   'drop.hint': 'oder ein .opnflvr-Projekt',
   'tab.trace': 'Track',
   'tab.carte': 'Karte',
@@ -66,7 +66,7 @@ const messages: Messages['shell'] = {
   'tour.welcome.title': 'Willkommen bei OpenFlyover',
   'tour.welcome.body': 'Diese Tour zeigt das Wichtigste in wenigen Schritten. Sie können sie jederzeit beenden.',
   'tour.import.title': 'Beginnen Sie mit einer Strecke',
-  'tour.import.body': 'Importieren Sie eine GPX-, FIT- oder IGC-Datei oder laden Sie das Beispiel zum Ausprobieren.',
+  'tour.import.body': 'Importieren Sie eine GPX-, FIT-, IGC- oder KML-Datei oder laden Sie das Beispiel zum Ausprobieren.',
   'tour.tabs.title': 'Die Einstellungen sind in Tabs geordnet',
   'tour.tabs.body': 'Jeder Tab steuert einen Aspekt des Films: Strecke, Karte, Wetter, Licht, Kamera, Einblendungen. Mit Strg+K finden Sie eine Einstellung über ihren Namen.',
   'tour.panel.title': 'Das Einstellungsfeld',

@@ -50,7 +50,7 @@ const messages: Messages['shortcuts'] = {
   'label.search': 'Search settings',
   'label.close': 'Close the dialog, then the export drawer, then the selection',
   title: 'Keyboard shortcuts',
-  drop: 'Drag your GPX, FIT or IGC tracks, or a project, anywhere in the window. Shortcuts do not work while typing in a text field.',
+  drop: 'Drag your GPX, FIT, IGC or KML tracks, or a project, anywhere in the window. Shortcuts do not work while typing in a text field.',
   or: ' or ',
 }
 

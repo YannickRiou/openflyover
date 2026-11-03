@@ -48,6 +48,6 @@ export default {
   'label.search': 'Rechercher un réglage',
   'label.close': 'Fermer la fenêtre, puis le tiroir d’export, puis la sélection',
   title: 'Raccourcis clavier',
-  drop: "Glissez vos traces GPX, FIT ou IGC, ou un projet, n'importe où dans la fenêtre. Les raccourcis ne marchent pas pendant la saisie d'un texte.",
+  drop: "Glissez vos traces GPX, FIT, IGC ou KML, ou un projet, n'importe où dans la fenêtre. Les raccourcis ne marchent pas pendant la saisie d'un texte.",
   or: ' ou ',
 }

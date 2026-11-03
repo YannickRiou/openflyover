@@ -140,11 +140,12 @@ async function register(): Promise<void> {
  * soon after).
  */
 export function sharedFileName(name: string, head: Uint8Array): string {
-  if (/\.(gpx|fit|igc|json)$/i.test(name)) return name
+  if (/\.(gpx|fit|igc|kml|kmz|json)$/i.test(name)) return name
   if (String.fromCharCode(...head.subarray(8, 12)) === '.FIT') return `${name}.fit`
   const text = new TextDecoder().decode(head)
   if (/<gpx[\s>]/.test(text)) return `${name}.gpx`
   if (/^A[A-Z0-9]{3}/.test(text) && /\nH[FOP]DTE/.test(text)) return `${name}.igc`
+  if (/<kml[\s>]/.test(text)) return `${name}.kml`
   return name
 }
 
