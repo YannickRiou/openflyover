@@ -82,7 +82,7 @@ function destination(): WritableFile {
 }
 
 /** Starts a 2 s film at 10 fps written to `file` and runs it to the end. */
-async function exportFilm(file: WritableFile, extra: Partial<Parameters<typeof runExport>[1]> = {}) {
+async function exportFilm(file: WritableFile, extra: Partial<Parameters<typeof runExport>[1]> = {}, requestExtra: Partial<ExportRequest> = {}) {
   useExportStore.getState().start({
     width: 320,
     height: 180,
@@ -93,6 +93,7 @@ async function exportFilm(file: WritableFile, extra: Partial<Parameters<typeof r
     holdEndS: 1,
     baseName: 'film',
     destination: file,
+    ...requestExtra,
   })
   const request = useExportStore.getState().request as ExportRequest
   const three = fakeThree()
@@ -230,6 +231,29 @@ describe('runExport', () => {
     await exportFilm(destination())
     expect(mixFilmAudio).toHaveBeenCalledTimes(3)
     vi.mocked(mixFilmAudio).mockImplementation(async () => null)
+  })
+
+  it('a measure of the cost of the layers (probe) fetches no tile ahead, mixes no sound and renders only its window', async () => {
+    const track = buildTrack({
+      name: 'test',
+      source: 'gpx',
+      segments: [{ points: Array.from({ length: 12 }, (_, i) => ({ lon: 6.78, lat: 45.9 - i * 0.009, ele: 1000 })) }],
+    })
+    const { tracks, bounds } = useAppStore.getState()
+    useAppStore.setState({ tracks: [track], bounds: track.bounds })
+    const preloadTile = vi.fn(async () => undefined)
+    const engine = { prefetch: () => 0, update: vi.fn(), sampleHeight: () => 0, onChange: () => () => {}, stats: { pendingTiles: 0, pendingVisibleTiles: 0 } }
+    try {
+      const { frameCount } = await exportFilm(destination(), { engine: () => engine as unknown as TerrainEngine, budget: DESKTOP_BUDGET, preloadTile }, { probe: true, holdStartS: 0, holdEndS: 0, window: { fromS: 0.5, toS: 1 } })
+      expect(frameCount).toBeLessThan(20)
+    } finally {
+      useAppStore.setState({ tracks, bounds })
+    }
+    expect(preloadTile).not.toHaveBeenCalled()
+    expect(mixFilmAudio).not.toHaveBeenCalled()
+    expect(useExportStore.getState().phase).toBe('done')
+    expect(useExportStore.getState().frameCount).toBeGreaterThanOrEqual(2)
+    expect(useExportStore.getState().frameCount).toBeLessThan(20)
   })
 
   it('keeps the tiles of the film for the frames when the browser\'s data saver is on', async () => {

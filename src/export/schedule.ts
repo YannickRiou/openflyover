@@ -272,6 +272,8 @@ export interface ScheduleOptions {
   holdStartS?: number
   /** extra frames on progress 1 after the flyover ends, seconds */
   holdEndS?: number
+  /** only the frames whose film time is in `[fromS, toS]` (the measure of the cost of the layers, `layerCost.ts`) */
+  window?: { fromS: number; toS: number }
 }
 
 /**
@@ -279,7 +281,7 @@ export interface ScheduleOptions {
  * frame k is at `k / (ramp − 1) × durationS`, exactly 0 on its first frame and `durationS` on its last; holds add
  * `round(holdS × fps)` frames at 0 and `durationS`.
  */
-export function buildFrameTimes({ durationS, fps, holdStartS = 0, holdEndS = 0 }: ScheduleOptions): number[] {
+export function buildFrameTimes({ durationS, fps, holdStartS = 0, holdEndS = 0, window }: ScheduleOptions): number[] {
   if (!(fps > 0) || !Number.isFinite(fps)) throw new RangeError(`invalid frame rate: ${fps}`)
   if (!(durationS > 0) || !Number.isFinite(durationS)) throw new RangeError(`invalid duration: ${durationS}`)
   const ramp = Math.max(2, Math.round(durationS * fps))
@@ -291,7 +293,10 @@ export function buildFrameTimes({ durationS, fps, holdStartS = 0, holdEndS = 0 }
   for (let k = 0; k < before; k++) frames[i++] = 0
   for (let k = 0; k < ramp; k++) frames[i++] = (k / (ramp - 1)) * durationS
   for (let k = 0; k < after; k++) frames[i++] = durationS
-  return frames
+  if (!window) return frames
+  const inside = frames.filter((t) => t >= window.fromS && t <= window.toS)
+  // never fewer than the two frames of a film: a window that holds none gives the whole film back
+  return inside.length >= 2 ? inside : frames
 }
 
 /**

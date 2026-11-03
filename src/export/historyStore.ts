@@ -72,7 +72,8 @@ export function installExportHistory(now: () => number = () => performance.now()
     if (state.phase === previous.phase) return
     if (state.phase === 'rendering') {
       const { request } = state
-      run = request && !request.still ? { request, startedAt: now(), settings: useAppStore.getState().settings } : null
+      // a still image is not recorded, nor a measure of the cost of the layers (`probe`)
+      run = request && !request.still && !request.probe ? { request, startedAt: now(), settings: useAppStore.getState().settings } : null
       return
     }
     const outcome = OUTCOMES[state.phase]

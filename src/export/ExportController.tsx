@@ -542,7 +542,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     const settings = useAppStore.getState().settings
     // the soundtrack from the first frame: film time 0 comes after the frames held at the start
     // an image sequence has no sound
-    const audio = request.sequence ? null : await filmSoundtrack(settings.film, Math.round(request.holdStartS * fps) / fps, schedule.length / fps, request.encoding?.loudnessLufs ?? null)
+    const audio = request.sequence || request.probe ? null : await filmSoundtrack(settings.film, Math.round(request.holdStartS * fps) / fps, schedule.length / fps, request.encoding?.loudnessLufs ?? null)
     if (isCanceled()) throw new ExportCanceledError()
     // WebCodecs, else the system's ffmpeg (desktop app on Linux); the test without encoding ends on its message
     session = noEncoding
@@ -624,7 +624,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     // the network; its time is counted apart
     const dataSaver = dataSaverOn()
     if (dataSaver) writeBreadcrumb('export : préchargement ignoré (économiseur de données)')
-    if (deps.engine() && !dataSaver) {
+    if (deps.engine() && !dataSaver && !request.probe) {
       const p0 = performance.now()
       const app = useAppStore.getState()
       const preload = app.bounds && app.tracks.length > 0 ? filmTilesToPreload({
