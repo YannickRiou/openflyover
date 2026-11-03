@@ -60,7 +60,7 @@ export function chainName(names: readonly string[]): string {
 }
 
 /**
- * One track running through `tracks` in `chainOrder`: their segments one after the other, their waypoints, new id,
+ * One track running through `tracks` in `chainOrder`: their segments one after the other, their flights and waypoints, new id,
  * stats and bounds recomputed; colour, source, activity and clock offset of the first. Throws `Error` with a message
  * for the user below two tracks, or when two timed recordings overlap (a group outing: a ghost race, not a chain).
  */
@@ -79,6 +79,15 @@ export function chainTracks(tracks: readonly Track[]): Track {
     activityType: first.activityType,
   })
   track.color = first.color
+  // the flights of each recording (paragliding…), moved along by the length of the recordings before it: the jump between
+  // two recordings is not counted, so each one starts where the previous one ends
+  let startM = 0
+  const flights = ordered.flatMap((t) => {
+    const moved = (t.flights ?? []).map((f) => ({ ...f, startM: f.startM + startM, endM: f.endM + startM, ...(f.maxHeightAtM !== undefined && { maxHeightAtM: f.maxHeightAtM + startM }) }))
+    startM += t.stats.distanceM
+    return moved
+  })
+  if (flights.length > 0) track.flights = flights
   const waypoints = ordered.flatMap((t) => t.waypoints ?? [])
   if (waypoints.length > 0) track.waypoints = waypoints
   if (first.utcOffsetMin !== undefined) track.utcOffsetMin = first.utcOffsetMin
