@@ -23,6 +23,13 @@ export interface DeviceBudget {
   cloudSettleFrames: number
   /** resolution of the preview cloud pass (fraction of the canvas) */
   cloudResolutionScale: number
+  /**
+   * resolution of the cloud pass in an export (fraction of the film's size) of a device whose preview had to be lightened
+   * (`exportCloudScale`, scene/previewQuality.ts); a device that keeps up exports it at 1. The export's pass is marched pixel
+   * by pixel, which was 56 to 66 % of the time of an image on an iPhone 12 (#434); clouds are soft, so it draws them a little
+   * coarser than the rest
+   */
+  exportCloudResolutionScale: number
   /** default rendering of the sea of clouds: « Nappe » ('surface', one draw call) is far cheaper than the ray march */
   seaRender: 'volume' | 'surface'
   /** largest short side of an exported film or still, px */
@@ -59,6 +66,7 @@ export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
   maxImageryZoomOffset: 2,
   cloudSettleFrames: 32,
   cloudResolutionScale: 1,
+  exportCloudResolutionScale: 1,
   seaRender: 'volume',
   maxExportShortSide: 2160,
   maxLodHeightPx: Infinity,
@@ -72,7 +80,7 @@ export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
   maxTrees: 250_000,
 }
 
-const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'maxExportShortSide' | 'maxLodHeightPx' | 'maxVideoBitrate' | 'memoryWarnBytes' | 'maxResidentTiles' | 'maxTileLoads'> = {
+const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'exportCloudResolutionScale' | 'maxExportShortSide' | 'maxLodHeightPx' | 'maxVideoBitrate' | 'memoryWarnBytes' | 'maxResidentTiles' | 'maxTileLoads'> = {
   maxPixelRatio: 2,
   movingPixelRatio: 1.5,
   tileBitmaps: 200,
@@ -109,6 +117,7 @@ export function budgetFor({ coarsePointer, shortSidePx, memoryGb }: DeviceTraits
   const budget: DeviceBudget = {
     ...MOBILE_BUDGET,
     kind: phone ? 'phone' : 'tablet',
+    exportCloudResolutionScale: phone ? 0.75 : 1,
     maxExportShortSide: phone ? 1080 : 1440,
     // about the height of the phone's preview: a 1080p or portrait export keeps the tiles the preview already holds
     maxLodHeightPx: phone ? 720 : Infinity,

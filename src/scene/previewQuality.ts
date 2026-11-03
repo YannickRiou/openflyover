@@ -67,6 +67,15 @@ export function previewBudget(budget: PreviewBudget, light: boolean): PreviewBud
   }
 }
 
+/**
+ * Resolution of the cloud pass in an export: full, unless the device had to lighten its preview (rung above 0: it was
+ * judged too slow by what it does, not by its name), then the budget's `exportCloudResolutionScale` (a computer's is 1).
+ * A recent phone that keeps up exports its clouds as sharp as a computer does.
+ */
+export function exportCloudScale(budget: Pick<DeviceBudget, 'exportCloudResolutionScale'>, rung: PreviewRung): number {
+  return rung === 0 ? 1 : budget.exportCloudResolutionScale
+}
+
 /** Shadow map and trees to draw: the preview's, but always the device's own while exporting (video, poster, capture). */
 export function sceneBudget(preview: PreviewBudget, exporting: boolean, device: PreviewBudget = deviceBudget()): Pick<PreviewBudget, 'shadowMapSize' | 'maxTrees'> {
   const { shadowMapSize, maxTrees } = exporting ? device : preview
@@ -202,10 +211,16 @@ export function currentPreviewBudget(): PreviewBudget {
   return previewBudget(deviceBudget(), currentPreviewRung() !== 0)
 }
 
-/** Preview limits, again when the setting or the measure changes. */
-export function usePreviewBudget(): PreviewBudget {
+/** Rung of the preview now, again when the setting or the measure changes. */
+export function usePreviewRung(): PreviewRung {
   const quality = usePreferences((s) => s.previewQuality)
   const measured = usePreviewMeasure((s) => s.rung)
   const elsewhere = useRenderElsewhere((s) => s.active)
-  return useMemo(() => previewBudget(deviceBudget(), previewRung(quality, measured, elsewhere) !== 0), [quality, measured, elsewhere])
+  return previewRung(quality, measured, elsewhere)
+}
+
+/** Preview limits, again when the setting or the measure changes. */
+export function usePreviewBudget(): PreviewBudget {
+  const light = usePreviewRung() !== 0
+  return useMemo(() => previewBudget(deviceBudget(), light), [light])
 }
