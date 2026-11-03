@@ -21,7 +21,12 @@ export default {
   'fit.decodeError': 'aucun point et erreur de décodage ({error})',
   'fit.noPosition': 'aucun enregistrement avec position',
   'fit.defaultName': 'Activité FIT',
+  'igc.invalid': 'Fichier IGC invalide : {reason}',
+  'igc.notIgc': 'ce n\'est pas un fichier IGC (aucun enregistrement de vol « B »)',
+  'igc.noPoint': 'aucun point de vol exploitable',
+  'igc.defaultName': 'Vol',
+  'igc.defaultPoint': 'Point {n}',
   'chainError.needTwo': 'Il faut au moins deux traces à enchaîner.',
   'chainError.overlap': '« {a} » et « {b} » ont été enregistrées en même temps : impossible de les enchaîner.',
-  unsupported: 'Format non supporté : {shown} (formats acceptés : .gpx, .fit)',
+  unsupported: 'Format non supporté : {shown} (formats acceptés : .gpx, .fit, .igc)',
 }

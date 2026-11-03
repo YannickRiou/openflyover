@@ -414,7 +414,7 @@ describe('closeProject / newProject', () => {
     platform.openFiles.mockResolvedValueOnce([])
     await newProject(answering('close'))
     expectEmpty()
-    expect(platform.openFiles).toHaveBeenCalledWith({ filters: [{ name: 'Traces GPX ou FIT', extensions: ['gpx', 'fit'] }], multiple: true })
+    expect(platform.openFiles).toHaveBeenCalledWith({ filters: [{ name: 'Traces GPX, FIT ou IGC', extensions: ['gpx', 'fit', 'igc'] }], multiple: true })
     expect(toasts()).toEqual([])
   })
 })

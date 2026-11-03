@@ -13,7 +13,7 @@
 [![Tauri 2](https://img.shields.io/badge/Tauri-2-1C2A33?logo=tauri&logoColor=white)](https://v2.tauri.app/)
 [![Tested with Vitest](https://img.shields.io/badge/tested_with-Vitest-1C2A33?logo=vitest&logoColor=white)](https://vitest.dev/)
 
-OpenFlyover makes a 3D flyover movie from a GPX or FIT track, over the real terrain, with open data.
+OpenFlyover makes a 3D flyover movie from a GPX, FIT or IGC track, over the real terrain, with open data.
 
 - [Overview](#overview)
 - [Quick start](#quick-start)

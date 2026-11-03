@@ -50,7 +50,7 @@ const messages: Messages['shortcuts'] = {
   'label.search': 'Einstellung suchen',
   'label.close': 'Fenster schließen, dann Exportbereich, dann Auswahl',
   title: 'Tastenkürzel',
-  drop: 'GPX- oder FIT-Dateien oder ein Projekt an eine beliebige Stelle im Fenster ziehen. Die Tastenkürzel funktionieren nicht während der Texteingabe.',
+  drop: 'GPX-, FIT- oder IGC-Dateien oder ein Projekt an eine beliebige Stelle im Fenster ziehen. Die Tastenkürzel funktionieren nicht während der Texteingabe.',
   or: ' oder ',
 }
 
