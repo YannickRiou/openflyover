@@ -41,8 +41,8 @@ The images and licence pages are build inputs committed in `src-tauri/installer/
    the file names and the update check; the one in `package.json` is shown by the diagnostic report and « Réglages › Mises à jour ».
 2. Rename the `## Unreleased` heading of `CHANGELOG.md` to the version and month, and add the « Nouveautés » entry of the
    version (`src/ui/whatsNew.ts` and `news.vNN.*` in each `src/i18n/<language>/news.ts`): the handbook's « Release procedure » has the details.
-3. Only if a dependency changed: regenerate the third-party licenses with `npm run notices` (after `npm ci`; the first run takes about 8 minutes because
-   of the crates.io rate limit) and commit `THIRD_PARTY_NOTICES.md` and `src-tauri/installer/license.rtf` / `license.txt`: they are shipped with the installers.
+3. Only if a dependency changed: regenerate the third-party licenses with `npm run notices` (after `npm ci`; a few seconds: the licences already in
+   `THIRD_PARTY_NOTICES.md` are reused, only the crates new since then are asked of crates.io, one a second) and commit `THIRD_PARTY_NOTICES.md` and `src-tauri/installer/license.rtf` / `license.txt`: they are shipped with the installers.
 4. Open the pull request from a branch `release/2.2.0` and merge it: `release-tag.yml` tags the merge commit `v2.2.0` and
    starts this workflow on it. By hand, the same: `git tag -a v2.2.0 -m "OpenFlyover 2.2.0"`, then `git push origin v2.2.0`
    (any tag starting with `v` starts the workflow).
