@@ -2064,7 +2064,7 @@ const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (
       <p><strong>Change the number in five places.</strong> <code>npm version X.Y.Z --no-git-tag-version</code> updates <code>package.json</code> and <code>package-lock.json</code>; edit by hand <code>version</code> in <code>src-tauri/Cargo.toml</code> and in <code>src-tauri/tauri.conf.json</code>, and the <code>openflyover</code> entry of <code>src-tauri/Cargo.lock</code> (or let a <code>cargo build</code> in <code>src-tauri/</code> refresh the lock file).</p>
       <p><strong>Run</strong> <code>git grep -n "X.Y.Z"</code> with the real number. <strong>You should see</strong> the five files and the changelog heading; <code>git grep -n "<em>old number</em>"</code> should only find mentions of the past (older changelog entries, the previous « Nouveautés » block, documents).</p>
     </div></li>
-    <li><div><strong>Licences</strong>, only if a dependency changed since the last release: <code>npm run notices</code> (about 8 minutes the first time).</div></li>
+    <li><div><strong>Licences</strong>, only if a dependency changed since the last release: <code>npm run notices</code> (a few seconds: the licences already in <code>THIRD_PARTY_NOTICES.md</code> are reused, only new crates are asked of crates.io, one a second).</div></li>
     <li><div class="stack">
       <p><strong>Pull request, then merge.</strong> Commit (<code>chore(release): X.Y.Z</code>), push, open the pull request, wait for CI, merge.</p>
       <p><strong>You should see</strong> the « Website » workflow run on <code>master</code> in the Actions tab of GitHub, and the site serve the new version a few minutes later.</p>
