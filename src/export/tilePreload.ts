@@ -23,6 +23,20 @@ export const PRELOAD_MAX_BYTES: Record<DeviceKind, number> = { phone: 250e6, tab
 /** points of the track the order is taken from (the nearest one gives a tile its place in the film) */
 const ORDER_POINTS = 500
 
+/**
+ * The browser's data saver is on (`navigator.connection.saveData`: Android Chrome, Edge): the tiles are then fetched by
+ * the frames that need them, not ahead. Safari, hence an iPhone and Chrome on it, does not tell.
+ */
+type DataSaverScope = { navigator?: { connection?: { saveData?: boolean } } }
+
+export function dataSaverOn(scope: DataSaverScope = globalThis as DataSaverScope): boolean {
+  try {
+    return scope.navigator?.connection?.saveData === true
+  } catch {
+    return false
+  }
+}
+
 export interface FilmTiles {
   /** URLs to fetch, in the order the film needs them */
   urls: string[]

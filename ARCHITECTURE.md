@@ -132,8 +132,10 @@ full customization through a single project document, WebCodecs video export, Ta
 
 The first screen (shell, panels, welcome card) loads the app, React and the HeroUI / React Aria primitives, without three.js:
 1.9 MB, 559 kB gzip over 22 files in 4.5.0, stylesheet included (the app 441 kB, `primitives` 291 kB, React 219 kB,
-French and the i18n code 177 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 580 kB
-gzip (`scripts/check-bundle-size.mjs`, after the build): raise it on purpose in the pull request that needs it.
+French and the i18n code 177 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 582 kB
+gzip (`scripts/check-bundle-size.mjs`, after the build): raise it on purpose in the pull request that needs it (580 → 582
+for the diagnostic report's phone rows: the terrain workers' status, the GPU timer, the wait for the GPU, which the
+first screen holds because the export's guard builds the report).
 Nothing in the first screen may import `three` or `@react-three/fiber` statically: the status bar reads the renderer through
 `scene/perfProbe.ts` (a plain module the scene fills when its canvas is created). Only French (the
 reference, the fallback of a missing message) is in the first screen; English, Spanish, Italian and German are one chunk each
@@ -337,6 +339,9 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      tuiles du film : n / N » (`reportTiles`), its time is `timings.preloadMs` (« préchargement des tuiles » in the split) and
      the remaining time starts at the first frame (`startedAt` set again there, after the soundtrack, the encoder and the
      tiles, all made once). The panel's « ≈ x s / image » is that same pace (`etaS` over the frames left), so the two agree.
+   - **Data saver**: with `navigator.connection.saveData` (`dataSaverOn`: Android Chrome, Edge; Safari, hence an iPhone and
+     Chrome on it, does not tell) the preload is skipped, the frames fetch the tiles they need (breadcrumb « préchargement
+     ignoré »).
    - **The cap is hard: the level of detail gives way** (phone, tablet). A low view looking at the horizon in a portrait
      film needs 220–390 tiles by itself (iPhone 12: 147 → 224 loaded during the « descente », tab killed), so the
      selection is made to fit: `solveLodLevel` multiplies `errorTargetPx` by `LOD_STEP` (1.1) per level, 0 to
@@ -3055,6 +3060,14 @@ exports) gets it from the terrain source of the settings.
   (`gpuMs`): the GPU is then the limit. `gpuWaitMs` stays 0, the wait of the GPU goes into `encodeWaitMs`, and `gpuMs`
   still gives the GPU's time. Session flag `openflyover.export.gpuWait` = `'1'` (`GPU_WAIT_KEY`, this tab) brings the
   wait back to time the GPU.
+- **What the report tells a phone, which has no console** (`diagnostic.ts`, « Appareil » and « Export » sections): the
+  terrain workers (`terrain/tileWorkerStatus.ts`, noted by `tileWorker.ts`: `untried`, `active` with the number of
+  workers and of tiles they built, `unsupported`, `dropped`; the status module is apart so that reading it loads no worker),
+  whether the GPU time can be measured (`hasGpuTimer` in diagnostic.ts, which is on the first screen: `EXT_disjoint_timer_query_webgl2`, absent on Safari, hence on an
+  iPhone, where only the wait for the GPU tells its share), and whether the export waits for the GPU (`waitsForGpuFor`).
+  **`?export-gpu-wait=on|off|default`** in the page address (`applyGpuWaitParam`, called by `main.tsx`) sets
+  `GPU_WAIT_KEY` for this tab: two exports of the same film on the same build, one with the wait and one without, compare
+  on a phone without a console. Nothing changes without the parameter.
 - **Frame handover** (`handover.ts`, WebCodecs sessions only: `session.acceptsSource`): three ways to get the composed
   frame to the encoder, all with the same pixels (same `composeFrame`, sRGB, no alpha; checked in Chrome: byte-identical
   `VideoFrame`s, same colour space): `offscreen` (OffscreenCanvas → `VideoSample(canvas)`, the reference), `canvas` (a

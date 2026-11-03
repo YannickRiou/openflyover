@@ -9,6 +9,7 @@
  */
 import { BITMAP_OPTIONS } from './fetch'
 import { runTileJob, type TileJob, type TileResult } from './tileJob'
+import { noteTileBuilt, noteWorkersDropped, noteWorkersStarted, noteWorkersUnsupported } from './tileWorkerStatus'
 
 const MAX_WORKERS = 4
 
@@ -24,6 +25,7 @@ const pending = new Map<number, { slot: Slot; done: (result?: TileResult) => voi
 
 /** Drop the workers for good; the tiles they still hold are built by the page. */
 function retire(): void {
+  noteWorkersDropped()
   const dead = slots
   slots = null
   dead?.forEach(({ worker }) => worker.terminate())
@@ -33,10 +35,13 @@ function retire(): void {
 
 function start(): Slot[] | null {
   const supported = typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined' && typeof ImageBitmap !== 'undefined'
-  if (!supported) return null
+  if (!supported) {
+    noteWorkersUnsupported()
+    return null
+  }
   try {
     const count = Math.max(1, Math.min(MAX_WORKERS, (navigator.hardwareConcurrency || 2) - 1))
-    return Array.from({ length: count }, () => {
+    const pool = Array.from({ length: count }, () => {
       const worker = new Worker(new URL('./tile.worker.ts', import.meta.url), { type: 'module' })
       worker.onmessage = (event: MessageEvent<{ id: number; result?: TileResult; unsupported?: true }>) => {
         const { id, result, unsupported } = event.data
@@ -51,7 +56,10 @@ function start(): Slot[] | null {
       worker.onmessageerror = retire
       return { worker, busy: 0 }
     })
+    noteWorkersStarted(count)
+    return pool
   } catch {
+    noteWorkersUnsupported()
     return null
   }
 }
@@ -83,6 +91,7 @@ export async function buildTileOffThread(job: TileJob): Promise<TileResult | und
   firstTile ??= verify(job, result)
   try {
     const own = await firstTile
+    if (own === null) noteTileBuilt()
     return own === null ? result : first ? own : undefined
   } catch {
     // the page cannot build this tile itself: the next one is the check (and this one fails where the engine builds it)
