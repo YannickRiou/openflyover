@@ -48,18 +48,19 @@ export type VideoCodecChoice = (typeof VIDEO_CODEC_CHOICES)[number]
 /** Bitrate chosen by hand, Mbit/s (the encoder's bounds, `MIN_BITRATE` / `MAX_BITRATE`). */
 /**
  * Formats of the platforms people publish to, one click in « Format »: the proportions, the size, the frame rate, H.264
- * (what they all take) and a bitrate of the order they recommend. They set these fields and nothing else.
+ * (what they all take), a bitrate of the order they recommend and the margins on (their interface covers the edges).
+ * They set these fields and nothing else.
  */
 export const PLATFORM_PRESETS = [
-  { id: 'youtube-4k', get label() { return t('video.platform.youtube-4k') }, video: { aspect: '16:9', resolution: '4k', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 40 } },
-  { id: 'youtube', get label() { return t('video.platform.youtube') }, video: { aspect: '16:9', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 12 } },
-  { id: 'vertical', get label() { return t('video.platform.vertical') }, video: { aspect: '9:16', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 10 } },
-  { id: 'feed', get label() { return t('video.platform.feed') }, video: { aspect: '4:5', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 8 } },
-  { id: 'square', get label() { return t('video.platform.square') }, video: { aspect: '1:1', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 8 } },
+  { id: 'youtube-4k', get label() { return t('video.platform.youtube-4k') }, video: { aspect: '16:9', resolution: '4k', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 40, margins: true } },
+  { id: 'youtube', get label() { return t('video.platform.youtube') }, video: { aspect: '16:9', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 12, margins: true } },
+  { id: 'vertical', get label() { return t('video.platform.vertical') }, video: { aspect: '9:16', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 10, margins: true } },
+  { id: 'feed', get label() { return t('video.platform.feed') }, video: { aspect: '4:5', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 8, margins: true } },
+  { id: 'square', get label() { return t('video.platform.square') }, video: { aspect: '1:1', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 8, margins: true } },
 ] as const satisfies readonly {
   id: string
   label: string
-  video: Pick<VideoSettings, 'aspect' | 'resolution' | 'fps' | 'codec' | 'manualBitrate' | 'bitrateMbps'>
+  video: Pick<VideoSettings, 'aspect' | 'resolution' | 'fps' | 'codec' | 'manualBitrate' | 'bitrateMbps' | 'margins'>
 }[]
 
 export type PlatformPresetId = (typeof PLATFORM_PRESETS)[number]['id']
@@ -99,6 +100,11 @@ export interface VideoSettings {
   /** the soundtrack brought to `loudnessLufs` (LUFS, one of `LOUDNESS_TARGETS_LUFS`) and kept under -1 dBTP (`film/loudness.ts`) */
   normalizeLoudness: boolean
   loudnessLufs: number
+  /**
+   * the overlay keeps the margins of the format: 5 % on each side, and in 9:16 and 4:5 the areas the vertical feeds
+   * cover. Off by default (a film shared elsewhere uses the whole picture), on with a platform's format
+   */
+  margins: boolean
 }
 
 /** Encoding fields, also those an older project lacks: it encodes as it did (bitrate of the quality, first codec). */
@@ -111,6 +117,7 @@ const ENCODING_DEFAULTS = {
   nameTemplate: '',
   normalizeLoudness: false,
   loudnessLufs: DEFAULT_LOUDNESS_LUFS,
+  margins: false,
 } as const satisfies Partial<VideoSettings>
 
 /** A phone starts at 720p (44 % fewer pixels than 1080p); it can still choose up to its cap. */
@@ -220,7 +227,8 @@ export function isValidVideoSettings(video: VideoSettings): boolean {
     typeof video.nameTemplate === 'string' &&
     video.nameTemplate.length <= NAME_TEMPLATE_MAX &&
     typeof video.normalizeLoudness === 'boolean' &&
-    (LOUDNESS_TARGETS_LUFS as readonly number[]).includes(video.loudnessLufs)
+    (LOUDNESS_TARGETS_LUFS as readonly number[]).includes(video.loudnessLufs) &&
+    typeof video.margins === 'boolean'
   )
 }
 
@@ -237,10 +245,16 @@ const LEGACY_FORMATS: Record<string, Pick<VideoSettings, 'aspect' | 'resolution'
 /**
  * Upgrade of a saved `video` setting (project or preset) before validation: `{ format, fps, quality }`
  * becomes `{ aspect, resolution, fps, quality }` (an unknown format falls back to 16:9 1080p), and the encoding fields
- * it lacks take their defaults.
+ * it lacks take their defaults. A setting made before `margins` keeps them when it is a platform's format (its film was
+ * made for that platform), else it is off like a new one.
  */
 export function withVideoDefaults(raw: unknown): unknown {
   if (!isRecord(raw)) return raw
+  const video = upgradedVideo(raw)
+  return 'margins' in raw ? video : { ...video, margins: platformPresetOf({ ...video, margins: true } as unknown as VideoSettings) !== null }
+}
+
+function upgradedVideo(raw: Record<string, unknown>): Record<string, unknown> {
   if (!('format' in raw)) return { ...ENCODING_DEFAULTS, ...raw }
   const { format, ...rest } = raw
   if ('aspect' in rest && 'resolution' in rest) return { ...ENCODING_DEFAULTS, ...rest }

@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v50.margins.title': 'Des marges au choix',
+  'v50.margins.text': 'La case « Marges de sécurité » de l’export garde l’habillage loin des bords et, en 9:16 et 4:5, hors des zones de Reels, TikTok et Shorts. Elle se coche d’elle-même quand vous choisissez une plateforme. Décochée, l’habillage se rapproche des bords et l’image entière sert au film.',
   'v50.modes.title': 'Trois modes d’interface',
   'v50.modes.text': 'Débutant, Confirmé ou Expert : choisissez combien de réglages vous voyez, dans la barre du haut ou dans Réglages. Le film est le même dans les trois modes. Un réglage modifié reste toujours visible, et Ctrl+K trouve aussi ceux qui sont cachés.',
   'v50.ambiance.title': 'Un fond de carte et une ambiance en un clic',

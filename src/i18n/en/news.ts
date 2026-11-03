@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v50.margins.title': 'Margins when you want them',
+  'v50.margins.text': 'The “Marges de sécurité” box of the export keeps the overlay away from the edges and, in 9:16 and 4:5, out of the areas of Reels, TikTok and Shorts. It ticks itself when you pick a platform. Unticked, the overlay moves close to the edges and the whole picture serves the film.',
   'v50.modes.title': 'Three interface modes',
   'v50.modes.text': 'Beginner, Intermediate or Expert: choose how many settings you see, in the top bar or in Settings. The film is the same in the three modes. A setting you changed always stays visible, and Ctrl+K also finds the hidden ones.',
   'v50.ambiance.title': 'A map background and a mood in one click',

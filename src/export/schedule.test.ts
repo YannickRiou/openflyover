@@ -146,6 +146,15 @@ describe('video formats', () => {
     expect(withVideoDefaults(null)).toBeNull()
   })
 
+  it('keeps the margins of a project made for a platform before they could be turned off, not of the others', () => {
+    const { margins: _margins, ...before } = withPlatformPreset(DEFAULT_VIDEO_SETTINGS, 'vertical')
+    expect(withVideoDefaults(before)).toMatchObject({ margins: true })
+    const { margins: _off, ...other } = DEFAULT_VIDEO_SETTINGS
+    expect(withVideoDefaults(other)).toMatchObject({ margins: false })
+    // a choice already made stays
+    expect(withVideoDefaults({ ...before, margins: false })).toMatchObject({ margins: false })
+  })
+
   it('gives a project saved before the encoding settings the encoding it had', () => {
     const old = { aspect: '1:1', resolution: '720p', fps: 24, quality: 'max' }
     const upgraded = withVideoDefaults(old) as VideoSettings

@@ -36,7 +36,7 @@ import type { OverlayStyleId } from './settings'
 import type { DayCard, OverlayContext2D, OverlayExtras, StageCard } from './draw'
 import { MEDIA_DEFAULTS, STAGE_CARD_FIELDS } from '../film/model'
 import type { FilmMedia, FilmText } from '../film/model'
-import { DEFAULT_LOGO, DEFAULT_OVERLAY, OFFSET_MAX, OVERLAY_ANCHORS, OVERLAY_STYLES, STYLE_LAYOUTS, TEXT_BACKINGS, inStyleSlot, withStyleLayout, withWidgetOffset } from './settings'
+import { DEFAULT_LOGO, EDGE_MARGIN, DEFAULT_OVERLAY, OFFSET_MAX, OVERLAY_ANCHORS, OVERLAY_STYLES, STYLE_LAYOUTS, TEXT_BACKINGS, inStyleSlot, withStyleLayout, withWidgetOffset } from './settings'
 import type { Rect } from './structures'
 import { migrateProject, sanitizeSettings } from '../project/document'
 import { phoneInterfaceFor } from '../ui/safeZoneLayout'
@@ -638,6 +638,14 @@ describe('layout of the overlay for each format', () => {
     const zones = phoneInterfaceFor(size.width, size.height).map(({ box }) => ({ x: box.left * size.width, y: box.top * size.height, w: box.width * size.width, h: box.height * size.height }))
     expect(zones.length).toBeGreaterThan(0)
     for (const b of layout(project, size)) for (const zone of zones) expect(overlap(b, zone), `${format} ${b.id}`).toBe(false)
+  })
+
+  it.each(Object.entries(FORMATS))('%s: with the margins off the widgets go near the edges, still apart', (_, size) => {
+    const boxes = drawOverlay(fakeContext().ctx, overlayFrameAt(track, 0.5), project, size, { logos: [image] }, { margins: false })
+    const counters = boxes.find((b) => b.id === 'counters')!
+    expect(counters.x).toBeCloseTo(size.width * EDGE_MARGIN, 6)
+    expect(counters.y).toBeCloseTo(size.height * EDGE_MARGIN, 6)
+    for (const [i, a] of boxes.entries()) for (const b of boxes.slice(i + 1)) expect(overlap(a, b), `${a.id} / ${b.id}`).toBe(false)
   })
 
   it('keeps a free position at the same relative place in every format, and inside the frame', () => {

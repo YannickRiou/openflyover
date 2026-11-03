@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Ver las novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v50.margins.title': 'Márgenes a elección',
+  'v50.margins.text': 'La casilla «Márgenes de seguridad» de la exportación aleja los gráficos de los bordes y, en 9:16 y 4:5, de las zonas de Reels, TikTok y Shorts. Se marca sola al elegir una plataforma. Sin marcar, los gráficos se acercan a los bordes y toda la imagen sirve a la película.',
   'v50.modes.title': 'Tres modos de interfaz',
   'v50.modes.text': 'Principiante, Intermedio o Experto: elija cuántos ajustes ve, en la barra superior o en Ajustes. La película es la misma en los tres modos. Un ajuste modificado sigue siempre visible, y Ctrl+K también encuentra los ocultos.',
   'v50.ambiance.title': 'Un fondo de mapa y un ambiente con un clic',
