@@ -50,7 +50,7 @@ const messages: Messages['shortcuts'] = {
   'label.search': 'Cerca un’impostazione',
   'label.close': 'Chiudi la finestra, poi il cassetto di esportazione, poi la selezione',
   title: 'Scorciatoie da tastiera',
-  drop: 'Trascina le tue tracce GPX o FIT, o un progetto, in qualsiasi punto della finestra. Le scorciatoie non funzionano durante la digitazione di un testo.',
+  drop: 'Trascina le tue tracce GPX, FIT o IGC, o un progetto, in qualsiasi punto della finestra. Le scorciatoie non funzionano durante la digitazione di un testo.',
   or: ' o ',
 }
 

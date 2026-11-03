@@ -28,6 +28,7 @@ describe('supportedExtension', () => {
     expect(supportedExtension('a.gpx')).toBe('gpx')
     expect(supportedExtension('A.GPX')).toBe('gpx')
     expect(supportedExtension('rando.Fit')).toBe('fit')
+    expect(supportedExtension('vol.IGC')).toBe('igc')
     expect(supportedExtension('a.gpx.zip')).toBeUndefined()
     expect(supportedExtension('a.kml')).toBeUndefined()
     expect(supportedExtension('gpx')).toBeUndefined()
@@ -35,6 +36,14 @@ describe('supportedExtension', () => {
 })
 
 describe('importFile', () => {
+  it('imports an IGC File: a paragliding track in the colour asked for', async () => {
+    const igc = ['AXYZ', 'HFDTE150921', 'B1123454553412N00652087EA01850019050000', 'B1123464553420N00652100EA01852019070000'].join('\n')
+    const tracks = await importFile(new File([igc], 'Vol.IGC'), 2)
+    expect(tracks).toHaveLength(1)
+    expect(tracks[0]).toMatchObject({ name: 'Vol', activityType: 'paragliding', color: TRACK_COLORS[2] })
+    expect(tracks[0].stats.pointCount).toBe(2)
+  })
+
   it('imports a GPX File (upper-case extension)', async () => {
     const file = new File([gpxText], 'Montée.GPX', { type: 'application/gpx+xml' })
     const tracks = await importFile(file, 1)

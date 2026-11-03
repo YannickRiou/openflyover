@@ -85,22 +85,26 @@ describe('sharedFileName', () => {
   it('keeps a name with a known extension', () => {
     expect(sharedFileName('Sortie.GPX', bytes('<?xml'))).toBe('Sortie.GPX')
     expect(sharedFileName('run.fit', new Uint8Array(16))).toBe('run.fit')
+    expect(sharedFileName('vol.IGC', bytes('hello'))).toBe('vol.IGC')
   })
 
   it('adds the extension the content says', () => {
     const fit = new Uint8Array([14, 0x10, 0, 0, 0, 0, 0, 0, ...bytes('.FIT'), 0, 0])
     expect(sharedFileName('activity_123', fit)).toBe('activity_123.fit')
     expect(sharedFileName('Komoot tour', bytes('<?xml version="1.0"?>\n<gpx version="1.1">'))).toBe('Komoot tour.gpx')
+    // an IGC log: an `A` record, then its date line
+    expect(sharedFileName('XCTrack flight', bytes('AXCT123 logger\r\nHFDTEDATE:150921,01\r\n'))).toBe('XCTrack flight.igc')
+    expect(sharedFileName('Alphabet', bytes('ABCD\nno date line'))).toBe('Alphabet')
     expect(sharedFileName('notes', bytes('hello'))).toBe('notes')
   })
 })
 
 describe('pickerAccept', () => {
-  const tracks = [{ name: 'Traces GPX ou FIT', extensions: ['gpx', 'fit'] }]
+  const tracks = [{ name: 'Traces GPX, FIT ou IGC', extensions: ['gpx', 'fit', 'igc'] }]
   const images = [{ name: 'Images', extensions: ['png', 'jpg'] }]
 
   it('filters by extension, except tracks and projects on iOS (Safari greys out the types it does not know)', () => {
-    expect(pickerAccept(tracks, false)).toBe('.gpx,.fit')
+    expect(pickerAccept(tracks, false)).toBe('.gpx,.fit,.igc')
     expect(pickerAccept(tracks, true)).toBe('')
     expect(pickerAccept(images, true)).toBe('.png,.jpg')
     // a project file has no type iOS knows either

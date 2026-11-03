@@ -10,7 +10,7 @@ const messages: Messages['home'] = {
   'empty.links': 'Links',
   'empty.guide': 'Erste Schritte',
   'empty.download': 'Desktop-App (Windows, macOS, Linux)',
-  'empty.hint': 'Eine oder mehrere GPX- oder FIT-Dateien an eine beliebige Stelle im Fenster ziehen.',
+  'empty.hint': 'Eine oder mehrere GPX-, FIT- oder IGC-Dateien an eine beliebige Stelle im Fenster ziehen.',
   'empty.importing': 'Import läuft…',
   'empty.chooseFile': 'Datei wählen',
   'empty.sample': 'Mit dem Beispiel testen',

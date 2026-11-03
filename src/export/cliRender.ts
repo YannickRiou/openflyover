@@ -80,7 +80,7 @@ export async function runCliRenderIfAsked(invoke: Invoke = tauriInvoke): Promise
     const formats = cliFormats(request.formats, formatKey(video.aspect, video.resolution))
     const jobs = buildBatchJobs({ formats, still: false, poster: false }, video)
     const files = trackFiles((await readableFolderAt(request.input)).files)
-    if (files.length === 0) return await exit(2, `Aucune trace GPX ou FIT dans ${request.input}.`)
+    if (files.length === 0) return await exit(2, `Aucune trace GPX, FIT ou IGC dans ${request.input}.`)
     console.info(`[rendu en lot] ${files.length} trace(s) × ${jobs.length} format(s) → ${request.output}`)
     const folder = writableFolderAt(request.output)
     const tracks = await useBatchStore.getState().runTracks(files, jobs, {

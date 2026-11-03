@@ -136,12 +136,15 @@ async function register(): Promise<void> {
 
 /**
  * Name of a shared file, with the extension the import needs: Android apps may share a track under a bare name.
- * `head`: its first bytes (a FIT header says ".FIT" at byte 8).
+ * `head`: its first bytes (a FIT header says ".FIT" at byte 8; an IGC log starts with an `A` record and has its `HFDTE` date line
+ * soon after).
  */
 export function sharedFileName(name: string, head: Uint8Array): string {
-  if (/\.(gpx|fit|json)$/i.test(name)) return name
+  if (/\.(gpx|fit|igc|json)$/i.test(name)) return name
   if (String.fromCharCode(...head.subarray(8, 12)) === '.FIT') return `${name}.fit`
-  if (/<gpx[\s>]/.test(new TextDecoder().decode(head))) return `${name}.gpx`
+  const text = new TextDecoder().decode(head)
+  if (/<gpx[\s>]/.test(text)) return `${name}.gpx`
+  if (/^A[A-Z0-9]{3}/.test(text) && /\nH[FOP]DTE/.test(text)) return `${name}.igc`
   return name
 }
 
