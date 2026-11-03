@@ -2,7 +2,7 @@ import type { Messages } from '../messages'
 
 const messages: Messages['shell'] = {
   loading: 'Loading…',
-  'drop.title': 'Drop your GPX, FIT or IGC tracks',
+  'drop.title': 'Drop your GPX, FIT, IGC or KML tracks',
   'drop.hint': 'or a .opnflvr project',
   'tab.trace': 'Track',
   'tab.carte': 'Map',
@@ -66,7 +66,7 @@ const messages: Messages['shell'] = {
   'tour.welcome.title': 'Welcome to OpenFlyover',
   'tour.welcome.body': 'This tour shows the essentials in a few steps. You can stop it at any time.',
   'tour.import.title': 'Start with a track',
-  'tour.import.body': 'Import a GPX, FIT or IGC file, or load the sample to try it out.',
+  'tour.import.body': 'Import a GPX, FIT, IGC or KML file, or load the sample to try it out.',
   'tour.tabs.title': 'Settings are sorted into tabs',
   'tour.tabs.body': 'Each tab sets one aspect of the film: track, map, weather, light, camera, overlays. Ctrl+K finds a setting by its name.',
   'tour.panel.title': 'The settings panel',

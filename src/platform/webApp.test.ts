@@ -100,11 +100,11 @@ describe('sharedFileName', () => {
 })
 
 describe('pickerAccept', () => {
-  const tracks = [{ name: 'Traces GPX, FIT ou IGC', extensions: ['gpx', 'fit', 'igc'] }]
+  const tracks = [{ name: 'Traces GPX, FIT, IGC ou KML', extensions: ['gpx', 'fit', 'igc', 'kml', 'kmz'] }]
   const images = [{ name: 'Images', extensions: ['png', 'jpg'] }]
 
   it('filters by extension, except tracks and projects on iOS (Safari greys out the types it does not know)', () => {
-    expect(pickerAccept(tracks, false)).toBe('.gpx,.fit,.igc')
+    expect(pickerAccept(tracks, false)).toBe('.gpx,.fit,.igc,.kml,.kmz')
     expect(pickerAccept(tracks, true)).toBe('')
     expect(pickerAccept(images, true)).toBe('.png,.jpg')
     // a project file has no type iOS knows either

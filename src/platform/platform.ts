@@ -270,10 +270,10 @@ export function isAppleMobile(nav: { userAgent: string; maxTouchPoints?: number 
 
 /**
  * `accept` of the web file input: the filters' extensions, except for tracks and projects on iOS, where Safari greys
- * out the .gpx / .fit / .igc / .opnflvr files it has no type for (Files, apps); the import checks the extension anyway.
+ * out the .gpx / .fit / .igc / .kml / .kmz / .opnflvr files it has no type for (Files, apps); the import checks the extension anyway.
  */
 export function pickerAccept(filters: readonly FileFilter[], appleMobile: boolean): string {
-  const unknownTypes = filters.some((f) => f.extensions.some((e) => /^(gpx|fit|igc|opnflvr)$/i.test(e)))
+  const unknownTypes = filters.some((f) => f.extensions.some((e) => /^(gpx|fit|igc|kml|kmz|opnflvr)$/i.test(e)))
   return appleMobile && unknownTypes ? '' : acceptAttribute(filters)
 }
 

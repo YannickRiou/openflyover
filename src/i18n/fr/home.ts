@@ -8,7 +8,7 @@ export default {
   'empty.links': 'Liens',
   'empty.guide': 'Premiers pas',
   'empty.download': 'Appli de bureau (Windows, macOS, Linux)',
-  'empty.hint': 'Glissez une ou plusieurs traces GPX, FIT ou IGC n’importe où dans la fenêtre.',
+  'empty.hint': 'Glissez une ou plusieurs traces GPX, FIT, IGC ou KML n’importe où dans la fenêtre.',
   'empty.importing': 'Import en cours…',
   'empty.chooseFile': 'Choisir un fichier',
   'empty.sample': "Essayer avec l'exemple",

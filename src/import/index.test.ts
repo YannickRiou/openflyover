@@ -30,7 +30,9 @@ describe('supportedExtension', () => {
     expect(supportedExtension('rando.Fit')).toBe('fit')
     expect(supportedExtension('vol.IGC')).toBe('igc')
     expect(supportedExtension('a.gpx.zip')).toBeUndefined()
-    expect(supportedExtension('a.kml')).toBeUndefined()
+    expect(supportedExtension('a.kml')).toBe('kml')
+    expect(supportedExtension('Vol.KMZ')).toBe('kmz')
+    expect(supportedExtension('a.kml.zip')).toBeUndefined()
     expect(supportedExtension('gpx')).toBeUndefined()
   })
 })
@@ -62,7 +64,7 @@ describe('importFile', () => {
   })
 
   it('rejects unsupported formats with a French message', async () => {
-    await expect(importFile(new File(['x'], 'trace.kml'))).rejects.toThrow('Format non supporté : .kml')
+    await expect(importFile(new File(['x'], 'trace.tcx'))).rejects.toThrow('Format non supporté : .tcx')
     await expect(importFile(new File(['x'], 'sansextension'))).rejects.toThrow(/Format non supporté/)
   })
 

@@ -50,7 +50,7 @@ const messages: Messages['shortcuts'] = {
   'label.search': 'Buscar un ajuste',
   'label.close': 'Cerrar la ventana, luego el cajón de exportación y después la selección',
   title: 'Atajos de teclado',
-  drop: 'Arrastra tus tracks GPX, FIT o IGC, o un proyecto, a cualquier parte de la ventana. Los atajos no funcionan mientras se escribe un texto.',
+  drop: 'Arrastra tus tracks GPX, FIT, IGC o KML, o un proyecto, a cualquier parte de la ventana. Los atajos no funcionan mientras se escribe un texto.',
   or: ' o ',
 }
 
