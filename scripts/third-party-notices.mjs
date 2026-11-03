@@ -6,7 +6,8 @@
  *   files read from node_modules (run `npm ci` first). Identical texts are printed once.
  * - Rust: every registry crate of src-tauri/Cargo.lock, licence from the crates.io API (1 request per second, as
  *   crates.io asks), standard texts from the SPDX list. Results are cached in scripts/notices-cache.local (git-ignored),
- *   so a rerun is instant (a first run takes about 8 minutes).
+ *   so a rerun is instant; a fresh checkout reads the licences of THIRD_PARTY_NOTICES.md first and only asks crates.io
+ *   for the crates new since then (it used to take about 8 minutes).
  * - Bundled assets that are not npm packages (fonts, Lucide icons, geoid grid...) are described in ASSETS below.
  * - Licences that are not permissive (see PERMISSIVE) are reported on stderr and in the "Licence review" section.
  *
@@ -101,6 +102,13 @@ async function get(url, tries = 3) {
 
 const cratesFile = join(CACHE, 'crates.json')
 const crateCache = existsSync(cratesFile) ? JSON.parse(readFileSync(cratesFile, 'utf8')) : {}
+// a crate version's licence never changes: those of the notices already committed seed the cache, so only the crates new
+// since the last release are asked of crates.io (a fresh checkout or CI otherwise waits a second for each of ~500 crates)
+const committedNotices = join(ROOT, 'THIRD_PARTY_NOTICES.md')
+if (existsSync(committedNotices)) {
+  const rust = readFileSync(committedNotices, 'utf8').split('\n## Rust crates')[1] ?? ''
+  for (const [, name, version, licence] of rust.matchAll(/^- (\S+) (\S+): (.+)$/gm)) crateCache[`${name}@${version}`] ??= licence === 'unknown' ? null : licence
+}
 
 async function crateLicence(name, version) {
   const key = `${name}@${version}`
