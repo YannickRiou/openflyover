@@ -30,6 +30,7 @@ import {
 } from 'three'
 import { CloudLayers, type CloudsEffect } from '@takram/three-clouds'
 import { Clouds, type CloudsProps } from '@takram/three-clouds/r3f'
+import { deviceBudget } from '../core/deviceBudget'
 import { effectiveRender } from '../export/qualityTier'
 import { isExportBusy, useExportStore } from '../export/store'
 import { samplePath } from '../flyover/path'
@@ -51,7 +52,7 @@ import {
 import type { MarkerTrack } from './AtmosphereLayer'
 import { patchRegionalCoverage } from './cloudShaders'
 import { shutterSubFrame, subFrameSlices } from './lens'
-import { usePreviewBudget } from './previewQuality'
+import { exportCloudScale, usePreviewBudget, usePreviewRung } from './previewQuality'
 import { previewCloudPass } from './renderOnDemand'
 import { useFilmClock } from './usePacing'
 import { useTerrainContext } from './terrainContext'
@@ -183,6 +184,8 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
    * moves, temporal upscaling still marches one pixel in 16 only.
    */
   const { cloudResolutionScale, cloudSettleFrames } = usePreviewBudget()
+  // the export's: full, unless the device was too slow for its preview (decided before the film starts: the preview stops while it runs)
+  const exportScale = exportCloudScale(deviceBudget(), usePreviewRung())
   const ref = useRef<CloudsEffect>(null)
   /** preview: inputs of the last frame and number of frames since they last changed */
   const last = useRef<number[]>([])
@@ -208,7 +211,7 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
     const effect = ref.current
     if (!effect) return
     effect.qualityPreset = exporting ? quality : 'low'
-    effect.resolutionScale = exporting ? 1 : cloudResolutionScale
+    effect.resolutionScale = exporting ? exportScale : cloudResolutionScale
     effect.temporalUpscale = !exporting
     // no reprojection of the shadow map (its jitter is averaged with the frames of a still view); its depth only
     // where the clouds are seen in detail
@@ -236,7 +239,7 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
     return () => {
       effect.update = update
     }
-  }, [exporting, quality, cloudResolutionScale])
+  }, [exporting, quality, cloudResolutionScale, exportScale])
 
   useFrame(({ camera, invalidate }) => {
     const effect = ref.current
@@ -336,7 +339,7 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
       shapeDetailTexture={`${CLOUD_TEXTURES_URL}shape_detail.bin`}
       turbulenceTexture={`${CLOUD_TEXTURES_URL}turbulence.png`}
       stbnTexture={noise}
-      resolutionScale={exporting ? 1 : cloudResolutionScale}
+      resolutionScale={exporting ? exportScale : cloudResolutionScale}
     />
   )
 }
