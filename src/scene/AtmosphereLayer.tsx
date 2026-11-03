@@ -29,6 +29,7 @@ import { CLEAR_SCENE_WEATHER, hazeExtinction, sceneWeatherAt } from '../weather/
 import type { SceneWeather } from '../weather/sceneWeather'
 import type { WeatherSeries } from '../weather/series'
 import { useWeatherStore, weatherSeriesOf } from '../weather/store'
+import { setLabSun } from './markerLab'
 import { currentPreviewRung, shadowRefresh, usePreviewBudget, sceneBudget } from './previewQuality'
 import { createCloudNoiseTexture } from './cloudNoise'
 import { patchCloudShadow } from './cloudShaders'
@@ -184,6 +185,7 @@ export function AtmosphereLayer() {
     const date = shotSunDate(clock, timeS, sunDate, daylight)
     atmosphere.updateByDate(date)
     dateRef.current = date
+    setLabSun(atmosphere.sunDirection, atmosphere.worldToECEFMatrix)
     const elevation = sunElevation(atmosphere.sunDirection, up)
 
     // weather under the marker at the sun date; the haze starts from the ground there
