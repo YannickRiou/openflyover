@@ -7,7 +7,7 @@
  * pictogram.
  */
 import { BackSide, BoxGeometry, CylinderGeometry, ExtrudeGeometry, Group, Mesh, MeshBasicMaterial, Quaternion, Shape, ShapeGeometry, SphereGeometry, TorusGeometry, Vector3 } from 'three'
-import type { BufferGeometry } from 'three'
+import type { BufferGeometry, Material } from 'three'
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 
 /** Height of a model in its own units (the rider on the bike, head included). */
@@ -24,6 +24,8 @@ export interface MarkerModel {
   pose(phase: number): void
   /** Colour of the flat fill, already scaled by the exposure and the light of the scene. */
   setColor(r: number, g: number, b: number): void
+  /** lab only: the factor of the light of the scene, for the parts that keep their own colour */
+  setLight?(r: number, g: number, b: number): void
 }
 
 export const UP = new Vector3(0, 1, 0)
@@ -31,7 +33,7 @@ const SEGMENT_SEGMENTS = 18
 
 export interface Build {
   root: Group
-  fill: MeshBasicMaterial
+  fill: Material
   outline: MeshBasicMaterial
   /** the dark of the outline, as a flat colour of its own (windows, tyres, lines) */
   ink: MeshBasicMaterial

@@ -1,0 +1,13 @@
+{
+  "b-adventurer": {
+    "emptyMs": 0.02,
+    "tris": 20420,
+    "drawCalls": 31,
+    "skinned": 30,
+    "renderMs": [
+      6.3,
+      5.9,
+      5.84
+    ]
+  }
+}
