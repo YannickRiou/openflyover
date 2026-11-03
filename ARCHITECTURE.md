@@ -3044,10 +3044,17 @@ exports) gets it from the terrain source of the settings.
   it would confuse) and drawn again at its end; the timeline is frozen and redrawn at its end.
 - **Encoding pipeline**: the encoder takes the canvas synchronously in `addFrame` (`VideoSampleSource` +
   `new VideoSample(canvas)` before any await; ffmpeg path: `getImageData`), so frame i is encoded while frame i+1
-  settles and renders (one `addFrame` in flight). Right after the last render of an image the loop waits for the GPU
-  (`waitForGpu`: a 1×1 `readPixels` of the default framebuffer, synchronous everywhere, timed as `gpuWaitMs`), so that
-  `composeMs` and `frameMs` are not charged for the render (on WebKit the drawing of the WebGL canvas into a 2D canvas is
-  deferred, and the render was paid for when the `VideoFrame` was made).
+  settles and renders (one `addFrame` in flight). **On a phone or tablet** (`budget.kind`), right after the last render of
+  an image the loop waits for the GPU (`waitForGpu`: a 1×1 `readPixels` of the default framebuffer, synchronous
+  everywhere, timed as `gpuWaitMs`), so that `composeMs` and `frameMs` are not charged for the render (on WebKit the
+  drawing of the WebGL canvas into a 2D canvas is deferred, and the render was paid for when the `VideoFrame` was
+  made). **On a computer it does not wait** (`RunDeps.waitsForGpu`, default `kind !== 'desktop' || gpuWaitRequested()`):
+  the composition is queued behind the render in the GPU's command order, so the image is complete when it is read, and
+  the page prepares the next frame while the GPU draws this one. Audit of #434 (the 29 s sample film, 1080p, 30 i/s,
+  « standard », GTX 1060, Chrome): 404 ms an image with the wait, 139 ms without, for a GPU time of about 115 ms an image
+  (`gpuMs`): the GPU is then the limit. `gpuWaitMs` stays 0, the wait of the GPU goes into `encodeWaitMs`, and `gpuMs`
+  still gives the GPU's time. Session flag `openflyover.export.gpuWait` = `'1'` (`GPU_WAIT_KEY`, this tab) brings the
+  wait back to time the GPU.
 - **Frame handover** (`handover.ts`, WebCodecs sessions only: `session.acceptsSource`): three ways to get the composed
   frame to the encoder, all with the same pixels (same `composeFrame`, sRGB, no alpha; checked in Chrome: byte-identical
   `VideoFrame`s, same colour space): `offscreen` (OffscreenCanvas → `VideoSample(canvas)`, the reference), `canvas` (a
@@ -3064,7 +3071,8 @@ exports) gets it from the terrain source of the settings.
 - **Timings** (`ExportTimings`): `rendered`, `renders` (advance calls), `renderMs` (main thread), `gpuMs` / `gpuRenders`
   (GPU timer queries `EXT_disjoint_timer_query_webgl2`, `gpuTimer.ts`; 0 where unavailable, e.g. Safari / iOS: only
   `gpuWaitMs` then tells the GPU's share), `waitMs`, `gpuWaitMs` (waiting for the GPU to finish the last render,
-  « attente de la carte graphique »; absent from the summary of older entries), `composeMs`, `frameMs` (VideoFrame /
+  « attente de la carte graphique »; 0 and absent from the summary on a computer, which does not wait; absent from the
+  summary of older entries), `composeMs`, `frameMs` (VideoFrame /
   readback), `encodeWaitMs` (back-pressure), `encodeMs` = the last four, `timeouts`, `givenUp`, and `handover` (the
   method kept, a string; stored in the history entry as `handover`), `preloadMs` (the tiles of the film fetched before the
   first frame, stored in the history entry too). `timingsSummary` writes them on one line for the

@@ -59,7 +59,7 @@ import {
   type DrawOverlay,
   type FrameOutcome,
 } from './capture'
-import { noEncodingTest } from './diagnostic'
+import { gpuWaitRequested, noEncodingTest } from './diagnostic'
 import { ExportCanceledError, type VideoEncodeSession } from './encoder'
 import { createSequenceEncoder, sequencePattern } from './sequenceEncoder'
 import { createGpuTimer, waitForGpu } from './gpuTimer'
@@ -114,7 +114,9 @@ interface RunDeps {
   clock: () => FilmClock
   signal: AbortSignal
   /** memory budget of the device (default: this one) */
-  budget?: Pick<DeviceBudget, 'exportTileKeepFrames' | 'exportPrefetchAhead'>
+  budget?: Pick<DeviceBudget, 'kind' | 'exportTileKeepFrames' | 'exportPrefetchAhead'>
+  /** wait for the GPU to finish each render before composing it (default: on a phone or tablet, or when asked for: `gpuWaitRequested`) */
+  waitsForGpu?: boolean
   /** fetches a tile of the film before its first frame (default: into the HTTP cache, `tilePreload.ts`) */
   preloadTile?: (url: string) => Promise<unknown>
 }
@@ -280,7 +282,12 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   if (request.still && drawView) return runDrawnStill(request, request.still, drawView, deps.signal)
 
   const { width, height, fps } = request
-  const { exportTileKeepFrames, exportPrefetchAhead } = deps.budget ?? deviceBudget()
+  const { kind, exportTileKeepFrames, exportPrefetchAhead } = deps.budget ?? deviceBudget()
+  // A computer queues the composition behind the render: the GPU keeps the order of its commands, so the frame is complete
+  // when it is read, and the page goes on preparing the next one meanwhile. Waiting for the GPU first made every image
+  // pay the CPU work and the GPU work one after the other (404 ms an image instead of 139 on the reference film, #434).
+  // Kept on a phone or tablet, where nobody measured the difference, and when asked for to time the GPU.
+  const waitsForGpu = deps.waitsForGpu ?? (kind !== 'desktop' || gpuWaitRequested())
   const lodHeight = exportLodHeight(height)
   const filmClock = deps.clock()
   const three = deps.get()
@@ -724,13 +731,15 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
           // the next frame's tiles load while the GPU draws this one (the wait below blocks the page, not the network nor
           // the tile workers): on a phone that wait is a fifth of a second per image
           prefetchAhead(i, NEXT_FRAME)
-          // same task as the last render: the drawing buffer still holds the frame; the render is waited for apart, so that
-          // composing and the video frame are not charged for it
-          const g0 = performance.now()
-          waitForGpu(glContext)
-          const waited = performance.now() - g0
-          timings.gpuWaitMs += waited
-          timings.encodeMs += waited
+          // same task as the last render: the drawing buffer still holds the frame. Where the render is waited for apart, so
+          // that composing and the video frame are not charged for it, that wait is counted as `gpuWaitMs`
+          if (waitsForGpu) {
+            const g0 = performance.now()
+            waitForGpu(glContext)
+            const waited = performance.now() - g0
+            timings.gpuWaitMs += waited
+            timings.encodeMs += waited
+          }
           const t0 = performance.now()
           composeFrame(handover.begin(), canvas, at, width, height, overlay)
           // a hold starts and its view stays (it does not move with time, or the film time stands still): kept aside for the

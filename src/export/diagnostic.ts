@@ -34,6 +34,13 @@ const MAX_VALUE = 200
 /** sessionStorage key of « Export de test sans encodage » (this tab only, never in the project) */
 export const NO_ENCODING_KEY = 'openflyover.export.noEncoding'
 
+/**
+ * sessionStorage key to keep, on a computer too, the wait for the GPU before each frame is composed (this tab only): it
+ * tells how long the GPU takes (`gpuWaitMs`, the « Répartition ») at the price of an export about three times slower
+ * on a graphics card of 2016 (#434). Set it to '1' from the console.
+ */
+export const GPU_WAIT_KEY = 'openflyover.export.gpuWait'
+
 type TestStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
 function tabStorage(): TestStorage | undefined {
@@ -41,6 +48,15 @@ function tabStorage(): TestStorage | undefined {
     return globalThis.sessionStorage
   } catch {
     return undefined
+  }
+}
+
+/** The wait for the GPU before composing a frame is asked for (`GPU_WAIT_KEY`). */
+export function gpuWaitRequested(storage: TestStorage | undefined = tabStorage()): boolean {
+  try {
+    return storage?.getItem(GPU_WAIT_KEY) === '1'
+  } catch {
+    return false
   }
 }
 

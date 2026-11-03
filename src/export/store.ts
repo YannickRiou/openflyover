@@ -101,7 +101,7 @@ export interface ExportTimings {
   waitMs: number
   /** composing and encoding: `gpuWaitMs` + `composeMs` + `frameMs` + `encodeWaitMs` */
   encodeMs: number
-  /** waiting for the GPU to finish the last render of each image, before composing (`waitForGpu`) */
+  /** waiting for the GPU to finish the last render of each image, before composing (`waitForGpu`); 0 on a computer, which does not wait (`GPU_WAIT_KEY`) */
   gpuWaitMs: number
   /** sky, WebGL image and overlay drawn into the encoder canvas */
   composeMs: number
