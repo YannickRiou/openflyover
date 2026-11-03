@@ -1,5 +1,5 @@
 /**
- * Import entry point: dispatches a File (GPX, FIT or IGC) to the right parser and assigns colours.
+ * Import entry point: dispatches a File (GPX, FIT, IGC, KML or KMZ) to the right parser and assigns colours.
  */
 import type { Track } from '../core/types'
 import { parseGpx } from './gpx'
@@ -8,13 +8,13 @@ import { t } from '../i18n'
 /** Palette for track lines and UI swatches: bright enough to read over orthophotos (balise red first). */
 export const TRACK_COLORS: readonly string[] = ['#FF5A36', '#FFC53D', '#5BC0EB', '#FFFFFF', '#B79CFF', '#7AD9A0']
 
-export type SupportedExtension = 'gpx' | 'fit' | 'igc'
+export type SupportedExtension = 'gpx' | 'fit' | 'igc' | 'kml' | 'kmz'
 
 /** Lower-cased extension (without the dot) when the format is supported, else undefined. */
 export function supportedExtension(fileName: string): SupportedExtension | undefined {
   const match = /\.([a-z0-9]+)$/i.exec(fileName.trim())
   const ext = match?.[1].toLowerCase()
-  return ext === 'gpx' || ext === 'fit' || ext === 'igc' ? ext : undefined
+  return ext === 'gpx' || ext === 'fit' || ext === 'igc' || ext === 'kml' || ext === 'kmz' ? ext : undefined
 }
 
 /** Give each track the colour TRACK_COLORS[(colorIndex + i) % length]. Mutates and returns `tracks`. */
@@ -33,7 +33,7 @@ export function importText(text: string, fileName: string, colorIndex = 0): Trac
 }
 
 /**
- * Parse a dropped / selected file by extension (.gpx, .fit, .igc, case-insensitive).
+ * Parse a dropped / selected file by extension (.gpx, .fit, .igc, .kml, .kmz, case-insensitive).
  * Throws `Error('Format non supporté : …')` for anything else.
  */
 export async function importFile(file: File, colorIndex = 0): Promise<Track[]> {
@@ -49,6 +49,15 @@ export async function importFile(file: File, colorIndex = 0): Promise<Track[]> {
       // the flight log of a paraglider, hang glider or glider: loaded on the first .igc file only
       const { parseIgc } = await import('./igc')
       return assignColors(parseIgc(await file.text(), file.name), colorIndex)
+    }
+    case 'kml': {
+      // loaded on the first .kml or .kmz only
+      const { parseKml } = await import('./kml')
+      return assignColors(parseKml(await file.text(), file.name), colorIndex)
+    }
+    case 'kmz': {
+      const { parseKmz } = await import('./kmz')
+      return assignColors(await parseKmz(await file.arrayBuffer(), file.name), colorIndex)
     }
     default: {
       const shown = /\.[^.]+$/.exec(file.name)?.[0] ?? file.name

@@ -33,7 +33,7 @@ export default {
   'file.noDecompress': "Ce navigateur ne sait pas décompresser les projets : ouvrez-le dans un navigateur récent ou dans l'application.",
   'file.damaged': 'Fichier de projet endommagé : les données compressées sont illisibles.',
   'actions.filterProject': 'Projet OpenFlyover',
-  'actions.filterTracks': 'Traces GPX, FIT ou IGC',
+  'actions.filterTracks': 'Traces GPX, FIT, IGC ou KML',
   'actions.filterBoth': 'Traces et projets',
   'actions.saved': 'Projet enregistré : {fileName}',
   'actions.saveFailed': "Impossible d'enregistrer le projet : {reason}",

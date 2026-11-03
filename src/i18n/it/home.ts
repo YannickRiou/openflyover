@@ -10,7 +10,7 @@ const messages: Messages['home'] = {
   'empty.links': 'Link',
   'empty.guide': 'Primi passi',
   'empty.download': 'App desktop (Windows, macOS, Linux)',
-  'empty.hint': 'Trascina una o più tracce GPX, FIT o IGC in qualsiasi punto della finestra.',
+  'empty.hint': 'Trascina una o più tracce GPX, FIT, IGC o KML in qualsiasi punto della finestra.',
   'empty.importing': 'Importazione in corso…',
   'empty.chooseFile': 'Scegli un file',
   'empty.sample': 'Prova con l’esempio',
