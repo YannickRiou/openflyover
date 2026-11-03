@@ -1399,7 +1399,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   off, sway kept). One sprite and one texture per marker (`markerLayout` / `drawMarker`: badge, stick, label;
   `sprite.center` = anchor); texture cache of 48 textures and 8 Mpx. glTF models evaluated, not done (licensing,
   lighting parity, poster overview hiding); « Modèle 3D » draws the figure as a small procedural 3D model instead
-  (`scene/markerModelKit.ts`, `markerModels.ts`, `markerFigureModels.ts`: flat fill and an inverted-hull outline, no file). `animated`: the
+  (`scene/markerModelKit.ts`, `markerModels.ts`, `markerFigureModels.ts`: flat fill and an inverted-hull outline, no file; the paraglider is the exception: `markerGlbFigures.ts` loads the glTF wing of `public/models` on demand, credited by `modelCredits.json` in the film, the video description and `THIRD_PARTY_NOTICES.md`, every `.glb` having an entry (tested)). `animated`: the
   figurine bounces and sways with `figureMotion(clock, timeS)` (lift up to 8% of the badge through `sprite.center`,
   ±5° through `material.rotation`). It walks at the marker's pace: a table over the whole film (`figureTable`, per
   `FilmClock`, a step of 1/30 s) turns the marker's progress per second, against the pace it keeps while it moves, into a

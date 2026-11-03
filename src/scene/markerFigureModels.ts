@@ -370,7 +370,8 @@ function createRider(): MarkerModel {
   })
 }
 
-function createParaglider(): MarkerModel {
+/** The flat figurine of the paraglider (also the stand-in while the glTF wing loads, `markerGlbFigures.ts`). */
+export function createParagliderFlat(): MarkerModel {
   return createBiped({
     hip: v(0, 0.45, 0),
     shoulder: v(0, 0.95, -0.12),
@@ -508,7 +509,7 @@ export const FIGURE_MODELS: Partial<Record<MarkerFigure, () => MarkerModel>> = {
   nageur: createSwimmer,
   kayak: createKayaker,
   cavalier: createRider,
-  parapente: createParaglider,
+  parapente: createParagliderFlat,
   moto: createMotorbike,
   voiture: createCar,
   avion: createPlane,

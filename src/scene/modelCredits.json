@@ -1,0 +1,15 @@
+[
+  {
+    "id": "parachute",
+    "title": "Parachute",
+    "author": "Poly by Google",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "sourceUrl": "https://poly.pizza/m/3Z7vJ96JIEB",
+    "file": "models/parachute.glb",
+    "figures": [
+      "parapente"
+    ],
+    "modifications": "texture reduced to 512 px and 64 colours, centred and scaled, outline added"
+  }
+]

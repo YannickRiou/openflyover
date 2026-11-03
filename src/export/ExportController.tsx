@@ -34,6 +34,7 @@ import { filmViewAt } from '../scene/filmView'
 import { adaptiveShutterSamples, sameShot, setShutterSubFrame, shutterSamples } from '../scene/lens'
 import { markerKeysMoveWithTime } from '../film/markerKeys'
 import { lastShadowPass, resetShadowPass } from '../scene/terrainShadow'
+import { whenMarkerModelsLoaded } from '../scene/markerGlbFigures'
 import { useTerrainContext } from '../scene/terrainContext'
 import type { HeightSampler } from '../scene/trackLineSet'
 import { useFilmClock } from '../scene/usePacing'
@@ -657,6 +658,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         writeBreadcrumb(`export : tuiles préchargées en ${(timings.preloadMs / 1000).toFixed(1)} s (${failed} échecs)`)
       }
     }
+    // the 3D models of the markers are there before the first frame (not their stand-ins)
+    await whenMarkerModelsLoaded()
     // the remaining time counts from the first frame: the soundtrack, the encoder and the tiles are made once, before it
     useExportStore.setState({ startedAt: performance.now() })
 

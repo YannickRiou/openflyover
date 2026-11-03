@@ -202,6 +202,11 @@ describe('overlayCredits', () => {
     expect(overlayCredits({ ...sources, landmarks: true, water: true })[2]).toBe(`Repères et eau : ${osmAttribution()}`)
     expect(overlayCredits({ ...sources, landmarks: true, water: true, forests: true, glaciers: true })[2]).toBe(`Repères, eau, forêts et glaciers : ${osmAttribution()}`)
     expect(overlayCredits({ ...sources, landmarks: true, forests: true })[2]).toBe(`Repères et forêts : ${osmAttribution()}`)
+    // a 3D model that asks for a credit is named with its author and licence, in the film and in the description
+    const models = [{ title: 'Parachute', author: 'Poly by Google', license: 'CC BY 3.0', sourceUrl: 'https://poly.pizza/m/3Z7vJ96JIEB' }]
+    expect(overlayCredits({ ...sources, models })[2]).toBe('3D : « Parachute », Poly by Google (CC BY 3.0), modifié')
+    expect(overlayShortCredits({ ...sources, models }).at(-1)).toBe('3D : « Parachute », Poly by Google (CC BY 3.0), modifié')
+    expect(creditsDescription({ ...sources, models })).toContain('https://poly.pizza/m/3Z7vJ96JIEB')
     // unknown ids fall back to the default sources, like the scene
     expect(overlayCredits({ ...sources, imagerySourceId: 'nope' })[1]).toBe(`Imagerie : ${getImagerySource('nope').attribution}`)
   })

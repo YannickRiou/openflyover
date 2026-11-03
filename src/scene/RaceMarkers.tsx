@@ -93,6 +93,10 @@ export function RaceMarkers() {
         if (model) {
           const fill = litColor(racerMarkerColors(track.color).badgeFill, gain, modelFill)
           model.setColor(fill.r, fill.g, fill.b)
+          if (model.setLight) {
+            const light = litColor('#FFFFFF', gain, modelFill)
+            model.setLight(light.r, light.g, light.b)
+          }
           model.pose(look.animated ? figureStride(clock, timeS) : MODEL_REST_PHASE)
           trackDirection(path, racer.distanceM, position, frame, settings.exaggeration, modelAhead)
           const height = MODEL_BALLS * markerRadius(camera, position, settings.marker.size)

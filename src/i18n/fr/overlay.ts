@@ -34,6 +34,7 @@ export default {
   'draw.weatherRow.wind': 'Vent',
   'draw.credits.relief': 'Relief : {source}',
   'draw.credits.imagery': 'Imagerie : {source}',
+  'draw.credits.model': '3D : « {title} », {author} ({license}), modifié',
   'draw.race.finished': 'Arrivée',
   'draw.race.lead': 'Tête',
   'style.editorial': 'Éditorial',
