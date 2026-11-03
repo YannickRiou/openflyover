@@ -2937,7 +2937,11 @@ exports) gets it from the terrain source of the settings.
   **Platform presets** (`PLATFORM_PRESETS`, chips above « Format »): YouTube 4K (16:9, 4K, 30 i/s, H.264, 40 Mbit/s), YouTube HD
   (1080p, 12), Reels / TikTok / Shorts (9:16, 1080p, 10), Instagram / Facebook (4:5, 1080p, 8) and square (1:1, 8): one click sets
   aspect, resolution, fps, `codec: 'avc'` and a bitrate by hand (`withPlatformPreset`, one undo step; the quality, key frames, sound
-  and name stay; `platformPresetOf` lights the chip the settings match exactly). A phone or tablet still caps the size
+  and name stay; `platformPresetOf` lights the chip the settings match exactly), and `margins: true`.
+  **Safety margins** (`video.margins`, « Marges de sécurité », false by default): the overlay keeps `SAFE_MARGIN` (5 %) from each
+  edge and, in 9:16 / 4:5, out of `phoneInterfaceFor`; off, `EDGE_MARGIN` (2 %) and no interface areas. `overlayExtras` passes it to
+  `drawOverlay` (`OverlayExtras.margins`), which sets `Painter.margin` for the widgets and the style structures. `withVideoDefaults`:
+  a setting saved without it gets `true` when it matches a platform preset (its film was made for one), else `false`. A phone or tablet still caps the size
   (`exportResolutionNote`). **File name template** (`video.nameTemplate`, `''` = the track's name, ≤ `NAME_TEMPLATE_MAX` = 120):
   `expandNameTemplate` with `{project}` `{track}` `{format}` `{resolution}` `{fps}` `{date}` (the recording's date, else today), an
   unknown word left as typed; for a single film (the batches keep « projet – format »). **Time before the first film**:

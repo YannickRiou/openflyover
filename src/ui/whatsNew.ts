@@ -23,6 +23,7 @@ export const WHATS_NEW: readonly NewsVersion[] = [
   {
     version: '5.0',
     items: [
+      { icon: 'maximize', get title() { return t('news.v50.margins.title') }, get text() { return t('news.v50.margins.text') } },
       { icon: 'sliders-horizontal', get title() { return t('news.v50.modes.title') }, get text() { return t('news.v50.modes.text') } },
       { icon: 'cloud-sun', get title() { return t('news.v50.ambiance.title') }, get text() { return t('news.v50.ambiance.text') } },
       { icon: 'maximize', get title() { return t('news.v50.layout.title') }, get text() { return t('news.v50.layout.text') } },
