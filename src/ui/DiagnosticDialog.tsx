@@ -22,7 +22,9 @@ export function DiagnosticRow() {
   // « Mesurer le coût des couches »: the run is loaded when asked for (export/layerCostRun.ts), nothing of it at start-up
   const [cost, setCost] = useState<{ label: string; index: number; total: number } | null>(null)
   const canceled = useRef(false)
-  const exporting = useExportStore((s) => isExportBusy(s.phase)) || useBatchStore((s) => s.phase === 'running')
+  const exportBusy = useExportStore((s) => isExportBusy(s.phase))
+  const batchRunning = useBatchStore((s) => s.phase === 'running')
+  const exporting = exportBusy || batchRunning
   const hasTrack = useAppStore((s) => s.tracks.length > 0)
   const measure = async () => {
     canceled.current = false
