@@ -254,6 +254,15 @@
     @apply absolute top-0 bottom-0 left-(--rail-w) z-8 w-[min(var(--panel-w),calc(100%-var(--rail-w)-16px))] shadow-pop;
   }
 
+  /* a phone on its side: the switch between the tabs of a group stays at the top, the tab scrolls under it (its sticky section heads no longer cover the switch) */
+  @variant phone-landscape {
+    @apply flex flex-col overflow-hidden;
+
+    & > :not([data-sheet-handle], [data-sheet-fixed]) {
+      @apply min-h-0 flex-1 overflow-y-auto overscroll-contain;
+    }
+  }
+
   @variant phone {
     @apply absolute inset-x-0 top-[calc(var(--phone-preview-h)+var(--phone-transport-h))] bottom-0 z-10 flex w-auto flex-col overflow-hidden rounded-t-md border-t border-r-0 shadow-pop;
     animation: sheet-in 160ms ease-out;

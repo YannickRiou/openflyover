@@ -677,7 +677,9 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   /** the right-click menu: where it opens (in the pixels of the lanes) and what it offers */
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null)
   const [zoom, setZoom] = useState<number>(centred ? CENTRED_ZOOM : ZOOM_RANGE.min)
-  const [collapsed, setCollapsed] = useState(() => matchesQuery(COMPACT_QUERY) && !centred)
+  const [strip, setCollapsed] = useState(() => matchesQuery(COMPACT_QUERY) && !centred)
+  // the portrait timeline never folds: a phone turned from landscape keeps the fold of the landscape strip, not shown
+  const collapsed = strip && !centred
   const [shownSheet, setShownSheet] = useState(sheetOpen)
   if (sheetOpen !== shownSheet) {
     setShownSheet(sheetOpen)

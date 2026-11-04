@@ -33,6 +33,9 @@ applyGpuWaitParam(location.search)
 // website: service worker, update prompt, iOS install hint, tracks shared to the installed app
 installWebApp((files) => void openFiles(files))
 
+// a touch screen: Safari zooms the page through its own gesture events, which `touch-action` does not stop (theme.css)
+if (window.matchMedia?.('(pointer: coarse)').matches) document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false })
+
 // first render once the catalog of the language is in (French is bundled; another is a small chunk, precached by the
 // service worker): no text in the wrong language, no missing one. If it cannot be fetched the app starts in French.
 void loadLanguage(usePreferences.getState().language)

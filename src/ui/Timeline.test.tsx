@@ -998,6 +998,33 @@ describe('Timeline — several keys at once', () => {
   })
 })
 
+describe('Timeline turned from landscape to portrait', () => {
+  it('shows its lanes once centred, even folded to a strip in landscape', async () => {
+    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    globalThis.ResizeObserver ??= class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    } as unknown as typeof ResizeObserver
+    const matchMedia = window.matchMedia
+    // a phone on its side: the timeline starts folded into a strip
+    window.matchMedia = ((query: string) => ({ matches: true, media: query, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia
+    const segments = [{ points: [6.8, 6.81, 6.82].map((lon, i) => ({ lon, lat: 45.9, ele: 1000 + i * 10 })) }]
+    useAppStore.setState({ tracks: [buildTrack({ name: 'Sortie', source: 'gpx', segments })] })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<Timeline />))
+    expect(host.querySelector('[data-testid="timeline"]')!.hasAttribute('data-folded')).toBe(true)
+    expect(host.querySelector('[data-testid="timeline-scroller"]')).toBeNull()
+    // turned upright: the same timeline, centred
+    await act(async () => root.render(<Timeline centred />))
+    expect(host.querySelector('[data-testid="timeline"]')!.hasAttribute('data-folded')).toBe(false)
+    expect(host.querySelector('[data-testid="timeline-scroller"]')).not.toBeNull()
+    window.matchMedia = matchMedia
+    act(() => root.unmount())
+  })
+})
+
 describe('Timeline: the modes of the interface', () => {
   it('keeps Arrêts, Textes, Médias and Musique in Débutant, Plans and Vitesse from Confirmé, and a lane that holds keys stays', async () => {
     ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
