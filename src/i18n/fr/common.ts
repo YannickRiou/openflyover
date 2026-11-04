@@ -14,6 +14,8 @@ export default {
   messages: 'Messages',
   closeMessage: 'Fermer le message',
   done: 'Terminé',
+  sheetExpand: 'Agrandir',
+  sheetCollapse: 'Réduire',
   save: 'Enregistrer',
   quoted: '« {text} »',
   yes: 'Oui',

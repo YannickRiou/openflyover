@@ -7,7 +7,7 @@ import { useHandViewStore } from '../scene/handView'
 import { useAppStore } from '../state/store'
 import { Icon } from './icons'
 import { SafeZones, useSafeZonesStore } from './SafeZones'
-import { frameRect } from './shell'
+import { BOTTOM_SHEET_QUERY, frameRect, matchesQuery, phonePreviewHeight } from './shell'
 import { withShortcut } from './shortcuts'
 import { Button, Tip } from './primitives'
 
@@ -63,6 +63,22 @@ export function Stage({ children }: { children?: ReactNode }) {
   }, [])
 
   const rect = size && aspect !== null ? frameRect(size.width, size.height, aspect) : null
+
+  // portrait phone: the preview is as tall as the frame of the format at the screen's width (the sheets start under it), not a fixed share with black bands
+  useLayoutEffect(() => {
+    if (!hasTracks) return undefined
+    const root = document.documentElement
+    const apply = () => {
+      if (matchesQuery(BOTTOM_SHEET_QUERY)) root.style.setProperty('--phone-preview-h', `${phonePreviewHeight(window.innerWidth, window.innerHeight, aspect)}px`)
+      else root.style.removeProperty('--phone-preview-h')
+    }
+    apply()
+    window.addEventListener('resize', apply)
+    return () => {
+      window.removeEventListener('resize', apply)
+      root.style.removeProperty('--phone-preview-h')
+    }
+  }, [hasTracks, aspect])
 
   return (
     <div

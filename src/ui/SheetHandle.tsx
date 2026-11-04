@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import { useT } from '../i18n'
 import { Icon } from './icons'
@@ -24,12 +24,24 @@ const HEAD =
   'phone:border-b phone:border-edge phone:bg-surface-panel phone:pr-2 phone:pl-4'
 
 /**
- * Head of a half sheet (portrait phone only, hidden otherwise): grip, optional title and « Terminé » (✓),
- * which closes it; dragging the head down past a third of the sheet (or a flick down) closes it too.
+ * Head of a half sheet (portrait phone only, hidden otherwise): grip, optional title, « Agrandir » (the sheet takes the
+ * whole height under the top bar, the view behind it) and « Terminé » (✓), which closes it; dragging the head down past a
+ * third of the sheet (or a flick down) closes it too.
  */
 export function SheetHandle({ title, onClose }: { title?: string; onClose(): void }) {
   const t = useT()
   const drag = useRef<Drag | null>(null)
+  const [expanded, setExpanded] = useState(false)
+  const head = useRef<HTMLDivElement>(null)
+  // the sheet is the head's parent: `data-expanded` is what the stylesheet reads (`panel-frame`, `dock-frame`)
+  const expand = (on: boolean) => {
+    setExpanded(on)
+    head.current?.parentElement?.toggleAttribute('data-expanded', on)
+  }
+  const done = () => {
+    expand(false)
+    onClose()
+  }
 
   const release = (sheet: HTMLElement) => {
     sheet.style.transform = ''
@@ -62,7 +74,7 @@ export function SheetHandle({ title, onClose }: { title?: string; onClose(): voi
     const velocity = e.timeStamp - d.t > 100 ? 0 : d.velocity
     const close = dismissSheet(e.clientY - d.y0, d.sheet.offsetHeight, velocity)
     release(d.sheet)
-    if (close) onClose()
+    if (close) done()
   }
   const onPointerCancel = () => {
     const d = drag.current
@@ -71,11 +83,16 @@ export function SheetHandle({ title, onClose }: { title?: string; onClose(): voi
   }
 
   return (
-    <div className={HEAD} data-sheet-handle="" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}>
+    <div ref={head} className={HEAD} data-sheet-handle="" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}>
       <span className="absolute top-1.5 left-1/2 h-[5px] w-10 -translate-x-1/2 rounded-full bg-edge-strong" aria-hidden="true" />
       {title && <span className="panel-title">{title}</span>}
+      <Tip text={expanded ? t('common.sheetCollapse') : t('common.sheetExpand')} align="end">
+        <Button variant="icon" className="ml-auto size-11 text-text-1" onClick={() => expand(!expanded)} aria-label={expanded ? t('common.sheetCollapse') : t('common.sheetExpand')} aria-pressed={expanded}>
+          <Icon name={expanded ? 'chevron-down' : 'chevron-up'} size={22} />
+        </Button>
+      </Tip>
       <Tip text={t('common.done')} align="end">
-        <Button variant="icon" className="ml-auto size-11 text-text-1" onClick={onClose} aria-label={t('common.done')}>
+        <Button variant="icon" className="size-11 text-text-1" onClick={done} aria-label={t('common.done')}>
           <Icon name="check" size={22} />
         </Button>
       </Tip>

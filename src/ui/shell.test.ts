@@ -5,6 +5,7 @@ import {
   dismissSheet,
   effectiveProjectName,
   frameRect,
+  phonePreviewHeight,
   isFileDrag,
   isProjectDirty,
   nextGridIndex,
@@ -354,5 +355,24 @@ describe('dismissSheet', () => {
   it('a flick down closes from a short drag, a move back up keeps it', () => {
     expect(dismissSheet(40, 400, 1000)).toBe(true)
     expect(dismissSheet(150, 400, -800)).toBe(false)
+  })
+})
+
+describe('phonePreviewHeight', () => {
+  it('is the frame of a 16:9 film at the width of the screen, with no black band above and below', () => {
+    expect(phonePreviewHeight(390, 669, 16 / 9)).toBe(219)
+  })
+
+  it('keeps the share of the screen for the sheets: not under 30 % nor over 55 %', () => {
+    // a 21:9 film at 390 px is 167 px high: lifted to 30 % of the screen
+    expect(phonePreviewHeight(390, 669, 21 / 9)).toBe(201)
+    // 9:16 and 4:5 frames at the full width would be taller than the screen
+    expect(phonePreviewHeight(390, 669, 9 / 16)).toBe(368)
+    expect(phonePreviewHeight(390, 669, 4 / 5)).toBe(368)
+  })
+
+  it('takes the default 42 % without a format (free framing, no track), and nothing without a screen', () => {
+    expect(phonePreviewHeight(390, 669, null)).toBe(281)
+    expect(phonePreviewHeight(0, 669, 16 / 9)).toBe(0)
   })
 })
