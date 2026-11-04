@@ -48,6 +48,8 @@ export function Stage({ children }: { children?: ReactNode }) {
   // the view was moved away from the film's (orbited while paused): the way back
   const away = useHandViewStore((s) => s.away)
   const viewport = useRef<HTMLDivElement>(null)
+  // portrait phone: the capture and the safe zones fold behind one button (four buttons took 176 px of a 219 px view)
+  const [toolsOpen, setToolsOpen] = useState(false)
   const [size, setSize] = useState<{ width: number; height: number } | null>(null)
 
   useLayoutEffect(() => {
@@ -111,10 +113,23 @@ export function Stage({ children }: { children?: ReactNode }) {
         </Tip>
       )}
       {aspect !== null && (
+        <Tip text={t('stage.tools')} side="left">
+          <Button
+            variant="icon"
+            className={`${FLOAT} hidden top-14 touch:top-16 phone:inline-flex`}
+            onClick={() => setToolsOpen((open) => !open)}
+            aria-pressed={toolsOpen}
+            aria-label={t('stage.tools')}
+          >
+            <Icon name="sliders-horizontal" />
+          </Button>
+        </Tip>
+      )}
+      {aspect !== null && (
         <Tip text={withShortcut(t('stage.safeZonesTip'), 'safe-zones')} side="left">
           <Button
             variant="icon"
-            className={`${FLOAT} top-14 touch:top-16`}
+            className={`${FLOAT} top-14 touch:top-16 phone:top-25 phone:touch:top-29 ${toolsOpen ? '' : 'phone:hidden'}`}
             onClick={() => useSafeZonesStore.getState().toggle()}
             aria-pressed={safeZones}
             aria-label={t('stage.safeZones')}
@@ -128,7 +143,7 @@ export function Stage({ children }: { children?: ReactNode }) {
           {/* none in « Libre »: its view is not the picture of the film. The view as it is now, once moved by hand. */}
           <Button
             variant="icon"
-            className={`${FLOAT} top-25 touch:top-29`}
+            className={`${FLOAT} top-25 touch:top-29 phone:top-36 phone:touch:top-42 ${toolsOpen ? '' : 'phone:hidden'}`}
             onClick={() => void import('../poster/export').then((m) => m.startStill(away))}
             disabled={exporting}
             aria-label={t('stage.capture')}
@@ -141,7 +156,7 @@ export function Stage({ children }: { children?: ReactNode }) {
         <Tip text={t('stage.filmView')} side="left">
           <Button
             variant="icon"
-            className={`${FLOAT} ${aspect === null ? 'top-14 touch:top-16' : 'top-36 touch:top-42'}`}
+            className={`${FLOAT} ${aspect === null ? 'top-14 touch:top-16' : `top-36 touch:top-42 ${toolsOpen ? 'phone:top-47 phone:touch:top-55' : 'phone:top-25 phone:touch:top-29'}`}`}
             onClick={() => useHandViewStore.getState().returnToFilm()}
             disabled={exporting}
             aria-label={t('stage.filmView')}

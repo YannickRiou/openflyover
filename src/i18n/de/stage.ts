@@ -3,6 +3,7 @@ import type { Messages } from '../messages'
 const messages: Messages['stage'] = {
   view: '3D-Ansicht',
   fit: 'Ansicht ausrichten',
+  tools: 'Werkzeuge der Ansicht',
   safeZones: 'Sicherheitszonen',
   safeZonesTip: 'Sicherheitszonen (nur Vorschau)',
   filmView: 'Zurück zur Filmansicht',

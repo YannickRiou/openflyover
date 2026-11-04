@@ -67,6 +67,21 @@ describe('Stage buttons', () => {
     expect(button(t('stage.filmView'))).toBeNull()
   })
 
+  it('has a « Outils de la vue » button (shown on a phone only) that opens and closes the capture and the safe zones, and none in « Libre »', async () => {
+    useAppStore.getState().replaceTracks([walk()])
+    const { button } = await mount()
+    const tools = button(t('stage.tools'))!
+    expect(tools.getAttribute('aria-pressed')).toBe('false')
+    await act(async () => tools.click())
+    expect(tools.getAttribute('aria-pressed')).toBe('true')
+    // the buttons it folds stay in the page: only the stylesheet of a phone hides them
+    expect(button(t('stage.capture'))).not.toBeNull()
+    await act(async () => tools.click())
+    expect(tools.getAttribute('aria-pressed')).toBe('false')
+    await act(async () => useAppStore.getState().setFreeFraming(true))
+    expect(button(t('stage.tools'))).toBeNull()
+  })
+
   it('« Capturer cette image » takes the film’s image, or the view as it is once moved by hand', async () => {
     useAppStore.getState().replaceTracks([walk()])
     const { button } = await mount()
