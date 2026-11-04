@@ -177,6 +177,15 @@ export function autoDistanceM(path: TrackPath): number {
 }
 
 /**
+ * Distance of the flight camera from its aim (metres) before the ground lifts it: the automatic distance times « Distance »,
+ * the lens's dolly and the style's own factor. The marker's real size is that of its ball seen from here (`setMarkerReferenceDistance`).
+ */
+export function flightDistanceM(path: TrackPath, camera: CameraSettings): number {
+  const distance = autoDistanceM(path) * camera.distance * focalDolly(camera.focalMm)
+  return camera.style === 'top' ? distance * TOP_DISTANCE_FACTOR : camera.style === 'cinematic' ? distance * CINEMATIC_DISTANCE_FACTOR : distance
+}
+
+/**
  * Horizontal unit direction of travel at `d`: the chord [d - w, d + w], wide enough to ignore GPS jitter and
  * switchbacks. North when the chord is shorter than 1 m (no motion).
  */
@@ -534,7 +543,7 @@ function placement(
     const angle = heading(at, window)
     return new Vector3(Math.sin(angle), 0, -Math.cos(angle))
   }
-  const distance = autoDistanceM(path) * camera.distance * focalDolly(camera.focalMm)
+  const distance = flightDistanceM(path, camera)
   const offset = camera.headingOffsetDeg * DEG
 
   switch (camera.style) {
@@ -558,14 +567,14 @@ function placement(
         reference: camera.northUp ? NORTH.clone() : travel(d, w),
         viewAngle: offset,
         pitchDeg: Math.max(camera.pitchDeg, TOP_MIN_PITCH_DEG),
-        distance: distance * TOP_DISTANCE_FACTOR,
+        distance,
       }
     case 'cinematic':
       return {
         reference: travel(d, w * CINEMATIC_WINDOW_FACTOR),
         viewAngle: offset + CINEMATIC_SWING_RAD * Math.sin((2 * Math.PI * timeS) / CINEMATIC_PERIOD_S),
         pitchDeg: camera.pitchDeg * CINEMATIC_PITCH_FACTOR,
-        distance: distance * CINEMATIC_DISTANCE_FACTOR,
+        distance,
       }
     case 'chase':
     default:

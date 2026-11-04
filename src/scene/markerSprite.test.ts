@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PerspectiveCamera, Sprite, Vector3 } from 'three'
 import type { SpriteMaterial } from 'three'
 import { createLocalFrame } from '../geo/ellipsoid'
@@ -20,7 +20,9 @@ import {
   markerLook,
   markerRadius,
   MARKER_MIN_RADIUS_PX,
+  MARKER_MIN_REAL_RADIUS_PX,
   MARKER_SCREEN_FACTOR,
+  setMarkerReferenceDistance,
   setMarkerViewportHeight,
   MARKER_DEPTH_PULL_M,
   pullMarkerForward,
@@ -100,6 +102,56 @@ describe('markerRadius on a small view', () => {
     setMarkerViewportHeight(300)
     expect(markerRadius(camera, target, 1)).toBeCloseTo((1000 * MARKER_MIN_RADIUS_PX) / 300, 5)
     setMarkerViewportHeight(1000)
+  })
+})
+
+describe('markerRadius with a real size', () => {
+  const camera = new PerspectiveCamera(CAMERA_FOV_DEG, 1, 1, 1e7)
+  const target = new Vector3()
+  const at = (distance: number) => {
+    camera.position.set(0, 0, distance)
+    return camera
+  }
+  afterEach(() => {
+    setMarkerReferenceDistance(null)
+    setMarkerViewportHeight(1000)
+  })
+  const onScreenPx = (distance: number, height: number) => (markerRadius(at(distance), target, 1) / (distance * Math.tan((CAMERA_FOV_DEG * Math.PI) / 360))) * (height / 2)
+
+  it('keeps the world size it has at the reference distance, whatever the camera does', () => {
+    setMarkerViewportHeight(1080)
+    setMarkerReferenceDistance(20_000)
+    const flight = markerRadius(at(20_000), target, 1)
+    expect(flight).toBeCloseTo(20_000 * MARKER_SCREEN_FACTOR, 5)
+    // the camera climbs to the overview: the ball keeps its radius, so it shrinks on the screen like the relief
+    expect(markerRadius(at(80_000), target, 1)).toBeCloseTo(flight, 5)
+    expect(onScreenPx(80_000, 1080)).toBeCloseTo(onScreenPx(20_000, 1080) / 4, 5)
+    // and the size, not the constant on-screen one, scales with `size`
+    expect(markerRadius(at(80_000), target, 2)).toBeCloseTo(2 * flight, 5)
+    setMarkerReferenceDistance(null)
+    expect(markerRadius(at(80_000), target, 1)).toBeCloseTo(80_000 * MARKER_SCREEN_FACTOR, 5)
+  })
+
+  it('is continuous where the camera comes to the reference distance (the hand-over from a shot to the flight)', () => {
+    setMarkerViewportHeight(844)
+    setMarkerReferenceDistance(3000)
+    const before = markerRadius(at(3000 * 1.001), target, 1)
+    const after = markerRadius(at(3000), target, 1)
+    expect(Math.abs(before - after) / after).toBeLessThan(0.02)
+  })
+
+  it('gives a phone the readable size of `MARKER_MIN_RADIUS_PX` at the reference distance, a tall view the usual one', () => {
+    setMarkerReferenceDistance(5000)
+    setMarkerViewportHeight(300)
+    expect(markerRadius(at(5000), target, 1)).toBeCloseTo((5000 * MARKER_MIN_RADIUS_PX) / 300, 5)
+    setMarkerViewportHeight(1080)
+    expect(markerRadius(at(5000), target, 1)).toBeCloseTo(5000 * MARKER_SCREEN_FACTOR, 5)
+  })
+
+  it('never goes under `MARKER_MIN_REAL_RADIUS_PX` on the screen, at the top of an overview', () => {
+    setMarkerReferenceDistance(2000)
+    // 100 times the reference distance: the real ball would be a fraction of a pixel; the floor is the same fraction of the height whatever the lens
+    expect(onScreenPx(200_000, 1000)).toBeCloseTo(MARKER_MIN_REAL_RADIUS_PX / 2 / Math.tan((CAMERA_FOV_DEG * Math.PI) / 360), 5)
   })
 })
 

@@ -18,6 +18,7 @@ import { markerAt, markerFadeM } from '../film/markerKeys'
 import { pinsMoveWithTime } from '../film/photoPins'
 import { useMediaStore } from '../film/media'
 import { keyAt, updateCameraKey } from '../film/timeline'
+import { flightDistanceM } from '../flyover/camera'
 import { captureKey, registerKeyCapture } from '../flyover/cameraKeys'
 import { fovDegOf } from '../flyover/cameraSettings'
 import { clampWorkArea, loopTime } from '../film/workArea'
@@ -41,6 +42,7 @@ import {
   MODEL_BALLS,
   MODEL_REST_PHASE,
   markerRadius,
+  setMarkerReferenceDistance,
   setMarkerViewportHeight,
   pullMarkerForward,
   placeMarker,
@@ -126,6 +128,7 @@ export function FlyoverRig() {
     return () => {
       sprites.forEach(releaseMarkerTexture)
       leadMarkerAnchor.shown = false
+      setMarkerReferenceDistance(null)
       models.forEach(disposeMarkerModel)
       models.clear()
     }
@@ -194,6 +197,7 @@ export function FlyoverRig() {
     const store = useAppStore.getState()
     const { playing, speed } = store.playback
     const { settings } = store
+    setMarkerReferenceDistance(path && path.count > 0 ? flightDistanceM(path, settings.camera) : null)
     // « Focale »: the lens of the film, in the preview and in the export (it draws with this camera; R3F keeps the fov through
     // a resize). The projection matrix is what the labels, the marker and the terrain's level of detail read.
     const lens = camera as PerspectiveCamera
