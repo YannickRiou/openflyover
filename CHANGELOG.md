@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **A cleaner timeline, on a phone and on a computer**: the lanes share one ground with a thin line between them instead of grey bands, the blocks are rounder, the ruler shows its times with a short mark instead of lines across it, and the playhead is a white line with a round cap in the accent colour (the one chosen in « Réglages »). On a phone the play button is round and the lane names are quieter. The colours stay the app's own.
+
 - **The tools of a phone's timeline are named and in sight**: the row under the preview held the key buttons, then icons that scrolled sideways, so what was past the edge could not be found. It now shows three buttons: « Clés » (the keys of « Plans » and « Vitesse »), « Ajouter » (a hold, a hold at a highlight, a speed portion, a text, photos or videos, music) and « ⋯ » (the film options, with the playback speed, the sound and the snapping). The lanes with nothing on them are no longer drawn; under the others, « Texte, photo, musique » opens the same menu as « Ajouter ». The user guide (five languages), ARCHITECTURE and the handbook describe the five groups of tabs, the mode choice in « Réglages » and the new row.
 
 - **A phone turned back upright shows its timeline**: after landscape, the lanes of the portrait timeline were gone (it kept the fold of the landscape strip). In landscape the switch between the tabs of a group stays at the top of the panel and the tab scrolls under it; its section titles no longer slide over the switch. On a touch screen two fingers no longer zoom the whole page, which could stay zoomed with the bars out of reach; the 3D view and the timeline keep their own pinch.
