@@ -32,7 +32,7 @@ const messages: Messages['settings'] = {
   'preferences.theme.light': 'Light',
   'preferences.theme.dark': 'Dark',
   'preferences.theme.system': 'System',
-  'preferences.accent.red': 'Trail red',
+  'preferences.accent.red': 'Beacon',
   'preferences.accent.blue': 'Glacier blue',
   'preferences.accent.green': 'Moss',
   'preferences.accent.amber': 'Amber',

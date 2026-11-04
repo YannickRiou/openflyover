@@ -422,25 +422,26 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
 9. **UI** (`ui/`): see "Interface" (shell, tabs, top bar, export drawer, status bar). Labels in
    French or English (see "Internationalisation"). Design system: `src/ui/theme.css`.
 
-## "Carte alpine" (alpine map) design system (CSS variables, `src/ui/theme.css`)
+## "Ligne de crête" design system (CSS variables, `src/ui/theme.css`; the charter: `docs/charter.md`)
 
-Token set **"Refuge"**: the neutrals are tinted, never grey (warm map paper, blue-black ink), so the shell reads as a
-map sheet and not as a generic dark app; one trail-marker red carries every primary action and selected state, with its
+Built from the logo: its ink ground, its cream ridge, its glacier route and the point of its summit, the « balise ». The
+neutrals are tinted, never grey (cream, blue-black ink), so the shell reads as a map sheet and not as a generic dark app;
+one accent, the balise, carries every primary action and selected state (`#B8361A` on the cream, `#FF5A36` on the ink), with its
 full scale (hover, tint, on-ink); glacier and moss, drawn from the subject, are used sparingly for meaning only.
 Contrast measured on the computed colours: text ≥ 4.5:1 on every pair, controls ≥ 3:1.
 
 | Role | Variable | Value | Contrast |
 |---|---|---|---|
-| Panel background | `--color-paper` | `#F6F3EC` | ink 13.6:1 |
+| Panel background (the ridge of the logo) | `--color-paper` | `#F5F2EA` | ink 13.5:1 |
 | Cards, segmented wells | `--color-card` | `#ECE7DA` | ink 12.2:1 |
-| Text, shell | `--color-ink` | `#1B2832` | |
+| Text, shell (the ground of the logo) | `--color-ink` | `#1C2A33` | |
 | Menus, toasts, tooltips on the shell | `--color-ink-raised` | `#263540` | white 12.6:1 |
 | Secondary text | `--color-ink-soft` | `#4E5C65` | paper 6.2:1, card 5.6:1 |
 | Separators | `--color-line` | `#DDD6C6` | decorative |
 | Field and control borders | `--color-line-strong` | `#8E8777` | white 3.0:1, paper 3.2:1 |
-| Primary action, selection (trail-marker red) | `--color-accent` / `--color-accent-strong` (hover) | `#B9391F` / `#962C15` | white on it 5.7:1 / 7.9:1 |
+| Primary action, selection (the balise, dark) | `--color-accent` / `--color-accent-strong` (hover) | `#B8361A` / `#962C15` | white on it 5.9:1 / 7.9:1 |
 | Selected tile, chip, current project | `--color-accent-tint` | `#F7DDD3` | ink 11.6:1 |
-| Accent on ink (focus, playhead, stops) | `--color-accent-light` | `#FF9B73` | ink 7.3:1 |
+| Accent on ink (focus, playhead, stops: the balise of the logo) | `--color-accent-light` | `#FF5A36` | ink 4.7:1 |
 | Secondary text on ink | `--color-glacier` | `#A9CCD9` | ink 8.8:1 |
 | Information badge on paper | `--color-glacier-deep` | `#2F5D70` | paper 6.5:1 |
 | Start, success | `--color-moss` / `--color-moss-light` | `#3A6446` / `#8FC79B` | paper 6.1:1 / ink 7.7:1 |
@@ -453,9 +454,10 @@ Semantic roles over the palette (component CSS uses these): `--surface-chrome`, 
 `--shadow-pop`. Selected states (tiles, chips, switches, sliders, checkboxes) are in the accent; segmented controls
 are a card well with a white pill; the only filled accent buttons are the primary action of a view.
 
-Headings: Fraunces; body and buttons: IBM Plex Sans; "diffusion" (broadcast) overlay style: IBM Plex Sans Condensed. Fonts
-**bundled** (no network access): WOFF2 in `public/fonts/` (Fraunces variable opsz + wght, IBM Plex Sans variable wght,
-IBM Plex Sans Condensed 500/600/700), `latin` and `latin-ext` subsets declared through `unicode-range` in
+Headings: IBM Plex Sans Condensed (`--font-heading`; a section title in spaced capitals, `panel-title`); body and buttons: IBM
+Plex Sans; the map and the overlay may take Barlow Semi Condensed 600/700 (`barlow` in `OVERLAY_FONT_IDS`); Fraunces stays
+among the fonts of the overlay and the posters. Fonts **bundled** (no network access): WOFF2 in `public/fonts/` (Fraunces
+variable opsz + wght, IBM Plex Sans variable wght, IBM Plex Sans Condensed 500/600/700, Barlow Semi Condensed 600/700), `latin` and `latin-ext` subsets declared through `unicode-range` in
 `src/ui/fonts.css` (imported by `src/main.tsx`); the browser downloads a subset only if a character requires it.
 Sources, versions and licenses: `public/fonts/README.md`. `src/ui/fonts.test.ts` checks that every referenced file exists and
 that every drawn font (UI, overlay, 3D labels) has its face. Text contrast ≥ 4.5:1.
@@ -2760,7 +2762,7 @@ exports) gets it from the terrain source of the settings.
   and `line`.
 - **Colors and fonts** (`settings.overlay.overrides`, optional, absent by default: old projects and default
   look unchanged): accent, text, panel background (color, opacity) as `#rrggbb`, font for titles and figures
-  from a short list (`OVERLAY_FONT_IDS`: bundled Fraunces, IBM Plex Sans and Sans Condensed, Georgia, system
+  from a short list (`OVERLAY_FONT_IDS`: bundled Fraunces, IBM Plex Sans and Sans Condensed, Barlow Semi Condensed, Georgia, system
   font, system monospace; nothing is downloaded). Key outside `DEFAULT_OVERLAY`: its shape is not
   checked by the document, `isValidOverrides` checks everything (object, known fields, values). `withOverrides` applies
   a change and removes the key when nothing is changed any more ("Revenir au style" (back to the style)). The drawn theme comes from a single
@@ -2837,7 +2839,7 @@ exports) gets it from the terrain source of the settings.
   export drawer, summary and result) copies `creditsDescription` (each sentence then its page) through `copyText`.
 - **Fonts**: a canvas does not trigger the download of web fonts on its own; `loadOverlayFonts()` requests them before the
   first frame, and the export must wait for it too. Bundled fonts (`src/ui/fonts.css`, `public/fonts/`):
-  Fraunces 300–700, IBM Plex Sans and Sans Condensed available offline.
+  Fraunces 300–700, IBM Plex Sans and Sans Condensed, Barlow Semi Condensed 600–700 available offline.
 - **Weather**: widget and line on the closing card (`weatherWidgetData`, `summarizeOuting`), with the Open-Meteo credit drawn
   as soon as they are visible (in the credits line, or alone at the bottom right if it is disabled).
 
@@ -4366,8 +4368,8 @@ development, only in a secure context).
 iOS publishes no per-tab WebGL memory budget; Safari kills and reloads a page that holds too many textures (WebKit
 bug 300782, October 2025): the device budget below is conservative, to be measured on real phones.
 
-- **Manifest** (`public/manifest.webmanifest`): « OpenFlyover », `display: standalone`, theme `#1b2832` (top bar ink),
-  background `#f6f3ec` (paper), icons rendered from `public/favicon.svg` (`icons/`: 192 and 512 px, a 512 px maskable
+- **Manifest** (`public/manifest.webmanifest`): « OpenFlyover », `display: standalone`, theme `#1c2a33` (top bar ink),
+  background `#f5f2ea` (cream), icons rendered from `public/favicon.svg` (`icons/`: 192 and 512 px, a 512 px maskable
   one with a full-bleed background and the drawing at 72 %, a 180 px `apple-touch-icon`). Every URL is relative
   (`start_url`, `scope`, `id`: `./`), so the same file works under `/openflyover/` and at a root (tested,
   `webApp.test.ts`). `index.html` links it with `theme-color` and `apple-touch-icon` (Vite adds the base).

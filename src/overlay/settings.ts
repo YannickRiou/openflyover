@@ -128,13 +128,14 @@ export const EDGE_MARGIN = 0.02
 export const OFFSET_MAX = 1
 
 /** Fonts the user can pick for the titles or the figures: the bundled faces, then a few system families. */
-export const OVERLAY_FONT_IDS = ['fraunces', 'plex', 'plex-condensed', 'georgia', 'system', 'mono'] as const
+export const OVERLAY_FONT_IDS = ['fraunces', 'plex', 'plex-condensed', 'barlow', 'georgia', 'system', 'mono'] as const
 export type OverlayFontId = (typeof OVERLAY_FONT_IDS)[number]
 
 export const OVERLAY_FONT_LABELS: Record<OverlayFontId, string> = {
   get fraunces() { return t('overlay.font.fraunces') },
   get plex() { return t('overlay.font.plex') },
   get 'plex-condensed'() { return t('overlay.font.plex-condensed') },
+  get barlow() { return t('overlay.font.barlow') },
   get georgia() { return t('overlay.font.georgia') },
   get system() { return t('overlay.font.system') },
   get mono() { return t('overlay.font.mono') },

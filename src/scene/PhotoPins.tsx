@@ -38,7 +38,7 @@ const TEXTURE_SCALE = 2
 /** The look is drawn for a frame this high (pixels). */
 export const PIN_REFERENCE_HEIGHT_PX = 720
 /** the ink and the amber of the app's palette (`--color-ink`, `--color-amber-light`) */
-const INK = '#1B2832'
+const INK = '#1C2A33'
 const LIT = '#F0C35E'
 const WHITE = '#FFFFFF'
 // the pictures over the 3D labels (order 10), their posts under them; the lit pin over everything

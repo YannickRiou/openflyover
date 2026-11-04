@@ -67,7 +67,7 @@ describe('accent colour', () => {
   })
 
   it('reproduces the designed dark tint for the default accent', () => {
-    expect(deriveAccent(DEFAULT_APPEARANCE.accent, true, DEFAULT_APPEARANCE.chrome).tint).toBe('#392221')
+    expect(deriveAccent(DEFAULT_APPEARANCE.accent, true, DEFAULT_APPEARANCE.chrome).tint).toBe('#392220')
   })
 })
 
@@ -109,7 +109,7 @@ describe('applyAppearance', () => {
   beforeEach(() => {
     root.removeAttribute('data-theme')
     root.removeAttribute('style')
-    document.head.innerHTML = '<meta name="theme-color" content="#1b2832">'
+    document.head.innerHTML = '<meta name="theme-color" content="#1c2a33">'
   })
   const themeColor = () => document.querySelector('meta[name="theme-color"]')!.getAttribute('content')
 
@@ -128,7 +128,7 @@ describe('applyAppearance', () => {
     applyAppearance(root, DEFAULT_APPEARANCE, false)
     expect(root.dataset.theme).toBe('light')
     expect(root.getAttribute('style') ?? '').toBe('')
-    expect(themeColor()).toBe('#1b2832')
+    expect(themeColor()).toBe('#1c2a33')
   })
 
   it('sets the accent scale and the bar colours of a custom choice, then removes them on the default', () => {
@@ -141,7 +141,7 @@ describe('applyAppearance', () => {
     expect(themeColor()).toBe('#20384a')
     applyAppearance(root, DEFAULT_APPEARANCE, false)
     expect(root.getAttribute('style') ?? '').toBe('')
-    expect(themeColor()).toBe('#1b2832')
+    expect(themeColor()).toBe('#1c2a33')
   })
 
   it('clamps a free colour that would not hold white text', () => {

@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **A charter drawn from the logo, « Ligne de crête »**: the ink of the logo's ground (`#1C2A33`), the cream of its ridge (`#F5F2EA`), the glacier of its route and, for the accent, the orange of the point at its summit, the « balise » (`#FF5A36` on the ink: playhead, stops, focus; `#B8361A` on the cream: the main button). The headings move from Fraunces to IBM Plex Sans Condensed, the section titles in spaced capitals like the names on a map. Barlow Semi Condensed, semibold and bold, joins the fonts of the overlay and the posters for the labels, titles and figures over the view. The default accent is named « Balise »; an accent chosen before is kept. The charter is in `docs/charter.md`.
+
 - **The app's own colours everywhere**: the weight bars of the settings, the « Imposé » and « Personnalisé » badges, the dot on a tab, the photo pins on the terrain, the lens flare and two of the bar colours offered in « Apparence » (now « Bleu nuit » and « Vert forêt ») take the colours of the app's palette (ink, glacier, moss, amber) instead of colours that did not belong to it. A bar colour chosen before is kept.
 
 - **The view in full screen on a phone**: a button at the bottom left of the view shows it over the whole screen, with play and ✕; turning the phone sideways while the film plays does the same, and turning it upright again leaves it.

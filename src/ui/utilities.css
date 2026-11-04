@@ -69,8 +69,9 @@
   @apply range-value min-w-[7ch];
 }
 
+/* A section's title: condensed capitals, a little spaced, like the names of the ranges on a topographic map (the charter). */
 @utility panel-title {
-  @apply font-heading text-title font-semibold text-text-1;
+  @apply font-heading text-body font-semibold tracking-[0.06em] text-text-1 uppercase;
 }
 
 /* On the ink chrome (top bar, rail): the focus ring is the light accent, which reads on ink (7.3:1). */

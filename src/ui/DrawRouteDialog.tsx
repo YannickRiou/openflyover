@@ -36,7 +36,7 @@ const MAP_HEIGHT_PX = 380
 const DEFAULT_MAP_WIDTH_PX = 640
 const ZOOM_STEP = 2
 const MISSING_TILE = '#8A8F94'
-const ROUTE_COLOR = '#B9391F'
+const ROUTE_COLOR = '#B8361A'
 /** Where the map opens when the project has no track yet: France. */
 const FRANCE: LonLatBounds = { west: -5.5, south: 41.2, east: 9.8, north: 51.2 }
 

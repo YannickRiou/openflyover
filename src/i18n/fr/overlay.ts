@@ -70,6 +70,7 @@ export default {
   'font.fraunces': 'Fraunces',
   'font.plex': 'IBM Plex Sans',
   'font.plex-condensed': 'IBM Plex Sans Condensed',
+  'font.barlow': 'Barlow Semi Condensed',
   'font.georgia': 'Georgia (système)',
   'font.system': 'Police du système',
   'font.mono': 'Chasse fixe (système)',
