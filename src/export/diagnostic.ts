@@ -8,7 +8,8 @@
 import { create } from 'zustand'
 import { deviceBudget } from '../core/deviceBudget'
 import type { DeviceBudget, DeviceKind } from '../core/deviceBudget'
-import { currentPreviewBudget } from '../scene/previewQuality'
+import { currentPreviewBudget, currentPreviewRung, exportCloudScale } from '../scene/previewQuality'
+import type { PreviewRung } from '../scene/previewQuality'
 import type { Track } from '../core/types'
 import { isAudioAsset, isVideoAsset, useMediaStore, usedMedia } from '../film/media'
 import type { MediaTable } from '../film/media'
@@ -161,6 +162,8 @@ export interface DiagnosticInput {
   tileWorkers?: TileWorkerStatus
   /** what this tab asks for the wait for the GPU (`gpuWaitSetting`) */
   gpuWait?: GpuWaitSetting
+  /** rung of the preview now (`currentPreviewRung`): a lightened preview also lowers the clouds of an export */
+  previewRung?: PreviewRung
 }
 
 const yes = (v: boolean) => (v ? 'oui' : 'non')
@@ -204,7 +207,7 @@ function deviceRows(input: DiagnosticInput): ReportRow[] {
   return rows
 }
 
-function exportRows({ request, settings, budget, canStreamToDisk, noEncoding, gpuWait }: DiagnosticInput): ReportRow[] {
+function exportRows({ request, settings, budget, canStreamToDisk, noEncoding, gpuWait, previewRung }: DiagnosticInput): ReportRow[] {
   const size = request ?? videoSize(settings.video.aspect, settings.video.resolution, budget.maxExportShortSide)
   const fps = request?.fps ?? settings.video.fps
   const quality = request?.quality ?? settings.video.quality
@@ -223,6 +226,11 @@ function exportRows({ request, settings, budget, canStreamToDisk, noEncoding, gp
   ]
   const used = effectiveRender(quality, settings.clouds)
   rows.push(['Rendu effectif', `nuages ${used.cloudsQuality}${used.cloudsByHand ? ' (choisie)' : ''}, ${used.maxSubFrames} rendus par image au plus`])
+  if (previewRung !== undefined) {
+    // the measures of « Coût des couches » only compare when this is the same from one report to the next
+    const scale = exportCloudScale(budget, previewRung)
+    rows.push(['Nuages de l’export', `${Math.round(scale * 100)} % de la résolution (aperçu ${previewRung === 0 ? 'complet' : `allégé, palier ${previewRung}`})`])
+  }
   // the encoder's bitrate for H.264 (the codec chosen is in the steps), or the one set by hand
   const cap = deviceBitrateCap(budget, canStreamToDisk)
   const encoding = request ? request.encoding : videoEncoding(settings.video)
@@ -463,6 +471,7 @@ export function collectDiagnostic(request?: ReportRequest, now = Date.now()): Di
     noEncoding: noEncodingTest(),
     tileWorkers: tileWorkerStatus(),
     gpuWait: gpuWaitSetting(),
+    previewRung: currentPreviewRung(),
   })
 }
 
