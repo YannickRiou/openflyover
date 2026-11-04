@@ -3,7 +3,7 @@
  * `raceAt(race, progress)` (see `flyover/race.ts`) for the current playback progress. Same kind of marker as the
  * lead (`settings.marker`, see `markerSprite.ts`: style, shape, stick) in the track's colour with an ink ring, the
  * figure of its own activity ('auto') and its own name as label; a picture stays the lead's own, so the racers then
- * show their ball. Same constant screen size as the lead marker, unlit, drawn over
+ * show their ball. Same size as the lead marker (`markerRadius`), unlit, drawn over
  * the terrain but cut by the relief in front of it (`pullMarkerForward`), height = `pathHeightM` × exaggeration + LINE_LIFT_M like the lead marker (in the air on a flight).
  * The camera keeps following the first track (FlyoverRig); mounted after it so the progress and the camera of
  * this frame are used.
