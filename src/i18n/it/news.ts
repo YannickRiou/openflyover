@@ -5,6 +5,13 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  // 5.5 — families of tabs, folded summaries
+  'v55.groups.title': 'Cinque gruppi di schede',
+  'v55.groups.text': 'Sul computer come sul telefono, la colonna di sinistra mostra cinque gruppi: Traccia, Scena, Camera, Overlay e Progetto. Un selettore in cima al pannello passa da una scheda all’altra. Ctrl+K apre il gruppo giusto.',
+  'v55.summary.title': 'Un riepilogo sotto ogni sezione compressa',
+  'v55.summary.text': 'Una sezione compressa dice che cosa vi è impostato, per esempio «Uniforme · 4 px · Pieno» per la traccia. Sul computer una scheda si apre con la sua prima sezione: apri solo ciò che vuoi cambiare.',
+  'v55.headings.title': 'Titoli facili da distinguere',
+  'v55.headings.text': 'La sezione della traccia si chiama ora «Stile della traccia», per non confonderla con l’elenco «Tracce». Le parti di una sezione (Linea, Alone) sono in minuscolo, più piccole e più chiare.',
   'v50.margins.title': 'Margini a scelta',
   'v50.margins.text': 'La casella “Margini di sicurezza” dell’esportazione tiene la grafica lontana dai bordi e, in 9:16 e 4:5, fuori dalle zone di Reels, TikTok e Shorts. Si spunta da sola quando si sceglie una piattaforma. Senza spunta la grafica si avvicina ai bordi e tutta l’immagine serve al film.',
   'v50.modes.title': 'Tre modalità dell’interfaccia',

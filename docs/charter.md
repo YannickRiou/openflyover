@@ -38,7 +38,7 @@ Tout texte atteint 4,5:1 sur son fond, dans les deux thèmes. Deux couleurs qu'i
 
 Deux familles, chacune à sa place : IBM Plex pour l'interface, Barlow pour ce qui se lit sur la carte.
 
-- **IBM Plex Sans** : toute l'interface (corps 14 px, aides 12 px, titres de réglage 16 px semi-gras).
+- **IBM Plex Sans** : toute l'interface (corps 14 px, aides 12 px, titres de réglage 16 px semi-gras), les parties d'une section (« Ligne », « Halo ») en minuscules semi-grasses de 12 px, en gris, entre le titre de section en capitales et le nom d'un réglage.
 - **IBM Plex Sans Condensed** : les titres de section en capitales espacées (comme les noms de massifs sur une carte), les étiquettes courtes, les chiffres des lectures (temps, distance, altitude), toujours en chiffres tabulaires.
 
 - **Barlow Semi Condensed**, demi-gras et gras : la police de la carte et de l'habillage. Dessinée d'après la signalétique routière, elle se lit vite, de loin et par-dessus une image ; condensée, elle fait tenir les longs noms (« Pic de la Coumette d'Aygues Tortes »). Elle sert aux étiquettes posées sur le relief (sommets, cols, lacs, repères), aux titres et aux chiffres de l'habillage (compteurs, carte d'ouverture et de clôture, affiche). Toujours sur un fond d'encre ou avec son contour, jamais en corps de texte dans l'interface.

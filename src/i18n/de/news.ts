@@ -5,6 +5,13 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  // 5.5 — families of tabs, folded summaries
+  'v55.groups.title': 'Fünf Gruppen von Tabs',
+  'v55.groups.text': 'Auf dem Computer wie auf dem Smartphone zeigt die linke Spalte fünf Gruppen: Track, Szene, Kamera, Overlay und Projekt. Ein Umschalter oben im Bereich wechselt zwischen ihren Tabs. Strg+K öffnet die richtige Gruppe.',
+  'v55.summary.title': 'Eine Zusammenfassung unter jedem eingeklappten Abschnitt',
+  'v55.summary.text': 'Ein eingeklappter Abschnitt sagt, was darin eingestellt ist, etwa „Einfarbig · 4 px · Durchgezogen“ beim Track. Auf dem Computer öffnet sich ein Tab mit seinem ersten Abschnitt: Sie öffnen nur, was Sie ändern wollen.',
+  'v55.headings.title': 'Überschriften, die sich leichter unterscheiden',
+  'v55.headings.text': 'Der Abschnitt des Tracks heißt jetzt „Track-Stil“, damit er nicht mehr mit der Liste „Tracks“ verwechselt wird. Die Teile eines Abschnitts (Linie, Leuchten) stehen in Kleinbuchstaben, kleiner und heller.',
   'v50.margins.title': 'Ränder nach Wahl',
   'v50.margins.text': 'Das Kästchen „Sicherheitsränder“ des Exports hält das Overlay von den Rändern fern und in 9:16 und 4:5 außerhalb der Bereiche von Reels, TikTok und Shorts. Es hakt sich selbst an, wenn Sie eine Plattform wählen. Ohne Haken rückt das Overlay an die Ränder und das ganze Bild gehört dem Film.',
   'v50.modes.title': 'Drei Modi der Oberfläche',

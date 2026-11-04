@@ -3,6 +3,14 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 5.5.0 (unreleased)
+
+- **The same five groups of tabs on a computer**: the rail showed nine tabs, a phone five groups. Both now show Trace, Scène (Carte, Météo, Lumière), Caméra (Survol, Objectif), Habillage and Projet, with the switch at the top of the panel to move between the tabs of a group. One grouping for every device. « Décor » became « Scène » on the phone too. Ctrl+K, the tour, the saved tab and the keyboard keys of the rail work as before, and a hidden tab (interface mode) still leaves its group.
+
+- **A summary under each folded section**: a folded section says what is set in it, in one line, for example « Unie · 4 px · Plein » for the track line. It is written for the track style, the marker, the map background, the relief, the clouds, the sun, the camera, the overlay and four sections of « Réglages » (language, interface mode, appearance, preview). On a computer a tab opens on its first section only; a section opened or folded by hand is remembered as before. A modified setting still shows « modifié » on a folded section. A phone keeps its sections open.
+
+- **Three levels of headings in the panels**: the track section is now « Style de la trace », so it is no longer taken for the « Traces » list above it. The parts of a section (« Ligne », « Halo », « Vol », and those of the export drawer and the inspector) are written in sentence case, smaller and muted, between the capitals of the section title and the row names.
+
 ## 5.4.0 (November 2026)
 
 - **A charter drawn from the logo, « Ligne de crête »**: the ink of the logo's ground (`#1C2A33`), the cream of its ridge (`#F5F2EA`), the glacier of its route and, for the accent, the orange of the point at its summit, the « balise » (`#FF5A36` on the ink: playhead, stops, focus; `#B8361A` on the cream: the main button). The headings move from Fraunces to IBM Plex Sans Condensed, the section titles in spaced capitals like the names on a map. Barlow Semi Condensed, semibold and bold, joins the fonts of the overlay and the posters for the labels, titles and figures over the view. The default accent is named « Balise »; an accent chosen before is kept. The charter is in `docs/charter.md`; the user guide (five languages), the « How it works » page, the handbook and the images of the desktop installers follow it too.

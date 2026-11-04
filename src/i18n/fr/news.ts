@@ -3,6 +3,13 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  // 5.5 — families of tabs, folded summaries
+  'v55.groups.title': 'Cinq familles d’onglets',
+  'v55.groups.text': 'Sur ordinateur comme sur téléphone, la colonne de gauche montre cinq familles : Trace, Scène, Caméra, Habillage et Projet. Un sélecteur en haut du panneau passe d’un onglet à l’autre. Ctrl+K ouvre la bonne famille.',
+  'v55.summary.title': 'Un résumé sous chaque section repliée',
+  'v55.summary.text': 'Une section repliée dit ce qui y est réglé, par exemple « Unie · 4 px · Plein » pour la trace. Sur ordinateur, un onglet s’ouvre sur sa première section : vous ouvrez seulement ce que vous voulez changer.',
+  'v55.headings.title': 'Des titres faciles à distinguer',
+  'v55.headings.text': 'La section de la trace s’appelle « Style de la trace », pour ne plus la confondre avec la liste « Traces ». Les parties d’une section (Ligne, Halo) sont écrites en minuscules, plus petites et plus claires.',
   'v50.margins.title': 'Des marges au choix',
   'v50.margins.text': 'La case « Marges de sécurité » de l’export garde l’habillage loin des bords et, en 9:16 et 4:5, hors des zones de Reels, TikTok et Shorts. Elle se coche d’elle-même quand vous choisissez une plateforme. Décochée, l’habillage se rapproche des bords et l’image entière sert au film.',
   'v50.modes.title': 'Trois modes d’interface',
