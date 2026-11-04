@@ -1794,7 +1794,10 @@ The interface and the texts drawn into the films and posters exist in **French**
   slider (arrows ±1 s, Shift ±5 s, Page ±10 s, Home / End). The keys are set where they live. Camera keys: the ◀ ◇ ▶ group (`KeyGroup`,
   `src/ui/KeyControls.tsx`: previous key / add or remove at the playhead / next key; Alt+← / Alt+→ unchanged) sits under the label
   of the « Plans » lane header; on a portrait phone (centred timeline, no lane headers) it is in the « Clés » sheet of the
-  transport row; with a mouse its ◀ and ▶ show while the pointer is over the lane head or the focus is in it (`lane-keys`). Lanes: « Plans », « Vitesse », one lane per keyed parameter, « Marqueur » (only with marker keys), « Arrêts »,
+  transport row; with a mouse its ◀ and ▶ show while the pointer is over the lane head or the focus is in it (`lane-keys`). Look
+  (phone and computer alike): the lanes share one ground with a hairline between them, blocks are rounded (`rounded-md`), a tick of
+  the ruler is its time and a short mark at the bottom, the playhead a white line with a round cap in the accent (the colours are
+  the app's tokens, the accent the one chosen in « Réglages »). Lanes: « Plans », « Vitesse », one lane per keyed parameter, « Marqueur » (only with marker keys), « Arrêts »,
   « Textes », « Médias », « Musique »; « Textes » also carries the opening title and the closing card (see below); there is no « Réglages » lane and the bar has no « Ajouter un réglage » or
   « Ajouter un changement de marqueur » button. `seekKeyframe` puts the film time exactly on the key
   (`adjacentKey`, one under the playhead skipped) and moves the inspector to it when it showed a keyframe. Lanes "Plans" (shots; opening, flyover with profile, closing;

@@ -131,17 +131,18 @@ const CHECKBOX_ON_DARK =
   'whitespace-nowrap [--accent:var(--accent-on-dark)] [--focus-ring:var(--focus-ring-on-dark)] [--line-strong:var(--color-glacier)] [--surface-control:transparent] [--text-1:var(--color-white)]'
 
 const HEAD = 'flex px-2 text-caption font-semibold text-glacier'
-const LANE = 'relative border-b border-chrome bg-white/5'
+const LANE = 'relative border-b border-white/5'
 /** The lane of the camera and the speed keys, taller by the group under its name in the header. */
 const KEYED_HEIGHT = 'h-11.5 touch:h-13.5'
 /** A folded lane: a thin strip, its name and the button that unfolds it. */
 const FOLDED_HEIGHT = 'h-4'
 /** The fold and lock buttons of a lane's head. */
 const LANE_TOOL = 'inline-flex size-5 items-center justify-center rounded-sm text-glacier hover:bg-white/15 aria-pressed:bg-white/20 aria-pressed:text-white focus-visible:outline-2 focus-visible:outline-white touch:size-8'
-const TICK = 'pointer-events-none absolute top-0 h-full border-white/15 text-caption tabular-nums whitespace-nowrap text-glacier'
+/** A tick of the ruler: its time, quiet, and a short mark at the bottom (no line across the ruler). */
+const TICK = "pointer-events-none absolute top-0 h-full text-[11px] tabular-nums whitespace-nowrap text-glacier/80 after:absolute after:bottom-0 after:h-1.5 after:w-px after:bg-white/30 after:content-['']"
 
 /** A block of a lane: the common part, then its kind (`BLOCK_KINDS`). */
-const BLOCK = 'absolute inset-y-[3px] box-border flex min-w-1.5 items-center overflow-hidden rounded-sm px-1.5 text-caption font-semibold aria-pressed:z-1 aria-pressed:ring-2 aria-pressed:ring-white data-[lifted]:z-2 data-[lifted]:shadow-pop'
+const BLOCK = 'absolute inset-y-[3px] box-border flex min-w-1.5 items-center overflow-hidden rounded-md px-1.5 text-caption font-semibold aria-pressed:z-1 aria-pressed:ring-2 aria-pressed:ring-white data-[lifted]:z-2 data-[lifted]:shadow-pop'
 const BLOCK_KINDS = {
   /** shots: glacier; « aucune » is a stub that can still be selected */
   shot: 'cursor-pointer bg-glacier text-ink',
@@ -178,12 +179,12 @@ const KEY =
   "absolute top-1/2 z-1 -mt-1.5 -ml-1.5 size-2.5 cursor-grab border before:absolute before:-inset-2 before:content-[''] touch:-mt-[9px] touch:-ml-[9px] touch:size-4"
 const KEY_DIAMOND = `${KEY} rotate-45 border-chrome bg-glacier aria-pressed:bg-white`
 const KEY_DOT = `${KEY} rounded-full border-white bg-[var(--key-color,var(--color-chartreuse))] aria-pressed:outline-2 aria-pressed:outline-offset-2 aria-pressed:outline-white`
-/** The playhead: a line across the lanes, a small accent triangle (the `before:` borders) on its top edge. */
+/** The playhead: a white line across the lanes, a round cap in the accent (`before:`) on its top edge. */
 const PLAYHEAD =
-  'pointer-events-none absolute inset-y-0 z-2 -ml-px w-0.5 bg-white before:absolute before:top-0 before:-left-1 before:border-[5px] before:border-transparent before:border-t-[6px] before:border-t-accent-light'
-/** The centred timeline's playhead stays in the middle of the lanes, which scroll under it: the line and its triangle are drawn on the body. */
+  "pointer-events-none absolute inset-y-0 z-2 -ml-px w-0.5 bg-white before:absolute before:top-0 before:-left-1 before:size-2.5 before:rounded-full before:bg-accent-light before:content-['']"
+/** The centred timeline's playhead stays in the middle of the lanes, which scroll under it: the line and its cap are drawn on the body. */
 const CENTRE_PLAYHEAD =
-  'after:pointer-events-none after:absolute after:inset-y-0 after:left-[calc(50%-1px)] after:z-3 after:w-0.5 after:bg-white before:pointer-events-none before:absolute before:top-0 before:left-[calc(50%-5px)] before:z-4 before:border-[5px] before:border-transparent before:border-t-[6px] before:border-t-accent-light'
+  "after:pointer-events-none after:absolute after:inset-y-0 after:left-[calc(50%-1px)] after:z-3 after:w-0.5 after:bg-white before:pointer-events-none before:absolute before:top-0 before:left-[calc(50%-5px)] before:z-4 before:size-2.5 before:rounded-full before:bg-accent-light before:content-['']"
 
 const SPEEDS = PLAYBACK_SPEEDS
 /** « Média » picker: pictures and videos recognised on both targets (the desktop types a file by `mimeTypeOf`). */
@@ -1753,7 +1754,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         <Tip text={withShortcut(playing ? t('timeline.bar.pauseTip') : t('timeline.bar.playTip'), 'play')} side="top" align="start">
           <Button
             variant="icon"
-            className={BAR_PLAY}
+            className={`${BAR_PLAY}${centred ? ' rounded-full' : ''}`}
             onClick={() => setPlaying(!playing)}
             aria-label={playing ? t('timeline.bar.pause') : t('timeline.bar.play')}
           >
@@ -1989,7 +1990,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               <div className={rulerHeight} />
               {lanes.filter((lane) => !emptyLanes.has(lane.id)).map((lane) => (
                 <div key={lane.id} className="flex h-9 items-center">
-                  <span className="max-w-24 truncate rounded-r-sm bg-chrome/85 px-1.5 py-0.5 text-caption leading-none font-semibold text-glacier">{lane.name}</span>
+                  <span className="ml-1 max-w-24 truncate rounded-full bg-chrome/80 px-2 py-0.5 text-[11px] leading-none font-semibold text-glacier">{lane.name}</span>
                 </div>
               ))}
             </div>
@@ -2078,7 +2079,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 {ticks.map((t) => (
                   <span
                     key={t}
-                    className={`${TICK} ${tickLabelFlips(xOf(t), contentWidth) ? '-translate-x-full border-r pr-[3px]' : 'border-l pl-[3px]'} ${centred ? 'leading-6' : 'leading-5 touch:leading-7'}`}
+                    className={`${TICK} ${tickLabelFlips(xOf(t), contentWidth) ? '-translate-x-full pr-[3px] after:right-0' : 'pl-[3px] after:left-0'} ${centred ? 'leading-6' : 'leading-5 touch:leading-7'}`}
                     style={{ left: xOf(t) }}
                   >
                     {formatFilmTime(t)}
