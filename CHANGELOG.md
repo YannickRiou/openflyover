@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 5.3.0 (November 2026)
 
 - **A cleaner timeline, on a phone and on a computer**: the lanes share one ground with a thin line between them instead of grey bands, the blocks are rounder, the ruler shows its times with a short mark instead of lines across it, and the playhead is a white line with a round cap in the accent colour (the one chosen in « Réglages »). On a phone the play button is round and the lane names are quieter. The colours stay the app's own.
 
