@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v55.camera.title': 'La caméra en deux questions',
+  'v55.camera.text': 'Choisissez d’abord le mouvement (Suivre, Balancer, Tourner autour, Cinéma, Du dessus, Libre), puis la hauteur sur un seul curseur, d’Au ras à Satellite. Chaque choix ne change que ses propres réglages. Les réglages fins restent en dessous, à partir du mode Confirmé.',
   'v50.margins.title': 'Des marges au choix',
   'v50.margins.text': 'La case « Marges de sécurité » de l’export garde l’habillage loin des bords et, en 9:16 et 4:5, hors des zones de Reels, TikTok et Shorts. Elle se coche d’elle-même quand vous choisissez une plateforme. Décochée, l’habillage se rapproche des bords et l’image entière sert au film.',
   'v50.modes.title': 'Trois modes d’interface',

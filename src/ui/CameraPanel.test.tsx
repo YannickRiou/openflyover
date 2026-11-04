@@ -197,23 +197,58 @@ describe('CameraPanel: « À la suite » on two days', () => {
   })
 })
 
-describe('CameraPanel: the presets', () => {
+describe('CameraPanel: « Mouvement » and « Hauteur »', () => {
   afterEach(() => {
     document.body.innerHTML = ''
   })
 
-  it('are a radio group of tiles: the current one is checked, choosing another sets the camera', async () => {
+  const camera = () => useAppStore.getState().settings.camera
+  const motion = (host: HTMLElement, name: string) => [...host.querySelectorAll<HTMLButtonElement>('[aria-label="Mouvement"] button')].find((b) => b.textContent === name)!
+  const heightThumb = (host: HTMLElement) => host.querySelector('[data-testid="camera-height-name"]')!.closest('.field')!.querySelector<HTMLInputElement>('input')!
+
+  it('each movement sets the style and nothing else', async () => {
     const { host, root } = await mount(timed, 60)
-    const group = host.querySelector('[role="radiogroup"][aria-labelledby]')!
-    const tile = (name: string) => [...group.querySelectorAll<HTMLInputElement>('input[type="radio"]')].find((r) => r.labels?.[0]?.textContent?.startsWith(name))!
-    expect(tile('Poursuite').checked).toBe(true)
-    expect(tile('Oiseau').checked).toBe(false)
-    await act(async () => tile('Oiseau').click())
-    expect(useAppStore.getState().settings.camera.style).toBe('sway')
-    expect(tile('Oiseau').checked).toBe(true)
-    // settings that match no preset show a tile of their own, which is already chosen
-    await act(async () => useAppStore.getState().setSetting('camera', { ...useAppStore.getState().settings.camera, distance: 1.11 }))
-    expect(tile('Personnalisé').checked).toBe(true)
+    const before = camera()
+    for (const [name, style] of [['Balancer', 'sway'], ['Tourner autour', 'orbit'], ['Cinéma', 'cinematic'], ['Du dessus', 'top'], ['Libre', 'free'], ['Suivre', 'chase']] as const) {
+      await act(async () => motion(host, name).click())
+      expect(camera(), name).toEqual({ ...before, style })
+    }
+    // the sentence under it describes the one chosen
+    expect(host.textContent).toContain('Derrière le marqueur, dans la direction du trajet.')
+    act(() => root.unmount())
+  })
+
+  it('« Hauteur » names the stop, the default one first; a stop sets the distance and the tilt, nothing else', async () => {
+    const { host, root } = await mount(timed, 60)
+    expect(host.querySelector('[data-testid="camera-height-name"]')!.textContent).toBe('Proche')
+    const before = camera()
+    const thumb = heightThumb(host)
+    // Home, then each arrow: the six stops from « Au ras » to « Satellite »
+    const stops = [['Au ras', 0.5, 20], ['Proche', 1, 30], ['Hélicoptère', 1.3, 25], ['Drone haut', 1.8, 55], ['Avion', 3, 35], ['Satellite', 4, 85]] as const
+    for (const [i, [name, distance, pitchDeg]] of stops.entries()) {
+      await act(async () => {
+        thumb.focus()
+        thumb.dispatchEvent(new KeyboardEvent('keydown', { key: i === 0 ? 'Home' : 'ArrowRight', bubbles: true }))
+      })
+      expect(host.querySelector('[data-testid="camera-height-name"]')!.textContent, name).toBe(name)
+      expect(camera(), name).toEqual({ ...before, distance, pitchDeg })
+    }
+    act(() => root.unmount())
+  })
+
+  it('a distance or tilt of its own reads « Personnalisé » and the slider changes nothing until moved', async () => {
+    const { host, root } = await mount(timed, 60)
+    await act(async () => useAppStore.getState().setSetting('camera', { ...camera(), distance: 1.11 }))
+    expect(host.querySelector('[data-testid="camera-height-name"]')!.textContent).toBe('Personnalisé')
+    expect(heightThumb(host).value).toBe('1')
+    expect(camera().distance).toBe(1.11)
+    act(() => root.unmount())
+  })
+
+  it('« Libre » has no height to choose (the keyframes decide)', async () => {
+    const { host, root } = await mount(timed, 60)
+    await act(async () => useAppStore.getState().setSetting('camera', { ...camera(), style: 'free' }))
+    expect(host.querySelector('[data-testid="camera-height-name"]')).toBeNull()
     act(() => root.unmount())
   })
 })
@@ -343,14 +378,16 @@ describe('CameraPanel: the modes of the interface', () => {
     document.body.innerHTML = ''
   })
 
-  it('shows the presets and the duration in Débutant, the framing from Confirmé, the smoothings from Expert; a changed value stays', async () => {
+  it('shows « Mouvement », « Hauteur » and the duration in Débutant, the framing from Confirmé, the smoothings from Expert; a changed value stays', async () => {
     usePreferences.setState({ uiMode: 'debutant' })
     const { host, root } = await mount(timed, 60)
     const labels = () => [...host.querySelectorAll('[data-testid="setting-row-label"]')].map((el) => el.textContent)
     expect(labels()).toEqual([])
     expect(host.textContent).toContain('Cinéma')
+    expect(host.querySelector('[data-testid="camera-height-name"]')).not.toBeNull()
     await act(async () => usePreferences.setState({ uiMode: 'confirme' }))
-    expect(labels()).toEqual(expect.arrayContaining(['Style', 'Focale', 'Distance', 'Inclinaison']))
+    expect(labels()).toEqual(expect.arrayContaining(['Focale', 'Distance', 'Inclinaison']))
+    expect(labels()).not.toContain('Style')
     expect(labels()).not.toContain('Visée')
     await act(async () => usePreferences.setState({ uiMode: 'expert' }))
     expect(labels()).toContain('Visée')

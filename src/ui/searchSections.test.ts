@@ -33,6 +33,12 @@ describe('searchSections', () => {
     expect(searchSections('vives', SHELL_TABS)[0]).toMatchObject({ tab: 'carte', title: 'Fond de carte' })
   })
 
+  it('finds « Caméra » by « mouvement » and « hauteur », and by the older words', () => {
+    for (const word of ['mouvement', 'hauteur', 'préréglage', 'style', 'distance', 'inclinaison']) {
+      expect(searchSections(word, SHELL_TABS)[0], word).toMatchObject({ tab: 'survol', title: 'Caméra' })
+    }
+  })
+
   it('skips the tabs that are not shown', () => {
     expect(searchSections('nuages', ['projet'])).toEqual([])
   })
