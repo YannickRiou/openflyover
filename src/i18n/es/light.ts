@@ -184,7 +184,7 @@ const messages: Messages['light'] = {
   'snow.line': 'Límite de la nieve',
   'snow.hintWeather': 'Nieve por encima de {altitude} m (tiempo del día de salida).',
   'snow.hintManual': 'Nieve por encima de {altitude} m, sea cual sea el tiempo.',
-  'snow.hintNone': 'Sin nieve: el suelo queda como en la foto.',
+  'snow.hintNone': 'Sin nieve ni glaciares: el suelo queda como en la foto.',
   'snow.hintOff': 'Sin nieve: el tiempo del día está desactivado (casilla « Meteorología del día de la salida », más arriba).',
   'snow.hintWaiting': 'Sin nieve: el tiempo del día no está cargado (vea el mensaje de más arriba).',
   'snow.hintNoSnow': 'Sin nieve ese día: el tiempo no indica ni nieve en el suelo ni nevada a la altitud del track.',

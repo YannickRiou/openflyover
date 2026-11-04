@@ -3,6 +3,11 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **The scene settings only offer what acts**: « Ambiance » (Débutant) is gone while the atmosphere is off, « Qualité des nuages à l'export » while the sea of clouds is a flat layer, the lens flare while the atmosphere is off, the halo radius while there is no halo, the three phases of a night when the track has no night, and « Très fin » for the photos on a phone or a tablet (it was the same as « Fin »). « Ombres des nuages » waits for the weather like the clouds do. « Aucune » neige says it removes the glaciers too, and the motion blur tip says the preview shows it only while the film plays.
+- **« Grand beau » is a clear sky**: it now also switches the weather of the day off in the scene, so that a grey day no longer gives a haze and a veil under « no clouds » (the other two ambiances keep it).
+
 ## 5.1.1 (November 2026)
 
 - **The 3D markers keep their own colours**: a new « Couleurs du modèle 3D » choice in the marker settings (« Naturelles » by default, or « De la trace »). The horse is brown, the car blue, the skis red and the jacket green instead of everything being in the colour of the track, so the marker no longer merges with the track line. « De la trace » puts the colour of the track on the main part (jacket, hull, skis, body) as before. With several tracks in parallel, each racer keeps the colour of its track; a colour chosen by hand for the figure still wins.

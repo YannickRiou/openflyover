@@ -182,7 +182,7 @@ export default {
   'snow.line': 'Limite de la neige',
   'snow.hintWeather': 'Neige au-dessus de {altitude} m (météo du jour de départ).',
   'snow.hintManual': 'Neige au-dessus de {altitude} m, quelle que soit la météo.',
-  'snow.hintNone': 'Pas de neige : le sol reste comme sur la photo.',
+  'snow.hintNone': 'Pas de neige ni de glaciers : le sol reste comme sur la photo.',
   'snow.hintOff': 'Pas de neige : la météo du jour est désactivée (case « Météo du jour de la sortie », plus haut).',
   'snow.hintWaiting': 'Pas de neige : la météo du jour n’est pas chargée (voir le message plus haut).',
   'snow.hintNoSnow': 'Pas de neige ce jour-là : la météo n’annonce ni neige au sol ni chute de neige à l’altitude de la trace.',

@@ -184,7 +184,7 @@ const messages: Messages['light'] = {
   'snow.line': 'Limite della neve',
   'snow.hintWeather': 'Neve sopra {altitude} m (meteo del giorno di partenza).',
   'snow.hintManual': 'Neve sopra {altitude} m, qualunque sia il meteo.',
-  'snow.hintNone': 'Nessuna neve: il terreno resta come nella foto.',
+  'snow.hintNone': 'Nessuna neve né ghiacciai: il terreno resta come nella foto.',
   'snow.hintOff': 'Nessuna neve: il meteo del giorno è disattivato (casella « Meteo del giorno dell’uscita », più sopra).',
   'snow.hintWaiting': 'Nessuna neve: il meteo del giorno non è caricato (vedi il messaggio qui sopra).',
   'snow.hintNoSnow': 'Nessuna neve quel giorno: il meteo non segnala né neve al suolo né nevicate all’altitudine della traccia.',

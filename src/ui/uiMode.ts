@@ -55,9 +55,15 @@ export function ambianceHours(day: SolarDay): Record<Ambiance, number | null | u
 }
 
 /** The chip whose values these settings are, if any: the one that shows lit, and whose choice the tabs need not show again. */
-export function ambianceOf(settings: Pick<Settings, 'clouds' | 'sunFromTrack' | 'sunHour'>, day: SolarDay): Ambiance | undefined {
+export function ambianceOf(settings: Pick<Settings, 'clouds' | 'sunFromTrack' | 'sunHour' | 'weatherScene'>, day: SolarDay): Ambiance | undefined {
   const hours = ambianceHours(day)
-  return AMBIANCES.find((a) => settings.clouds.mode === AMBIANCE_CLOUDS[a] && (hours[a] === undefined ? settings.sunFromTrack : !settings.sunFromTrack && settings.sunHour === hours[a]))
+  // « Grand beau » is a sky with no haze nor veil either: the weather of the day does not act on the scene (the other chips keep it)
+  return AMBIANCES.find(
+    (a) =>
+      settings.clouds.mode === AMBIANCE_CLOUDS[a] &&
+      settings.weatherScene.enabled === (a !== 'sunny') &&
+      (hours[a] === undefined ? settings.sunFromTrack : !settings.sunFromTrack && settings.sunHour === hours[a]),
+  )
 }
 
 /**
@@ -66,7 +72,7 @@ export function ambianceOf(settings: Pick<Settings, 'clouds' | 'sunFromTrack' | 
  * shows the choice).
  */
 const HIDDEN_TABS: Partial<Record<ShellTab, { min: UiMode; paths: readonly SettingPath[]; chips?: readonly SettingPath[] }>> = {
-  meteo: { min: 'confirme', paths: ['weather', 'weatherScene', 'snow', ...pathsBut('clouds', DEFAULT_CLOUDS, 'mode')], chips: ['clouds.mode'] },
+  meteo: { min: 'confirme', paths: ['weather', 'weatherScene.strength', 'snow', ...pathsBut('clouds', DEFAULT_CLOUDS, 'mode')], chips: ['clouds.mode', 'weatherScene.enabled'] },
   lumiere: { min: 'confirme', paths: ['atmosphere', 'shadows', 'cloudShadows', 'nightLightEv', 'sunDate', 'exposureEv', 'grading', 'film.nights', 'film.dayCards'], chips: ['sunFromTrack', 'sunHour'] },
   objectif: { min: 'expert', paths: ['lens'] },
 }
