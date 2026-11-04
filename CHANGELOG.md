@@ -7,6 +7,12 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 - **A taller view and sheets on a phone**: in portrait, the preview is as tall as the frame of the film at the width of the screen, instead of 42 % of the screen with a black band above and below (a 16:9 film goes from 219 px with 62 px of black to 219 px of view and 62 px more for the sheets); a 9:16 or 4:5 frame takes up to 55 % of the screen. The panels and the export sheet gain a « Agrandir » button in their head: the sheet takes the whole height under the top bar (« Réduire » or « Terminé » brings it back).
 
+- **The export button stays in sight on a phone**: in the export sheet (« Vidéo » and « Plusieurs formats »), « Exporter la vidéo » is pinned to the bottom of the sheet while the settings scroll under it. It used to be below the fold, after the tabs and the whole list of settings.
+
+- **Fewer buttons over the view on a phone**: in portrait, the capture and the safe zones fold behind one « Outils de la vue » button (four buttons took 176 px of a 219 px view). « Recadrer » and « Revenir à la vue du film » stay in sight. Computers and tablets are unchanged.
+
+- **The tab bar of a phone shows it scrolls**: five tabs and a half fit across the screen, so the sixth is cut at the edge. Before, a stub of 26 px was left under the fade and the bar looked complete, hiding Lens, Overlay, Project and Settings.
+
 ## 5.1.2 (November 2026)
 
 - **The overlay, the camera and the film inspectors only offer what acts**: the style of the overlay stays offered with the overlay off (it also sets the 3D labels, the texts and the credits); the leaderboard only with a race in parallel; the profile only for a track with elevations; the position and size of the weather only once it is loaded, of a logo once it has a picture, of the free text once it says something, of a photo's caption once it has one. A « Bilan » shows only the lens of the camera; « Libre » camera: a stop has no camera of its own; the tilt slider of the view from above starts at 70° (below it changed nothing); « Transitions » only with a stop, a speed portion, a night or a junction. The 3D labels of photos only with a photo on the timeline, of named points only for a file that has some, and the end points and kilometres not in a Bilan. A junction that passes a night no longer lets the passage and its duration be set (they are not read), and the key of a marker no longer offers the badge nor the edge colour for a 3D model.

@@ -165,6 +165,8 @@ const ENCODING_PATHS: SettingPath[] = ['video.manualBitrate', 'video.bitrateMbps
 const GROUP = 'mt-3 border-t border-edge pt-2 font-body text-hint font-semibold tracking-wider text-text-2 uppercase'
 /** The buttons of the panel, one per line. */
 const ACTIONS = 'flex flex-col gap-2 *:min-w-0'
+/** The buttons that start an export: on a portrait phone they stay at the bottom of the sheet while its settings scroll (the sheet is short: the button used to be below the fold). */
+const START_ACTIONS = `${ACTIONS} phone:sticky phone:-bottom-4 phone:z-2 phone:-mx-4 phone:border-t phone:border-edge phone:bg-surface-panel phone:px-4 phone:py-3`
 /** Duration, images, codec and size on one tinted line. */
 const SUMMARY = 'rounded-sm bg-surface-card px-3 py-2 text-body font-semibold text-text-1 tabular-nums'
 /** The export stopped (encoder, tiles): kept in view with its report, not only in a toast. */
@@ -701,7 +703,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       )}
 
       {!busy && (
-        <div className={ACTIONS}>
+        <div className={START_ACTIONS}>
           <Button variant="primary" onClick={start} disabled={!trackName || (!codec && !(sequence && !overlayOnly))}>
             <Icon name="download" size={18} />
             {overlayOnly ? t('export.panel.exportOverlay') : t('export.panel.exportVideo')}
@@ -1107,7 +1109,7 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       )}
 
       {!busy && (
-        <div className={ACTIONS}>
+        <div className={START_ACTIONS}>
           <Button
             variant="primary"
             onClick={perTrack ? startPerTrack : start}
