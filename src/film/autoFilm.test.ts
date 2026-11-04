@@ -19,7 +19,9 @@ describe('autoFilmSettings', () => {
     expect(total(reel)).toBe(30)
     expect(platformPresetOf(reel.video)).toBe('vertical')
     expect(findCameraPreset(reel.camera)?.id).toBe('cinema')
-    expect(reel.overlay).toMatchObject({ enabled: true, style: 'app', title: { enabled: true, showDate: true }, end: { enabled: true, figures: ['distance', 'ascent', 'maxAltitude'] } })
+    // every gabarit starts from the same look, the « Cinéma » camera and overlay style
+    for (const id of ['reel', 'resume', 'souvenir'] as const) expect(autoFilmSettings(DEFAULT_SETTINGS, id, single).overlay.style).toBe('cinema')
+    expect(reel.overlay).toMatchObject({ enabled: true, style: 'cinema', title: { enabled: true, showDate: true }, end: { enabled: true, figures: ['distance', 'ascent', 'maxAltitude'] } })
     expect(reel.film).toMatchObject({ autoStops: false, stops: [] })
     expect(reel.film.autoStopsPlaces).toBeUndefined()
 

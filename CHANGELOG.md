@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 5.5.0 (unreleased)
+
+- **One look for every gabarit**: « Reel 30 s », « Résumé 1 min » and « Souvenir 3 min » of « Film automatique » all start from the « Cinéma » overlay style, with black bars and the figures on a subtitle line, as they already shared the « Cinéma » camera. « Résumé » used « Diffusion » and the two others « Application ». Another style can still be chosen afterwards in « Habillage ».
+
 ## 5.4.0 (November 2026)
 
 - **A charter drawn from the logo, « Ligne de crête »**: the ink of the logo's ground (`#1C2A33`), the cream of its ridge (`#F5F2EA`), the glacier of its route and, for the accent, the orange of the point at its summit, the « balise » (`#FF5A36` on the ink: playhead, stops, focus; `#B8361A` on the cream: the main button). The headings move from Fraunces to IBM Plex Sans Condensed, the section titles in spaced capitals like the names on a map. Barlow Semi Condensed, semibold and bold, joins the fonts of the overlay and the posters for the labels, titles and figures over the view. The default accent is named « Balise »; an accent chosen before is kept. The charter is in `docs/charter.md`; the user guide (five languages), the « How it works » page, the handbook and the images of the desktop installers follow it too.
