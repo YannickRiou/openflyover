@@ -155,7 +155,7 @@
   }
 
   @variant phone-landscape {
-    @apply h-[46px];
+    @apply h-[2.875rem];
   }
 }
 

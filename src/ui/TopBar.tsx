@@ -201,9 +201,8 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
     return () => clearTimeout(timer)
   }, [unsaved])
 
-  // a phone: its 44 px bar takes controls of 36 px, which leaves the name of the project some room
   return (
-    <header className="chrome-focus relative z-10 grid phone:[--control-h:36px] phone:[--spacing-control:36px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-white/10 bg-chrome pr-2 pl-3 text-white bar-condensed:flex bar-condensed:gap-2 phone-any:pt-[var(--safe-top)]">
+    <header className="chrome-focus relative z-10 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-white/10 bg-chrome pr-2 pl-3 text-white bar-condensed:flex bar-condensed:gap-2 phone-any:pt-[var(--safe-top)]">
       <div className="flex min-w-0 items-center gap-1 bar-condensed:flex-auto">
         <img className="mr-1 size-7 flex-none phone:hidden" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={28} height={28} title="OpenFlyover" />
         <h1 className="sr-only">OpenFlyover</h1>

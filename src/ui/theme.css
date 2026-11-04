@@ -50,14 +50,16 @@
    * 600 headings. `text-caption` rail labels and badges, `text-hint` hints and units, `text-body` rows, labels, controls,
    * `text-title` section titles (in the heading font). Tailwind's own sizes stay for HeroUI's stylesheets.
    */
-  --text-caption: 11px;
-  --text-caption--line-height: 16px;
-  --text-hint: 12px;
-  --text-hint--line-height: 16px;
-  --text-body: 14px;
-  --text-body--line-height: 20px;
-  --text-title: 16px;
-  --text-title--line-height: 24px;
+  /* in rem, so they follow the size of the screen (the root of `:root`, below), each with a floor for legibility: 11, 12, 14
+     and 16 px on a computer or a tablet, down to 11, 11, 13 and 14 px on a small phone */
+  --text-caption: max(11px, 0.6875rem);
+  --text-caption--line-height: 1rem;
+  --text-hint: max(11px, 0.75rem);
+  --text-hint--line-height: 1rem;
+  --text-body: max(13px, 0.875rem);
+  --text-body--line-height: 1.25rem;
+  --text-title: max(14px, 1rem);
+  --text-title--line-height: 1.5rem;
 
   /* control heights: `h-control` compact (32 px), `h-control-lg` comfortable (40 px); 44 px on a touch screen, see `--control-h` */
   --spacing-control: var(--control-h);
@@ -171,12 +173,18 @@
  */
 @layer base {
 :root {
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
+  /*
+   * The scale of the whole interface: the root size grows with the shorter side of the screen, 13 px on a small phone (either
+   * way up), 16 px from 700 px on (a tablet, a computer). Every length in rem follows it: Tailwind's spacing, the bars, the
+   * controls, the text (with its floors). Only the 16 px of the fields (no zoom on focus in iOS) and the canvas stay in px.
+   */
+  font-size: clamp(13px, 10.85px + 0.735vmin, 16px);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
 
   /* semantic roles, mapped to the palette above (the dark theme below only remaps these) */
   --surface-chrome: var(--color-ink);
@@ -207,16 +215,16 @@
   --status-error: #962c15;
   --status-error-on-dark: #ff9b73;
 
-  /* shell layout */
-  --topbar-h: 48px;
-  --rail-w: 64px;
-  --panel-w: 320px;
-  --dock-w: 300px;
-  --statusbar-h: 24px;
+  /* shell layout, in rem: it follows the size of the screen with the root */
+  --topbar-h: 3rem;
+  --rail-w: 4rem;
+  --panel-w: 20rem;
+  --dock-w: 18.75rem;
+  --statusbar-h: 1.5rem;
   /* room left above the top bar for the phone's status bar (`env(safe-area-inset-top)`, more on iOS below) */
   --safe-top: env(safe-area-inset-top);
-  --control-h: 32px;
-  --control-h-lg: 40px;
+  --control-h: 2rem;
+  --control-h-lg: 2.5rem;
   /* rim of a colour swatch, visible on the panel */
   --swatch-border: rgb(28 42 51 / 0.35);
 
@@ -380,16 +388,16 @@ select {
 }
 
 .field__label {
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 500;
-  line-height: 20px;
+  line-height: var(--text-body--line-height);
   color: var(--text-1);
 }
 
 .select-field,
 .input {
   width: 100%;
-  min-height: 36px;
+  min-height: 2.25rem;
   padding: 0 var(--space-3);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
@@ -407,8 +415,8 @@ select {
 @layer components {
 @media (max-width: 1280px) {
   :root {
-    --panel-w: 280px;
-    --dock-w: 280px;
+    --panel-w: 17.5rem;
+    --dock-w: 17.5rem;
   }
 }
 
@@ -416,9 +424,10 @@ select {
   :root {
     /* two fingers on the interface do not zoom the page (it stayed zoomed, the bars out of reach): the 3D view and the timeline take the pinch for themselves */
     touch-action: pan-x pan-y;
-    --topbar-h: 56px;
-    --control-h: 44px;
-    --control-h-lg: 44px;
+    /* a finger: 56 and 44 px on a tablet, in proportion on a phone, never under 36 px for a target */
+    --topbar-h: 3.5rem;
+    --control-h: max(36px, 2.75rem);
+    --control-h-lg: max(36px, 2.75rem);
   }
 
   .btn,
@@ -426,7 +435,7 @@ select {
   .select-field,
   .input,
   .select-bar {
-    min-height: 44px;
+    min-height: var(--control-h);
   }
 
   .shell-frame :is(input:not([type='range'], [type='checkbox'], [type='radio'], [type='color']), select, textarea) {
@@ -440,22 +449,11 @@ select {
   }
 }
 
-/* a phone on its side: shorter bars and controls, the film and the timeline need the height */
-@media (max-height: 499px) and (min-aspect-ratio: 1/1) {
-  :root {
-    --topbar-h: 44px;
-    --control-h: 40px;
-    --control-h-lg: 40px;
-  }
-}
-
 /* the portrait phone: the preview keeps the top of the screen, the transport row sits under it, the sheets start under both */
 @media (max-width: 699px) and (not ((max-height: 499px) and (min-aspect-ratio: 1/1))) {
   :root {
-    /* a lower top bar: the name, undo, redo, the format, the menu and « Exporter » (the language is in « Réglages ») */
-    --topbar-h: 44px;
     --phone-preview-h: 42dvh;
-    --phone-transport-h: 52px;
+    --phone-transport-h: 3.25rem;
   }
 }
 }

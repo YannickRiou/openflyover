@@ -134,11 +134,11 @@ full customization through a single project document, WebCodecs video export, Ta
 
 The first screen (shell, panels, welcome card) loads the app, React and the HeroUI / React Aria primitives, without three.js:
 1.9 MB, 559 kB gzip over 22 files in 4.5.0, stylesheet included (the app 441 kB, `primitives` 291 kB, React 219 kB,
-French and the i18n code 177 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 585 kB
+French and the i18n code 177 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 586 kB
 gzip (`scripts/check-bundle-size.mjs`, after the build): raise it on purpose in the pull request that needs it (580 → 582
 for the diagnostic report's phone rows: the terrain workers' status, the GPU timer, the wait for the GPU, which the
 first screen holds because the export's guard builds the report; 582 → 583 for the credits of the 3D models, the
-marker settings and their labels in French; 583 → 584 for the phone layout: the « Agrandir » button of the sheets, the tools button of the view and the preview height; 584 → 585 for the phone's timeline row: « Clés », « Ajouter » and its menu, the add row under the lanes).
+marker settings and their labels in French; 583 → 584 for the phone layout: the « Agrandir » button of the sheets, the tools button of the view and the preview height; 584 → 585 for the phone's timeline row: « Clés », « Ajouter » and its menu, the add row under the lanes; 585 → 586 for the block bar's « Couper » and « Dupliquer », the « Langue » section of « Réglages » and the proportional scale of the theme).
 Nothing in the first screen may import `three` or `@react-three/fiber` statically: the status bar reads the renderer through
 `scene/perfProbe.ts` (a plain module the scene fills when its canvas is created). Only French (the
 reference, the fallback of a missing message) is in the first screen; English, Spanish, Italian and German are one chunk each
@@ -498,7 +498,7 @@ block). A Tailwind `@theme` token of HeroUI that the app also defines must keep 
 (`@tailwindcss/vite`, nothing at run time). `theme.css` imports it and declares the palette, fonts, type and spacing scales, radii and
 shadows as `@theme` tokens (`bg-ink`, `text-accent`, `font-heading`, `text-body`, `h-control`…), the semantic roles above, the `dark`
 variant (the theme attribute, never the system scheme) and the named variants `touch`, `drawer`, `phone`, `phone-any`,
-`phone-landscape` and `bar-condensed` (the breakpoints of the shell, named once). `utilities.css` holds the `@utility` classes
+`phone-landscape` and `bar-condensed` (the breakpoints of the shell, named once). **Scale**: one, proportional to the screen, no size per device. The root size is `clamp(13px, 10.85px + 0.735vmin, 16px)` (the shorter side: a phone is about 13.7 px either way up, a tablet or a computer 16 px), and every length is in rem: Tailwind's `--spacing`, the shell (`--topbar-h`, `--rail-w`, `--panel-w`, `--statusbar-h`, `--phone-transport-h`), the controls (`--control-h`, a finger `max(36px, 2.75rem)`) and the text tokens, each with a floor (`--text-body: max(13px, 0.875rem)`…). Only the 16 px of the fields (no zoom on focus in iOS), the canvas and hairlines stay in px. A new size is written in rem or as a token, never as a px value for one kind of screen. `utilities.css` holds the `@utility` classes
 several components share (`type-label`, `type-hint`, `panel-head`, `rail-tab`, `btn-chrome`, `overlay-frame`…), the frames of the
 shell (`shell-frame`, `panel-frame`, `dock-frame`, `tabpanel-frame`, `stage-frame`, `dock-section`: a frame that sets defaults for its
 children does it with `:where(&) > *`, so the children's own utilities win), the keyframes `tip-in` and `sheet-in`, and the
@@ -671,9 +671,8 @@ pointer (`appearance.css`).
   - *Compact* (`max-width: 699px` or `max-height: 499px`, a phone either way up): top bar reduced to the logo, the
     project name, undo and redo (always in the bar), the format button (`FormatMenu` in `TopBar.tsx`, in the place of the
     `FormatSwitcher` row: the icon of the chosen format, a bottom sheet of the formats; both call `pickFormat`), « Plus
-    d'actions » (⋯, `MoreMenu` in `TopBar.tsx`: open, save) and « Exporter » with its label; no « ? ». A portrait phone has a
-    44 px bar (`--topbar-h`) of 36 px controls (`--control-h` and `--spacing-control` on the header), no logo and no
-    language flag: the language is a section of « Réglages » (`PreferencesPanel`), as everywhere; in landscape the timeline starts folded (`Timeline`: strip
+    d'actions » (⋯, `MoreMenu` in `TopBar.tsx`: open, save) and « Exporter » with its label; no « ? ». A portrait phone has
+    no logo and no language flag: the language is a section of « Réglages » (`PreferencesPanel`), as everywhere; in landscape the timeline starts folded (`Timeline`: strip
     with play and time) and unfolds as a sheet over the view; panel and drawer sheets fold it (`sheetOpen`), its
     unfolding folds them (`onUnfold` → shell event `fold`): one sheet at a time. Dialogs (`Modal`) are full screen. Safe areas
     (`viewport-fit=cover` in `index.html`, `env(safe-area-inset-*)` on the shell rows and sides), `100dvh`, no page
