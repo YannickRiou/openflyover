@@ -320,8 +320,8 @@ export function FlyoverRig() {
         const colors = leadMarkerColors({ ...blend.to, figureColor: own }, under?.color ?? '#FFFFFF')
         const fill = litColor(colors.badgeFill, exposureGain, modelFill)
         model.setColor(fill.r, fill.g, fill.b)
-        // its own colours, unless the figure colour was chosen by hand (the racers keep the colour of their track, RaceMarkers.tsx)
-        model.setNatural?.(blend.to.modelColors === 'natural' && own === '')
+        // its own colours, or the colour of the track (or the figure colour chosen by hand) on its main part; the racers keep the colour of their track (RaceMarkers.tsx)
+        model.setNatural?.(blend.to.modelColors === 'natural')
         if (model.setLight) {
           const light = litColor('#FFFFFF', exposureGain, modelFill)
           model.setLight(light.r, light.g, light.b)
