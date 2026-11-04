@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 5.2.0 (November 2026)
 
 - **A quieter top bar and timeline on a computer**: « Débutant / Confirmé / Expert » left the top bar, where it took room for a choice made once; it stays in Réglages, « Mode de l’interface » (where phones and tablets already had it). Under « Plans » and « Vitesse », the previous and next key buttons show while the mouse is over the lane name or the keyboard focus is in it, like the fold and lock buttons; the key button stays, it shows whether a key is at the playhead. Touch screens keep all three.
 
