@@ -6,6 +6,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## 5.5.0 (unreleased)
 
 - **The film options no longer overflow**: in « Options du film » on the timeline, a long label such as « Baisser toutes les musiques sous les vidéos » wraps onto a second line instead of running past the panel and adding a sideways scroll bar.
+- **Thin scrollbars**: the panels and the timeline scroll with a thin rounded bar in the colour of their text, without the arrows or the grey track of the system bar, in the browser and in the desktop app.
 
 ## 5.4.0 (November 2026)
 
@@ -122,7 +123,6 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 - **Figure above the marker, redone**: « Donnée au-dessus du marqueur » is no longer a panel but a large figure hanging above the marker, with a soft shadow. It is bigger, higher above the marker, and takes the fonts and the colours of the overlay (a white figure when the style's text is dark).
 - **Marker and figure readable on a phone**: on a small view (under about 700 px tall, as a phone's preview) the ball keeps a radius of at least 5 px, and the figure above it grows with it. Larger views and exports are unchanged.
-
 
 ## 4.7.0 (November 2026)
 
