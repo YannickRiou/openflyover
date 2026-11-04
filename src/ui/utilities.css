@@ -264,7 +264,8 @@
   }
 
   @variant phone {
-    @apply absolute inset-x-0 top-[calc(var(--phone-preview-h)+var(--phone-transport-h))] bottom-0 z-10 flex w-auto flex-col overflow-hidden rounded-t-md border-t border-r-0 shadow-pop;
+    /* it stops above the tab bar (`rail-frame`, 56 px): another tab is one touch away, the sheet then shows it */
+    @apply absolute inset-x-0 top-[calc(var(--phone-preview-h)+var(--phone-transport-h))] bottom-14 z-10 flex w-auto flex-col overflow-hidden rounded-t-md border-t border-r-0 shadow-pop;
     animation: sheet-in 160ms ease-out;
 
     @media (prefers-reduced-motion: reduce) {

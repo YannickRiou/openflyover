@@ -686,8 +686,9 @@ pointer (`appearance.css`).
     « Texte, photo, musique » row under them, sticky to the left, opens the same menu), the bottom tab bar (five groups of tabs,
     `TAB_GROUPS` in `shell.ts`, a fifth of the width each; a group opens the tab of it last shown, a `ToggleButtonGroup` at the top
     of the sheet, `data-sheet-fixed`, switches between its tabs; the same groups in the rail of a landscape phone, `COMPACT_QUERY`),
-    the status bar. Panel, export drawer and inspector are half sheets from under the transport row to the status bar,
-    over the timeline and the tab bar, never over the preview (sliding in, not under `prefers-reduced-motion`). Their
+    the status bar. Panel, export drawer and inspector are half sheets from under the transport row, over the timeline,
+    never over the preview; the panel stops above the tab bar (`bottom-14`: another tab is one touch away), the export
+    drawer and the inspector go down to the status bar (sliding in, not under `prefers-reduced-motion`). Their
     head (`SheetHandle.tsx`: grip, tab name, « Terminé » ✓) closes them on ✓ or when dragged down past a third of
     their height, a flick included (`dismissSheet`); the ✕ of the drawer and the inspector is hidden. Sheet content
     scrolls inside (`overscroll-behavior: contain`); a press on the view does not close a sheet (it does on a tablet
