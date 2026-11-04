@@ -1,7 +1,7 @@
 import { SNAP_GROUPS } from '../film/timeline'
 import type { SnapGroup } from '../film/timeline'
 import { useId } from 'react'
-import { t, useT } from '../i18n'
+import { LANGUAGES, t, useLanguage, useT } from '../i18n'
 import { getPlatform } from '../platform'
 import { ACCENT_PRESETS, CHROME_PRESETS, DEFAULT_APPEARANCE, THEMES, clampAccent, clampChrome } from './appearance'
 import type { Theme } from './appearance'
@@ -139,6 +139,7 @@ export function PreferencesPanel() {
   const heap = 'memory' in performance
   const perfKeys = PERF_ITEMS.filter((key) => (key === 'memory' ? heap : key === 'system' ? desktop : true))
 
+  const language = useLanguage()
   const appearance = prefs.appearance
   const setAppearance = (patch: Partial<typeof appearance>) => setPreferences({ appearance: { ...appearance, ...patch } })
   const isDefault = (Object.keys(DEFAULT_APPEARANCE) as (keyof typeof appearance)[]).every((key) => appearance[key] === DEFAULT_APPEARANCE[key])
@@ -146,6 +147,16 @@ export function PreferencesPanel() {
   return (
     <>
       <p className="type-hint pt-3">{t('settings.preferences.intro')}</p>
+      {/* also the top bar's flag on a computer; the only place on a phone, whose bar has no room for it */}
+      <PanelSection title={t('topbar.language.label')}>
+        <RadioGroup aria-label={t('topbar.language.label')} value={language} onChange={(code) => setPreferences({ language: code })}>
+          {LANGUAGES.map((l) => (
+            <Radio key={l.code} value={l.code}>
+              {l.name}
+            </Radio>
+          ))}
+        </RadioGroup>
+      </PanelSection>
       <PanelSection title={t('shell.mode.title')}>
         <RadioGroup aria-label={t('shell.mode.title')} value={prefs.uiMode} onChange={(uiMode) => setPreferences({ uiMode })}>
           {UI_MODES.map((mode) => (

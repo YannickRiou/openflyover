@@ -452,6 +452,8 @@ select {
 /* the portrait phone: the preview keeps the top of the screen, the transport row sits under it, the sheets start under both */
 @media (max-width: 699px) and (not ((max-height: 499px) and (min-aspect-ratio: 1/1))) {
   :root {
+    /* a lower top bar: the name, undo, redo, the format, the menu and « Exporter » (the language is in « Réglages ») */
+    --topbar-h: 44px;
     --phone-preview-h: 42dvh;
     --phone-transport-h: 52px;
   }

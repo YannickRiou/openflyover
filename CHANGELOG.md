@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **A lower top bar on a phone, with undo and redo**: in portrait the bar is 44 px high instead of 56, « Annuler » and « Rétablir » are in it (they were in the ⋯ menu) and the project name has more room; the logo and the language flag leave it. The language is now also a section of « Réglages », on every device.
+
 - **Split and duplicate on a phone**: a selected text or photo gets « Couper » (in two at the playhead) and « Dupliquer » in the bar of the block, a video « Dupliquer », as X and Ctrl+D on a computer. The flight and the stops get neither: cutting them would make no sense.
 
 - **The tabs of a phone stay in sight under a sheet**: the settings sheet stops above the tab bar, so another tab is one touch away and opens in the same sheet (it took closing the sheet first).

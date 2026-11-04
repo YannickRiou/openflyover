@@ -106,3 +106,13 @@ describe('PreferencesPanel, « Mode de l’interface »', () => {
     expect(host.textContent).toContain('Un réglage modifié reste visible.')
   })
 })
+
+describe('PreferencesPanel, « Langue »', () => {
+  it('lists the languages, the current one chosen, and a choice is kept on this device (a phone has no flag in its top bar)', async () => {
+    expect(radio('Français').checked).toBe(true)
+    await act(async () => radio('English').click())
+    expect(usePreferences.getState().language).toBe('en')
+    expect(JSON.parse(getPlatform().storage.get(PREFERENCES_KEY)!).language).toBe('en')
+    await act(async () => usePreferences.setState({ language: 'fr' }))
+  })
+})
