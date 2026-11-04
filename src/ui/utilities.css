@@ -265,6 +265,11 @@
     & > :not([data-sheet-handle]) {
       @apply min-h-0 flex-1 overflow-y-auto overscroll-contain;
     }
+
+    /* « Agrandir »: the sheet covers the view and the timeline, up to the top bar */
+    &[data-expanded] {
+      @apply top-0;
+    }
   }
 }
 
@@ -294,6 +299,11 @@
 
     & > :not([data-sheet-handle]) {
       @apply min-h-0 flex-1 overflow-y-auto overscroll-contain;
+    }
+
+    /* « Agrandir »: the sheet covers the view and the timeline, up to the top bar */
+    &[data-expanded] {
+      @apply top-0;
     }
   }
 }
