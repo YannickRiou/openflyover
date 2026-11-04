@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **A phone turned back upright shows its timeline**: after landscape, the lanes of the portrait timeline were gone (it kept the fold of the landscape strip). In landscape the switch between the tabs of a group stays at the top of the panel and the tab scrolls under it; its section titles no longer slide over the switch. On a touch screen two fingers no longer zoom the whole page, which could stay zoomed with the bars out of reach; the 3D view and the timeline keep their own pinch.
+
 ## 5.2.0 (November 2026)
 
 - **A quieter top bar and timeline on a computer**: « Débutant / Confirmé / Expert » left the top bar, where it took room for a choice made once; it stays in Réglages, « Mode de l’interface » (where phones and tablets already had it). Under « Plans » and « Vitesse », the previous and next key buttons show while the mouse is over the lane name or the keyboard focus is in it, like the fold and lock buttons; the key button stays, it shows whether a key is at the playhead. Touch screens keep all three.

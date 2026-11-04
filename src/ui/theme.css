@@ -414,6 +414,8 @@ select {
 
 @media (pointer: coarse) {
   :root {
+    /* two fingers on the interface do not zoom the page (it stayed zoomed, the bars out of reach): the 3D view and the timeline take the pinch for themselves */
+    touch-action: pan-x pan-y;
     --topbar-h: 56px;
     --control-h: 44px;
     --control-h-lg: 44px;
