@@ -1,14 +1,16 @@
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildTrack } from '../import/stats'
+import { getPlatform } from '../platform'
 import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
 import { findImageryDates } from '../terrain/imageryDates'
 import { GradingPanel } from './GradingPanel'
 import { usePreferences } from './preferences'
 import { LightSettings, MapSettings, WeatherSettings } from './SettingsPanel'
+import { FOLDS_KEY } from './shell'
 
 vi.mock('../terrain/imageryDates', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../terrain/imageryDates')>()),
@@ -227,5 +229,30 @@ describe('Modes of the interface', () => {
     await act(async () => useAppStore.getState().setSetting('atmosphere', false))
     expect(sections(host)).toContain('Atmosphère')
     await unmount()
+  })
+})
+
+describe('Folded sections', () => {
+  beforeEach(() => getPlatform().storage.remove(FOLDS_KEY))
+  afterEach(() => {
+    getPlatform().storage.remove(FOLDS_KEY)
+    document.body.innerHTML = ''
+  })
+  const states = (host: HTMLElement) => Object.fromEntries([...host.querySelectorAll<HTMLDetailsElement>('details[data-panel-section]')].map((d) => [d.dataset.panelSection, d.open]))
+
+  it('a tab opens on its first section only, the others show a summary; what the person left wins', async () => {
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<div className="tabpanel-frame"><MapSettings /></div>))
+    expect(states(host)).toMatchObject({ 'Fond de carte': true, Relief: false })
+    expect(host.querySelector('[data-panel-section="Relief"] [data-testid="section-summary"]')!.textContent).toMatch(/^Exagération du relief ×/)
+    act(() => root.unmount())
+
+    getPlatform().storage.set(FOLDS_KEY, JSON.stringify({ Relief: true, 'Fond de carte': false }))
+    const again = document.body.appendChild(document.createElement('div'))
+    const root2 = createRoot(again)
+    await act(async () => root2.render(<div className="tabpanel-frame"><MapSettings /></div>))
+    expect(states(again)).toMatchObject({ 'Fond de carte': false, Relief: true })
+    act(() => root2.unmount())
   })
 })

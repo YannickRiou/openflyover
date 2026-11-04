@@ -735,7 +735,7 @@ export function MapSettings() {
   return (
     <>
       {/* the imagery source is left out of the marker: the import picks it per region (IGN, swisstopo) */}
-      <PanelSection title={t('light.map.background')} keys={['terrainSourceId', 'imageryZoomOffset', 'imageryVivid', 'water', 'forest']}>
+      <PanelSection title={t('light.map.background')} summary={getImagerySource(settings.imagerySourceId).name} keys={['terrainSourceId', 'imageryZoomOffset', 'imageryVivid', 'water', 'forest']}>
         {mode === 'debutant' && <BasemapChoice />}
         {/* the import picks the imagery by region: its choice is shown from « Confirmé » on whatever its value */}
         <ModeGate min="confirme">
@@ -815,7 +815,7 @@ export function MapSettings() {
         </SettingRow>
       </PanelSection>
 
-      <PanelSection title={t('light.map.terrain')} keys={['exaggeration', 'demClean']}>
+      <PanelSection title={t('light.map.terrain')} summary={`${t('light.map.exaggeration')} ×${formatNumber(settings.exaggeration, 1)}`} keys={['exaggeration', 'demClean']}>
         <RangeField
           label={t('light.map.exaggeration')}
           tip={t('light.map.exaggerationTip')}
@@ -970,13 +970,14 @@ export function WeatherSettings() {
   const t = useT()
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
   const weatherScene = useAppStore((s) => s.settings.weatherScene)
+  const clouds = useAppStore((s) => s.settings.clouds)
   const setSetting = useAppStore((s) => s.setSetting)
   const weatherReady = useWeatherReady()
   const id = useId()
 
   return (
     <>
-      <PanelSection title={t('light.weather.clouds')} keys={['clouds']} min="confirme">
+      <PanelSection title={t('light.weather.clouds')} summary={CLOUD_MODE_OPTIONS.find((option) => option.value === clouds.mode)?.label} keys={['clouds']} min="confirme">
         {atmosphere ? <CloudsControl weatherReady={weatherReady} /> : <AtmosphereOffHint what="clouds" />}
       </PanelSection>
 
@@ -1031,6 +1032,8 @@ export function LightSettings() {
   const weatherReady = useWeatherReady()
   const waitingWeather = meteoClouds && !weatherReady
   const nightLightEv = useAppStore((s) => s.settings.nightLightEv)
+  const sunFromTrack = useAppStore((s) => s.settings.sunFromTrack)
+  const sunHour = useAppStore((s) => s.settings.sunHour)
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
 
@@ -1067,7 +1070,7 @@ export function LightSettings() {
         )}
       </PanelSection>
 
-      <PanelSection title={t('light.atmosphere.sun')} keys={['sunFromTrack', 'sunHour', 'sunDate']} min="confirme">
+      <PanelSection title={t('light.atmosphere.sun')} summary={sunFromTrack ? t('light.sun.follow') : `${t('light.sun.fixed')} · ${formatHour(sunHour)}`} keys={['sunFromTrack', 'sunHour', 'sunDate']} min="confirme">
         {atmosphere ? (
           <SunTimeControl />
         ) : (

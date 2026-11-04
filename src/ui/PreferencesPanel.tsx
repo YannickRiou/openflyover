@@ -148,7 +148,7 @@ export function PreferencesPanel() {
     <>
       <p className="type-hint pt-3">{t('settings.preferences.intro')}</p>
       {/* also the top bar's flag on a computer; the only place on a phone, whose bar has no room for it */}
-      <PanelSection title={t('topbar.language.label')}>
+      <PanelSection title={t('topbar.language.label')} summary={LANGUAGES.find((l) => l.code === language)?.name}>
         <RadioGroup aria-label={t('topbar.language.label')} value={language} onChange={(code) => setPreferences({ language: code })}>
           {LANGUAGES.map((l) => (
             <Radio key={l.code} value={l.code}>
@@ -157,7 +157,7 @@ export function PreferencesPanel() {
           ))}
         </RadioGroup>
       </PanelSection>
-      <PanelSection title={t('shell.mode.title')}>
+      <PanelSection title={t('shell.mode.title')} summary={t(`shell.mode.${prefs.uiMode}`)}>
         <RadioGroup aria-label={t('shell.mode.title')} value={prefs.uiMode} onChange={(uiMode) => setPreferences({ uiMode })}>
           {UI_MODES.map((mode) => (
             <Radio key={mode} value={mode}>
@@ -168,7 +168,7 @@ export function PreferencesPanel() {
         <p className="type-hint">{t(`shell.mode.${prefs.uiMode}.hint`)}</p>
         <p className="type-hint">{t('shell.mode.settingsHint')}</p>
       </PanelSection>
-      <PanelSection title={t('settings.preferences.appearance.title')}>
+      <PanelSection title={t('settings.preferences.appearance.title')} summary={THEME_LABELS[appearance.theme]}>
         <Choice legend={t('settings.preferences.appearance.theme')} labels={THEME_LABELS} keys={THEMES} value={appearance.theme} onChange={(theme) => setAppearance({ theme })} />
         <AppearanceColor
           label={t('settings.preferences.appearance.accent')}
@@ -216,7 +216,7 @@ export function PreferencesPanel() {
         <Chips legend={t('settings.preferences.timeline.snap')} labels={SNAP_LABELS} keys={SNAP_GROUPS} value={prefs.timelineSnap} onChange={(timelineSnap) => setPreferences({ timelineSnap })} />
         <p className="type-hint">{t('settings.preferences.timeline.snapHint')}</p>
       </PanelSection>
-      <PanelSection title={t('settings.preferences.preview.title')}>
+      <PanelSection title={t('settings.preferences.preview.title')} summary={PREVIEW_LABELS[prefs.previewQuality]}>
         <Choice
           legend={t('settings.preferences.preview.quality')}
           labels={PREVIEW_LABELS}

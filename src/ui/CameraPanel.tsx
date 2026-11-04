@@ -245,7 +245,7 @@ export function CameraPanel() {
   return (
     <>
       <AutoFilmSection />
-      <PanelSection title={t('camera.panel.camera')} keys={['camera']}>
+      <PanelSection title={t('camera.panel.camera')} summary={preset ? preset.name : t('camera.panel.custom')} keys={['camera']}>
         {bilan && <p className="type-hint">{t('track.bilan.fixed')}</p>}
         {/* a Bilan shows the whole outing from above: only the lens counts */}
         {!bilan && (
