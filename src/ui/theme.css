@@ -42,7 +42,7 @@
   --color-black: #000000;
 
   /* the charter: IBM Plex in two widths, condensed for the titles (Fraunces stays among the fonts of the films' texts) */
-  --font-heading: 'IBM Plex Sans Condensed', 'IBM Plex Sans', system-ui, sans-serif;
+  --font-heading: 'Manrope', 'IBM Plex Sans', system-ui, sans-serif;
   --font-body: 'IBM Plex Sans', system-ui, sans-serif;
 
   /*

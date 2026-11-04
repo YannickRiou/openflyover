@@ -128,8 +128,8 @@ export const SHELL_TABS = ['trace', 'carte', 'meteo', 'lumiere', 'survol', 'obje
 export type ShellTab = (typeof SHELL_TABS)[number]
 
 /**
- * A phone, either way up, shows the tabs in five groups (nine tabs do not fit across): the tab of a group opens the one of
- * its tabs last shown, and the sheet switches between them. In montage order, like the tabs.
+ * The rail shows the tabs in five groups, on a computer as on a phone either way up (nine tabs do not fit across a phone):
+ * the tab of a group opens the one of its tabs last shown, and the panel switches between them. In montage order, like the tabs.
  */
 export const TAB_GROUPS = {
   trace: ['trace'],

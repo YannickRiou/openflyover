@@ -23,8 +23,13 @@ export const WHATS_NEW: readonly NewsVersion[] = [
   {
     version: '5.5',
     items: [
+    items: [
       { icon: 'square', get title() { return t('news.v55.titlebar.title') }, get text() { return t('news.v55.titlebar.text') } },
       { icon: 'info', get title() { return t('news.v55.status.title') }, get text() { return t('news.v55.status.text') } },
+      { icon: 'layers', get title() { return t('news.v55.groups.title') }, get text() { return t('news.v55.groups.text') } },
+      { icon: 'sliders-horizontal', get title() { return t('news.v55.summary.title') }, get text() { return t('news.v55.summary.text') } },
+      { icon: 'route', get title() { return t('news.v55.headings.title') }, get text() { return t('news.v55.headings.text') } },
+    ],
     ],
   },
   {

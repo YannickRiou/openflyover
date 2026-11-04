@@ -9,6 +9,13 @@ const messages: Messages['news'] = {
   'v55.titlebar.text': 'In der Desktop-App ist die obere Leiste von OpenFlyover jetzt auch die Titelleiste. Ziehen Sie sie, um das Fenster zu verschieben, doppelklicken Sie darauf, um es zu vergrößern, und nutzen Sie die drei Schaltflächen rechts neben „Exportieren“. Eine Zeile weniger und überall dieselbe Farbe. Auf dem Mac bleiben die drei runden Schaltflächen links.',
   'v55.status.title': 'Eine ruhigere Statusleiste',
   'v55.status.text': 'Die Leiste unten zeigt nur noch, was gerade lädt und was fehlgeschlagen ist. Ist alles bereit, bleibt sie leer. Die Leistungswerte stehen hinter dem „i“-Knopf.',
+  // 5.5 — families of tabs, folded summaries
+  'v55.groups.title': 'Fünf Gruppen von Tabs',
+  'v55.groups.text': 'Auf dem Computer wie auf dem Smartphone zeigt die linke Spalte fünf Gruppen: Track, Szene, Kamera, Overlay und Projekt. Ein Umschalter oben im Bereich wechselt zwischen ihren Tabs. Strg+K öffnet die richtige Gruppe.',
+  'v55.summary.title': 'Eine Zusammenfassung unter jedem eingeklappten Abschnitt',
+  'v55.summary.text': 'Ein eingeklappter Abschnitt sagt, was darin eingestellt ist, etwa „Einfarbig · 4 px · Durchgezogen“ beim Track. Auf dem Computer öffnet sich ein Tab mit seinem ersten Abschnitt: Sie öffnen nur, was Sie ändern wollen.',
+  'v55.headings.title': 'Überschriften, die sich leichter unterscheiden',
+  'v55.headings.text': 'Der Abschnitt des Tracks heißt jetzt „Track-Stil“, damit er nicht mehr mit der Liste „Tracks“ verwechselt wird. Die Überschriften stehen jetzt in Manrope, einer runderen Schrift, in normaler Schreibweise: fett für einen Abschnitt, kleiner und heller für seine Teile (Linie, Leuchten).',
   'v50.margins.title': 'Ränder nach Wahl',
   'v50.margins.text': 'Das Kästchen „Sicherheitsränder“ des Exports hält das Overlay von den Rändern fern und in 9:16 und 4:5 außerhalb der Bereiche von Reels, TikTok und Shorts. Es hakt sich selbst an, wenn Sie eine Plattform wählen. Ohne Haken rückt das Overlay an die Ränder und das ganze Bild gehört dem Film.',
   'v50.modes.title': 'Drei Modi der Oberfläche',

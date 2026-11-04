@@ -42,7 +42,7 @@ const messages: Messages['marker'] = {
   'image.remove': 'Rimuovi',
   'image.hint': 'Foto o avatar, ritagliato in tondo. In parallelo, le altre tracce mantengono la loro pallina.',
   'track.solid': 'Uniforme',
-  'track.title': 'Traccia',
+  'track.title': 'Stile della traccia',
   'track.lineGroup': 'Linea',
   'track.haloGroup': 'Alone',
   'track.drawOn': 'Traccia che si disegna',

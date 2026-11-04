@@ -9,6 +9,13 @@ const messages: Messages['news'] = {
   'v55.titlebar.text': 'In the desktop app, the top bar of OpenFlyover is now also the title bar. Drag it to move the window, double-click it to enlarge it, and use the three buttons on the right of “Export”. One row less, and the same colour all the way across. On a Mac, the three round buttons stay on the left.',
   'v55.status.title': 'A calmer status bar',
   'v55.status.text': 'The bar at the bottom now shows only what is loading, and what failed. When everything is ready, it says nothing. The performance figures are behind the “i” button.',
+  // 5.5 — families of tabs, folded summaries
+  'v55.groups.title': 'Five groups of tabs',
+  'v55.groups.text': 'On a computer as on a phone, the left column shows five groups: Track, Scene, Camera, Overlay and Project. A switch at the top of the panel moves between their tabs. Ctrl+K opens the right group.',
+  'v55.summary.title': 'A summary under each folded section',
+  'v55.summary.text': 'A folded section says what is set in it, for example “Solid · 4 px · Dashes” for the track. On a computer a tab opens on its first section: you open only what you want to change.',
+  'v55.headings.title': 'Headings that are easy to tell apart',
+  'v55.headings.text': 'The track section is now called “Track style”, so it is no longer mistaken for the “Tracks” list. Headings are now in Manrope, a rounder font, in sentence case: bold for a section, smaller and lighter for its parts (Line, Glow).',
   'v50.margins.title': 'Margins when you want them',
   'v50.margins.text': 'The “Marges de sécurité” box of the export keeps the overlay away from the edges and, in 9:16 and 4:5, out of the areas of Reels, TikTok and Shorts. It ticks itself when you pick a platform. Unticked, the overlay moves close to the edges and the whole picture serves the film.',
   'v50.modes.title': 'Three interface modes',

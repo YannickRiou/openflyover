@@ -69,9 +69,14 @@
   @apply range-value min-w-[7ch];
 }
 
-/* A section's title: condensed capitals, a little spaced, like the names of the ranges on a topographic map (the charter). */
+/* A section's title: Manrope bold in sentence case, the softer first of three levels (the charter). */
 @utility panel-title {
-  @apply font-heading text-body font-semibold tracking-[0.06em] text-text-1 uppercase;
+  @apply font-heading text-title font-bold text-text-1;
+}
+
+/* A part of a section (« Ligne », « Halo », « Vol »): Manrope semi-bold, smaller and muted, between the section title and the row labels. */
+@utility panel-subtitle {
+  @apply font-heading text-[max(12px,0.8125rem)] font-semibold text-text-2;
 }
 
 /* On the ink chrome (top bar, rail): the focus ring is the light accent, which reads on ink (7.3:1). */
@@ -249,41 +254,32 @@
 
 /*
  * The side panel (one tab at a time): beside the view; a drawer over it below 1024 px; a half sheet under the preview on a
- * portrait phone, where each child but the sheet handle scrolls on its own (like `dock-frame`, on the other side).
+ * portrait phone. Each child but the sheet handle and the switch between the tabs of a group scrolls on its own, so that
+ * the switch stays at the top and the sticky section heads of the tab never cover it.
  */
 @utility panel-frame {
-  @apply w-(--panel-w) flex-none overflow-y-auto overscroll-contain border-r border-edge bg-surface-panel text-text-1;
+  @apply flex w-(--panel-w) flex-none flex-col overflow-hidden border-r border-edge bg-surface-panel text-text-1;
 
   /* readouts */
   & output {
     font-variant-numeric: tabular-nums;
   }
 
+  & > :not([data-sheet-handle], [data-sheet-fixed]) {
+    @apply min-h-0 flex-1 overflow-y-auto overscroll-contain;
+  }
+
   @variant drawer {
     @apply absolute top-0 bottom-0 left-(--rail-w) z-8 w-[min(var(--panel-w),calc(100%-var(--rail-w)-16px))] shadow-pop;
   }
 
-  /* a phone on its side: the switch between the tabs of a group stays at the top, the tab scrolls under it (its sticky section heads no longer cover the switch) */
-  @variant phone-landscape {
-    @apply flex flex-col overflow-hidden;
-
-    & > :not([data-sheet-handle], [data-sheet-fixed]) {
-      @apply min-h-0 flex-1 overflow-y-auto overscroll-contain;
-    }
-  }
-
   @variant phone {
     /* it stops above the tab bar (`rail-frame`, 56 px): another tab is one touch away, the sheet then shows it */
-    @apply absolute inset-x-0 top-[calc(var(--phone-preview-h)+var(--phone-transport-h))] bottom-14 z-10 flex w-auto flex-col overflow-hidden rounded-t-md border-t border-r-0 shadow-pop;
+    @apply absolute inset-x-0 top-[calc(var(--phone-preview-h)+var(--phone-transport-h))] bottom-14 z-10 w-auto rounded-t-md border-t border-r-0 shadow-pop;
     animation: sheet-in 160ms ease-out;
 
     @media (prefers-reduced-motion: reduce) {
       animation: none;
-    }
-
-    /* (the switch between the tabs of a group stays above them, like the handle) */
-    & > :not([data-sheet-handle], [data-sheet-fixed]) {
-      @apply min-h-0 flex-1 overflow-y-auto overscroll-contain;
     }
 
     /* « Agrandir »: the sheet covers the view and the timeline, up to the top bar */

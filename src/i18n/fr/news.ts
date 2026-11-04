@@ -7,6 +7,13 @@ export default {
   'v55.titlebar.text': 'Dans l’application pour ordinateur, la barre du haut d’OpenFlyover sert aussi de barre de titre. Glissez-la pour déplacer la fenêtre, double-cliquez pour l’agrandir, et utilisez les trois boutons à droite d’« Exporter ». Une ligne de moins, et la même couleur partout. Sur Mac, les trois pastilles restent à gauche.',
   'v55.status.title': 'Une barre d’état plus calme',
   'v55.status.text': 'La barre du bas n’affiche plus que ce qui charge, et ce qui a échoué. Quand tout est prêt, elle ne dit rien. Les chiffres de performance sont derrière le bouton « i ».',
+  // 5.5 — families of tabs, folded summaries
+  'v55.groups.title': 'Cinq familles d’onglets',
+  'v55.groups.text': 'Sur ordinateur comme sur téléphone, la colonne de gauche montre cinq familles : Trace, Scène, Caméra, Habillage et Projet. Un sélecteur en haut du panneau passe d’un onglet à l’autre. Ctrl+K ouvre la bonne famille.',
+  'v55.summary.title': 'Un résumé sous chaque section repliée',
+  'v55.summary.text': 'Une section repliée dit ce qui y est réglé, par exemple « Unie · 4 px · Plein » pour la trace. Sur ordinateur, un onglet s’ouvre sur sa première section : vous ouvrez seulement ce que vous voulez changer.',
+  'v55.headings.title': 'Des titres faciles à distinguer',
+  'v55.headings.text': 'La section de la trace s’appelle « Style de la trace », pour ne plus la confondre avec la liste « Traces ». Les titres passent en Manrope, plus ronde, en minuscules : celui d’une section en gras, ses parties (Ligne, Halo) plus petites et plus claires.',
   'v50.margins.title': 'Des marges au choix',
   'v50.margins.text': 'La case « Marges de sécurité » de l’export garde l’habillage loin des bords et, en 9:16 et 4:5, hors des zones de Reels, TikTok et Shorts. Elle se coche d’elle-même quand vous choisissez une plateforme. Décochée, l’habillage se rapproche des bords et l’image entière sert au film.',
   'v50.modes.title': 'Trois modes d’interface',

@@ -42,7 +42,7 @@ const messages: Messages['marker'] = {
   'image.remove': 'Entfernen',
   'image.hint': 'Foto oder Avatar, rund zugeschnitten. Parallel behalten die anderen Tracks ihre Kugel.',
   'track.solid': 'Einfarbig',
-  'track.title': 'Track',
+  'track.title': 'Track-Stil',
   'track.lineGroup': 'Linie',
   'track.haloGroup': 'Leuchten',
   'track.drawOn': 'Track zeichnet sich',

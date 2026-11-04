@@ -90,7 +90,7 @@ const TAB_LABELS: Record<ShellTab, { label: string; icon: IconName }> = {
   reglages: { get label() { return translate('shell.tab.reglages') }, icon: 'sliders-horizontal' },
 }
 
-/** The tabs of a phone, in groups (`TAB_GROUPS`): Trace, Habillage and Projet keep the name of their first tab. */
+/** The tabs of the rail, in groups (`TAB_GROUPS`), on every device: Trace, Habillage and Projet keep the name of their first tab. */
 const GROUP_LABELS: Record<TabGroup, { label: string; icon: IconName }> = {
   trace: TAB_LABELS.trace,
   decor: { get label() { return translate('shell.group.decor') }, icon: 'mountain' },
@@ -99,7 +99,7 @@ const GROUP_LABELS: Record<TabGroup, { label: string; icon: IconName }> = {
   projet: TAB_LABELS.projet,
 }
 
-/** The tabs of the rail: a column on the side, a row in the phone bar (five groups of tabs there, `TAB_GROUPS`; the row still scrolls if a language makes them wider). */
+/** The tabs of the rail (five groups of tabs, `TAB_GROUPS`): a column on the side, a row in the phone bar (it still scrolls if a language makes them wider). */
 const TAB_LIST =
   'flex min-h-0 flex-col items-center gap-1 overflow-y-auto [scrollbar-width:none] ' +
   'phone:scroll-fade-x phone:flex-1 phone:flex-row phone:gap-0 phone:overflow-x-auto phone:overflow-y-hidden phone:overscroll-x-contain phone:px-1'
@@ -134,9 +134,6 @@ const subscribeTo = (media: string) => (onChange: () => void) => {
 /** The portrait phone layout (`BOTTOM_SHEET_QUERY`): preview on top, timeline, tab bar, half sheets. */
 const subscribePhone = subscribeTo(BOTTOM_SHEET_QUERY)
 const usePhone = () => useSyncExternalStore(subscribePhone, () => matchesQuery(BOTTOM_SHEET_QUERY))
-/** A phone either way up (`COMPACT_QUERY`): the tabs in groups. */
-const subscribeCompact = subscribeTo(COMPACT_QUERY)
-const useCompact = () => useSyncExternalStore(subscribeCompact, () => matchesQuery(COMPACT_QUERY))
 
 /** Escape is left to an open menu inside this element (it closes itself first). */
 const handlesOwnEscape = (target: EventTarget | null) => target instanceof Element && target.closest('[data-local-escape]') !== null
@@ -329,21 +326,18 @@ export default function App() {
   const tabs = shownTabs(shell)
   // the rail leaves out the tabs the mode hides (the search still finds their sections)
   const railTabs = useModeTabs(tabs)
-  const compact = useCompact()
-  // a phone: the tab of a group opens the one of its tabs last shown
+  // the tab of a group opens the one of its tabs last shown
   const [lastShown, setLastShown] = useState<Partial<Record<TabGroup, ShellTab>>>({})
   if (lastShown[groupOf(shell.tab)] !== shell.tab) setLastShown({ ...lastShown, [groupOf(shell.tab)]: shell.tab })
   const groupTabs = (group: TabGroup) => (TAB_GROUPS[group] as readonly ShellTab[]).filter((tab) => railTabs.includes(tab))
-  const railItems = compact
-    ? TAB_GROUP_IDS.filter((group) => groupTabs(group).length > 0).map((group) => {
-        const members = groupTabs(group)
-        const last = lastShown[group]
-        const id = members.includes(shell.tab) ? shell.tab : last && members.includes(last) ? last : members[0]!
-        return { key: group, id, members, ...GROUP_LABELS[group] }
-      })
-    : railTabs.map((tab) => ({ key: tab, id: tab, members: [tab], ...TAB_LABELS[tab] }))
-  /** the tabs of the open group, switched at the top of the sheet */
-  const siblings = compact ? groupTabs(groupOf(shell.tab)) : []
+  const railItems = TAB_GROUP_IDS.filter((group) => groupTabs(group).length > 0).map((group) => {
+    const members = groupTabs(group)
+    const last = lastShown[group]
+    const id = members.includes(shell.tab) ? shell.tab : last && members.includes(last) ? last : members[0]!
+    return { key: group, id, members, ...GROUP_LABELS[group] }
+  })
+  /** the tabs of the open group, switched at the top of the panel */
+  const siblings = groupTabs(groupOf(shell.tab))
   const [dragging, setDragging] = useState(false)
   // the export drawer is mounted on its first opening, or on the first export (« Capturer cette image »), and kept (export
   // progress, result, batch): it is what saves the file
@@ -732,7 +726,7 @@ export default function App() {
             {/* no title: the tab bar stays in sight under the sheet and shows the open tab, the first section names it again */}
             <SheetHandle onClose={() => dispatch({ type: 'fold' })} />
             {siblings.length > 1 && (
-              <div className="sticky top-0 z-1 flex-none bg-surface-panel px-3 pt-2 pb-2" data-sheet-fixed="" data-testid="tab-group-switch">
+              <div className="sticky top-0 z-1 flex-none bg-surface-panel px-4 pt-2 pb-2 phone-any:px-3" data-sheet-fixed="" data-testid="tab-group-switch">
                 <ToggleButtonGroup<ShellTab>
                   value={shell.tab}
                   onChange={(tab) => dispatch({ type: 'select-tab', tab, narrow: isNarrow() })}

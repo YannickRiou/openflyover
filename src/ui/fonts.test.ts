@@ -39,7 +39,9 @@ describe('embedded fonts', () => {
     const used = [
       ...OVERLAY_FONTS,
       '300 32px "Fraunces"',
-      '600 32px "Fraunces"', // headings (theme.css)
+      '600 32px "Fraunces"',
+      '700 16px "Manrope"', // headings of the interface (theme.css, utilities.css)
+      '600 13px "Manrope"',
       '700 32px "Fraunces"',
       '400 14px "IBM Plex Sans"', // body (index.css)
       '600 13px "IBM Plex Sans"', // buttons, 3D labels

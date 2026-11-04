@@ -454,10 +454,10 @@ Semantic roles over the palette (component CSS uses these): `--surface-chrome`, 
 `--shadow-pop`. Selected states (tiles, chips, switches, sliders, checkboxes) are in the accent; segmented controls
 are a card well with a white pill; the only filled accent buttons are the primary action of a view.
 
-Headings: IBM Plex Sans Condensed (`--font-heading`; a section title in spaced capitals, `panel-title`); body and buttons: IBM
+Headings: Manrope (`--font-heading`; a section title in bold sentence case, `panel-title`; a part of a section in semi-bold, smaller and muted, `panel-subtitle`; a row name in IBM Plex Sans, `type-label`); body and buttons: IBM
 Plex Sans; the map and the overlay may take Barlow Semi Condensed 600/700 (`barlow` in `OVERLAY_FONT_IDS`); Fraunces stays
 among the fonts of the overlay and the posters. Fonts **bundled** (no network access): WOFF2 in `public/fonts/` (Fraunces
-variable opsz + wght, IBM Plex Sans variable wght, IBM Plex Sans Condensed 500/600/700, Barlow Semi Condensed 600/700), `latin` and `latin-ext` subsets declared through `unicode-range` in
+variable opsz + wght, IBM Plex Sans variable wght, IBM Plex Sans Condensed 500/600/700 for the film, Barlow Semi Condensed 600/700, Manrope 600/700), `latin` and `latin-ext` subsets declared through `unicode-range` in
 `src/ui/fonts.css` (imported by `src/main.tsx`); the browser downloads a subset only if a character requires it.
 Sources, versions and licenses: `public/fonts/README.md`. `src/ui/fonts.test.ts` checks that every referenced file exists and
 that every drawn font (UI, overlay, 3D labels) has its face. Text contrast ≥ 4.5:1.
@@ -544,7 +544,7 @@ pointer (`appearance.css`).
   entries of « Mes projets » but the open one (`useLibraryStore`, kept fresh by the always-mounted Projet tab), and links:
   « Premiers pas » (the user guide, published with the site by `pages.yml` under `docs/`), the desktop installers of the
   latest release (website only) and GitHub.
-- **Rail and panel**: vertical rail of icon + label tabs (64 px; `Tabs` primitive: `tablist`, one tab stop, arrows (up / down in the rail, left / right in the phone's bar) and Home / End, a press on the open tab folds the panel) and a
+- **Rail and panel**: vertical rail of icon + label tabs, five groups on every device (`TAB_GROUPS`: Trace, Scène (Carte, Météo, Lumière), Caméra (Survol, Objectif), Habillage, Projet (Projet, Réglages); a group opens the tab of it last shown, a `ToggleButtonGroup` at the top of the panel, `data-sheet-fixed`, switches between its tabs; Ctrl+K and the saved tab name a tab, its group follows) (64 px; `Tabs` primitive: `tablist`, one tab stop, arrows (up / down in the rail, left / right in the phone's bar) and Home / End, a press on the open tab folds the panel) and a
   320 px panel, one tab at a time, nine tabs in montage order (`SHELL_TABS`), one question each: **Trace** (track; track list with "+ Ajouter" (add; a menu: « Fichiers GPX ou FIT… », « Activités Strava… »), waiting message without a track, then the « Trace » line settings, « Marqueur » and « Étiquettes », hidden without a track),
   **Carte** (map; base map and water, relief, OSM landmarks and points of interest),
   **Météo** (weather; weather of the outing, clouds, weather in the image), **Lumière** (light; atmosphere, shadows,
@@ -695,8 +695,8 @@ pointer (`appearance.css`).
     « ⋯ » (`FilmOptions` with an `extra` part: playback speed, mute when there is sound, snapping, clear the work area); no ■,
     readout, zoom nor fold), the timeline (`Timeline` `centred`, below; its empty lanes are not drawn, `emptyLanes`, and a dashed
     « Texte, photo, musique » row under them, sticky to the left, opens the same menu), the bottom tab bar (five groups of tabs,
-    `TAB_GROUPS` in `shell.ts`, a fifth of the width each; a group opens the tab of it last shown, a `ToggleButtonGroup` at the top
-    of the sheet, `data-sheet-fixed`, switches between its tabs; the same groups in the rail of a landscape phone, `COMPACT_QUERY`),
+    `TAB_GROUPS` in `shell.ts`, a fifth of the width each; the same groups, with the same switch at the top of the panel, in the rail of
+    a landscape phone and of a computer),
     the status bar. Panel, export drawer and inspector are half sheets from under the transport row, over the timeline,
     never over the preview; the panel stops above the tab bar (`bottom-14`: another tab is one touch away), the export
     drawer and the inspector go down to the status bar (sliding in, not under `prefers-reduced-motion`). Their
@@ -731,11 +731,13 @@ pointer (`appearance.css`).
     (`tap`), a long press shows any other tip. Every other `:hover` style sits in `@media (hover: hover)`,
     in place (same cascade on a computer): no grey background or border left on a button after a tap.
 - **Sections of the tabs** (`PanelSection.tsx`): `PanelSection` = flat collapsible section (`fold-head` utility,
-  sticky header: title, the ↺ "modifié" reset button of its keys, chevron), open initially, then as last left: open / folded
+  sticky header: title and, folded, its optional one-line `summary` (what is set, worded by the section's component: « Unie · 4 px · Plein »),
+  the ↺ "modifié" reset button of its keys, chevron), then as last left, else open on a phone and, on a computer, open only for the first
+  section of its tab (`useLayoutEffect` on mount: the others fold): open / folded
   state remembered by title in the platform storage (`FOLDS_KEY` `openflyover.folds.v1`, `parseFoldPrefs` in `shell.ts`,
   read once on mount, written on `toggle`; without storage or with an unreadable value every section opens; a title no longer used is ignored). Carte: "Fond de carte" (base map)
   (imagery, water), "Relief" (exaggeration), "Repères et points d'intérêt" (`LandmarkPanel`, absent without a track).
-  Trace: « Trace » (line settings, track colouring included; `TrackStyleSection`), « Marqueur » (`MarkerSection`). The 3D labels are all in « Habillage » › « Étiquettes 3D » (`LabelSettings`, `LabelColors`, the `labels` keys). Réglages: « Apparence », « Barre d'état », « Timeline » (`PreferencesPanel`).
+  Trace: « Style de la trace » (line settings, track colouring included; `TrackStyleSection`), « Marqueur » (`MarkerSection`). The 3D labels are all in « Habillage » › « Étiquettes 3D » (`LabelSettings`, `LabelColors`, the `labels` keys). Réglages: « Apparence », « Barre d'état », « Timeline » (`PreferencesPanel`).
   Météo: "Météo de la sortie" (`WeatherPanel`), "Nuages" (clouds), "Pluie et brume" (weather in the scene and its intensity;
   `WeatherSettings`). Lumière: "Atmosphère" (atmosphere, shadows, exposure), "Soleil" (sun time and date; `LightSettings`), « Jours et nuits » (`NightSettings`: « Montrer les nuits », « Crépuscule » / « Nuit » / « Aube » in seconds, « Cartes de jour »: switch, informations, titre, position, taille, couleurs et polices, durée, « Vue haute pendant la nuit »; `film.dayCards`),
   "Couleurs" (`GradingPanel`). Survol: "Caméra" (camera; preset tiles, each implying a style, north up),

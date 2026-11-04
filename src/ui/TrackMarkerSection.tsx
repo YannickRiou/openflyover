@@ -158,7 +158,7 @@ const TRACK_BEYOND_WIDTH: SettingPath[] = ['trackTail', 'trackColorBy', 'trackLe
 const MARKER_BEYOND_SHAPE = pathsBut('marker', DEFAULT_MARKER, 'kind')
 
 /** Heading of a part of a section (« Ligne », « Halo », « Vol »). */
-const GROUP = 'border-t border-edge pt-2 font-body text-hint font-semibold tracking-wider text-text-2 uppercase first:border-t-0 first:pt-0'
+const GROUP = 'panel-subtitle border-t border-edge pt-2 first:border-t-0 first:pt-0'
 
 export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   const t = useT()
@@ -188,7 +188,10 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   )
 
   return (
-    <PanelSection title={t('marker.track.title')} keys={['trackColorBy', 'trackLegendAnchor', 'trackStyle', 'trackTail', 'trackRibbon']} hidden={hidden}>
+    <PanelSection
+      title={t('marker.track.title')}
+      summary={[trackColorBy === 'none' ? t('marker.track.solid') : TRACK_METRICS[trackColorBy].label, `${formatShort(style.width)} px`, TRACK_DASH_LABELS[style.dash]].join(' · ')}
+      keys={['trackColorBy', 'trackLegendAnchor', 'trackStyle', 'trackTail', 'trackRibbon']} hidden={hidden}>
       <ModeGate min="confirme" paths={TRACK_BEYOND_WIDTH}>
       <h3 className={GROUP}>{t('marker.track.lineGroup')}</h3>
       <div className="flex items-center gap-1">
@@ -458,7 +461,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
   const model3dAlways = figurine && marker.model3d && markerKeys.every((key) => key.kind === 'figurine')
 
   return (
-    <PanelSection title={t('marker.section.title')} keys={['marker', 'markerValue']} hidden={hidden}>
+    <PanelSection title={t('marker.section.title')} summary={MARKER_KIND_LABELS[marker.kind]} keys={['marker', 'markerValue']} hidden={hidden}>
       {/* from the first marker key on, the keys give the marker its look */}
       <ModeGate min="expert" paths={['film.markerKeys']}>
       {markerKeyCount > 0 && <p className="type-hint">{t('marker.section.keyed', { count: markerKeyCount })}</p>}

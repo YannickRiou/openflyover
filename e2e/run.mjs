@@ -58,6 +58,20 @@ const seconds = (ms) => `${(ms / 1000).toFixed(1)} s`
 
 /** The tabs of the side panel, in the order of the rail (SHELL_TABS in src/ui/shell.ts). */
 const TABS = ['trace', 'carte', 'meteo', 'lumiere', 'survol', 'objectif', 'habillage', 'projet', 'reglages']
+/** The rail shows five groups of tabs (`TAB_GROUPS`): the tab of a group, then its switch in the panel. */
+const GROUP_IDS = ['trace', 'decor', 'camera', 'habillage', 'projet']
+const GROUPS = { trace: 'trace', carte: 'decor', meteo: 'decor', lumiere: 'decor', survol: 'camera', objectif: 'camera', habillage: 'habillage', projet: 'projet', reglages: 'projet' }
+const TAB_NAMES = { carte: 'Carte', meteo: 'Météo', lumiere: 'Lumière', survol: 'Survol', objectif: 'Objectif', projet: 'Projet', reglages: 'Réglages' }
+/** Shows the tab `tab` with its panel unfolded: its group in the rail (a click on the open group would fold the panel), then the button of its switch. */
+async function showTab(page, tab) {
+  const shown = () => page.evaluate((t) => document.querySelector(`[data-testid="tab-panel-${t}"]`)?.getAttribute('role') === 'tabpanel' && !document.querySelector('[data-testid="side-panel"]')?.hidden, tab)
+  if (await shown()) return
+  const group = GROUPS[tab]
+  const folded = await page.evaluate((g) => document.querySelector(`[data-testid="tab-${g}"]`)?.getAttribute('aria-selected') === 'true', group)
+  if (!folded || (await page.$eval('[data-testid="side-panel"]', (el) => el.hidden))) await page.click(`[data-testid="tab-${group}"]`)
+  if (!(await shown())) await page.click(`[data-testid="tab-group-switch"] button::-p-text(${TAB_NAMES[tab]})`)
+  await until(page, (t) => document.querySelector(`[data-testid="tab-panel-${t}"]`)?.getAttribute('role') === 'tabpanel', tab)
+}
 
 /** Waits until `fn` (run in the page) returns a truthy value. */
 const until = (page, fn, arg, timeout = STEP_MS) => page.waitForFunction(fn, { timeout, polling: 250 }, arg)
@@ -245,7 +259,7 @@ const SCENARIOS = [
       })
       assert(!(await page.$('[data-testid="empty-state"]')), "l'accueil est resté affiché après le chargement de l'exemple")
       // the tabs come back, on « Trace »
-      await until(page, (all) => [...document.querySelectorAll('[role="tablist"] [role="tab"]')].map((t) => t.dataset.testid.replace('tab-', '')).join() === all, TABS.join())
+      await until(page, (all) => [...document.querySelectorAll('[role="tablist"] [role="tab"]')].map((t) => t.dataset.testid.replace('tab-', '')).join() === all, GROUP_IDS.join())
       assert(await page.$eval('[data-testid="tab-trace"]', (t) => t.getAttribute('aria-selected') === 'true'), "l'onglet Trace n'est pas ouvert après l'exemple")
       assert(await page.$('[data-testid="topbar-export"]'), "« Exporter » manque après l'exemple")
       // the project name is a text field named by its label: typing renames the project
@@ -262,14 +276,9 @@ const SCENARIOS = [
     title: 'Onglets du rail et aide des raccourcis',
     async run({ page }) {
       const shown = await page.$$eval('[role="tablist"] [role="tab"]', (tabs) => tabs.map((t) => t.dataset.testid.replace('tab-', '')))
-      assert(shown.join() === TABS.join(), `onglets du rail : ${shown.join(', ')}`)
+      assert(shown.join() === GROUP_IDS.join(), `groupes du rail : ${shown.join(', ')}`)
       for (const tab of TABS) {
-        const open = await page.evaluate(
-          (t) => document.querySelector(`[data-testid="tab-${t}"]`)?.getAttribute('aria-selected') === 'true' && !document.querySelector('[data-testid="side-panel"]')?.hidden,
-          tab,
-        )
-        // a click on the open tab folds the panel
-        if (!open) await page.click(`[data-testid="tab-${tab}"]`)
+        await showTab(page, tab)
         await until(
           page,
           (t) => {
@@ -296,19 +305,19 @@ const SCENARIOS = [
         await page.keyboard.press(key)
         await until(page, (t) => document.activeElement?.dataset.testid === t && document.querySelector('[role="tab"][aria-selected="true"]')?.dataset.testid === t, expected)
       }
-      await page.focus('[data-testid="tab-reglages"]')
+      await page.focus('[data-testid="tab-projet"]')
       assert(await page.$eval('[data-testid="side-panel"]', (el) => !el.hidden), 'le focus clavier sur l’onglet ouvert replie le panneau')
       await press('Home', 'tab-trace')
-      await press('ArrowDown', 'tab-carte')
-      await press('End', 'tab-reglages')
+      await press('ArrowDown', 'tab-decor')
+      await press('End', 'tab-projet')
       await press('ArrowDown', 'tab-trace')
-      await press('ArrowUp', 'tab-reglages')
+      await press('ArrowUp', 'tab-projet')
       const tabStops = await page.$$eval('[role="tablist"] [role="tab"]', (all) => all.filter((t) => t.tabIndex === 0).map((t) => t.dataset.testid))
-      assert(tabStops.join() === 'tab-reglages', `un seul onglet dans l'ordre de tabulation : ${tabStops.join(', ')}`)
+      assert(tabStops.join() === 'tab-projet', `un seul onglet dans l'ordre de tabulation : ${tabStops.join(', ')}`)
       // the open tab pressed again folds the panel (with the mouse, with Enter), pressed once more shows it
-      await page.click('[data-testid="tab-reglages"]')
+      await page.click('[data-testid="tab-projet"]')
       await until(page, () => document.querySelector('[data-testid="side-panel"]')?.hidden)
-      await page.click('[data-testid="tab-reglages"]')
+      await page.click('[data-testid="tab-projet"]')
       await until(page, () => !document.querySelector('[data-testid="side-panel"]')?.hidden)
       await page.keyboard.press('Enter')
       await until(page, () => document.querySelector('[data-testid="side-panel"]')?.hidden)
@@ -357,7 +366,7 @@ const SCENARIOS = [
     id: 'diagnostic',
     title: 'Rapport de diagnostic (onglet Réglages) : appareil et réglages, sans nom de trace',
     async run({ page }) {
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-reglages"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-reglages"]')
+      await showTab(page, 'reglages')
       await page.click('[data-testid="tab-panel-reglages"] [data-testid="setting-row-head"]::-p-text(Diagnostic)')
       await clickButton(page, 'Afficher le rapport')
       await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
@@ -374,7 +383,7 @@ const SCENARIOS = [
     id: 'couleur',
     title: 'Couleur (onglet Réglages) : préréglage en un geste, panneau pour une couleur libre, Échap rend le focus',
     async run({ page }) {
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-reglages"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-reglages"]')
+      await showTab(page, 'reglages')
       // a preset: one tap, the choice announced as selected
       const indigo = await page.waitForSelector('[role="option"][aria-label="Couleur d\'accentuation : Indigo"]', { visible: true, timeout: STEP_MS })
       await indigo.click()
@@ -407,9 +416,7 @@ const SCENARIOS = [
     id: 'reglage-repli',
     title: 'Réglage replié (onglet Lumière) : nom et valeur, curseur au clavier, retour par défaut (↺)',
     async run({ page }) {
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-lumiere"]')?.getAttribute('aria-selected') !== 'true')) {
-        await page.click('[data-testid="tab-lumiere"]')
-      }
+      await showTab(page, 'lumiere')
       const head = '[data-testid="tab-panel-lumiere"] [data-testid="setting-row-head"]::-p-text(Exposition)'
       const rowState = () =>
         page.evaluate(() => {
@@ -454,23 +461,23 @@ const SCENARIOS = [
           const { settings, setSetting } = window.__e2e.appStore.getState()
           setSetting(k, { ...settings[k], ...p })
         }, key, patch)
-      const dot = (tab) => page.evaluate((t) => !!document.querySelector(`[data-testid="tab-${t}"] [data-testid="tab-weight"]`), tab)
+      const dot = (tab) => page.evaluate((t) => !!document.querySelector(`[data-testid="tab-${t}"] [data-testid="tab-weight"]`), GROUPS[tab])
       try {
         // clouds « Fine »: three bars, « lourd », and the dot on « Météo »
         await set('clouds', { mode: 'meteo', quality: 'high' })
-        await page.click('[data-testid="tab-meteo"]')
+        await showTab(page, 'meteo')
         await page.waitForSelector('[data-testid="tab-panel-meteo"] [data-testid="setting-row-label"] [data-testid="render-weight"][data-tier="3"]', { timeout: STEP_MS })
         const name = await page.$eval('[data-testid="tab-panel-meteo"] [data-testid="setting-row-label"] [data-testid="render-weight"]', (el) => el.textContent)
         assert(name === 'Poids de rendu : lourd', `nom accessible du pictogramme : ${name}`)
-        await until(page, () => !!document.querySelector('[data-testid="tab-meteo"] [data-testid="tab-weight"]'))
+        await until(page, () => !!document.querySelector('[data-testid="tab-decor"] [data-testid="tab-weight"]'))
         // « Aucun »: no pictogram, no dot
         await set('clouds', { mode: 'aucun' })
-        await until(page, () => !document.querySelector('[data-testid="tab-panel-meteo"] [data-testid="render-weight"]') && !document.querySelector('[data-testid="tab-meteo"] [data-testid="tab-weight"]'))
+        await until(page, () => !document.querySelector('[data-testid="tab-panel-meteo"] [data-testid="render-weight"]') && !document.querySelector('[data-testid="tab-decor"] [data-testid="tab-weight"]'))
         // « Moyenne » with the motion blur: the dot moves to « Objectif »
         await set('clouds', { mode: 'meteo', quality: 'medium' })
         assert(!(await dot('meteo')) && !(await dot('objectif')), 'point sur un onglet avec les réglages par défaut')
         await set('lens', { shutter: 0.5 })
-        await until(page, () => !!document.querySelector('[data-testid="tab-objectif"] [data-testid="tab-weight"]'))
+        await until(page, () => !!document.querySelector('[data-testid="tab-camera"] [data-testid="tab-weight"]'))
         assert(!(await dot('meteo')), 'point sur Météo avec des nuages « Moyenne »')
       } finally {
         await set('clouds', { mode: 'meteo', quality: 'medium' })
@@ -491,7 +498,7 @@ const SCENARIOS = [
       // a click on the open tab folds the panel
       const openTab = async (tab) => {
         const shown = await page.evaluate((t) => document.querySelector(`[data-testid="tab-panel-${t}"]`)?.offsetParent !== null, tab)
-        if (!shown) await page.click(`[data-testid="tab-${tab}"]`)
+        if (!shown) await showTab(page, tab)
       }
       const badge = (tab, knob) => page.evaluate((t, k) => document.querySelector(`[data-testid="tab-panel-${t}"] [data-testid="preset-badge-${k}"]`)?.textContent ?? null, tab, knob)
       try {
@@ -666,7 +673,7 @@ const SCENARIOS = [
       await waitForScene(page)
       const traceOpen = () =>
         page.evaluate(() => document.querySelector('[data-testid="tab-trace"]')?.getAttribute('aria-selected') === 'true' && !document.querySelector('[data-testid="side-panel"]')?.hidden)
-      if (!(await traceOpen())) await page.click('[data-testid="tab-trace"]')
+      if (!(await traceOpen())) await showTab(page, 'trace')
       await until(page, () => !document.querySelector('[data-testid="tab-panel-trace"]')?.hidden)
       const inspectorShown = () => page.evaluate(() => document.querySelector('aside[aria-label="Inspecteur"]')?.hidden === false)
       const focusedText = () => page.evaluate(() => document.activeElement?.textContent.trim())
@@ -802,7 +809,7 @@ const SCENARIOS = [
     id: 'heure',
     title: 'Réglages › Timeline : « Afficher l’heure enregistrée » montre l’heure de la trace dans la barre de la timeline',
     async run({ page }) {
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-reglages"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-reglages"]')
+      await showTab(page, 'reglages')
       const toggle = await switchOf(page, 'reglages', "Afficher l'heure enregistrée")
       assert(!(await page.$('[data-testid="timeline-clock"]')), 'l’heure est affichée avant d’avoir été demandée')
       await toggle.evaluate((el) => el.click())
@@ -816,7 +823,7 @@ const SCENARIOS = [
     id: 'cartes',
     title: 'Titre d’ouverture et carte de clôture : blocs de la piste Textes, inspecteur, Suppr les désactive',
     async run({ page }) {
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-habillage"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-habillage"]')
+      await showTab(page, 'habillage')
       const overlay = await switchOf(page, 'habillage', "Afficher l'habillage")
       const cards = () => page.$$eval('[role="group"][aria-label="Textes"] [data-item^="card-"]', (blocks) => blocks.map((b) => b.getAttribute('title')))
       assert((await cards()).length === 0, 'des cartes sont affichées sans habillage')
@@ -839,7 +846,7 @@ const SCENARIOS = [
     id: 'cles-etiquettes',
     title: 'Habillage › Étiquettes 3D : une clé crée la piste « Étiquettes », Suppr la retire',
     async run({ page }) {
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-habillage"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-habillage"]')
+      await showTab(page, 'habillage')
       const lane = '[role="group"][aria-label="Étiquettes"]'
       assert(!(await page.$(lane)), 'la piste Étiquettes existe sans clé')
       await page.click('button[aria-label="Étiquettes : ajouter une clé"]')
@@ -854,7 +861,7 @@ const SCENARIOS = [
     id: 'reperes',
     title: 'Repères et points d’intérêt (onglet Carte) : un point au marqueur, son arrêt coché puis décoché, vu sur la timeline',
     async run({ page }) {
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-carte"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-carte"]')
+      await showTab(page, 'carte')
       const stops = await laneCount(page, 'Arrêts')
       await clickButton(page, "Point d'intérêt au marqueur")
       const box = '[data-testid="tab-panel-carte"] [data-testid="place"] input[aria-label^="Arrêt dans le film à « Point d"]'
@@ -946,9 +953,7 @@ const SCENARIOS = [
               ?.querySelector('[data-testid="setting-row-value"]').textContent ?? '',
         )
       // the sample is kept in « Mes projets » by itself: a change is written by the autosave (« Enregistré » again)
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-lumiere"]')?.getAttribute('aria-selected') !== 'true')) {
-        await page.click('[data-testid="tab-lumiere"]')
-      }
+      await showTab(page, 'lumiere')
       // centred first: scrolled to the top edge, the row would sit under the sticky section title and the click hit it
       await page.$eval('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-head"]::-p-text(Exposition)', (el) => el.scrollIntoView({ block: 'center' }))
       await page.click('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-head"]::-p-text(Exposition)')

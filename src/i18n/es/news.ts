@@ -9,6 +9,13 @@ const messages: Messages['news'] = {
   'v55.titlebar.text': 'En la aplicación de escritorio, la barra superior de OpenFlyover es ahora también la barra de título. Arrástrala para mover la ventana, haz doble clic para agrandarla y usa los tres botones a la derecha de «Exportar». Una fila menos y el mismo color en todo el ancho. En Mac, los tres botones redondos siguen a la izquierda.',
   'v55.status.title': 'Una barra de estado más tranquila',
   'v55.status.text': 'La barra de abajo solo muestra lo que se está cargando y lo que ha fallado. Cuando todo está listo, no dice nada. Las cifras de rendimiento están tras el botón «i».',
+  // 5.5 — families of tabs, folded summaries
+  'v55.groups.title': 'Cinco grupos de pestañas',
+  'v55.groups.text': 'En el ordenador como en el teléfono, la columna de la izquierda muestra cinco grupos: Track, Escena, Cámara, Gráficos y Proyecto. Un selector en la parte superior del panel pasa de una pestaña a otra. Ctrl+K abre el grupo correcto.',
+  'v55.summary.title': 'Un resumen bajo cada sección plegada',
+  'v55.summary.text': 'Una sección plegada dice qué hay ajustado en ella, por ejemplo «Uniforme · 4 px · Continuo» para el track. En el ordenador, una pestaña se abre con su primera sección: abres solo lo que quieres cambiar.',
+  'v55.headings.title': 'Títulos fáciles de distinguir',
+  'v55.headings.text': 'La sección del track se llama ahora «Estilo del track», para no confundirla con la lista «Tracks». Los títulos pasan a Manrope, una letra más redonda, en minúsculas: en negrita para una sección, más pequeños y claros para sus partes (Línea, Halo).',
   'v50.margins.title': 'Márgenes a elección',
   'v50.margins.text': 'La casilla «Márgenes de seguridad» de la exportación aleja los gráficos de los bordes y, en 9:16 y 4:5, de las zonas de Reels, TikTok y Shorts. Se marca sola al elegir una plataforma. Sin marcar, los gráficos se acercan a los bordes y toda la imagen sirve a la película.',
   'v50.modes.title': 'Tres modos de interfaz',

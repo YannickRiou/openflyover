@@ -169,7 +169,7 @@ function InspectorGroup({ title, children }: { title: string; children: ReactNod
   const id = useId()
   return (
     <section className="flex flex-col gap-3 border-t border-edge pt-3" aria-labelledby={id}>
-      <h3 id={id} className="type-hint font-semibold tracking-wider uppercase">
+      <h3 id={id} className="panel-subtitle">
         {title}
       </h3>
       {children}
