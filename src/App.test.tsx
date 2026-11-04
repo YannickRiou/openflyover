@@ -160,6 +160,8 @@ describe('App shell: the tabs in five groups', () => {
 
   it('opens the group and the tab of a section found with Ctrl+K', async () => {
     getPlatform().storage.set(PREFERENCES_KEY, JSON.stringify({ language: 'fr' }))
+    // the tab a test before left open is remembered: start from the first one
+    getPlatform().storage.remove('openflyover.shell.v1')
     ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
     Element.prototype.scrollIntoView = () => {}
     const segments = [{ points: [6.8, 6.81, 6.82].map((lon) => ({ lon, lat: 45.9 })) }]
