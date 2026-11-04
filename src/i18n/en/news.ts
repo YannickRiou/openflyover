@@ -16,6 +16,8 @@ const messages: Messages['news'] = {
   'v55.summary.text': 'A folded section says what is set in it, for example “Solid · 4 px · Dashes” for the track. On a computer a tab opens on its first section: you open only what you want to change.',
   'v55.headings.title': 'Headings that are easy to tell apart',
   'v55.headings.text': 'The track section is now called “Track style”, so it is no longer mistaken for the “Tracks” list. Headings are now in Manrope, a rounder font, in sentence case: bold for a section, smaller and lighter for its parts (Line, Glow).',
+  'v55.pictures.title': 'A picture for each choice',
+  'v55.pictures.text': 'In the Trace tab, the marker’s shape (ball, figurine, picture), the style of the ball (disc, halo, pulsation) and the line style (solid, dashed, dotted) each become a tile on one rail, with a small drawing above its word. You tell them apart at a glance.',
   'v50.margins.title': 'Margins when you want them',
   'v50.margins.text': 'The “Marges de sécurité” box of the export keeps the overlay away from the edges and, in 9:16 and 4:5, out of the areas of Reels, TikTok and Shorts. It ticks itself when you pick a platform. Unticked, the overlay moves close to the edges and the whole picture serves the film.',
   'v50.modes.title': 'Three interface modes',

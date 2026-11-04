@@ -16,6 +16,8 @@ const messages: Messages['news'] = {
   'v55.summary.text': 'Una sección plegada dice qué hay ajustado en ella, por ejemplo «Uniforme · 4 px · Continuo» para el track. En el ordenador, una pestaña se abre con su primera sección: abres solo lo que quieres cambiar.',
   'v55.headings.title': 'Títulos fáciles de distinguir',
   'v55.headings.text': 'La sección del track se llama ahora «Estilo del track», para no confundirla con la lista «Tracks». Los títulos pasan a Manrope, una letra más redonda, en minúsculas: en negrita para una sección, más pequeños y claros para sus partes (Línea, Halo).',
+  'v55.pictures.title': 'Una imagen para cada opción',
+  'v55.pictures.text': 'En la pestaña Track, la forma del marcador (bola, figurita, imagen), el estilo de la bola (disco, halo, pulso) y el trazo de la línea (continuo, rayas, puntos) forman cada uno una fila de casillas, con un pequeño dibujo sobre la palabra. Se distinguen de un vistazo.',
   'v50.margins.title': 'Márgenes a elección',
   'v50.margins.text': 'La casilla «Márgenes de seguridad» de la exportación aleja los gráficos de los bordes y, en 9:16 y 4:5, de las zonas de Reels, TikTok y Shorts. Se marca sola al elegir una plataforma. Sin marcar, los gráficos se acercan a los bordes y toda la imagen sirve a la película.',
   'v50.modes.title': 'Tres modos de interfaz',

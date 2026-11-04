@@ -3,6 +3,7 @@
  * of theme.css, without the round control: the option itself is what is drawn. `look="segmented"`: options side by side
  * in one frame, the chosen one raised; `look="chips"`: see chip.css; `look="plain"`: the CSS of the screen draws them
  * (its hook is `.option__label`, the clickable label of an option, which holds the hidden native radio).
+ * The rail has the radius of the panels' cards and its tiles the radius left inside its padding, so the corners are concentric.
  * The group is horizontal, so its selectors carry `[data-orientation]` to come after HeroUI's.
  */
 @layer components {
@@ -11,7 +12,7 @@
   gap: 2px;
   padding: 2px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--surface-card);
 }
 
@@ -23,6 +24,17 @@
 /* many options (the eight overlay styles): they wrap onto several rows instead of overflowing sideways */
 .segmented--wrap[data-orientation] {
   flex-wrap: wrap;
+}
+
+/* a list of options with a picture each (the figures of the marker): tiles of equal size, three to a row */
+.segmented--grid[data-orientation] {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* a word on two lines (« Selon l'activité ») must not push the pictures of its row out of line */
+.segmented--grid .segmented__option .radio__content {
+  align-items: flex-start;
 }
 
 .segmented__option {
@@ -42,12 +54,16 @@
   justify-content: center;
   gap: 0;
   padding: 5px var(--space-2);
-  border-radius: 4px;
+  border-radius: calc(var(--radius-md) - 3px);
   color: var(--text-2);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.2;
+  overflow-wrap: anywhere;
   text-align: center;
+  transition:
+    background-color 150ms ease-out,
+    box-shadow 150ms ease-out;
 }
 
 @media (hover: hover) {
@@ -65,6 +81,17 @@
 .segmented__option .radio__content[data-focus-visible='true'] {
   outline: var(--focus-ring);
   outline-offset: -2px;
+}
+
+/* the raised tile of the dark theme is lighter than its rail, as the white tile is on the paper */
+:root[data-theme='dark'] .segmented__option .radio__content[data-selected='true'] {
+  background: color-mix(in srgb, var(--surface-card) 78%, var(--text-1));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segmented__option .radio__content {
+    transition: none;
+  }
 }
 
 /* a disabled option is still hovered (its `title` says why) and keeps its place */

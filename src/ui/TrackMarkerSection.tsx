@@ -40,7 +40,7 @@ import {
   TRACK_TAIL_LENGTH_RANGE,
   TRACK_WIDTH_RANGE,
 } from '../scene/markerSettings'
-import type { MarkerFigure, MarkerSettings, TrackRibbonSettings, TrackStyle, TrackTailSettings } from '../scene/markerSettings'
+import type { MarkerBallStyle, MarkerFigure, MarkerKind, MarkerSettings, TrackDash, TrackRibbonSettings, TrackStyle, TrackTailSettings } from '../scene/markerSettings'
 import type { SettingPath } from '../project/apply'
 import { addJunctionMarkerKeys, useFilmSequence, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
@@ -78,8 +78,53 @@ function FigureIcon({ figure }: { figure: MarkerFigure }) {
   )
 }
 
-/** One choice among `options`, as chips (radio buttons). */
-function ChipChoice<T extends string>({
+/** A choice drawn as a small picture, 28 × 16: lines in the text colour, the marker in the accent, so both themes read it. */
+function ChoicePicture({ children }: { children: ReactNode }) {
+  return (
+    <svg width={28} height={16} viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true" focusable="false">
+      {children}
+    </svg>
+  )
+}
+
+/** The ball in its three styles: a plain disc, a soft halo around it, rings spreading out of it. */
+function BallStylePicture({ ballStyle }: { ballStyle: MarkerBallStyle }) {
+  return (
+    <ChoicePicture>
+      {ballStyle === 'halo' && <circle cx={14} cy={8} r={7.5} className="fill-brand opacity-40" stroke="none" />}
+      {ballStyle === 'pulsation' && (
+        <>
+          <circle cx={14} cy={8} r={5.5} className="stroke-brand opacity-70" strokeWidth={1.5} />
+          <circle cx={14} cy={8} r={7.5} className="stroke-brand opacity-35" strokeWidth={1.5} />
+        </>
+      )}
+      <circle cx={14} cy={8} r={ballStyle === 'plat' ? 5 : 3.5} className="fill-brand" stroke="none" />
+    </ChoicePicture>
+  )
+}
+
+/** The kind of marker: the ball, the figure of the activity, a picture frame. */
+function MarkerKindPicture({ kind, figure }: { kind: MarkerKind; figure: MarkerFigure }) {
+  if (kind === 'figurine') return <FigureIcon figure={figure} />
+  if (kind === 'image') return <Icon name="image" size={16} />
+  return (
+    <ChoicePicture>
+      <circle cx={14} cy={8} r={5} className="fill-brand" stroke="none" />
+    </ChoicePicture>
+  )
+}
+
+/** The line of the track: a stretch drawn solid, dashed or dotted. */
+function DashPicture({ dash }: { dash: TrackDash }) {
+  return (
+    <ChoicePicture>
+      <path d="M2 8h24" strokeLinecap="round" strokeDasharray={dash === 'tirets' ? '5 4' : dash === 'points' ? '0 5' : undefined} />
+    </ChoicePicture>
+  )
+}
+
+/** One choice among `options`, as a rail of tiles (radio buttons), the picture of each above its word; a long list wraps into a grid. */
+function SegmentedChoice<T extends string>({
   label,
   options,
   value,
@@ -97,11 +142,13 @@ function ChipChoice<T extends string>({
   return (
     <fieldset className="field m-0 min-w-0 border-0 p-0">
       <legend className="type-label mb-1 p-0">{label}</legend>
-      <RadioGroup look="chips" aria-label={label} value={value} onChange={onChange}>
+      <RadioGroup aria-label={label} className={options.length > 4 ? 'segmented--grid' : undefined} value={value} onChange={onChange}>
         {options.map((option) => (
           <Radio key={option} value={option}>
-            {icon?.(option)}
-            {labels[option]}
+            <span className="flex flex-col items-center gap-1">
+              {icon?.(option)}
+              {labels[option]}
+            </span>
           </Radio>
         ))}
       </RadioGroup>
@@ -320,11 +367,12 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
       </SettingRow>
       <ModeGate min="confirme" paths={TRACK_BEYOND_WIDTH}>
       <SettingRow label={t('marker.track.dash')} value={TRACK_DASH_LABELS[style.dash]} paths={['trackStyle.dash']}>
-        <ChipChoice
+        <SegmentedChoice
           label={t('marker.track.dash')}
           options={TRACK_DASHES}
           value={style.dash}
           labels={TRACK_DASH_LABELS}
+          icon={(dash) => <DashPicture dash={dash} />}
           onChange={(dash) => updateStyle({ dash })}
         />
       </SettingRow>
@@ -466,25 +514,27 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
       <ModeGate min="expert" paths={['film.markerKeys']}>
       {markerKeyCount > 0 && <p className="type-hint">{t('marker.section.keyed', { count: markerKeyCount })}</p>}
       </ModeGate>
-      <ChipChoice
+      <SegmentedChoice
         label={t('marker.section.shape')}
         options={MARKER_KINDS}
         value={marker.kind}
         labels={MARKER_KIND_LABELS}
+        icon={(kind) => <MarkerKindPicture kind={kind} figure={activityFigure} />}
         onChange={(kind) => updateMarker({ kind })}
       />
       <ModeGate min="confirme" paths={MARKER_BEYOND_SHAPE}>
       {marker.kind === 'boule' && (
-        <ChipChoice
+        <SegmentedChoice
           label={t('marker.section.style')}
           options={MARKER_BALL_STYLES}
           value={marker.ballStyle}
           labels={MARKER_BALL_STYLE_LABELS}
+          icon={(ballStyle) => <BallStylePicture ballStyle={ballStyle} />}
           onChange={(ballStyle) => updateMarker({ ballStyle })}
         />
       )}
       {figurine && (
-        <ChipChoice
+        <SegmentedChoice
           label={t('marker.section.figurine')}
           options={MARKER_FIGURE_CHOICES}
           value={marker.figure}
@@ -503,7 +553,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
         </Checkbox>
       )}
       {figurine && marker.model3d && (
-        <ChipChoice
+        <SegmentedChoice
           label={t('marker.section.modelColors')}
           options={MARKER_MODEL_COLORS}
           value={marker.modelColors}
@@ -587,7 +637,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
         </summary>
         <div className="mt-1 flex flex-col gap-3">
           {figurine && !model3dAlways && (
-            <ChipChoice
+            <SegmentedChoice
               label={t('marker.section.badge')}
               options={MARKER_SHAPES}
               value={marker.shape}
@@ -596,7 +646,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
             />
           )}
           {!model3dAlways && (<>
-          <ChipChoice
+          <SegmentedChoice
             label={t('marker.section.label')}
             options={MARKER_LABEL_MODES}
             value={marker.label}
