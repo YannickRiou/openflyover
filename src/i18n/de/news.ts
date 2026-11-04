@@ -6,7 +6,7 @@ const messages: Messages['news'] = {
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
   'v55.pictures.title': 'Ein Bild für jede Auswahl',
-  'v55.pictures.text': 'Im Reiter Track zeigen die Form des Markers (Kugel, Figur, Bild), der Stil der Kugel (Scheibe, Halo, Puls) und die Linienart (durchgezogen, gestrichelt, gepunktet) je eine kleine Zeichnung neben ihrem Namen. So unterscheidet man sie auf einen Blick.',
+  'v55.pictures.text': 'Im Reiter Track zeigen die Form des Markers (Kugel, Figur, Bild), der Stil der Kugel (Scheibe, Halo, Puls) und die Linienart (durchgezogen, gestrichelt, gepunktet) bilden je eine Reihe von Feldern mit einer kleinen Zeichnung über dem Wort. So unterscheidet man sie auf einen Blick.',
   'v50.margins.title': 'Ränder nach Wahl',
   'v50.margins.text': 'Das Kästchen „Sicherheitsränder“ des Exports hält das Overlay von den Rändern fern und in 9:16 und 4:5 außerhalb der Bereiche von Reels, TikTok und Shorts. Es hakt sich selbst an, wenn Sie eine Plattform wählen. Ohne Haken rückt das Overlay an die Ränder und das ganze Bild gehört dem Film.',
   'v50.modes.title': 'Drei Modi der Oberfläche',

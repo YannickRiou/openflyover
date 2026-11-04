@@ -123,8 +123,8 @@ function DashPicture({ dash }: { dash: TrackDash }) {
   )
 }
 
-/** One choice among `options`, as chips (radio buttons). */
-function ChipChoice<T extends string>({
+/** One choice among `options`, as a rail of tiles (radio buttons), the picture of each above its word; a long list wraps into a grid. */
+function SegmentedChoice<T extends string>({
   label,
   options,
   value,
@@ -142,11 +142,13 @@ function ChipChoice<T extends string>({
   return (
     <fieldset className="field m-0 min-w-0 border-0 p-0">
       <legend className="type-label mb-1 p-0">{label}</legend>
-      <RadioGroup look="chips" aria-label={label} value={value} onChange={onChange}>
+      <RadioGroup aria-label={label} className={options.length > 4 ? 'segmented--grid' : undefined} value={value} onChange={onChange}>
         {options.map((option) => (
           <Radio key={option} value={option}>
-            {icon?.(option)}
-            {labels[option]}
+            <span className="flex flex-col items-center gap-1">
+              {icon?.(option)}
+              {labels[option]}
+            </span>
           </Radio>
         ))}
       </RadioGroup>
@@ -362,7 +364,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
       </SettingRow>
       <ModeGate min="confirme" paths={TRACK_BEYOND_WIDTH}>
       <SettingRow label={t('marker.track.dash')} value={TRACK_DASH_LABELS[style.dash]} paths={['trackStyle.dash']}>
-        <ChipChoice
+        <SegmentedChoice
           label={t('marker.track.dash')}
           options={TRACK_DASHES}
           value={style.dash}
@@ -509,7 +511,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
       <ModeGate min="expert" paths={['film.markerKeys']}>
       {markerKeyCount > 0 && <p className="type-hint">{t('marker.section.keyed', { count: markerKeyCount })}</p>}
       </ModeGate>
-      <ChipChoice
+      <SegmentedChoice
         label={t('marker.section.shape')}
         options={MARKER_KINDS}
         value={marker.kind}
@@ -519,7 +521,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
       />
       <ModeGate min="confirme" paths={MARKER_BEYOND_SHAPE}>
       {marker.kind === 'boule' && (
-        <ChipChoice
+        <SegmentedChoice
           label={t('marker.section.style')}
           options={MARKER_BALL_STYLES}
           value={marker.ballStyle}
@@ -529,7 +531,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
         />
       )}
       {figurine && (
-        <ChipChoice
+        <SegmentedChoice
           label={t('marker.section.figurine')}
           options={MARKER_FIGURE_CHOICES}
           value={marker.figure}
@@ -548,7 +550,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
         </Checkbox>
       )}
       {figurine && marker.model3d && (
-        <ChipChoice
+        <SegmentedChoice
           label={t('marker.section.modelColors')}
           options={MARKER_MODEL_COLORS}
           value={marker.modelColors}
@@ -632,7 +634,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
         </summary>
         <div className="mt-1 flex flex-col gap-3">
           {figurine && !model3dAlways && (
-            <ChipChoice
+            <SegmentedChoice
               label={t('marker.section.badge')}
               options={MARKER_SHAPES}
               value={marker.shape}
@@ -641,7 +643,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
             />
           )}
           {!model3dAlways && (<>
-          <ChipChoice
+          <SegmentedChoice
             label={t('marker.section.label')}
             options={MARKER_LABEL_MODES}
             value={marker.label}

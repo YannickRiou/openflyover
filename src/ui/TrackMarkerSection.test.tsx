@@ -66,14 +66,14 @@ describe('MarkerSection', () => {
     await track.stop()
   })
 
-  it('draws a picture for each shape and style of the marker, which stay named by their word', async () => {
+  it('draws a picture on each tile of the shape and style rails of the marker, which stay named by their word', async () => {
     const view = await show({ ...DEFAULT_MARKER })
     for (const [label, words] of [
       [t('marker.section.shape' as never), ['marker.kind.boule', 'marker.kind.figurine', 'marker.kind.image']],
       [t('marker.section.style' as never), ['marker.ball.plat', 'marker.ball.halo', 'marker.ball.pulsation']],
     ] as const) {
       const group = [...view.host.querySelectorAll('fieldset')].find((f) => f.querySelector('legend')?.textContent === label)
-      const chips = [...(group?.querySelectorAll('.chip') ?? [])]
+      const chips = [...(group?.querySelectorAll('.segmented__option') ?? [])]
       expect(chips.map((chip) => chip.textContent)).toEqual(words.map((word) => t(word as never)))
       for (const chip of chips) expect(chip.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
       // the picture changes nothing to the choice: one radio, the current one, is checked

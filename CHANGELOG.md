@@ -5,7 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## 5.5.0 (unreleased)
 
-- **A picture for each choice of the marker and the line**: in the « Trace » tab, the shape of the marker (ball, figurine, picture), the style of the ball (disc, halo, pulsation) and the line style (solid, dashed, dotted) each show a small drawing beside their name, in the colours of the app, in the light and the dark theme. The word stays, and the choice works as before with the keyboard and a screen reader.
+- **A picture for each choice of the marker and the line, on a rail**: in the « Trace » tab, the shape of the marker (ball, figurine, picture), the style of the ball (disc, halo, pulsation), the figure and the line style (solid, dashed, dotted) are no longer separate pills with a tick. They are the tiles of one rounded rail, each with a small drawing above its word, and the chosen tile is raised. A long list, like the figures, wraps into rows of three. The look follows the light and the dark theme, and the choice works as before with the keyboard and a screen reader. Every rail of the app has the same rounder corners.
 
 ## 5.4.0 (November 2026)
 
