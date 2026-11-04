@@ -5,7 +5,7 @@ export default {
   'v60.titlebar.title': 'Plus de barre Windows en haut',
   'v60.titlebar.text': 'Dans l’application pour ordinateur, la barre du haut d’OpenFlyover sert aussi de barre de titre. Glissez-la pour déplacer la fenêtre, double-cliquez pour l’agrandir, et utilisez les trois boutons à droite d’« Exporter ». Une ligne de moins, et la même couleur partout. Sur Mac, les trois pastilles restent à gauche.',
   'v60.status.title': 'Une barre d’état plus calme',
-  'v60.status.text': 'La barre du bas n’affiche plus que ce qui charge, et ce qui a échoué. Quand tout est prêt, elle ne dit rien. Les chiffres de performance sont derrière le bouton « i ».',
+  'v60.status.text': 'La barre du bas n’affiche plus que ce qui charge, et ce qui a échoué. Quand tout est prêt, elle ne dit rien. Les chiffres de performance sont dans « À propos et mises à jour », dans le menu du logo.',
   // 5.5 — families of tabs, folded summaries
   'v60.groups.title': 'Cinq familles d’onglets',
   'v60.groups.text': 'Sur ordinateur comme sur téléphone, la colonne de gauche montre cinq familles : Trace, Scène, Caméra, Habillage et Projet. Un sélecteur en haut du panneau passe d’un onglet à l’autre. Ctrl+K ouvre la bonne famille.',

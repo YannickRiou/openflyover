@@ -7,7 +7,7 @@ const messages: Messages['news'] = {
   'v60.titlebar.title': 'No more Windows strip on top',
   'v60.titlebar.text': 'In the desktop app, the top bar of OpenFlyover is now also the title bar. Drag it to move the window, double-click it to enlarge it, and use the three buttons on the right of “Export”. One row less, and the same colour all the way across. On a Mac, the three round buttons stay on the left.',
   'v60.status.title': 'A calmer status bar',
-  'v60.status.text': 'The bar at the bottom now shows only what is loading, and what failed. When everything is ready, it says nothing. The performance figures are behind the “i” button.',
+  'v60.status.text': 'The bar at the bottom now shows only what is loading, and what failed. When everything is ready, it says nothing. The performance figures are in “À propos et mises à jour”, in the logo menu.',
   // 5.5 — families of tabs, folded summaries
   'v60.groups.title': 'Five groups of tabs',
   'v60.groups.text': 'On a computer as on a phone, the left column shows five groups: Track, Scene, Camera, Overlay and Project. A switch at the top of the panel moves between their tabs. Ctrl+K opens the right group.',

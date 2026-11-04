@@ -1,11 +1,10 @@
-import { useState, useSyncExternalStore } from 'react'
+import { Suspense, lazy, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { useBatchStore } from '../export/batch'
 import { isExportBusy, useExportStore } from '../export/store'
 import { useLanguage, useT } from '../i18n'
 import type { LanguageCode } from '../i18n'
 import { useAppStore } from '../state/store'
-import { AboutDialog } from './AboutDialog'
 import { Icon } from './icons'
 import { unsavedChangesText } from './library'
 import { askUnsavedChanges } from './openChoice'
@@ -15,7 +14,10 @@ import { setPreferences, usePreferences } from './preferences'
 import { closeProject } from './projectActions'
 import { BOTTOM_SHEET_QUERY, matchesQuery } from './shell'
 import { LATEST_NEWS } from './whatsNew'
-import { WhatsNewDialog } from './WhatsNewDialog'
+
+// opened on demand only: loaded when first asked for, out of the first screen (the updates check, the performance readout, the news texts)
+const AboutDialog = lazy(() => import('./AboutDialog').then((m) => ({ default: m.AboutDialog })))
+const WhatsNewDialog = lazy(() => import('./WhatsNewDialog').then((m) => ({ default: m.WhatsNewDialog })))
 
 /** The user guide in `language`, published with the website (pages.yml): English at user-guide.html, the others at user-guide.<code>.html. */
 export function guideUrl(language: LanguageCode): string {
@@ -84,11 +86,16 @@ export function useAppMenu(onHelp: () => void): AppMenu {
     { id: 'shortcuts', label: t('topbar.shortcuts'), icon: <Icon name="keyboard" size={18} />, onSelect: onHelp },
     { id: 'about', label: t('status.about'), icon: <Icon name="info" size={18} />, onSelect: () => setAboutOpen(true) },
   ]
+  // each dialog stays mounted once loaded, so that it closes with its own animation
+  const [newsLoaded, setNewsLoaded] = useState(false)
+  const [aboutLoaded, setAboutLoaded] = useState(false)
+  if (newsOpen && !newsLoaded) setNewsLoaded(true)
+  if (aboutOpen && !aboutLoaded) setAboutLoaded(true)
   const dialogs = (
-    <>
-      <WhatsNewDialog open={newsOpen} onClose={() => setNewsOpen(false)} />
-      <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
-    </>
+    <Suspense fallback={null}>
+      {newsLoaded && <WhatsNewDialog open={newsOpen} onClose={() => setNewsOpen(false)} />}
+      {aboutLoaded && <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />}
+    </Suspense>
   )
   return { items, newsUnseen, dialogs }
 }

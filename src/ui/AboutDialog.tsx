@@ -1,37 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useT } from '../i18n'
-import { useRegionStore } from '../osm/region'
-import { hasOsmLandmarks, useForestStore, useGlacierStore, useLandmarkStore, useWaterStore } from '../osm/store'
 import { overlayCredits } from '../overlay/data'
 import { getPlatform } from '../platform'
 import { useAppStore } from '../state/store'
 import { updateDateNote, useSourceDates } from '../terrain/sourceDates'
 import { getImagerySource } from '../terrain/sources'
-import { useWeatherStore, weatherShown } from '../weather/store'
 import { compactCredits, perfParts, type PerfSample, type SystemStats } from './mapStatus'
 import { usePreferences } from './preferences'
 import { PERF_ITEMS } from './shell'
 import type { PerfItem } from './shell'
 import { getPerfProbe } from '../scene/perfProbe'
 import { Modal } from './primitives'
+import { useCreditSources } from './StatusBar'
 import { UpdatesSection } from './UpdatesSection'
 
 /** package.json version, set by vite.config.ts (the same number as the desktop installer's) */
 declare const __APP_VERSION__: string
-
-/** The sources behind the map on screen: what the credits of the status bar and of « À propos » are made from. */
-export function useCreditSources() {
-  const terrainSourceId = useAppStore((s) => s.settings.terrainSourceId)
-  const imagerySourceId = useAppStore((s) => s.settings.imagerySourceId)
-  const weather = useWeatherStore(weatherShown)
-  const landmarks = useLandmarkStore((s) => hasOsmLandmarks(s.landmarks))
-  // OpenStreetMap is credited for the water, the forests and the highlighted region as well as for the landmarks
-  const water = useWaterStore((s) => s.polygons > 0)
-  const forests = useForestStore((s) => s.polygons > 0)
-  const glaciers = useGlacierStore((s) => s.polygons > 0)
-  const region = useRegionStore((s) => s.region !== null)
-  return { terrainSourceId, imagerySourceId, weather, landmarks, water, forests, glaciers, osm: landmarks || water || forests || glaciers || region }
-}
 
 /** Performance readout refresh. */
 const PERF_INTERVAL_MS = 1000

@@ -7,7 +7,7 @@ const messages: Messages['news'] = {
   'v60.titlebar.title': 'Via la barra di Windows',
   'v60.titlebar.text': 'Nell’app per computer, la barra in alto di OpenFlyover è ora anche la barra del titolo. Trascinala per spostare la finestra, fai doppio clic per ingrandirla e usa i tre pulsanti a destra di “Esporta”. Una riga in meno e lo stesso colore dappertutto. Su Mac i tre pulsanti rotondi restano a sinistra.',
   'v60.status.title': 'Una barra di stato più calma',
-  'v60.status.text': 'La barra in basso mostra solo ciò che si sta caricando e ciò che non è riuscito. Quando tutto è pronto, non dice nulla. Le prestazioni sono dietro il pulsante «i».',
+  'v60.status.text': 'La barra in basso mostra solo ciò che si sta caricando e ciò che non è riuscito. Quando tutto è pronto, non dice nulla. Le prestazioni sono in «À propos et mises à jour», nel menu del logo.',
   // 5.5 — families of tabs, folded summaries
   'v60.groups.title': 'Cinque gruppi di schede',
   'v60.groups.text': 'Sul computer come sul telefono, la colonna di sinistra mostra cinque gruppi: Traccia, Scena, Camera, Overlay e Progetto. Un selettore in cima al pannello passa da una scheda all’altra. Ctrl+K apre il gruppo giusto.',

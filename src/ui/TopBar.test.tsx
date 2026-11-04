@@ -210,6 +210,8 @@ describe('TopBar: the OpenFlyover menu', () => {
     expect(logo.getAttribute('aria-label')).toBe('Menu OpenFlyover · Nouveautés')
     await act(async () => logo.click())
     await act(async () => rows()[1].click())
+    // the dialog is loaded on demand
+    await act(async () => vi.dynamicImportSettled())
     expect(document.body.textContent).toContain(`Version ${LATEST_NEWS}`)
     expect(host.querySelector('[data-testid="news-dot"]')).toBeNull()
     act(() => root.unmount())
@@ -223,6 +225,8 @@ describe('TopBar: the OpenFlyover menu', () => {
     expect(onHelp).toHaveBeenCalledOnce()
     await act(async () => logo.click())
     await act(async () => rows()[4].click())
+    // the dialog is loaded on demand
+    await act(async () => vi.dynamicImportSettled())
     expect(document.body.textContent).toMatch(/Version\s*: \S+/)
     expect(document.body.textContent).toContain('Sources et licences')
     act(() => root.unmount())

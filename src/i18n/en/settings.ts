@@ -57,7 +57,7 @@ const messages: Messages['settings'] = {
   'preferences.statusBar.title': 'Status bar',
   'preferences.statusBar.loads': 'Loads',
   'preferences.statusBar.performance': 'Performance',
-  'preferences.statusBar.hint': 'Performance figures show behind the “i” button of the status bar. Source credits are always visible.',
+  'preferences.statusBar.hint': 'Performance figures show in “À propos et mises à jour”, in the logo menu. Source credits are always visible.',
   'preferences.timeline.title': 'Timeline',
   'preferences.timeline.clock': 'Show the recorded time',
   'preferences.timeline.clockHint': 'Time of the track at the marker position, after the film timecode.',

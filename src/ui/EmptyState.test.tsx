@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { setLanguage } from '../i18n'
 import { DOWNLOAD_URL, EmptyState } from './EmptyState'
 import { usePreferences } from './preferences'
@@ -25,6 +25,8 @@ describe('home screen', () => {
     expect(host.querySelector('[data-testid="home-download"]')?.getAttribute('href')).toBe(DOWNLOAD_URL)
     // the card opens « Nouveautés » and marks them seen
     await act(async () => (host.querySelector('[data-testid="home-news"]') as HTMLButtonElement).click())
+    // the dialog is loaded on demand
+    await act(async () => vi.dynamicImportSettled())
     expect(document.body.textContent).toContain(`Version ${LATEST_NEWS}`)
     expect(usePreferences.getState().whatsNewSeen).toBe(LATEST_NEWS)
     act(() => root.unmount())

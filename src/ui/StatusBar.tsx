@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useT } from '../i18n'
 import { useRegionStore } from '../osm/region'
-import { useLandmarkStore } from '../osm/store'
+import { hasOsmLandmarks, useForestStore, useGlacierStore, useLandmarkStore, useWaterStore } from '../osm/store'
 import { useForestStatusStore } from '../scene/forestStatus'
 import { useGlacierStatusStore } from '../scene/glacierStatus'
 import { useWaterStatusStore } from '../scene/waterStatus'
 import { useAppStore } from '../state/store'
-import { useWeatherStore } from '../weather/store'
-import { useCreditSources } from './AboutDialog'
+import { useWeatherStore, weatherShown } from '../weather/store'
 import { formatPercent } from './format'
 import { Icon } from './icons'
 import {
@@ -123,6 +122,20 @@ function FetchChips() {
       )}
     </p>
   )
+}
+
+/** The sources behind the map on screen: what the credits of the status bar and of « À propos » are made from. */
+export function useCreditSources() {
+  const terrainSourceId = useAppStore((s) => s.settings.terrainSourceId)
+  const imagerySourceId = useAppStore((s) => s.settings.imagerySourceId)
+  const weather = useWeatherStore(weatherShown)
+  const landmarks = useLandmarkStore((s) => hasOsmLandmarks(s.landmarks))
+  // OpenStreetMap is credited for the water, the forests and the highlighted region as well as for the landmarks
+  const water = useWaterStore((s) => s.polygons > 0)
+  const forests = useForestStore((s) => s.polygons > 0)
+  const glaciers = useGlacierStore((s) => s.polygons > 0)
+  const region = useRegionStore((s) => s.region !== null)
+  return { terrainSourceId, imagerySourceId, weather, landmarks, water, forests, glaciers, osm: landmarks || water || forests || glaciers || region }
 }
 
 /**

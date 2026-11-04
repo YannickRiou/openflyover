@@ -7,7 +7,7 @@ const messages: Messages['news'] = {
   'v60.titlebar.title': 'Keine Windows-Leiste mehr oben',
   'v60.titlebar.text': 'In der Desktop-App ist die obere Leiste von OpenFlyover jetzt auch die Titelleiste. Ziehen Sie sie, um das Fenster zu verschieben, doppelklicken Sie darauf, um es zu vergrößern, und nutzen Sie die drei Schaltflächen rechts neben „Exportieren“. Eine Zeile weniger und überall dieselbe Farbe. Auf dem Mac bleiben die drei runden Schaltflächen links.',
   'v60.status.title': 'Eine ruhigere Statusleiste',
-  'v60.status.text': 'Die Leiste unten zeigt nur noch, was gerade lädt und was fehlgeschlagen ist. Ist alles bereit, bleibt sie leer. Die Leistungswerte stehen hinter dem „i“-Knopf.',
+  'v60.status.text': 'Die Leiste unten zeigt nur noch, was gerade lädt und was fehlgeschlagen ist. Ist alles bereit, bleibt sie leer. Die Leistungswerte stehen unter „À propos et mises à jour“ im Logo-Menü.',
   // 5.5 — families of tabs, folded summaries
   'v60.groups.title': 'Fünf Gruppen von Tabs',
   'v60.groups.text': 'Auf dem Computer wie auf dem Smartphone zeigt die linke Spalte fünf Gruppen: Track, Szene, Kamera, Overlay und Projekt. Ein Umschalter oben im Bereich wechselt zwischen ihren Tabs. Strg+K öffnet die richtige Gruppe.',

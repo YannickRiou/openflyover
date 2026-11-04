@@ -57,7 +57,7 @@ const messages: Messages['settings'] = {
   'preferences.statusBar.title': 'Barra de estado',
   'preferences.statusBar.loads': 'Cargas',
   'preferences.statusBar.performance': 'Rendimiento',
-  'preferences.statusBar.hint': 'El rendimiento se muestra tras el botón «i» de la barra de estado. Los créditos de las fuentes siempre están visibles.',
+  'preferences.statusBar.hint': 'El rendimiento se muestra en «À propos et mises à jour», en el menú del logo. Los créditos de las fuentes siempre están visibles.',
   'preferences.timeline.title': 'Línea de tiempo',
   'preferences.timeline.clock': 'Mostrar la hora registrada',
   'preferences.timeline.clockHint': 'Hora del track en la posición del marcador, tras el código de tiempo de la película.',

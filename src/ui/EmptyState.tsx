@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Suspense, lazy, useState } from 'react'
 import { useT } from '../i18n'
 import { getPlatform, type ProjectEntry } from '../platform'
 import { useAppStore } from '../state/store'
@@ -9,7 +9,9 @@ import { chooseProjectToOpen, chooseTracksToImport, loadSample, openProject } fr
 import { StravaImport } from './StravaImport'
 import { Button } from './primitives'
 import { LATEST_NEWS, WHATS_NEW } from './whatsNew'
-import { WhatsNewDialog } from './WhatsNewDialog'
+
+// opened from the « Nouveau en … » card only: loaded when first asked for, out of the first screen
+const WhatsNewDialog = lazy(() => import('./WhatsNewDialog').then((m) => ({ default: m.WhatsNewDialog })))
 
 /** The thumbnail of a project of the list, an empty frame for an older entry that has none. */
 const THUMB = 'library-thumb row-span-2'
@@ -54,6 +56,9 @@ export function EmptyState() {
   const currentId = useLibraryStore((s) => s.currentId)
   const recent = entries.filter((e) => e.id !== currentId).slice(0, RECENT_COUNT)
   const [newsOpen, setNewsOpen] = useState(false)
+  // stays mounted once loaded, so that it closes with its own animation
+  const [newsLoaded, setNewsLoaded] = useState(false)
+  if (newsOpen && !newsLoaded) setNewsLoaded(true)
   const news = WHATS_NEW[0]
   const openNews = () => {
     setNewsOpen(true)
@@ -109,7 +114,11 @@ export function EmptyState() {
             <span className="type-hint block">{news.items.slice(0, NEWS_TITLES).map((item) => item.title).join(' · ')}</span>
           </span>
         </button>
-        <WhatsNewDialog open={newsOpen} onClose={() => setNewsOpen(false)} />
+        {newsLoaded && (
+          <Suspense fallback={null}>
+            <WhatsNewDialog open={newsOpen} onClose={() => setNewsOpen(false)} />
+          </Suspense>
+        )}
 
         {recent.length > 0 && (
           <section className="mt-6 w-full border-t border-edge pt-4 text-left" aria-labelledby="empty-recent">

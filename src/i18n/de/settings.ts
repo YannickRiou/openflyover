@@ -57,7 +57,7 @@ const messages: Messages['settings'] = {
   'preferences.statusBar.title': 'Statusleiste',
   'preferences.statusBar.loads': 'Ladevorgänge',
   'preferences.statusBar.performance': 'Leistung',
-  'preferences.statusBar.hint': 'Die Leistungswerte erscheinen hinter dem „i“-Knopf der Statusleiste. Die Quellenangaben bleiben immer sichtbar.',
+  'preferences.statusBar.hint': 'Die Leistungswerte erscheinen unter „À propos et mises à jour“ im Logo-Menü. Die Quellenangaben bleiben immer sichtbar.',
   'preferences.timeline.title': 'Zeitleiste',
   'preferences.timeline.clock': 'Aufgezeichnete Uhrzeit anzeigen',
   'preferences.timeline.clockHint': 'Uhrzeit des Tracks an der Position des Markers, nach der Filmzeit.',

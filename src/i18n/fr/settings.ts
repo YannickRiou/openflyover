@@ -55,7 +55,7 @@ export default {
   'preferences.statusBar.title': "Barre d'état",
   'preferences.statusBar.loads': 'Chargements',
   'preferences.statusBar.performance': 'Performances',
-  'preferences.statusBar.hint': "Les chiffres de performance s'affichent derrière le bouton « i » de la barre d'état. Les crédits des sources restent toujours visibles.",
+  'preferences.statusBar.hint': "Les chiffres de performance s'affichent dans « À propos et mises à jour », dans le menu du logo. Les crédits des sources restent toujours visibles.",
   'preferences.timeline.title': 'Timeline',
   'preferences.timeline.clock': "Afficher l'heure enregistrée",
   'preferences.timeline.clockHint': 'Heure de la trace à la position du marqueur, après le minutage du film.',
