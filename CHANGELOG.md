@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **The marker no longer offers what a 3D model ignores**: with « Modèle 3D » on (and no marker key turning it into a ball or a picture somewhere in the film), the « Tige et ombre au sol », the badge shape, the text under the marker and the colour of the edge are not shown any more, since the model has none of them; their values are kept for when the model is off. « Couleur du modèle » (the former « Couleur du badge ») is only shown with « De la trace »: « Naturelles » now ignores it, so a colour left by hand can no longer change a natural model unseen. The hint for several tracks in parallel says that the others keep a figurine, not a ball, when the marker is a figurine.
+
 ## 5.1.1 (November 2026)
 
 - **The 3D markers keep their own colours**: a new « Couleurs du modèle 3D » choice in the marker settings (« Naturelles » by default, or « De la trace »). The horse is brown, the car blue, the skis red and the jacket green instead of everything being in the colour of the track, so the marker no longer merges with the track line. « De la trace » puts the colour of the track on the main part (jacket, hull, skis, body) as before. With several tracks in parallel, each racer keeps the colour of its track; a colour chosen by hand for the figure still wins.
