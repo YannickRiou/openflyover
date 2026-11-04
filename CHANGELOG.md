@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Five tabs on a phone, all in sight**: the nine tabs did not fit across a phone (five and a half showed, the bar had to scroll). A phone, either way up, now shows five groups: Trace, Décor (Carte, Météo, Lumière), Caméra (Survol, Objectif), Habillage and Projet (Projet, Réglages). A group opens the tab of it last shown, and a switch at the top of the sheet goes from one of its tabs to the other. Computers and tablets keep the nine tabs.
+
 - **A phone on its side is usable**: a phone 667 px wide or less held in landscape (iPhone SE, mini) took the portrait layout, with a timeline of no height; it now gets the landscape layout like the larger phones. In landscape the top bar and the controls are shorter (44 and 40 px), and the unfolded timeline keeps its buttons on one row that scrolls sideways and takes at most 72 % of the height (it was 85 %, over the whole view, with the buttons on three rows).
 
 - **The lanes are named on a phone**: in portrait, the centred timeline had no column of headers, so nothing said what a lane was. Each lane now carries its name at its left end, over the blocks.

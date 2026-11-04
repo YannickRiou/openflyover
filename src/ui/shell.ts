@@ -127,6 +127,21 @@ export function isProjectDirty(current: SavedProject, saved: SavedProject): bool
 export const SHELL_TABS = ['trace', 'carte', 'meteo', 'lumiere', 'survol', 'objectif', 'habillage', 'projet', 'reglages'] as const
 export type ShellTab = (typeof SHELL_TABS)[number]
 
+/**
+ * A phone, either way up, shows the tabs in five groups (nine tabs do not fit across): the tab of a group opens the one of
+ * its tabs last shown, and the sheet switches between them. In montage order, like the tabs.
+ */
+export const TAB_GROUPS = {
+  trace: ['trace'],
+  decor: ['carte', 'meteo', 'lumiere'],
+  camera: ['survol', 'objectif'],
+  habillage: ['habillage'],
+  projet: ['projet', 'reglages'],
+} as const satisfies Record<string, readonly ShellTab[]>
+export type TabGroup = keyof typeof TAB_GROUPS
+export const TAB_GROUP_IDS = Object.keys(TAB_GROUPS) as TabGroup[]
+export const groupOf = (tab: ShellTab): TabGroup => TAB_GROUP_IDS.find((g) => (TAB_GROUPS[g] as readonly ShellTab[]).includes(tab)) ?? 'trace'
+
 /** The only tab of the home screen (no track): the others have nothing to act on yet. */
 export const HOME_TABS: readonly ShellTab[] = ['projet']
 

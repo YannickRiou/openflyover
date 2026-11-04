@@ -109,6 +109,7 @@ const PATHS = {
       <circle cx="18" cy="5" r="3" />
     </>
   ),
+  mountain: <path d="m8 3 4 8 5-5 5 15H2L8 3z" />,
   map: (
     <>
       <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />

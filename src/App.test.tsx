@@ -99,6 +99,44 @@ describe('App shell', () => {
   })
 })
 
+describe('App shell on a phone', () => {
+  it('groups the tabs in five; a group opens the tab of it last shown, the sheet switches between its tabs', async () => {
+    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    Element.prototype.scrollIntoView = () => {}
+    // a phone on its side: the compact layout, the rail beside the view
+    const matchMedia = window.matchMedia
+    window.matchMedia = ((query: string) => ({ matches: query.includes('max-height: 499px') && !query.includes('not'), media: query, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia
+    const segments = [{ points: [6.8, 6.81, 6.82].map((lon) => ({ lon, lat: 45.9 })) }]
+    useAppStore.setState({ tracks: [buildTrack({ name: 'Sortie', source: 'gpx', segments })] })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<App />))
+    const rail = () => [...document.querySelectorAll('[role="tab"]')].map((el) => el.textContent)
+    const tab = (group: string) => document.querySelector<HTMLElement>(`[role="tab"][data-testid="tab-${group}"]`)!
+    const switches = () => [...document.querySelectorAll('[data-testid="tab-group-switch"] button')].map((b) => b.textContent)
+    const shown = () => document.querySelector('[data-testid^="tab-panel-"]:not([data-inert="true"])')?.getAttribute('data-testid')
+    expect(rail()).toEqual(['Trace', 'Décor', 'Caméra', 'Habillage', 'Projet'])
+
+    await act(async () => tab('decor').click())
+    expect(shown()).toBe('tab-panel-carte')
+    expect(switches()).toEqual(['Carte', 'Météo', 'Lumière'])
+    await act(async () => [...document.querySelectorAll<HTMLElement>('[data-testid="tab-group-switch"] button')][1]!.click())
+    expect(shown()).toBe('tab-panel-meteo')
+    // another group, then back: Météo again
+    await act(async () => tab('camera').click())
+    expect(shown()).toBe('tab-panel-survol')
+    expect(switches()).toEqual(['Survol', 'Objectif'])
+    await act(async () => tab('decor').click())
+    expect(shown()).toBe('tab-panel-meteo')
+    // a group of one tab has no switch
+    await act(async () => tab('habillage').click())
+    expect(switches()).toEqual([])
+    window.matchMedia = matchMedia
+    act(() => root.unmount())
+    document.body.innerHTML = ''
+  })
+})
+
 describe('Tabs and the « Ambiance » chips', () => {
   it('« Grand beau » in Débutant keeps Météo and Lumière hidden; values that match no chip bring the tabs back', async () => {
     ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true

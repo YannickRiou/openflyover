@@ -11,6 +11,8 @@ export default {
   'tab.habillage': 'Habillage',
   'tab.projet': 'Projet',
   'tab.reglages': 'Réglages',
+  'group.decor': 'Décor',
+  'group.camera': 'Caméra',
   'section.labels': 'Étiquettes',
   'section.weather': 'Météo de la sortie',
   'section.offline': 'Hors ligne',
