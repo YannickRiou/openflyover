@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v55.pictures.title': 'Un’immagine per ogni scelta',
+  'v55.pictures.text': 'Nella scheda Traccia, la forma del marcatore (sfera, figurina, immagine), lo stile della sfera (disco, alone, pulsazione) e il tratto della linea (pieno, tratteggiato, puntinato) mostrano ciascuno un piccolo disegno accanto al nome. Si distinguono a colpo d’occhio.',
   'v50.margins.title': 'Margini a scelta',
   'v50.margins.text': 'La casella “Margini di sicurezza” dell’esportazione tiene la grafica lontana dai bordi e, in 9:16 e 4:5, fuori dalle zone di Reels, TikTok e Shorts. Si spunta da sola quando si sceglie una piattaforma. Senza spunta la grafica si avvicina ai bordi e tutta l’immagine serve al film.',
   'v50.modes.title': 'Tre modalità dell’interfaccia',

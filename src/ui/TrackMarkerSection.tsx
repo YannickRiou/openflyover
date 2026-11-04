@@ -40,7 +40,7 @@ import {
   TRACK_TAIL_LENGTH_RANGE,
   TRACK_WIDTH_RANGE,
 } from '../scene/markerSettings'
-import type { MarkerFigure, MarkerSettings, TrackRibbonSettings, TrackStyle, TrackTailSettings } from '../scene/markerSettings'
+import type { MarkerBallStyle, MarkerFigure, MarkerKind, MarkerSettings, TrackDash, TrackRibbonSettings, TrackStyle, TrackTailSettings } from '../scene/markerSettings'
 import type { SettingPath } from '../project/apply'
 import { addJunctionMarkerKeys, useFilmSequence, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
@@ -75,6 +75,51 @@ function FigureIcon({ figure }: { figure: MarkerFigure }) {
         <path key={d} d={d} />
       ))}
     </svg>
+  )
+}
+
+/** A choice drawn as a small picture, 28 × 16: lines in the text colour, the marker in the accent, so both themes read it. */
+function ChoicePicture({ children }: { children: ReactNode }) {
+  return (
+    <svg width={28} height={16} viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true" focusable="false">
+      {children}
+    </svg>
+  )
+}
+
+/** The ball in its three styles: a plain disc, a soft halo around it, rings spreading out of it. */
+function BallStylePicture({ ballStyle }: { ballStyle: MarkerBallStyle }) {
+  return (
+    <ChoicePicture>
+      {ballStyle === 'halo' && <circle cx={14} cy={8} r={7.5} className="fill-brand opacity-40" stroke="none" />}
+      {ballStyle === 'pulsation' && (
+        <>
+          <circle cx={14} cy={8} r={5.5} className="stroke-brand opacity-70" strokeWidth={1.5} />
+          <circle cx={14} cy={8} r={7.5} className="stroke-brand opacity-35" strokeWidth={1.5} />
+        </>
+      )}
+      <circle cx={14} cy={8} r={ballStyle === 'plat' ? 5 : 3.5} className="fill-brand" stroke="none" />
+    </ChoicePicture>
+  )
+}
+
+/** The kind of marker: the ball, the figure of the activity, a picture frame. */
+function MarkerKindPicture({ kind, figure }: { kind: MarkerKind; figure: MarkerFigure }) {
+  if (kind === 'figurine') return <FigureIcon figure={figure} />
+  if (kind === 'image') return <Icon name="image" size={16} />
+  return (
+    <ChoicePicture>
+      <circle cx={14} cy={8} r={5} className="fill-brand" stroke="none" />
+    </ChoicePicture>
+  )
+}
+
+/** The line of the track: a stretch drawn solid, dashed or dotted. */
+function DashPicture({ dash }: { dash: TrackDash }) {
+  return (
+    <ChoicePicture>
+      <path d="M2 8h24" strokeLinecap="round" strokeDasharray={dash === 'tirets' ? '5 4' : dash === 'points' ? '0 5' : undefined} />
+    </ChoicePicture>
   )
 }
 
@@ -322,6 +367,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
           options={TRACK_DASHES}
           value={style.dash}
           labels={TRACK_DASH_LABELS}
+          icon={(dash) => <DashPicture dash={dash} />}
           onChange={(dash) => updateStyle({ dash })}
         />
       </SettingRow>
@@ -468,6 +514,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
         options={MARKER_KINDS}
         value={marker.kind}
         labels={MARKER_KIND_LABELS}
+        icon={(kind) => <MarkerKindPicture kind={kind} figure={activityFigure} />}
         onChange={(kind) => updateMarker({ kind })}
       />
       <ModeGate min="confirme" paths={MARKER_BEYOND_SHAPE}>
@@ -477,6 +524,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           options={MARKER_BALL_STYLES}
           value={marker.ballStyle}
           labels={MARKER_BALL_STYLE_LABELS}
+          icon={(ballStyle) => <BallStylePicture ballStyle={ballStyle} />}
           onChange={(ballStyle) => updateMarker({ ballStyle })}
         />
       )}

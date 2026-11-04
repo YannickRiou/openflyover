@@ -23,7 +23,7 @@ async function show(marker: MarkerSettings, markerKeys: { kind: MarkerSettings['
   const root = createRoot(host)
   await act(async () => root.render(<MarkerSection hidden={false} />))
   // the « Plus d'options » block is a closed <details>: its content is in the page all the same
-  return { text: () => host.textContent ?? '', stop: () => act(() => root.unmount()) }
+  return { host, text: () => host.textContent ?? '', stop: () => act(() => root.unmount()) }
 }
 
 describe('MarkerSection', () => {
@@ -64,5 +64,21 @@ describe('MarkerSection', () => {
     const track = await show({ ...FIGURINE, modelColors: 'track' })
     expect(track.text()).toContain(t('marker.section.modelColor' as never))
     await track.stop()
+  })
+
+  it('draws a picture for each shape and style of the marker, which stay named by their word', async () => {
+    const view = await show({ ...DEFAULT_MARKER })
+    for (const [label, words] of [
+      [t('marker.section.shape' as never), ['marker.kind.boule', 'marker.kind.figurine', 'marker.kind.image']],
+      [t('marker.section.style' as never), ['marker.ball.plat', 'marker.ball.halo', 'marker.ball.pulsation']],
+    ] as const) {
+      const group = [...view.host.querySelectorAll('fieldset')].find((f) => f.querySelector('legend')?.textContent === label)
+      const chips = [...(group?.querySelectorAll('.chip') ?? [])]
+      expect(chips.map((chip) => chip.textContent)).toEqual(words.map((word) => t(word as never)))
+      for (const chip of chips) expect(chip.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
+      // the picture changes nothing to the choice: one radio, the current one, is checked
+      expect(group?.querySelectorAll('input[type="radio"]:checked')).toHaveLength(1)
+    }
+    await view.stop()
   })
 })

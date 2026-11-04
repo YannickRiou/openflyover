@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v55.pictures.title': 'Une image pour chaque choix',
+  'v55.pictures.text': 'Dans l’onglet Trace, la forme du marqueur (boule, figurine, image), le style de la boule (disque, halo, pulsation) et le trait de la ligne (plein, tirets, points) montrent chacun un petit dessin à côté de leur nom. On les distingue d’un coup d’œil.',
   'v50.margins.title': 'Des marges au choix',
   'v50.margins.text': 'La case « Marges de sécurité » de l’export garde l’habillage loin des bords et, en 9:16 et 4:5, hors des zones de Reels, TikTok et Shorts. Elle se coche d’elle-même quand vous choisissez une plateforme. Décochée, l’habillage se rapproche des bords et l’image entière sert au film.',
   'v50.modes.title': 'Trois modes d’interface',

@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v55.pictures.title': 'A picture for each choice',
+  'v55.pictures.text': 'In the Trace tab, the marker’s shape (ball, figurine, picture), the style of the ball (disc, halo, pulsation) and the line style (solid, dashed, dotted) each show a small drawing beside their name. You tell them apart at a glance.',
   'v50.margins.title': 'Margins when you want them',
   'v50.margins.text': 'The “Marges de sécurité” box of the export keeps the overlay away from the edges and, in 9:16 and 4:5, out of the areas of Reels, TikTok and Shorts. It ticks itself when you pick a platform. Unticked, the overlay moves close to the edges and the whole picture serves the film.',
   'v50.modes.title': 'Three interface modes',
