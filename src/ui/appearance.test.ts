@@ -82,8 +82,8 @@ describe('bar colour', () => {
   })
 
   it('derives a raised colour, lighter, for menus and toasts', () => {
-    const { chrome, raised } = deriveChrome('#113b54')
-    expect(chrome).toBe('#113b54')
+    const { chrome, raised } = deriveChrome('#20384a')
+    expect(chrome).toBe('#20384a')
     expect(contrastRatio(raised, '#ffffff')).toBeLessThan(contrastRatio(chrome, '#ffffff'))
     expect(contrastRatio(raised, '#ffffff')).toBeGreaterThanOrEqual(4.5)
   })
@@ -95,10 +95,10 @@ describe('parseAppearance', () => {
     expect(parseAppearance('dark')).toEqual(DEFAULT_APPEARANCE)
     expect(parseAppearance([1])).toEqual(DEFAULT_APPEARANCE)
     expect(parseAppearance({ theme: 'sepia', accent: 'rouge', chrome: '#123' })).toEqual(DEFAULT_APPEARANCE)
-    expect(parseAppearance({ theme: 'system', accent: '#2F6A8A', chrome: '#113b54', density: 'compact' })).toEqual({
+    expect(parseAppearance({ theme: 'system', accent: '#2F6A8A', chrome: '#20384a', density: 'compact' })).toEqual({
       theme: 'system',
       accent: '#2f6a8a',
-      chrome: '#113b54',
+      chrome: '#20384a',
     })
     expect(parseAppearance({ theme: 'dark' })).toEqual({ ...DEFAULT_APPEARANCE, theme: 'dark' })
   })
@@ -132,13 +132,13 @@ describe('applyAppearance', () => {
   })
 
   it('sets the accent scale and the bar colours of a custom choice, then removes them on the default', () => {
-    applyAppearance(root, { ...DEFAULT_APPEARANCE, accent: '#4a55b8', chrome: '#113b54' }, false)
+    applyAppearance(root, { ...DEFAULT_APPEARANCE, accent: '#4a55b8', chrome: '#20384a' }, false)
     expect(root.style.getPropertyValue('--color-accent')).toBe('#4a55b8')
     for (const name of ['--color-accent-strong', '--color-accent-tint', '--color-accent-light', '--surface-chrome', '--surface-chrome-raised']) {
       expect(root.style.getPropertyValue(name)).toMatch(/^#[0-9a-f]{6}$/)
     }
-    expect(root.style.getPropertyValue('--surface-chrome')).toBe('#113b54')
-    expect(themeColor()).toBe('#113b54')
+    expect(root.style.getPropertyValue('--surface-chrome')).toBe('#20384a')
+    expect(themeColor()).toBe('#20384a')
     applyAppearance(root, DEFAULT_APPEARANCE, false)
     expect(root.getAttribute('style') ?? '').toBe('')
     expect(themeColor()).toBe('#1b2832')

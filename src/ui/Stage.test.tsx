@@ -9,7 +9,7 @@ import { t } from '../i18n'
 import { useHandViewStore } from '../scene/handView'
 import { resetAppStore, useAppStore } from '../state/store'
 import { buildTrack } from '../import/stats'
-import { Stage } from './Stage'
+import { Stage, useViewFull } from './Stage'
 
 const started = vi.hoisted(() => ({ calls: [] as boolean[] }))
 // the 3D view and the overlay are their own chunks: not needed here
@@ -65,6 +65,25 @@ describe('Stage buttons', () => {
 
     await act(async () => useHandViewStore.getState().setAway(false))
     expect(button(t('stage.filmView'))).toBeNull()
+  })
+
+  it('« Plein écran » covers the screen with the view, its own play and ✕; ✕ and Escape bring the view back', async () => {
+    useAppStore.getState().replaceTracks([walk()])
+    const { button } = await mount()
+    const region = () => document.querySelector('[role="region"]')!
+    await act(async () => button(t('stage.full'))!.click())
+    expect(useViewFull.getState().full).toBe(true)
+    expect(region().className).toContain('fixed!')
+    // the other buttons of the view leave it, play and ✕ come
+    expect(button(t('stage.fit'))).toBeNull()
+    await act(async () => button(t('timeline.bar.play'))!.click())
+    expect(useAppStore.getState().playback.playing).toBe(true)
+    await act(async () => button(t('stage.fullExit'))!.click())
+    expect(useViewFull.getState().full).toBe(false)
+    expect(region().className).not.toContain('fixed!')
+    await act(async () => button(t('stage.full'))!.click())
+    await act(async () => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })))
+    expect(useViewFull.getState().full).toBe(false)
   })
 
   it('has a « Outils de la vue » button (shown on a phone only) that opens and closes the capture and the safe zones, and none in « Libre »', async () => {

@@ -178,7 +178,7 @@ const BLOCK_LABEL = 'pointer-events-none relative min-w-0 truncate'
 const KEY =
   "absolute top-1/2 z-1 -mt-1.5 -ml-1.5 size-2.5 cursor-grab border before:absolute before:-inset-2 before:content-[''] touch:-mt-[9px] touch:-ml-[9px] touch:size-4"
 const KEY_DIAMOND = `${KEY} rotate-45 border-chrome bg-glacier aria-pressed:bg-white`
-const KEY_DOT = `${KEY} rounded-full border-white bg-[var(--key-color,var(--color-chartreuse))] aria-pressed:outline-2 aria-pressed:outline-offset-2 aria-pressed:outline-white`
+const KEY_DOT = `${KEY} rounded-full border-white bg-[var(--key-color,var(--color-amber-light))] aria-pressed:outline-2 aria-pressed:outline-offset-2 aria-pressed:outline-white`
 /** The playhead: a white line across the lanes, a round cap in the accent (`before:`) on its top edge. */
 const PLAYHEAD =
   "pointer-events-none absolute inset-y-0 z-2 -ml-px w-0.5 bg-white before:absolute before:top-0 before:-left-1 before:size-2.5 before:rounded-full before:bg-accent-light before:content-['']"

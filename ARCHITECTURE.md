@@ -134,11 +134,11 @@ full customization through a single project document, WebCodecs video export, Ta
 
 The first screen (shell, panels, welcome card) loads the app, React and the HeroUI / React Aria primitives, without three.js:
 1.9 MB, 559 kB gzip over 22 files in 4.5.0, stylesheet included (the app 441 kB, `primitives` 291 kB, React 219 kB,
-French and the i18n code 177 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 585 kB
+French and the i18n code 177 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 586 kB
 gzip (`scripts/check-bundle-size.mjs`, after the build): raise it on purpose in the pull request that needs it (580 → 582
 for the diagnostic report's phone rows: the terrain workers' status, the GPU timer, the wait for the GPU, which the
 first screen holds because the export's guard builds the report; 582 → 583 for the credits of the 3D models, the
-marker settings and their labels in French; 583 → 584 for the phone layout: the « Agrandir » button of the sheets, the tools button of the view and the preview height; 584 → 585 for the phone's timeline row: « Clés », « Ajouter » and its menu, the add row under the lanes).
+marker settings and their labels in French; 583 → 584 for the phone layout: the « Agrandir » button of the sheets, the tools button of the view and the preview height; 584 → 585 for the phone's timeline row: « Clés », « Ajouter » and its menu, the add row under the lanes; 585 → 586 for the block bar's « Couper » and « Dupliquer », the « Langue » section of « Réglages » and the proportional scale of the theme).
 Nothing in the first screen may import `three` or `@react-three/fiber` statically: the status bar reads the renderer through
 `scene/perfProbe.ts` (a plain module the scene fills when its canvas is created). Only French (the
 reference, the fallback of a missing message) is in the first screen; English, Spanish, Italian and German are one chunk each
@@ -498,7 +498,7 @@ block). A Tailwind `@theme` token of HeroUI that the app also defines must keep 
 (`@tailwindcss/vite`, nothing at run time). `theme.css` imports it and declares the palette, fonts, type and spacing scales, radii and
 shadows as `@theme` tokens (`bg-ink`, `text-accent`, `font-heading`, `text-body`, `h-control`…), the semantic roles above, the `dark`
 variant (the theme attribute, never the system scheme) and the named variants `touch`, `drawer`, `phone`, `phone-any`,
-`phone-landscape` and `bar-condensed` (the breakpoints of the shell, named once). `utilities.css` holds the `@utility` classes
+`phone-landscape` and `bar-condensed` (the breakpoints of the shell, named once). **Scale**: one, proportional to the screen, no size per device. The root size is `clamp(13px, 10.85px + 0.735vmin, 16px)` (the shorter side: a phone is about 13.7 px either way up, a tablet or a computer 16 px), and every length is in rem: Tailwind's `--spacing`, the shell (`--topbar-h`, `--rail-w`, `--panel-w`, `--statusbar-h`, `--phone-transport-h`), the controls (`--control-h`, a finger `max(36px, 2.75rem)`) and the text tokens, each with a floor (`--text-body: max(13px, 0.875rem)`…). Only the 16 px of the fields (no zoom on focus in iOS), the canvas and hairlines stay in px. A new size is written in rem or as a token, never as a px value for one kind of screen. `utilities.css` holds the `@utility` classes
 several components share (`type-label`, `type-hint`, `panel-head`, `rail-tab`, `btn-chrome`, `overlay-frame`…), the frames of the
 shell (`shell-frame`, `panel-frame`, `dock-frame`, `tabpanel-frame`, `stage-frame`, `dock-section`: a frame that sets defaults for its
 children does it with `:where(&) > *`, so the children's own utilities win), the keyframes `tip-in` and `sheet-in`, and the
@@ -669,16 +669,19 @@ pointer (`appearance.css`).
   (rail and timeline kept).
 - **Phone and tablet** (`BOTTOM_SHEET_QUERY` and `COMPACT_QUERY` in `shell.ts`, same strings as the CSS):
   - *Compact* (`max-width: 699px` or `max-height: 499px`, a phone either way up): top bar reduced to the logo, the
-    project name, the format button (`FormatMenu` in `TopBar.tsx`, in the place of the `FormatSwitcher` row: the icon of the
-    chosen format, a bottom sheet of the formats; both call `pickFormat`), « Plus d'actions » (⋯, `MoreMenu` in `TopBar.tsx`:
-    undo, redo, open, save) and « Exporter » with its label; no « ? »; in landscape the timeline starts folded (`Timeline`: strip
+    project name, undo and redo (always in the bar), the format button (`FormatMenu` in `TopBar.tsx`, in the place of the
+    `FormatSwitcher` row: the icon of the chosen format, a bottom sheet of the formats; both call `pickFormat`), « Plus
+    d'actions » (⋯, `MoreMenu` in `TopBar.tsx`: open, save) and « Exporter » with its label; no « ? ». A portrait phone has
+    no logo and no language flag: the language is a section of « Réglages » (`PreferencesPanel`), as everywhere; in landscape the timeline starts folded (`Timeline`: strip
     with play and time) and unfolds as a sheet over the view; panel and drawer sheets fold it (`sheetOpen`), its
     unfolding folds them (`onUnfold` → shell event `fold`): one sheet at a time. Dialogs (`Modal`) are full screen. Safe areas
     (`viewport-fit=cover` in `index.html`, `env(safe-area-inset-*)` on the shell rows and sides), `100dvh`, no page
     overscroll. A touch tablet in portrait (`max-width: 1023px` and `pointer: coarse`) also takes the « Plus d'actions »
     menu.
   - *Portrait phone* (`max-width: 699px`, after CapCut; `App` reads it with `usePhone`): from top to bottom the top
-    bar, the 3D preview (`--phone-preview-h` 42dvh, `Stage.tsx`, only with a track), the timeline's bar as a
+    bar, the 3D preview (`--phone-preview-h` 42dvh, `Stage.tsx`, only with a track; « Plein écran » at its bottom left,
+    `useViewFull`: the stage `fixed` over the screen with its own play and ✕, as Safari on an iPhone has no full screen for
+    a page; a turn to landscape while playing takes it, the turn back leaves it, Escape too), the timeline's bar as a
     slim transport row (play and time, then three named buttons, `data-testid="timeline-tools"`: « Clés » (a sheet with the ◀ ◇ ▶
     of « Plans » and « Vitesse »), « Ajouter » (a `Menu`: hold, hold at each free highlight, speed portion, text, media, music) and
     « ⋯ » (`FilmOptions` with an `extra` part: playback speed, mute when there is sound, snapping, clear the work area); no ■,
@@ -686,14 +689,17 @@ pointer (`appearance.css`).
     « Texte, photo, musique » row under them, sticky to the left, opens the same menu), the bottom tab bar (five groups of tabs,
     `TAB_GROUPS` in `shell.ts`, a fifth of the width each; a group opens the tab of it last shown, a `ToggleButtonGroup` at the top
     of the sheet, `data-sheet-fixed`, switches between its tabs; the same groups in the rail of a landscape phone, `COMPACT_QUERY`),
-    the status bar. Panel, export drawer and inspector are half sheets from under the transport row to the status bar,
-    over the timeline and the tab bar, never over the preview (sliding in, not under `prefers-reduced-motion`). Their
-    head (`SheetHandle.tsx`: grip, tab name, « Terminé » ✓) closes them on ✓ or when dragged down past a third of
+    the status bar. Panel, export drawer and inspector are half sheets from under the transport row, over the timeline,
+    never over the preview; the panel stops above the tab bar (`bottom-14`: another tab is one touch away), the export
+    drawer and the inspector go down to the status bar (sliding in, not under `prefers-reduced-motion`). Their
+    head (`SheetHandle.tsx`: grip, « Agrandir », « Terminé » ✓; no title on the panel's sheet, the tab bar under it shows the open tab) closes them on ✓ or when dragged down past a third of
     their height, a flick included (`dismissSheet`); the ✕ of the drawer and the inspector is hidden. Sheet content
     scrolls inside (`overscroll-behavior: contain`); a press on the view does not close a sheet (it does on a tablet
     side sheet). A selected block (`inspecting`) replaces the tab bar with its actions (`BlockTools` in `App`:
     « Terminé » deselects, « Modifier » opens `FilmInspector` in the half sheet (`editing`, `edit` event; ✓ closes it
-    and keeps the selection), « Supprimer », « Sans plan » for the opening and the closing, `removeFilmItem`).
+    and keeps the selection), « Couper » at the playhead for a text or a photo (`splitFilmItem`) and « Dupliquer » for a text or a medium
+    (`duplicateFilmItem`), shown only for the blocks that take them, as X and Ctrl+D; « Supprimer », « Sans plan » for the
+    opening and the closing, `removeFilmItem`).
     Landscape phone: the rail stays on the side, without its fold button; the timeline strip as above.
   - *Centred timeline* (`Timeline` `centred`, portrait phone): the lanes carry half their width of blank at both
     ends, the playhead is a line fixed in the middle (drawn on the body of the lanes), so the horizontal scroll is the film
@@ -757,9 +763,9 @@ pointer (`appearance.css`).
   from `sunChipHour`; one `transaction`). The values of a chip are not a reason to show « Météo » and « Lumière »: `ambianceOf` (`uiMode.ts`) names the chip whose values the settings are, for the lit chip and for `HIDDEN_TABS` (`chips`: `clouds.mode`, `sunFromTrack`, `sunHour`); values that are no chip's show the tabs. Tests: `App.test.tsx` (rail, first launch), `SettingsPanel.test.tsx`, `CameraPanel.test.tsx`,
   `OverlayPanel.test.tsx`, `Timeline.test.tsx`, `TopBar.test.tsx`, `PreferencesPanel.test.tsx`, `searchSections.test.ts`, `shell.test.ts`.
 - **Render weight** (`src/ui/renderCost.ts`, pure, tested; `RenderWeight` and `TabWeightDot` in `PanelSection.tsx`): which settings lengthen
-  the export, as a pictogram (three bars like a signal icon: filled navy, the rest periwinkle; the heaviest tier in chartreuse on a navy
-  chip; `--color-navy` / `--color-periwinkle` / `--color-chartreuse` in `theme.css`) after the name of the setting (`weight` prop of
-  `SettingRow` and `RangeField`, export drawer included), and a chartreuse dot on a navy ring on a tab (rail and phone bar) while one
+  the export, as a pictogram (three bars like a signal icon: filled ink, the rest the line colour; the heaviest tier in light amber,
+  the app's « attention », on an ink chip; the app's own tokens in `theme.css`) after the name of the setting (`weight` prop of
+  `SettingRow` and `RangeField`, export drawer included), and a light amber dot on an ink ring on a tab (rail and phone bar) while one
   of its settings is at tier 3 (`tabHasHeavySetting`). Both read the store with their own selector (primitives), so the memoised panels
   and the 3D scene do not render again; `Tip` tooltip with the factor, visually hidden « Poids de rendu : léger / moyen / lourd »
   (the dot adds « réglage lourd actif » to the tab's name). Tiers come from the factors of the code; « ≈ ×N » only where N is one:
@@ -1286,8 +1292,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   direction of the atmosphere (ECEF) is brought into the scene frame and projected; the effect reads five taps of
   its pass input over the sun disc: the disc saturates the tone mapping unless the relief or a volumetric cloud
   (which writes no depth) hides it, so occlusion needs no extra pass. Glare, a horizontal streak, a faint ring and six
-  ghosts along the line from the sun through the centre (tinted with the palette's periwinkle, water green and
-  chartreuse), faded over the last 5% of the frame; none when the sun is off screen. Five texture reads per pixel.
+  ghosts along the line from the sun through the centre (tinted with the palette's glacier, light moss and light
+  amber), faded over the last 5% of the frame; none when the sun is off screen. Five texture reads per pixel.
 - **Motion blur**, export (exact and deterministic): each film frame is rendered up to `SHUTTER_SUBFRAMES` = 8 times at
   instants stratified over ± shutter / 2 frame intervals around it (`shutterSamples`, progress and film time
   interpolated between neighbouring frames of the schedule; an instant in another clock phase, i.e. across the cut of
@@ -2142,7 +2148,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   lit pin still follow the film time: `pinsMoveWithTime(labels, film)` makes the preview rig's view `timed` and the export's scene
   `sceneMovesWithTime`, so a held frame is not copied.
 - **The pins** (`scene/PhotoPins.tsx`, in `TerrainLayer` after `Labels`): three sprites per pin with `sizeAttenuation` off
-  (the foot, the post, the framed thumbnail drawn on a canvas from the table's 160 px thumbnail; lit: chartreuse frame and glow, ×1.25), drawn like the labels (`AlwaysDepth` with a depth write, so the atmosphere does not haze them as sky).
+  (the foot, the post, the framed thumbnail drawn on a canvas from the table's 160 px thumbnail; lit: light amber frame and glow, ×1.25, edged in ink), drawn like the labels (`AlwaysDepth` with a depth write, so the atmosphere does not haze them as sky).
   Size: a share of the height of the frame (`PIN_REFERENCE_HEIGHT_PX` = 720, or the height of a 16:9 frame of the same width in
   a tall frame), not CSS pixels, so the preview and every export resolution show the same pin (the 3D labels, in pixels, use
   `exportRenderScale` of the canvas); down to 50 % from 1 to 10 km. Hidden behind the relief and faded with « Portée » like the labels
@@ -3333,9 +3339,9 @@ exports) gets it from the terrain source of the settings.
   `adaptiveShutterSamples(…, max)` (and `subFrameCount(spanPx, max)`: window = max / (max − 1) of the span, still ≤ `SHUTTER_STEP_PX`
   between renders) and to `shutterSamples`. The count stays a function of the film time and the quality alone: same project + same
   quality → same frames. `subFrameSlices` still splits the clouds' slices exactly among the sub-frames.
-- **Badges** (`presetBadge`, `PresetBadge` in `PanelSection.tsx`, `preset` prop of `SettingRow` / `RangeField`): « Imposé par Haute » (periwinkle
+- **Badges** (`presetBadge`, `PresetBadge` in `PanelSection.tsx`, `preset` prop of `SettingRow` / `RangeField`): « Imposé par Haute » (glacier
   pill after the weight pictogram) on the clouds quality row (Météo) while it is `'auto'`, and on the motion blur slider (Objectif) only
-  when the tier lowers its 8 (Standard); « Personnalisé » (chartreuse pill) on the clouds row once chosen by hand, with the row's
+  when the tier lowers its 8 (Standard); « Personnalisé » (light amber pill) on the clouds row once chosen by hand, with the row's
   « Revenir au préréglage » button. The « Qualité » row of the export drawer then reads « Haute · Personnalisé » (`isCustomised`), lists
   what the quality drives and repeats the button. Depth of field has no lever of its own (see below), only the repetition at each
   sub-frame, which its pictogram counts.

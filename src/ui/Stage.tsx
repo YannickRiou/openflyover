@@ -4,6 +4,7 @@ import { VIDEO_ASPECTS } from '../export/schedule'
 import { isExportBusy, useExportStore } from '../export/store'
 import { useT } from '../i18n'
 import { useHandViewStore } from '../scene/handView'
+import { create } from 'zustand'
 import { useAppStore } from '../state/store'
 import { Icon } from './icons'
 import { SafeZones, useSafeZonesStore } from './SafeZones'
@@ -17,6 +18,16 @@ const OverlayCanvas = lazy(() => import('../overlay/OverlayCanvas').then((m) => 
 
 /** Pale sky behind the transparent canvas of a view that fills the stage. */
 const SKY = 'bg-[linear-gradient(180deg,var(--color-glacier)_0%,var(--color-paper)_100%)]'
+/** A phone on its side (the `phone-landscape` variant). */
+const LANDSCAPE_QUERY = '(max-height: 499px) and (min-aspect-ratio: 1/1)'
+
+/**
+ * The view over the whole screen, on a phone (Safari on an iPhone has no full screen for a page, only for a video): the stage
+ * covers the screen, play or pause and a ✕ on it. `auto`: it came with a turn of the phone while the film played, and goes
+ * with the turn back.
+ */
+export const useViewFull = create<{ full: boolean; auto: boolean }>(() => ({ full: false, auto: false }))
+
 /** A button floating over the view, at its right edge (the top is set per button, 3.5 rem apart, 4 rem on a touch screen). */
 const FLOAT = 'btn-float absolute right-3 z-4'
 
@@ -51,6 +62,28 @@ export function Stage({ children }: { children?: ReactNode }) {
   // portrait phone: the capture and the safe zones fold behind one button (four buttons took 176 px of a 219 px view)
   const [toolsOpen, setToolsOpen] = useState(false)
   const [size, setSize] = useState<{ width: number; height: number } | null>(null)
+  const full = useViewFull((s) => s.full)
+  const playing = useAppStore((s) => s.playback.playing)
+  const setPlaying = useAppStore((s) => s.setPlaying)
+  // full screen: Escape leaves it; a phone turned on its side while the film plays takes it, turned back leaves it
+  useEffect(() => {
+    if (!full) return undefined
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') useViewFull.setState({ full: false, auto: false })
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [full])
+  useEffect(() => {
+    const query = window.matchMedia?.(LANDSCAPE_QUERY)
+    if (!query) return undefined
+    const onTurn = () => {
+      if (query.matches && useAppStore.getState().playback.playing && useAppStore.getState().tracks.length > 0) useViewFull.setState({ full: true, auto: true })
+      else if (!query.matches && useViewFull.getState().auto) useViewFull.setState({ full: false, auto: false })
+    }
+    query.addEventListener('change', onTurn)
+    return () => query.removeEventListener('change', onTurn)
+  }, [])
 
   useLayoutEffect(() => {
     const el = viewport.current
@@ -83,7 +116,7 @@ export function Stage({ children }: { children?: ReactNode }) {
   return (
     <div
       ref={viewport}
-      className={`relative min-h-0 flex-1 overflow-hidden ${aspect === null ? SKY : 'bg-chrome'} ${hasTracks ? 'phone:h-(--phone-preview-h) phone:flex-none' : ''}`}
+      className={`relative min-h-0 flex-1 overflow-hidden ${aspect === null ? SKY : 'bg-chrome'} ${hasTracks ? 'phone:h-(--phone-preview-h) phone:flex-none' : ''}${full ? ' fixed! inset-0 z-60 h-auto! bg-black!' : ''}`}
       role="region"
       aria-label={t('stage.view')}
     >
@@ -99,7 +132,40 @@ export function Stage({ children }: { children?: ReactNode }) {
         </Suspense>
         {rect && safeZones && <SafeZones aspect={aspectId} />}
       </div>
-      {hasTracks && (
+      {full && (
+        <>
+          <Button
+            variant="icon"
+            className="btn-float absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-[calc(env(safe-area-inset-right)+0.75rem)] z-5"
+            onClick={() => useViewFull.setState({ full: false, auto: false })}
+            aria-label={t('stage.fullExit')}
+          >
+            <Icon name="x" />
+          </Button>
+          <Button
+            variant="icon"
+            className="btn-float absolute bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 z-5 -translate-x-1/2"
+            onClick={() => setPlaying(!playing)}
+            aria-label={playing ? t('timeline.bar.pause') : t('timeline.bar.play')}
+          >
+            <Icon name={playing ? 'pause' : 'play'} />
+          </Button>
+        </>
+      )}
+      {/* a phone: the view over the whole screen (bottom left, clear of the source credits at the right) */}
+      {hasTracks && !full && (
+        <Tip text={t('stage.full')} side="right">
+          <Button
+            variant="icon"
+            className="btn-float absolute bottom-3 left-3 z-4 hidden phone-any:inline-flex"
+            onClick={() => useViewFull.setState({ full: true, auto: false })}
+            aria-label={t('stage.full')}
+          >
+            <Icon name="maximize" />
+          </Button>
+        </Tip>
+      )}
+      {hasTracks && !full && (
         <Tip text={withShortcut(t('stage.fit'), 'fit')} side="left">
           <Button
             variant="icon"
@@ -112,7 +178,7 @@ export function Stage({ children }: { children?: ReactNode }) {
           </Button>
         </Tip>
       )}
-      {aspect !== null && (
+      {aspect !== null && !full && (
         <Tip text={t('stage.tools')} side="left">
           <Button
             variant="icon"
@@ -125,7 +191,7 @@ export function Stage({ children }: { children?: ReactNode }) {
           </Button>
         </Tip>
       )}
-      {aspect !== null && (
+      {aspect !== null && !full && (
         <Tip text={withShortcut(t('stage.safeZonesTip'), 'safe-zones')} side="left">
           <Button
             variant="icon"
@@ -138,7 +204,7 @@ export function Stage({ children }: { children?: ReactNode }) {
           </Button>
         </Tip>
       )}
-      {aspect !== null && (
+      {aspect !== null && !full && (
         <Tip text={t('stage.capture')} side="left">
           {/* none in « Libre »: its view is not the picture of the film. The view as it is now, once moved by hand. */}
           <Button
@@ -152,7 +218,7 @@ export function Stage({ children }: { children?: ReactNode }) {
           </Button>
         </Tip>
       )}
-      {hasTracks && away && (
+      {hasTracks && away && !full && (
         <Tip text={t('stage.filmView')} side="left">
           <Button
             variant="icon"

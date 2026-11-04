@@ -137,6 +137,43 @@ describe('App shell on a phone', () => {
   })
 })
 
+describe('App shell: the bar of a selected block on a phone', () => {
+  it('offers « Couper » and « Dupliquer » for a text, not for a stop', async () => {
+    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    Element.prototype.scrollIntoView = () => {}
+    const matchMedia = window.matchMedia
+    // a phone upright: the bottom sheets and the block bar
+    window.matchMedia = ((query: string) => ({ matches: query.includes('max-width: 699px'), media: query, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia
+    const segments = [{ points: [6.8, 6.81, 6.82].map((lon) => ({ lon, lat: 45.9 })) }]
+    useAppStore.setState({ tracks: [buildTrack({ name: 'Sortie', source: 'gpx', segments })] })
+    const { addStop, addText } = await import('./film/timeline')
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<App />))
+    const bar = () => [...document.querySelectorAll('[role="toolbar"][aria-label="Élément sélectionné"] button')].map((b) => b.textContent)
+    const { settings, setSetting, setFilmSelection } = useAppStore.getState()
+    const text = addText(settings.film, 0)
+    await act(async () => {
+      setSetting('film', text.film)
+      setFilmSelection(text.id)
+    })
+    expect(bar()).toEqual(['Terminé', 'Modifier', 'Couper', 'Dupliquer', 'Supprimer'])
+    const stop = addStop(useAppStore.getState().settings.film, 100)
+    await act(async () => {
+      setSetting('film', stop.film)
+      setFilmSelection(stop.id)
+    })
+    expect(bar()).toEqual(['Terminé', 'Modifier', 'Supprimer'])
+    await act(async () => {
+      setFilmSelection(null)
+      setSetting('film', settings.film)
+    })
+    window.matchMedia = matchMedia
+    act(() => root.unmount())
+    document.body.innerHTML = ''
+  })
+})
+
 describe('Tabs and the « Ambiance » chips', () => {
   it('« Grand beau » in Débutant keeps Météo and Lumière hidden; values that match no chip bring the tabs back', async () => {
     ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true

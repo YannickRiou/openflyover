@@ -110,6 +110,21 @@ const PATHS = {
     </>
   ),
   mountain: <path d="m8 3 4 8 5-5 5 15H2L8 3z" />,
+  scissors: (
+    <>
+      <circle cx="6" cy="6" r="3" />
+      <path d="M8.12 8.12 12 12" />
+      <path d="M20 4 8.12 15.88" />
+      <circle cx="6" cy="18" r="3" />
+      <path d="M14.8 14.8 20 20" />
+    </>
+  ),
+  copy: (
+    <>
+      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+    </>
+  ),
   map: (
     <>
       <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />

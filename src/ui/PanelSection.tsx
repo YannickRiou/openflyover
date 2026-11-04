@@ -86,8 +86,8 @@ const WEIGHT_BAR = ['h-1', 'h-2', 'h-3']
 
 /**
  * « Poids de rendu »: three bars, as many filled as the setting's current value lengthens the export (renderCost.ts);
- * nothing at weight 0. It reads the store itself, so the memoised panels do not render again with the settings. Navy
- * bars on periwinkle; the heaviest in chartreuse on a navy chip.
+ * nothing at weight 0. It reads the store itself, so the memoised panels do not render again with the settings. Ink
+ * bars on the line colour; the heaviest in amber (the app's « attention ») on an ink chip.
  */
 export function RenderWeight({ weight }: { weight: WeightKey }) {
   const t = useT()
@@ -96,11 +96,11 @@ export function RenderWeight({ weight }: { weight: WeightKey }) {
   if (tier === 0) return null
   return (
     <Tip text={tip} wrap={220}>
-      <span className={`${WEIGHT} ml-2 ${tier === 3 ? 'bg-navy' : ''}`} data-testid="render-weight" data-tier={tier}>
+      <span className={`${WEIGHT} ml-2 ${tier === 3 ? 'bg-ink' : ''}`} data-testid="render-weight" data-tier={tier}>
         {WEIGHT_BAR.map((height, i) => (
           <i
             key={height}
-            className={`w-[3px] rounded-[1px] ${height} ${i < tier ? (tier === 3 ? 'bg-chartreuse' : 'bg-navy') : 'bg-periwinkle'}`}
+            className={`w-[3px] rounded-[1px] ${height} ${i < tier ? (tier === 3 ? 'bg-amber-light' : 'bg-ink') : 'bg-line'}`}
             aria-hidden="true"
           />
         ))}
@@ -112,7 +112,7 @@ export function RenderWeight({ weight }: { weight: WeightKey }) {
 
 /**
  * « Imposé par Haute » / « Personnalisé »: next to the name of a row that the export quality drives (qualityTier.ts).
- * Periwinkle while the quality decides, chartreuse once the value was chosen by hand over it; `stacked` puts it under
+ * Glacier while the quality decides, amber once the value was chosen by hand over it; `stacked` puts it under
  * the name instead of after it.
  */
 export function PresetBadge({ knob, stacked = false }: { knob: PresetKnob; stacked?: boolean }) {
@@ -122,7 +122,7 @@ export function PresetBadge({ knob, stacked = false }: { knob: PresetKnob; stack
   if (!kind) return null
   return (
     <span
-      className={`rounded-full px-2 align-middle text-caption font-semibold whitespace-nowrap text-navy ${stacked ? 'mt-0.5 block w-fit' : 'ml-2 inline-block'} ${kind === 'preset' ? 'bg-periwinkle' : 'bg-chartreuse'}`}
+      className={`rounded-full px-2 align-middle text-caption font-semibold whitespace-nowrap text-ink ${stacked ? 'mt-0.5 block w-fit' : 'ml-2 inline-block'} ${kind === 'preset' ? 'bg-glacier' : 'bg-amber-light'}`}
       data-testid={`preset-badge-${knob}`}
     >
       {text}
@@ -138,7 +138,7 @@ export function TabWeightDot({ tabs }: { tabs: readonly ShellTab[] }) {
   return (
     <>
       <span
-        className="pointer-events-none absolute top-1 left-[calc(50%+6px)] size-2 rounded-full bg-chartreuse ring-2 ring-navy"
+        className="pointer-events-none absolute top-1 left-[calc(50%+6px)] size-2 rounded-full bg-amber-light ring-2 ring-ink"
         data-testid="tab-weight"
         aria-hidden="true"
       />

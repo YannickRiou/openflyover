@@ -55,6 +55,8 @@ export default {
   'dock.inspector': 'Inspecteur',
   'blockTools.aria': 'Élément sélectionné',
   'blockTools.edit': 'Modifier',
+  'blockTools.split': 'Couper',
+  'blockTools.duplicate': 'Dupliquer',
   exportBusy: "Un export est en cours : le fichier n'a pas été ouvert.",
   'tour.aria': 'Visite guidée',
   'tour.step': '{n} sur {total}',

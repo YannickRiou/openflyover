@@ -204,7 +204,7 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
   return (
     <header className="chrome-focus relative z-10 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-white/10 bg-chrome pr-2 pl-3 text-white bar-condensed:flex bar-condensed:gap-2 phone-any:pt-[var(--safe-top)]">
       <div className="flex min-w-0 items-center gap-1 bar-condensed:flex-auto">
-        <img className="mr-1 size-7 flex-none" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={28} height={28} title="OpenFlyover" />
+        <img className="mr-1 size-7 flex-none phone:hidden" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={28} height={28} title="OpenFlyover" />
         <h1 className="sr-only">OpenFlyover</h1>
         <TextField
           className="min-w-16 flex-[0_1_220px] bar-condensed:flex-auto phone-any:min-w-0"
@@ -218,12 +218,12 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
         />
         <span className="mx-1 h-5 w-px flex-none bg-white/15 bar-condensed:hidden" aria-hidden="true" />
         <Tip text={withShortcut(t('topbar.undo'), 'undo')}>
-          <BarButton className="bar-condensed:hidden" onClick={history.undo} disabled={!canUndo || busy} aria-label={t('topbar.undo')}>
+          <BarButton onClick={history.undo} disabled={!canUndo || busy} aria-label={t('topbar.undo')}>
             <Icon name="undo" />
           </BarButton>
         </Tip>
         <Tip text={withShortcut(t('topbar.redo'), 'redo')}>
-          <BarButton className="bar-condensed:hidden" onClick={history.redo} disabled={!canRedo || busy} aria-label={t('topbar.redo')}>
+          <BarButton onClick={history.redo} disabled={!canRedo || busy} aria-label={t('topbar.redo')}>
             <Icon name="redo" />
           </BarButton>
         </Tip>
@@ -255,11 +255,12 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
             <Icon name="circle-help" />
           </BarButton>
         </Tip>
-        <LanguageMenu />
+        {/* a phone chooses its language in « Réglages »: the bar keeps undo and redo instead */}
+        <div className="contents phone:hidden">
+          <LanguageMenu />
+        </div>
         <MoreMenu
           items={[
-            { label: t('topbar.undo'), icon: 'undo', onClick: history.undo, disabled: !canUndo || busy },
-            { label: t('topbar.redo'), icon: 'redo', onClick: history.redo, disabled: !canRedo || busy },
             { label: t('topbar.openMore'), icon: 'folder-open', onClick: onOpen, disabled: busy },
             { label: t('topbar.save'), icon: 'save', onClick: saveProject, disabled: busy },
           ]}

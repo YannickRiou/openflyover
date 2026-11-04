@@ -3,6 +3,22 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **The app's own colours everywhere**: the weight bars of the settings, the « Imposé » and « Personnalisé » badges, the dot on a tab, the photo pins on the terrain, the lens flare and two of the bar colours offered in « Apparence » (now « Bleu nuit » and « Vert forêt ») take the colours of the app's palette (ink, glacier, moss, amber) instead of colours that did not belong to it. A bar colour chosen before is kept.
+
+- **The view in full screen on a phone**: a button at the bottom left of the view shows it over the whole screen, with play and ✕; turning the phone sideways while the film plays does the same, and turning it upright again leaves it.
+
+- **No title twice in a phone's sheet**: the head of the settings sheet no longer repeats the name of the tab (« Habillage » then « Habillage »); the tab bar, in sight under the sheet, shows which one is open.
+
+- **The interface follows the size of the screen**: one scale, proportional to the shorter side of the screen, instead of sizes per device. Text, margins, bars and buttons are about 14 % smaller on a phone (either way up) than on a tablet or a computer, which do not change; the text never goes under 11 px (13 px for the body) and a touch target under 36 px.
+
+- **Undo and redo in the top bar of a phone**: « Annuler » and « Rétablir » are in the bar (they were in the ⋯ menu) and the project name has more room; the logo and the language flag leave the bar of a phone upright. The language is now also a section of « Réglages », on every device.
+
+- **Split and duplicate on a phone**: a selected text or photo gets « Couper » (in two at the playhead) and « Dupliquer » in the bar of the block, a video « Dupliquer », as X and Ctrl+D on a computer. The flight and the stops get neither: cutting them would make no sense.
+
+- **The tabs of a phone stay in sight under a sheet**: the settings sheet stops above the tab bar, so another tab is one touch away and opens in the same sheet (it took closing the sheet first).
+
 ## 5.3.0 (November 2026)
 
 - **A cleaner timeline, on a phone and on a computer**: the lanes share one ground with a thin line between them instead of grey bands, the blocks are rounder, the ruler shows its times with a short mark instead of lines across it, and the playhead is a white line with a round cap in the accent colour (the one chosen in « Réglages »). On a phone the play button is round and the lane names are quieter. The colours stay the app's own.

@@ -36,8 +36,8 @@ export const ACCENT_PRESETS: readonly { color: string; label: string }[] = [
 /** Colours offered for the bar and the rail; the secondary text of the bar keeps 4.5:1 on each. */
 export const CHROME_PRESETS: readonly { color: string; label: string }[] = [
   { color: '#1b2832', get label() { return t('settings.preferences.chrome.ink') } },
-  { color: '#113b54', get label() { return t('settings.preferences.chrome.navy') } },
-  { color: '#024442', get label() { return t('settings.preferences.chrome.pine') } },
+  { color: '#20384a', get label() { return t('settings.preferences.chrome.night') } },
+  { color: '#1f3d33', get label() { return t('settings.preferences.chrome.forest') } },
   { color: '#3b1d38', get label() { return t('settings.preferences.chrome.plum') } },
   { color: '#2b2f33', get label() { return t('settings.preferences.chrome.graphite') } },
 ]
