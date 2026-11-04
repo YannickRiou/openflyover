@@ -1910,7 +1910,11 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                   <span className={`max-w-full truncate pr-11 ${folded ? 'text-[10px] leading-none' : ''}`} title={lane.name}>
                     {lane.name}
                   </span>
-                  {lane.keys && !folded && <KeyGroup target={lane.keys} clock={clock} timeS={frozenS} disabled={!hasTrack} />}
+                  {lane.keys && !folded && (
+                    <span className="lane-keys">
+                      <KeyGroup target={lane.keys} clock={clock} timeS={frozenS} disabled={!hasTrack} />
+                    </span>
+                  )}
                   <span
                     className={`absolute right-1 ${lane.keys && !folded ? 'top-1' : 'top-1/2 -translate-y-1/2'} flex gap-0.5 ${folded || locked ? '' : 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 touch:opacity-100'}`}
                   >

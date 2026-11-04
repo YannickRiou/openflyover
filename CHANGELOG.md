@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **A quieter top bar and timeline on a computer**: « Débutant / Confirmé / Expert » left the top bar, where it took room for a choice made once; it stays in Réglages, « Mode de l’interface » (where phones and tablets already had it). Under « Plans » and « Vitesse », the previous and next key buttons show while the mouse is over the lane name or the keyboard focus is in it, like the fold and lock buttons; the key button stays, it shows whether a key is at the playhead. Touch screens keep all three.
+
 - **A phone on its side is usable**: a phone 667 px wide or less held in landscape (iPhone SE, mini) took the portrait layout, with a timeline of no height; it now gets the landscape layout like the larger phones. In landscape the top bar and the controls are shorter (44 and 40 px), and the unfolded timeline keeps its buttons on one row that scrolls sideways and takes at most 72 % of the height (it was 85 %, over the whole view, with the buttons on three rows).
 
 - **The lanes are named on a phone**: in portrait, the centred timeline had no column of headers, so nothing said what a lane was. Each lane now carries its name at its left end, over the blocks.
