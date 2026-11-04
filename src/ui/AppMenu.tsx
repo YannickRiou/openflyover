@@ -98,7 +98,8 @@ export function useAppMenu(onHelp: () => void): AppMenu {
  * to the logo, whose summit is that orange, it would read as a second sun. The ring of the bar detaches it from what is under it.
  */
 export function NewsDot() {
-  return <span className="absolute right-0.5 bottom-0.5 size-2.5 rounded-full bg-moss-light ring-2 ring-chrome" data-testid="news-dot" aria-hidden="true" />
+  // small and in the very corner: the chevron of the logo button stays clear
+  return <span className="absolute right-0 bottom-0 size-1.5 rounded-full bg-moss-light ring-1 ring-chrome" data-testid="news-dot" aria-hidden="true" />
 }
 
 /**

@@ -5,6 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## 5.5.0 (unreleased)
 
+- **One way to close a project**: « Fermer le projet » leaves the « Projet » tab, as « Mes projets » in the OpenFlyover menu does the same (back to the home screen, with the same question when changes would be lost). The news dot on the logo is smaller and sits in the corner, clear of the chevron. The font credit in « À propos » names the fonts the app ships today: IBM Plex, Manrope, Barlow and Fraunces.
 - **The film options no longer overflow**: in « Options du film » on the timeline, a long label such as « Baisser toutes les musiques sous les vidéos » wraps onto a second line instead of running past the panel and adding a sideways scroll bar.
 - **Thin scrollbars**: the panels and the timeline scroll with a thin rounded bar in the colour of their text, without the arrows or the grey track of the system bar, in the browser and in the desktop app.
 - **One look for every gabarit**: « Reel 30 s », « Résumé 1 min » and « Souvenir 3 min » of « Film automatique » all start from the « Cinéma » overlay style, with black bars and the figures on a subtitle line, as they already shared the « Cinéma » camera. « Résumé » used « Diffusion » and the two others « Application ». Another style can still be chosen afterwards in « Habillage ».

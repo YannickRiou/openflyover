@@ -74,8 +74,6 @@ const messages: Messages['project'] = {
   'panel.saveTip': 'Save the project (to the same file once saved)',
   'panel.saveAs': 'Save as…',
   'panel.saveAsTip': 'Save the project under another name or in another place',
-  'panel.close': 'Close the project',
-  'panel.closeHint': 'Closing goes back to the home screen; a kept project stays in My projects.',
   'panel.library': 'My projects',
   'panel.noLibrary': 'This browser cannot keep projects (insecure page, no HTTPS).',
   'panel.keptDesktop': 'Kept on this computer, saved automatically after every change.',

@@ -400,7 +400,7 @@ const isOpenProjectDirty = () => {
 }
 
 /**
- * What closing the open project (« Fermer le projet », « Nouveau projet ») would lose, once its waiting change is
+ * What closing the open project (« Mes projets » of the OpenFlyover menu, « Nouveau projet ») would lose, once its waiting change is
  * written: its changes saved nowhere. A project emptied of its tracks loses nothing (its entry or file keeps them).
  */
 export function projectCloseLoss(): CloseLoss {

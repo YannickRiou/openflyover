@@ -17,7 +17,7 @@ const messages: Messages['status'] = {
   version: 'Versión: {version}',
   sourcesProject: 'OpenFlyover es de código abierto: código, documentación y descargas en',
   sourcesNote:
-    'Estas menciones se incrustan en las películas exportadas (Gráficos, «Créditos de las fuentes»). Fuentes tipográficas: Fraunces e IBM Plex (SIL Open Font License 1.1). Iconos: Lucide (licencia ISC). OpenFlyover se publica bajo licencia MIT.',
+    'Estas menciones se incrustan en las películas exportadas (Gráficos, «Créditos de las fuentes»). Fuentes tipográficas: IBM Plex, Manrope, Barlow y Fraunces (SIL Open Font License 1.1). Iconos: Lucide (licencia ISC). OpenFlyover se publica bajo licencia MIT.',
   'source.weather': 'Meteorología de la salida (Open-Meteo)',
   'source.landmarks': 'Referencias (OpenStreetMap)',
   'source.region': 'Región del plano de situación (OpenStreetMap)',

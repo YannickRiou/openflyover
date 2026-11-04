@@ -80,8 +80,6 @@ const messages: Messages['project'] = {
   'panel.saveTip': 'Guardar el proyecto (en el mismo archivo una vez guardado)',
   'panel.saveAs': 'Guardar como…',
   'panel.saveAsTip': 'Guardar el proyecto con otro nombre o en otro lugar',
-  'panel.close': 'Cerrar el proyecto',
-  'panel.closeHint': 'Cerrar vuelve a la pantalla de inicio; un proyecto conservado permanece en Mis proyectos.',
   'panel.library': 'Mis proyectos',
   'panel.noLibrary': 'Este navegador no puede conservar proyectos (página no segura, sin HTTPS).',
   'panel.keptDesktop': 'Conservados en este ordenador, guardados automáticamente en cada cambio.',

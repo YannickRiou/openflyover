@@ -14,7 +14,7 @@ export default {
   sourcesTitle: 'Sources et licences',
   version: 'Version : {version}',
   sourcesProject: 'OpenFlyover est un projet libre : code source, documentation et téléchargements sur',
-  sourcesNote: 'Ces mentions sont incrustées dans les films exportés (Habillage, « Crédits des sources »). Polices : Fraunces et IBM Plex (SIL Open Font License 1.1). Icônes : Lucide (licence ISC). OpenFlyover est publié sous licence MIT.',
+  sourcesNote: 'Ces mentions sont incrustées dans les films exportés (Habillage, « Crédits des sources »). Polices : IBM Plex, Manrope, Barlow et Fraunces (SIL Open Font License 1.1). Icônes : Lucide (licence ISC). OpenFlyover est publié sous licence MIT.',
   'source.weather': 'Météo de la sortie (Open-Meteo)',
   'source.landmarks': 'Repères (OpenStreetMap)',
   'source.region': 'Région du plan de situation (OpenStreetMap)',

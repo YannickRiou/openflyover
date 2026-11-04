@@ -16,7 +16,7 @@ const messages: Messages['status'] = {
   sourcesTitle: 'Quellen und Lizenzen',
   version: 'Version: {version}',
   sourcesProject: 'OpenFlyover ist quelloffen: Code, Dokumentation und Downloads auf',
-  sourcesNote: 'Diese Angaben werden in die exportierten Filme eingeblendet (Overlay, „Quellenangaben“). Schriften: Fraunces und IBM Plex (SIL Open Font License 1.1). Icons: Lucide (ISC-Lizenz). OpenFlyover wird unter der MIT-Lizenz veröffentlicht.',
+  sourcesNote: 'Diese Angaben werden in die exportierten Filme eingeblendet (Overlay, „Quellenangaben“). Schriften: IBM Plex, Manrope, Barlow und Fraunces (SIL Open Font License 1.1). Icons: Lucide (ISC-Lizenz). OpenFlyover wird unter der MIT-Lizenz veröffentlicht.',
   'source.weather': 'Wetter der Tour (Open-Meteo)',
   'source.landmarks': 'Landmarken (OpenStreetMap)',
   'source.region': 'Region der Übersicht (OpenStreetMap)',

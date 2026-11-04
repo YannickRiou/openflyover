@@ -173,7 +173,7 @@ async function closeOpenProject(ask: () => Promise<CloseAnswer>, beforeEmptying?
   return true
 }
 
-/** « Fermer le projet » (Projet tab): back to the home screen; a kept project stays in « Mes projets ». */
+/** « Mes projets » (OpenFlyover menu): back to the home screen; a kept project stays in « Mes projets ». */
 export async function closeProject(ask: () => Promise<CloseAnswer>): Promise<void> {
   const { projectName, tracks } = useAppStore.getState()
   const name = effectiveProjectName(projectName, tracks[0]?.name)
@@ -241,7 +241,7 @@ function keepProject(): () => void {
 let closingLastTrack = false
 
 /**
- * The ✕ of a track card. The last track of the project goes with the project, as « Fermer le projet » (the home screen
+ * The ✕ of a track card. The last track of the project goes with the project, as « Mes projets » of the OpenFlyover menu (the home screen
  * shows, nothing is left to save): the same question when changes would be lost, then « Annuler » in the message puts
  * the track and the project back. The other tracks just go.
  */

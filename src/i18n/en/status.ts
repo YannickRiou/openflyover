@@ -16,7 +16,7 @@ const messages: Messages['status'] = {
   sourcesTitle: 'Sources and licences',
   version: 'Version: {version}',
   sourcesProject: 'OpenFlyover is open source: code, documentation and downloads on',
-  sourcesNote: 'These credits are burned into the exported films (Overlay, “Source credits”). Fonts: Fraunces and IBM Plex (SIL Open Font License 1.1). Icons: Lucide (ISC licence). OpenFlyover is published under the MIT licence.',
+  sourcesNote: 'These credits are burned into the exported films (Overlay, “Source credits”). Fonts: IBM Plex, Manrope, Barlow and Fraunces (SIL Open Font License 1.1). Icons: Lucide (ISC licence). OpenFlyover is published under the MIT licence.',
   'source.weather': 'Weather of the outing (Open-Meteo)',
   'source.landmarks': 'Landmarks (OpenStreetMap)',
   'source.region': 'Locator map region (OpenStreetMap)',

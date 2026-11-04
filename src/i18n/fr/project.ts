@@ -72,8 +72,6 @@ export default {
   'panel.saveTip': 'Enregistrer le projet (dans le même fichier une fois enregistré)',
   'panel.saveAs': 'Enregistrer sous…',
   'panel.saveAsTip': 'Enregistrer le projet sous un autre nom ou à un autre endroit',
-  'panel.close': 'Fermer le projet',
-  'panel.closeHint': 'Fermer revient à l’écran d’accueil ; un projet gardé reste dans Mes projets.',
   'panel.library': 'Mes projets',
   'panel.noLibrary': 'Ce navigateur ne peut pas garder de projets (page non sécurisée, sans HTTPS).',
   'panel.keptDesktop': 'Gardés sur cet ordinateur, enregistrés automatiquement à chaque changement.',
