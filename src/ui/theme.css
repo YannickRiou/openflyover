@@ -146,14 +146,19 @@
  */
 @custom-variant touch (@media (pointer: coarse));
 @custom-variant drawer (@media (max-width: 1023px));
-@custom-variant phone (@media (max-width: 699px));
+/* (a phone on its side, 667 px wide or less, is a landscape phone: the portrait layout would leave its timeline no height) */
+@custom-variant phone {
+  @media (max-width: 699px) and (not ((max-height: 499px) and (min-aspect-ratio: 1/1))) {
+    @slot;
+  }
+}
 /* (the block form: the shorthand splits a list of queries at the comma and keeps only the first) */
 @custom-variant phone-any {
   @media (max-width: 699px), (max-height: 499px) {
     @slot;
   }
 }
-@custom-variant phone-landscape (@media (max-height: 499px) and (min-width: 700px));
+@custom-variant phone-landscape (@media (max-height: 499px) and (min-aspect-ratio: 1/1));
 @custom-variant bar-condensed {
   @media (max-width: 1023px) and (pointer: coarse), (max-width: 699px), (max-height: 499px) {
     @slot;
@@ -433,8 +438,17 @@ select {
   }
 }
 
+/* a phone on its side: shorter bars and controls, the film and the timeline need the height */
+@media (max-height: 499px) and (min-aspect-ratio: 1/1) {
+  :root {
+    --topbar-h: 44px;
+    --control-h: 40px;
+    --control-h-lg: 40px;
+  }
+}
+
 /* the portrait phone: the preview keeps the top of the screen, the transport row sits under it, the sheets start under both */
-@media (max-width: 699px) {
+@media (max-width: 699px) and (not ((max-height: 499px) and (min-aspect-ratio: 1/1))) {
   :root {
     --phone-preview-h: 42dvh;
     --phone-transport-h: 52px;

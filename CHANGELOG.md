@@ -3,6 +3,12 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **A phone on its side is usable**: a phone 667 px wide or less held in landscape (iPhone SE, mini) took the portrait layout, with a timeline of no height; it now gets the landscape layout like the larger phones. In landscape the top bar and the controls are shorter (44 and 40 px), and the unfolded timeline keeps its buttons on one row that scrolls sideways and takes at most 72 % of the height (it was 85 %, over the whole view, with the buttons on three rows).
+
+- **The lanes are named on a phone**: in portrait, the centred timeline had no column of headers, so nothing said what a lane was. Each lane now carries its name at its left end, over the blocks.
+
 ## 5.1.3 (November 2026)
 
 - **A taller view and sheets on a phone**: in portrait, the preview is as tall as the frame of the film at the width of the screen, instead of 42 % of the screen with a black band above and below (a 16:9 film goes from 219 px with 62 px of black to 219 px of view and 62 px more for the sheets); a 9:16 or 4:5 frame takes up to 55 % of the screen. The panels and the export sheet gain a « Agrandir » button in their head: the sheet takes the whole height under the top bar (« Réduire » or « Terminé » brings it back).
