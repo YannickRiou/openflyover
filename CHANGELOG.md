@@ -9,7 +9,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 - **A summary under each folded section**: a folded section says what is set in it, in one line, for example « Unie · 4 px · Plein » for the track line. It is written for the track style, the marker, the map background, the relief, the clouds, the sun, the camera, the overlay and four sections of « Réglages » (language, interface mode, appearance, preview). On a computer a tab opens on its first section only; a section opened or folded by hand is remembered as before. A modified setting still shows « modifié » on a folded section. A phone keeps its sections open.
 
-- **Three levels of headings in the panels**: the track section is now « Style de la trace », so it is no longer taken for the « Traces » list above it. The parts of a section (« Ligne », « Halo », « Vol », and those of the export drawer and the inspector) are written in sentence case, smaller and muted, between the capitals of the section title and the row names.
+- **Three levels of headings in the panels, in a softer font**: the section titles were condensed capitals, spaced like the names of ranges on a map, which read as abrupt. The headings of the interface are now Manrope (self-hosted, weights 600 and 700, SIL OFL licence), in sentence case: the section title in bold at 16 px, the parts of a section (« Ligne », « Halo », « Vol », also in the export drawer and the inspector) in semi-bold at 13 px and muted, the row names in IBM Plex Sans as before. The track section is now « Style de la trace », so it is no longer taken for the « Traces » list above it. IBM Plex Sans Condensed stays for the film fonts only.
 
 ## 5.4.0 (November 2026)
 

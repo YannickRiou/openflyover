@@ -454,10 +454,10 @@ Semantic roles over the palette (component CSS uses these): `--surface-chrome`, 
 `--shadow-pop`. Selected states (tiles, chips, switches, sliders, checkboxes) are in the accent; segmented controls
 are a card well with a white pill; the only filled accent buttons are the primary action of a view.
 
-Headings: IBM Plex Sans Condensed (`--font-heading`; a section title in spaced capitals, `panel-title`; a part of a section in sentence case, smaller and muted, `panel-subtitle`; a row name, `type-label`); body and buttons: IBM
+Headings: Manrope (`--font-heading`; a section title in bold sentence case, `panel-title`; a part of a section in semi-bold, smaller and muted, `panel-subtitle`; a row name in IBM Plex Sans, `type-label`); body and buttons: IBM
 Plex Sans; the map and the overlay may take Barlow Semi Condensed 600/700 (`barlow` in `OVERLAY_FONT_IDS`); Fraunces stays
 among the fonts of the overlay and the posters. Fonts **bundled** (no network access): WOFF2 in `public/fonts/` (Fraunces
-variable opsz + wght, IBM Plex Sans variable wght, IBM Plex Sans Condensed 500/600/700, Barlow Semi Condensed 600/700), `latin` and `latin-ext` subsets declared through `unicode-range` in
+variable opsz + wght, IBM Plex Sans variable wght, IBM Plex Sans Condensed 500/600/700 for the film, Barlow Semi Condensed 600/700, Manrope 600/700), `latin` and `latin-ext` subsets declared through `unicode-range` in
 `src/ui/fonts.css` (imported by `src/main.tsx`); the browser downloads a subset only if a character requires it.
 Sources, versions and licenses: `public/fonts/README.md`. `src/ui/fonts.test.ts` checks that every referenced file exists and
 that every drawn font (UI, overlay, 3D labels) has its face. Text contrast ≥ 4.5:1.

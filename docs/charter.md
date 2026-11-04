@@ -19,7 +19,7 @@ Le logo tient en quatre éléments, et la charte n'en ajoute pas d'autre.
 
 1. **Une seule balise.** L'orange marque un point, jamais une surface : l'action principale d'un écran, la tête de lecture, le repère sur la trace, l'onglet ouvert. Une zone de l'écran porte une balise, pas plusieurs. Un bloc orange plein n'existe que pour le bouton principal (« Exporter »).
 2. **Le trait plutôt que la surface.** Comme le logo, l'interface dessine avec des lignes de 2 px aux bouts arrondis : icônes, profils d'altitude, traces, filets. Peu d'ombres, aucun dégradé décoratif.
-3. **Lisible comme une carte.** Les étiquettes et les chiffres empruntent aux cartes topographiques : capitales condensées pour les titres de section, chiffres tabulaires, unités normalisées avec leur espace (12,6 km, 2 394 m, 30°, 01:11).
+3. **Lisible comme une carte.** Les étiquettes et les chiffres empruntent aux cartes topographiques : titres de section en Manrope, chiffres tabulaires, unités normalisées avec leur espace (12,6 km, 2 394 m, 30°, 01:11).
 4. **L'image d'abord.** L'encre s'efface autour de la vue 3D ; la couleur est réservée au film et à la balise. Les couleurs des traces et l'accent choisi dans « Réglages » restent ceux de la personne.
 
 ## Couleurs
@@ -36,10 +36,10 @@ Tout texte atteint 4,5:1 sur son fond, dans les deux thèmes. Deux couleurs qu'i
 
 ## Typographie
 
-Deux familles, chacune à sa place : IBM Plex pour l'interface, Barlow pour ce qui se lit sur la carte.
+Trois familles, chacune à sa place : Manrope pour les titres de l'interface, IBM Plex pour le reste de l'interface, Barlow pour ce qui se lit sur la carte.
 
-- **IBM Plex Sans** : toute l'interface (corps 14 px, aides 12 px, titres de réglage 16 px semi-gras), les parties d'une section (« Ligne », « Halo ») en minuscules semi-grasses de 12 px, en gris, entre le titre de section en capitales et le nom d'un réglage.
-- **IBM Plex Sans Condensed** : les titres de section en capitales espacées (comme les noms de massifs sur une carte), les étiquettes courtes, les chiffres des lectures (temps, distance, altitude), toujours en chiffres tabulaires.
+- **Manrope**, demi-gras et gras : les titres de l'interface, en minuscules (seule la première lettre est une capitale). Le titre d'une section est en gras à 16 px, les parties d'une section (« Ligne », « Halo ») en demi-gras à 13 px et en gris, le nom d'un réglage reste en IBM Plex Sans. La 5.4.0 posait les titres en capitales condensées espacées, comme les noms de massifs sur une carte : la lecture en était sèche, les lettres rondes de Manrope la rendent plus douce.
+- **IBM Plex Sans** : le corps de l'interface (14 px), les aides (12 px), les noms de réglage et les boutons, les étiquettes courtes, les chiffres des lectures (temps, distance, altitude), toujours en chiffres tabulaires. IBM Plex Sans Condensed ne sert plus qu'aux films (style « Diffusion » de l'habillage).
 
 - **Barlow Semi Condensed**, demi-gras et gras : la police de la carte et de l'habillage. Dessinée d'après la signalétique routière, elle se lit vite, de loin et par-dessus une image ; condensée, elle fait tenir les longs noms (« Pic de la Coumette d'Aygues Tortes »). Elle sert aux étiquettes posées sur le relief (sommets, cols, lacs, repères), aux titres et aux chiffres de l'habillage (compteurs, carte d'ouverture et de clôture, affiche). Toujours sur un fond d'encre ou avec son contour, jamais en corps de texte dans l'interface.
 
@@ -83,4 +83,4 @@ Le français d'abord, quatre autres langues ensuite. Des phrases courtes, à la 
 | Balise sur la crème (action) | `--color-accent` | `#B8361A` (blanc dessus : 5,9:1) |
 | Mousse, ambre | `--color-moss`, `--color-amber` (et `-light`) | voir `ARCHITECTURE.md` |
 
-La police des titres est `--font-heading` (IBM Plex Sans Condensed), celle de la carte et de l'habillage `barlow` dans `OVERLAY_FONT_IDS`. L'accent par défaut est la balise ; « Réglages » › « Apparence » permet toujours d'en choisir un autre. Le logo source : `public/favicon.svg`.
+La police des titres est `--font-heading` (Manrope), celle de la carte et de l'habillage `barlow` dans `OVERLAY_FONT_IDS`. L'accent par défaut est la balise ; « Réglages » › « Apparence » permet toujours d'en choisir un autre. Le logo source : `public/favicon.svg`.

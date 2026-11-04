@@ -9,7 +9,7 @@ export default {
   'v55.summary.title': 'Un résumé sous chaque section repliée',
   'v55.summary.text': 'Une section repliée dit ce qui y est réglé, par exemple « Unie · 4 px · Plein » pour la trace. Sur ordinateur, un onglet s’ouvre sur sa première section : vous ouvrez seulement ce que vous voulez changer.',
   'v55.headings.title': 'Des titres faciles à distinguer',
-  'v55.headings.text': 'La section de la trace s’appelle « Style de la trace », pour ne plus la confondre avec la liste « Traces ». Les parties d’une section (Ligne, Halo) sont écrites en minuscules, plus petites et plus claires.',
+  'v55.headings.text': 'La section de la trace s’appelle « Style de la trace », pour ne plus la confondre avec la liste « Traces ». Les titres passent en Manrope, plus ronde, en minuscules : celui d’une section en gras, ses parties (Ligne, Halo) plus petites et plus claires.',
   'v50.margins.title': 'Des marges au choix',
   'v50.margins.text': 'La case « Marges de sécurité » de l’export garde l’habillage loin des bords et, en 9:16 et 4:5, hors des zones de Reels, TikTok et Shorts. Elle se coche d’elle-même quand vous choisissez une plateforme. Décochée, l’habillage se rapproche des bords et l’image entière sert au film.',
   'v50.modes.title': 'Trois modes d’interface',
