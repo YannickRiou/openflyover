@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useT } from '../i18n'
+import { useAppStore } from '../state/store'
 import { Button, isModalOpen } from './primitives'
 import { placeBubble, startTour, stopTour, tourSeen, useTour } from './tourSteps'
 import type { Box, TourStep } from './tourSteps'
@@ -19,8 +20,8 @@ function boxOf(step: TourStep | undefined): Box | null {
 }
 
 /**
- * The guided tour: a bubble that points at one part of the screen after the other. It starts by itself at the first launch
- * (never in an automated browser), « Arrêter la visite » or Escape stops it at any step, and the help can start it again.
+ * The guided tour: a bubble that points at one part of the screen after the other. It starts by itself the first time a project is open
+ * (never in an automated browser, nor on the home screen), « Arrêter la visite » or Escape stops it at any step, and the help can start it again.
  */
 export function Tour() {
   const t = useT()
@@ -28,10 +29,12 @@ export function Tour() {
   const [box, setBox] = useState<Box | null>(null)
   const [spot, setSpot] = useState<{ left: number; top: number }>({ left: 0, top: 0 })
   const bubble = useRef<HTMLDivElement>(null)
+  // the tour points at the tabs, the timeline and the export: nothing of it on the home screen, before a track is open
+  const hasTracks = useAppStore((s) => s.tracks.length > 0)
 
-  // first launch
+  // first launch, once a project is open
   useEffect(() => {
-    if (tourSeen() || navigator.webdriver) return
+    if (!hasTracks || tourSeen() || navigator.webdriver) return undefined
     let timer: ReturnType<typeof setTimeout>
     const attempt = () => {
       if (tourSeen()) return
@@ -40,7 +43,7 @@ export function Tour() {
     }
     timer = setTimeout(attempt, START_DELAY_MS)
     return () => clearTimeout(timer)
-  }, [])
+  }, [hasTracks])
 
   const current = steps[step]
   useLayoutEffect(() => {

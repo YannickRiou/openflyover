@@ -9,6 +9,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 - **The lanes are named on a phone**: in portrait, the centred timeline had no column of headers, so nothing said what a lane was. Each lane now carries its name at its left end, over the blocks.
 
+- **The tour no longer starts on the home screen**: the guided tour of the first launch started 1.5 s after the page opened, with no project, and pointed at parts of the screen that were not there. It now starts the first time a project is open.
+
 ## 5.1.3 (November 2026)
 
 - **A taller view and sheets on a phone**: in portrait, the preview is as tall as the frame of the film at the width of the screen, instead of 42 % of the screen with a black band above and below (a 16:9 film goes from 219 px with 62 px of black to 219 px of view and 62 px more for the sheets); a 9:16 or 4:5 frame takes up to 55 % of the screen. The panels and the export sheet gain a « Agrandir » button in their head: the sheet takes the whole height under the top bar (« Réduire » or « Terminé » brings it back).
