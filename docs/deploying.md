@@ -163,8 +163,19 @@ tag, which publishes a release with the installers), signed as soon as the certi
 [`installers.md`](installers.md), which also explains the update key that enables « Rechercher une mise à jour » in the
 application.
 
-The icons in `src-tauri/icons/` come from `public/favicon.svg`. To regenerate them: `npx tauri icon public/favicon.svg`
-(then keep only the files listed in `src-tauri/tauri.conf.json`).
+The icons come from three sources. `src-tauri/icons/source/icon.svg` is the full icon (a glass mark over contour lines),
+`icon-maskable.svg` is its Android version (full-bleed ground, mark inside the 80 % circle) and `public/favicon.svg` is the
+flat logo used below 64 px. To regenerate the files, render them with a headless browser at their exact size:
+
+- `icon.svg` gives `public/icons/icon-512.png`, `icon-192.png` and, in `src-tauri/icons/`, `icon.png` (512), `128x128.png`
+  and `128x128@2x.png` (256);
+- the same file without the rounded corners (`rx="112"` removed) gives `apple-touch-icon.png` (180 px, opaque);
+- `icon-maskable.svg` gives `icon-maskable-512.png`;
+- `favicon.svg` gives `32x32.png`, and the frames of 16, 24, 32 and 48 px of `icon.ico` and of 16 and 32 px of `icon.icns`;
+  the larger frames come from `icon.svg`.
+
+`npx tauri icon` does not fit here: it scales one image to every size, so the small frames would keep the glass and the
+contour lines. The `.ico` and `.icns` are lists of PNG frames; keep only the files listed in `src-tauri/tauri.conf.json`.
 
 ### Current limitations
 

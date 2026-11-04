@@ -58,6 +58,14 @@ Les tailles suivent la taille de l'écran : une seule échelle, proportionnelle 
 
 Les icônes de Lucide (licence ISC), au trait de 2 px aux bouts arrondis comme le logo, sur une grille de 24 px, affichées à 20 px (18 dans une barre dense). Une icône seule porte toujours un nom accessible. Pas d'icône en couleur pleine, sauf la balise.
 
+## L'icône de l'application
+
+L'icône reprend le logo en verre dépoli : la crête est en verre crème, l'itinéraire en verre glacier, et la balise reste orange. Derrière elles, de fines courbes de niveau très pâles s'effacent vers les bords de la tuile d'encre, sous une lueur douce centrée sur le sommet.
+
+En dessous de 64 px, l'icône redevient le logo plat sur la tuile d'encre, sans courbes ni verre, pour rester lisible dans un onglet ou une barre des tâches. Le verre et les dégradés restent réservés à l'icône : l'interface garde ses aplats.
+
+Les sources sont dans `src-tauri/icons/source/` pour la version pleine et la version Android, et dans `public/favicon.svg` pour la version plate.
+
 ## Ton
 
 Le français d'abord, quatre autres langues ensuite. Des phrases courtes, à la voix active, avec le vocabulaire du terrain : trace, survol, arrêt, crête, col, dénivelé. Guillemets français et espaces insécables. Pas de point d'exclamation, pas de promesse : on dit ce que fait le bouton.
@@ -69,7 +77,7 @@ Le français d'abord, quatre autres langues ensuite. Des phrases courtes, à la 
 
 - L'orange en aplat de surface, ou plus d'une balise dans la même zone.
 - Une couleur qui ne vient pas de ces jetons (hors couleurs des traces et accent choisi par la personne).
-- Les dégradés, ombres lourdes, effets de verre.
+- Les dégradés, ombres lourdes et effets de verre dans l'interface (seule l'icône de l'application y fait exception).
 - Un texte sur une photo ou sur la vue 3D sans fond d'encre.
 
 ## Dans le code
@@ -83,4 +91,4 @@ Le français d'abord, quatre autres langues ensuite. Des phrases courtes, à la 
 | Balise sur la crème (action) | `--color-accent` | `#B8361A` (blanc dessus : 5,9:1) |
 | Mousse, ambre | `--color-moss`, `--color-amber` (et `-light`) | voir `ARCHITECTURE.md` |
 
-La police des titres est `--font-heading` (IBM Plex Sans Condensed), celle de la carte et de l'habillage `barlow` dans `OVERLAY_FONT_IDS`. L'accent par défaut est la balise ; « Réglages » › « Apparence » permet toujours d'en choisir un autre. Le logo source : `public/favicon.svg`.
+La police des titres est `--font-heading` (IBM Plex Sans Condensed), celle de la carte et de l'habillage `barlow` dans `OVERLAY_FONT_IDS`. L'accent par défaut est la balise ; « Réglages » › « Apparence » permet toujours d'en choisir un autre. Le logo plat : `public/favicon.svg`. L'icône en verre : `src-tauri/icons/source/`.

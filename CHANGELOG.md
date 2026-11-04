@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 5.5.0 (unreleased)
+
+- **A new icon, in frosted glass over contour lines**: the ridge and the route of the logo become pieces of frosted glass, cream and glacier, the point at the summit stays orange, and fine, very pale contour lines run behind them on the ink tile, under a soft glow. It is the icon of the installed web app (home screen on Android and iOS) and of the desktop app (taskbar, Start menu, Dock, installer). Below 64 px (browser tab, top bar, small frames of the icon files) the logo stays flat, with only a soft glow on the tile and no ring around the point. The sources are in `src-tauri/icons/source/` and `public/favicon.svg`; `docs/charter.md` and `docs/deploying.md` say how the icons are made.
+
 ## 5.4.0 (November 2026)
 
 - **A charter drawn from the logo, « Ligne de crête »**: the ink of the logo's ground (`#1C2A33`), the cream of its ridge (`#F5F2EA`), the glacier of its route and, for the accent, the orange of the point at its summit, the « balise » (`#FF5A36` on the ink: playhead, stops, focus; `#B8361A` on the cream: the main button). The headings move from Fraunces to IBM Plex Sans Condensed, the section titles in spaced capitals like the names on a map. Barlow Semi Condensed, semibold and bold, joins the fonts of the overlay and the posters for the labels, titles and figures over the view. The default accent is named « Balise »; an accent chosen before is kept. The charter is in `docs/charter.md`; the user guide (five languages), the « How it works » page, the handbook and the images of the desktop installers follow it too.

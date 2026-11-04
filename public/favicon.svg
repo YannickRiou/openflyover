@@ -1,1 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#1C2A33"/><path d="M4 24 L12.5 11 L17.5 18.5 L21 14 L28 24" fill="none" stroke="#F5F2EA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 24 L12.5 18 L15.5 22" fill="none" stroke="#A9CCD9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12.5" cy="11" r="3" fill="#FF5A36" stroke="#1C2A33" stroke-width="1.2"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs>
+<radialGradient id="of-glow" gradientUnits="userSpaceOnUse" cx="200" cy="175" r="360">
+<stop offset="0" stop-color="#3A5260" stop-opacity=".8"/>
+<stop offset=".5" stop-color="#2B3D49" stop-opacity=".36"/>
+<stop offset="1" stop-color="#1C2A33" stop-opacity="0"/>
+</radialGradient>
+<linearGradient id="of-down" x1="0" y1="0" x2="0" y2="1">
+<stop offset=".4" stop-color="#000" stop-opacity="0"/>
+<stop offset="1" stop-color="#000" stop-opacity=".24"/>
+</linearGradient>
+</defs>
+<rect width="512" height="512" rx="112" fill="#1C2A33"/>
+<rect width="512" height="512" rx="112" fill="url(#of-glow)"/>
+<rect width="512" height="512" rx="112" fill="url(#of-down)"/>
+<path d="M64 384 L200 176 L280 296 L336 224 L448 384" fill="none" stroke="#F5F2EA" stroke-width="35.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M136 384 L200 288 L248 352" fill="none" stroke="#A9CCD9" stroke-width="25.6" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="200" cy="176" r="50" fill="#FF5A36"/>
+</svg>
