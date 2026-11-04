@@ -3,7 +3,7 @@ import type { Messages } from '../messages'
 const messages: Messages['lens'] = {
   off: 'Aus',
   'shutter.label': 'Bewegungsunschärfe (Verschluss)',
-  'shutter.tip': 'Geschwindigkeitseffekt: Die Bildränder ziehen je nach Kamerageschwindigkeit in Bewegungsrichtung, die Mitte bleibt scharf. Beim Export mittelt jedes Bild außerdem bis zu 8 Renderings (4 in der Qualität Standard) während der Verschlussöffnung (längerer Export bei schnell bewegter Kamera, kein Mehraufwand im Stillstand).',
+  'shutter.tip': 'Geschwindigkeitseffekt: Die Bildränder ziehen je nach Kamerageschwindigkeit in Bewegungsrichtung, die Mitte bleibt scharf. Beim Export mittelt jedes Bild außerdem bis zu 8 Renderings (4 in der Qualität Standard) während der Verschlussöffnung (längerer Export bei schnell bewegter Kamera, kein Mehraufwand im Stillstand). In der Vorschau erscheint er nur während der Wiedergabe.',
   'bloom.label': 'Leuchten',
   'bloom.tip': 'Helle Bereiche strahlen: Sonne, Schnee, Spiegelungen auf dem Wasser.',
   'dof.label': 'Tiefenschärfe',

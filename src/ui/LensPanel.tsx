@@ -37,6 +37,7 @@ export function LensPanel() {
       {SLIDERS.map(({ key, label, tip, weight, preset }) => (
         <RangeField key={key} label={label} tip={tip} weight={weight} preset={preset} {...LENS_RANGES[key]} value={lens[key]} format={formatAmount} onChange={(value) => set(key, value)} />
       ))}
+      {(atmosphere || lens.flare > 0) && (
       <SettingRow label={t('lens.flare.label')} value={formatAmount(lens.flare)} paths={['lens.flare']}>
         <RangeField
           label={t('lens.flare.label')}
@@ -48,16 +49,18 @@ export function LensPanel() {
           onChange={(value) => set('flare', value)}
         />
       </SettingRow>
+      )}
+      {lens.bloom > 0 && (
       <SettingRow label={t('lens.bloomRadius.label')} value={formatPercent(lens.bloomRadius)} paths={['lens.bloomRadius']}>
         <RangeField
           label={t('lens.bloomRadius.label')}
           {...LENS_RANGES.bloomRadius}
           value={lens.bloomRadius}
           format={formatPercent}
-          disabled={lens.bloom === 0}
           onChange={(value) => set('bloomRadius', value)}
         />
       </SettingRow>
+      )}
     </PanelSection>
   )
 }
