@@ -145,7 +145,8 @@
   }
 
   @variant phone {
-    @apply w-auto min-w-18 px-1;
+    /* five tabs and a half across the screen: the half tab past the edge is the cue that the bar scrolls (a 26 px stub under the fade was not visible) */
+    @apply w-[calc((100vw-0.5rem)/5.5)] min-w-0 flex-none px-1;
 
     /* a part of the next tab shows past the edge: the bar reads as scrollable; the mark moves to the top edge */
     &[aria-selected='true']::before {
