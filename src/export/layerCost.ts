@@ -63,16 +63,18 @@ export interface LayerCostDeps {
 }
 
 export const REFERENCE_LABEL = 'référence'
+/** The reference measured again after the layers: far from the first one, the device slowed down on the way (heat) and the rows are not comparable. */
+export const REFERENCE_END_LABEL = 'référence refaite à la fin (un écart : l’appareil a ralenti pendant la mesure)'
 
 /**
  * The reference first (measured twice, the first run only warms the tiles and the shaders up), then each layer off in turn,
- * the settings put back after each and at the end. Stops at the first cancel (also when it interrupts a measure) and
+ * the settings put back after each and at the end, then the reference again (`REFERENCE_END_LABEL`). Stops at the first cancel (also when it interrupts a measure) and
  * returns what was measured; another failure throws after the settings are back.
  */
 export async function measureLayerCost(deps: LayerCostDeps, variants: readonly LayerVariant[] = LAYER_VARIANTS): Promise<LayerCostResult[]> {
   const base = deps.settings()
   const plan = variants.map((variant) => ({ variant, settings: variant.apply(base) }))
-  const total = 1 + plan.filter((p) => p.settings !== null).length
+  const total = 2 + plan.filter((p) => p.settings !== null).length
   const results: LayerCostResult[] = []
   try {
     deps.progress?.(REFERENCE_LABEL, 1, total)
@@ -93,6 +95,10 @@ export async function measureLayerCost(deps: LayerCostDeps, variants: readonly L
       results.push({ label: variant.label, msPerFrame: await deps.measure(variant.half ? 0.5 : 1) })
       deps.setSettings(base)
     }
+    if (deps.canceled()) return results
+    deps.progress?.(REFERENCE_LABEL, total, total)
+    await deps.settle()
+    results.push({ label: REFERENCE_END_LABEL, msPerFrame: await deps.measure(1) })
     return results
   } catch (error) {
     // the measure under way was cut short by the cancel: what came before it is kept

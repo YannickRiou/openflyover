@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '../state/store'
 import type { Settings } from '../state/store'
-import { LAYER_VARIANTS, REFERENCE_LABEL, layerCostRows, layerCostSection, measureLayerCost } from './layerCost'
+import { LAYER_VARIANTS, REFERENCE_END_LABEL, REFERENCE_LABEL, layerCostRows, layerCostSection, measureLayerCost } from './layerCost'
 import type { LayerCostDeps } from './layerCost'
 
 const BASE: Settings = {
@@ -45,12 +45,17 @@ describe('measureLayerCost', () => {
     expect(results.find((r) => r.label === 'sans ombres')?.msPerFrame).toBe(90)
     // half the pixels: both sides halved
     expect(results.find((r) => r.label.startsWith('moitié'))?.msPerFrame).toBe(25)
-    expect(seen.at(-1)?.scale).toBe(0.5)
+    expect(seen.at(-2)?.scale).toBe(0.5)
+    // the reference again at the end, to see whether the device slowed down on the way
+    expect(seen.at(-1)).toEqual({ clouds: 'meteo', shadows: true, scale: 1 })
+    expect(results.at(-1)).toEqual({ label: REFERENCE_END_LABEL, msPerFrame: 100 })
     expect(now()).toBe(BASE)
     // a layer off already is not measured, and the count of the progress leaves it out
     expect(results.find((r) => r.label === 'sans eau')).toEqual({ label: 'sans eau', msPerFrame: null, skipped: 'déjà désactivé dans ce projet' })
-    expect(progress[0]).toBe(`1/${LAYER_VARIANTS.filter((v) => v.apply(BASE) !== null).length + 1} ${REFERENCE_LABEL}`)
-    expect(progress.at(-1)).toMatch(/^\d+\/\d+ moitié/)
+    const total = LAYER_VARIANTS.filter((v) => v.apply(BASE) !== null).length + 2
+    expect(progress[0]).toBe(`1/${total} ${REFERENCE_LABEL}`)
+    expect(progress.at(-2)).toMatch(/^\d+\/\d+ moitié/)
+    expect(progress.at(-1)).toBe(`${total}/${total} ${REFERENCE_LABEL}`)
   })
 
   it('stops at a cancel, also one that cuts a measure short, keeps what came before and puts the settings back', async () => {

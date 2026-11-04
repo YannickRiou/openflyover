@@ -3090,7 +3090,10 @@ exports) gets it from the terrain source of the settings.
   the frames whose film time is inside, never fewer than two), exported without encoding (the tab flag « Export de test
   sans encodage » set for the run) with `ExportRequest.probe`: no tile fetched ahead, no soundtrack, nothing in the render
   history. The ms per image count the frames after the first. The reference is run twice (the first only warms the tiles and
-  the shaders up); a layer that is off already is not measured. The run holds the batch store `running` (no autosave, no edit),
+  the shaders up) and once more at the end (`REFERENCE_END_LABEL`): a gap between the two means the device slowed down during the
+  run (heat, on a phone), so its rows do not compare. The « Export » section tells « Nuages de l'export » (the resolution of the
+  cloud pass, lowered when the preview had to be lightened, `exportCloudScale`): two reports compare only when it is the same.
+  A layer that is off already is not measured. The run holds the batch store `running` (no autosave, no edit),
   suspends the undo history, and puts the same `settings` object, the flag and the export store back whatever happens (a
   cancel keeps what was measured, a failure throws after that). Nothing runs at start-up and nothing changes on a computer
   unless the button is pressed.
