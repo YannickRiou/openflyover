@@ -4,7 +4,6 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { buildTrack } from '../import/stats'
 import { useAppStore } from '../state/store'
-import { usePreferences } from './preferences'
 import { TopBar } from './TopBar'
 
 beforeAll(() => {
@@ -91,19 +90,11 @@ describe('TopBar: the output format on a phone', () => {
 })
 
 describe('TopBar: the mode of the interface', () => {
-  it('is a radio group named « Mode de l’interface »: a mode is chosen for the device, and the bar says which', async () => {
-    usePreferences.setState({ uiMode: 'expert' })
+  it('is not on the bar: it changes seldom, and « Réglages » has it', async () => {
     const host = document.body.appendChild(document.createElement('div'))
     const root = createRoot(host)
     await act(async () => root.render(<TopBar onOpen={() => {}} exportOpen={false} onToggleExport={() => {}} onHelp={() => {}} />))
-    const group = host.querySelector('[role="radiogroup"][aria-label="Mode de l’interface"]')!
-    const radios = [...group.querySelectorAll<HTMLInputElement>('input[type="radio"]')]
-    expect(radios.map((r) => r.labels?.[0]?.textContent)).toEqual(['Débutant', 'Confirmé', 'Expert'])
-    expect(radios.map((r) => r.checked)).toEqual([false, false, true])
-    await act(async () => radios[0].click())
-    expect(usePreferences.getState().uiMode).toBe('debutant')
-    expect(radios.map((r) => r.checked)).toEqual([true, false, false])
+    expect(host.querySelector('[role="radiogroup"][aria-label="Mode de l’interface"]')).toBeNull()
     act(() => root.unmount())
-    usePreferences.setState({ uiMode: 'expert' })
   })
 })

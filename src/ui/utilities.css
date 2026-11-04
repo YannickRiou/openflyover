@@ -542,3 +542,20 @@
   color: var(--color-text-1);
   box-shadow: var(--shadow-card);
 }
+
+/*
+ * The ◀ ◇ ▶ under a lane name (Plans, Vitesse) with a mouse: ◀ and ▶ show while the pointer is over the lane head or the
+ * focus is in it, like its fold and lock buttons; ◇ stays, it says whether a key is at the playhead. A finger sees all three.
+ */
+@utility lane-keys {
+  @media (pointer: fine) {
+    & [role='group'] > :is(:first-child, :last-child) {
+      opacity: 0;
+      transition: opacity 120ms ease-out;
+    }
+
+    :where(.group:hover, .group:focus-within) & [role='group'] > :is(:first-child, :last-child) {
+      opacity: 1;
+    }
+  }
+}

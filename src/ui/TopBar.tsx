@@ -7,7 +7,6 @@ import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
 import { AspectIcon, Icon } from './icons'
 import { LanguageMenu } from './LanguageMenu'
-import { ModeSwitcher } from './ModeChoice'
 import type { IconName } from './icons'
 import { saveProject } from './projectActions'
 import { effectiveProjectName, isProjectDirty } from './shell'
@@ -251,7 +250,6 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
       <FormatMenu disabled={busy} />
 
       <div className="flex items-center justify-self-end gap-2">
-        <ModeSwitcher />
         <Tip text={withShortcut(t('topbar.shortcuts'), 'help')}>
           <BarButton className="phone-any:hidden" onClick={onHelp} aria-label={t('topbar.shortcuts')}>
             <Icon name="circle-help" />
