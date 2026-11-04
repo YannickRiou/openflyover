@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 5.5.0 (unreleased)
+
+- **No more Windows title bar in the desktop app**: the white strip with the name of the app and its three buttons is gone. The top bar of OpenFlyover is now the title bar: drag it by an empty area to move the window, double-click it to enlarge or restore the window, and use the three buttons after « Exporter » (reduce, enlarge or restore, close). The close button goes through the same question as before when changes are not saved or an export is running. Linux works the same way. On macOS the window keeps its three coloured buttons, drawn over the top bar. The « File de rendus » window keeps its system bar. The website does not change. Known limit: the Windows 11 layout choices that appear over the enlarge button are no longer offered; Win+Z and dragging the window to the edge of the screen still work.
+
 ## 5.4.0 (November 2026)
 
 - **A charter drawn from the logo, « Ligne de crête »**: the ink of the logo's ground (`#1C2A33`), the cream of its ridge (`#F5F2EA`), the glacier of its route and, for the accent, the orange of the point at its summit, the « balise » (`#FF5A36` on the ink: playhead, stops, focus; `#B8361A` on the cream: the main button). The headings move from Fraunces to IBM Plex Sans Condensed, the section titles in spaced capitals like the names on a map. Barlow Semi Condensed, semibold and bold, joins the fonts of the overlay and the posters for the labels, titles and figures over the view. The default accent is named « Balise »; an accent chosen before is kept. The charter is in `docs/charter.md`; the user guide (five languages), the « How it works » page, the handbook and the images of the desktop installers follow it too.

@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Ver las novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v55.titlebar.title': 'Adiós a la barra de Windows',
+  'v55.titlebar.text': 'En la aplicación de escritorio, la barra superior de OpenFlyover es ahora también la barra de título. Arrástrala para mover la ventana, haz doble clic para agrandarla y usa los tres botones a la derecha de «Exportar». Una fila menos y el mismo color en todo el ancho. En Mac, los tres botones redondos siguen a la izquierda.',
   'v50.margins.title': 'Márgenes a elección',
   'v50.margins.text': 'La casilla «Márgenes de seguridad» de la exportación aleja los gráficos de los bordes y, en 9:16 y 4:5, de las zonas de Reels, TikTok y Shorts. Se marca sola al elegir una plataforma. Sin marcar, los gráficos se acercan a los bordes y toda la imagen sirve a la película.',
   'v50.modes.title': 'Tres modos de interfaz',

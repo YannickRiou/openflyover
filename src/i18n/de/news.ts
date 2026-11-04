@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v55.titlebar.title': 'Keine Windows-Leiste mehr oben',
+  'v55.titlebar.text': 'In der Desktop-App ist die obere Leiste von OpenFlyover jetzt auch die Titelleiste. Ziehen Sie sie, um das Fenster zu verschieben, doppelklicken Sie darauf, um es zu vergrößern, und nutzen Sie die drei Schaltflächen rechts neben „Exportieren“. Eine Zeile weniger und überall dieselbe Farbe. Auf dem Mac bleiben die drei runden Schaltflächen links.',
   'v50.margins.title': 'Ränder nach Wahl',
   'v50.margins.text': 'Das Kästchen „Sicherheitsränder“ des Exports hält das Overlay von den Rändern fern und in 9:16 und 4:5 außerhalb der Bereiche von Reels, TikTok und Shorts. Es hakt sich selbst an, wenn Sie eine Plattform wählen. Ohne Haken rückt das Overlay an die Ränder und das ganze Bild gehört dem Film.',
   'v50.modes.title': 'Drei Modi der Oberfläche',

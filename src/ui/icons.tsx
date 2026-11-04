@@ -222,6 +222,7 @@ const PATHS = {
       <path d="m6 6 12 12" />
     </>
   ),
+  minus: <path d="M5 12h14" />,
   ellipsis: (
     <>
       <circle cx="12" cy="12" r="1" />

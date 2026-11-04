@@ -3,14 +3,32 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { buildTrack } from '../import/stats'
+import type { WindowControls } from '../platform'
 import { useAppStore } from '../state/store'
 import { TopBar } from './TopBar'
+
+// the desktop app, when a test sets `controls` or `isDesktop`: the website otherwise
+const desktop = vi.hoisted(() => ({ controls: null as WindowControls | null, isDesktop: false }))
+vi.mock('../platform', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../platform')>()
+  return {
+    ...original,
+    getPlatform: () => {
+      const web = original.getPlatform()
+      return desktop.controls || desktop.isDesktop
+        ? { ...web, capabilities: { ...web.capabilities, isDesktop: true }, windowControls: desktop.controls ?? undefined }
+        : web
+    },
+  }
+})
 
 beforeAll(() => {
   ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 })
 
 afterEach(() => {
+  desktop.controls = null
+  desktop.isDesktop = false
   vi.useRealTimers()
   document.body.innerHTML = ''
 })
@@ -95,6 +113,62 @@ describe('TopBar: the mode of the interface', () => {
     const root = createRoot(host)
     await act(async () => root.render(<TopBar onOpen={() => {}} exportOpen={false} onToggleExport={() => {}} onHelp={() => {}} />))
     expect(host.querySelector('[role="radiogroup"][aria-label="Mode de l’interface"]')).toBeNull()
+    act(() => root.unmount())
+  })
+})
+
+describe('TopBar: the window buttons of the desktop app', () => {
+  const mount = async () => {
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<TopBar onOpen={() => {}} exportOpen={false} onToggleExport={() => {}} onHelp={() => {}} />))
+    return { host, root }
+  }
+  const button = (host: HTMLElement, name: string) => host.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`)
+
+  it('are not on the website', async () => {
+    const { host, root } = await mount()
+    for (const name of ['Réduire', 'Agrandir', 'Restaurer', 'Fermer']) expect(button(host, name)).toBeNull()
+    act(() => root.unmount())
+  })
+
+  it('are on the desktop after « Exporter »: the icon follows the state, close asks the window to close', async () => {
+    let tell: (maximized: boolean) => void = () => {}
+    const stop = vi.fn()
+    const controls = {
+      minimize: vi.fn(),
+      toggleMaximize: vi.fn(),
+      close: vi.fn(),
+      watchMaximized: vi.fn((listener: (maximized: boolean) => void) => {
+        tell = listener
+        listener(false)
+        return stop
+      }),
+    }
+    desktop.controls = controls
+    const { host, root } = await mount()
+    await act(async () => button(host, 'Réduire')!.click())
+    await act(async () => button(host, 'Agrandir')!.click())
+    await act(async () => button(host, 'Fermer')!.click())
+    expect(controls.minimize).toHaveBeenCalledTimes(1)
+    expect(controls.toggleMaximize).toHaveBeenCalledTimes(1)
+    expect(controls.close).toHaveBeenCalledTimes(1)
+    expect(button(host, 'Restaurer')).toBeNull()
+
+    await act(async () => tell(true))
+    expect(button(host, 'Agrandir')).toBeNull()
+    expect(button(host, 'Restaurer')).not.toBeNull()
+    // the bar moves the window by its empty areas
+    expect(host.querySelector('header')?.hasAttribute('data-tauri-drag-region')).toBe(true)
+    act(() => root.unmount())
+    expect(stop).toHaveBeenCalledTimes(1)
+  })
+
+  it('are left to the system on macOS, whose traffic lights get room on the left of the bar', async () => {
+    desktop.isDesktop = true
+    const { host, root } = await mount()
+    expect(button(host, 'Fermer')).toBeNull()
+    expect(host.querySelector('header')?.className).toContain('pl-20')
     act(() => root.unmount())
   })
 })

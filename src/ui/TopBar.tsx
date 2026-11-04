@@ -3,6 +3,8 @@ import { VIDEO_ASPECTS } from '../export/schedule'
 import { useBatchStore } from '../export/batch'
 import { isExportBusy, useExportStore } from '../export/store'
 import { useT } from '../i18n'
+import { getPlatform } from '../platform'
+import type { WindowControls } from '../platform'
 import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
 import { AspectIcon, Icon } from './icons'
@@ -27,6 +29,9 @@ const SAVE_STATE =
 
 /** « Exporter »: the one primary action of the bar, as high as the icon buttons. */
 const EXPORT_BUTTON = 'h-control min-h-0 px-3 whitespace-nowrap tabular-nums'
+
+/** A button of the window on the right of the bar: the height of the bar under its border, as wide as the system's own (46 px). */
+const WINDOW_BUTTON = 'h-[calc(var(--topbar-h)-1px)] w-11.5 rounded-none'
 
 /** How long the save icon keeps the accent colour once the project is saved (ms). */
 const SAVED_FLASH_MS = 3000
@@ -129,6 +134,34 @@ function FormatMenu({ disabled }: { disabled: boolean }) {
   )
 }
 
+/** Minimize, maximize or restore, close: the desktop window has no system title bar, the top bar is it (`Platform.windowControls`). */
+function WindowButtons({ controls }: { controls: WindowControls }) {
+  const t = useT()
+  const [maximized, setMaximized] = useState(false)
+  useEffect(() => controls.watchMaximized(setMaximized), [controls])
+  const toggleLabel = t(maximized ? 'topbar.window.restore' : 'topbar.window.maximize')
+  return (
+    // the margin takes back the padding of the bar: the buttons touch the edge of the window
+    <div className="-mr-2 ml-1 flex flex-none">
+      <Tip text={t('topbar.window.minimize')}>
+        <BarButton className={WINDOW_BUTTON} onClick={controls.minimize} aria-label={t('topbar.window.minimize')}>
+          <Icon name="minus" size={16} />
+        </BarButton>
+      </Tip>
+      <Tip text={toggleLabel}>
+        <BarButton className={WINDOW_BUTTON} onClick={controls.toggleMaximize} aria-label={toggleLabel}>
+          <Icon name={maximized ? 'copy' : 'square'} size={14} />
+        </BarButton>
+      </Tip>
+      <Tip text={t('topbar.window.close')}>
+        <BarButton className={`${WINDOW_BUTTON} btn-chrome-close`} onClick={controls.close} aria-label={t('topbar.window.close')}>
+          <Icon name="x" size={18} />
+        </BarButton>
+      </Tip>
+    </div>
+  )
+}
+
 interface MoreItem {
   label: string
   icon: IconName
@@ -170,10 +203,15 @@ interface TopBarProps {
 
 /**
  * Top bar: logo, project name (edited in place), undo / redo, open / save (icons; the save icon tells its state), output format,
- * shortcuts (« ? »), « Exporter » (the export drawer; « 42 % · Annuler » while exporting).
+ * shortcuts (« ? »), « Exporter » (the export drawer; « 42 % · Annuler » while exporting). In the desktop app it is also the
+ * title bar of the window: dragged by its empty areas (`data-tauri-drag-region` works on the element that has it, not on its
+ * children), a double click maximises, and the window buttons come after « Exporter ».
  */
 export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarProps) {
   const t = useT()
+  const { capabilities, windowControls } = getPlatform()
+  // desktop without buttons of ours: macOS, whose traffic lights sit over the left of the bar
+  const trafficLights = capabilities.isDesktop && !windowControls
   const history = getSettingsHistory()
   const { canUndo, canRedo } = useSyncExternalStore(history.subscribe, history.getState)
   const name = useAppStore((s) => s.projectName)
@@ -202,9 +240,12 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
   }, [unsaved])
 
   return (
-    <header className="chrome-focus relative z-10 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-white/10 bg-chrome pr-2 pl-3 text-white bar-condensed:flex bar-condensed:gap-2 phone-any:pt-[var(--safe-top)]">
-      <div className="flex min-w-0 items-center gap-1 bar-condensed:flex-auto">
-        <img className="mr-1 size-7 flex-none phone:hidden" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={28} height={28} title="OpenFlyover" />
+    <header
+      data-tauri-drag-region
+      className={`chrome-focus relative z-10 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-white/10 bg-chrome pr-2 text-white bar-condensed:flex bar-condensed:gap-2 phone-any:pt-[var(--safe-top)] ${trafficLights ? 'pl-20' : 'pl-3'}`}
+    >
+      <div data-tauri-drag-region className="flex min-w-0 items-center gap-1 bar-condensed:flex-auto">
+        <img data-tauri-drag-region className="mr-1 size-7 flex-none phone:hidden" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={28} height={28} title="OpenFlyover" />
         <h1 className="sr-only">OpenFlyover</h1>
         <TextField
           className="min-w-16 flex-[0_1_220px] bar-condensed:flex-auto phone-any:min-w-0"
@@ -249,7 +290,7 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
       <FormatSwitcher disabled={busy} />
       <FormatMenu disabled={busy} />
 
-      <div className="flex items-center justify-self-end gap-2">
+      <div data-tauri-drag-region className="flex items-center justify-self-end gap-2">
         <Tip text={withShortcut(t('topbar.shortcuts'), 'help')}>
           <BarButton className="phone-any:hidden" onClick={onHelp} aria-label={t('topbar.shortcuts')}>
             <Icon name="circle-help" />
@@ -295,6 +336,7 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
             </Tip>
           )
         )}
+        {windowControls && <WindowButtons controls={windowControls} />}
       </div>
     </header>
   )
