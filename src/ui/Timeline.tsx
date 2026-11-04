@@ -117,7 +117,7 @@ import type { MenuItem } from './primitives'
 const ROOT = 'chrome-focus @container/film-tl relative flex flex-col bg-chrome text-hint text-white'
 /** Folded to a strip on a short or narrow screen, a sheet over the view when open (the centred timeline fills its row instead). */
 const PHONE_SHEET =
-  'phone-any:absolute phone-any:inset-x-0 phone-any:bottom-0 phone-any:z-7 phone-any:max-h-[85%] phone-any:overflow-y-auto phone-any:overscroll-contain phone-any:border-t phone-any:border-white/10 phone-any:shadow-pop'
+  'phone-any:absolute phone-any:inset-x-0 phone-any:bottom-0 phone-any:z-7 phone-any:max-h-[85%] phone-landscape:max-h-[72%] phone-any:overflow-y-auto phone-any:overscroll-contain phone-any:border-t phone-any:border-white/10 phone-any:shadow-pop'
 /** Once the height was dragged (`data-timeline-sized` on the view, see TimelineResizer), the lanes scroll inside it. */
 const SIZED_BODY = 'timeline-sized-body:min-h-0 timeline-sized-body:flex-auto timeline-sized-body:overflow-y-auto'
 const TIME = 'min-w-[15ch] text-body tabular-nums whitespace-nowrap'
@@ -1711,7 +1711,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       }}
     >
       <div
-        className={`flex items-center gap-x-2 gap-y-1 px-2 ${centred ? 'h-[var(--phone-transport-h,52px)] flex-nowrap' : 'flex-wrap py-1'}`}
+        className={`flex items-center gap-x-2 gap-y-1 px-2 ${centred ? 'h-[var(--phone-transport-h,52px)] flex-nowrap' : 'flex-wrap py-1 phone-landscape:shrink-0 phone-landscape:flex-nowrap phone-landscape:overflow-x-auto phone-landscape:[scrollbar-width:none]'}`}
         data-testid="timeline-bar"
         data-timeline-bar=""
       >
@@ -1884,6 +1884,17 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           className={`flex border-t border-white/10 ${SIZED_BODY}${centred ? ` relative min-h-0 flex-auto ${CENTRE_PLAYHEAD}` : ''}`}
           id={`${id}-lanes`}
         >
+          {/* centred (portrait phone): no column of headers (the lanes take the whole width); the name of each lane floats over its left end */}
+          {centred && (
+            <div className="pointer-events-none absolute top-0 left-0 z-5" data-testid="timeline-lane-names" aria-hidden="true">
+              <div className={rulerHeight} />
+              {lanes.map((lane) => (
+                <div key={lane.id} className="flex h-9 items-center">
+                  <span className="max-w-24 truncate rounded-r-sm bg-chrome/85 px-1.5 py-0.5 text-caption leading-none font-semibold text-glacier">{lane.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <div className={`w-28 flex-none border-r border-white/10 touch:w-32 ${centred ? 'hidden' : ''}`} data-testid="timeline-heads">
             <div className={`${HEAD} ${rulerHeight} items-center`} data-testid="timeline-head" />
             {/* the lanes carry the same names; the camera and speed keys have their ◀ ◇ ▶ under theirs */}

@@ -377,7 +377,7 @@ export function parsePreferences(raw: string | null): Preferences {
 // ---------------------------------------------------------------------------
 
 /** Portrait phone: preview on top, timeline under it, tabs in a bottom bar; panels and drawers as half sheets over the timeline. */
-export const BOTTOM_SHEET_QUERY = '(max-width: 699px)'
+export const BOTTOM_SHEET_QUERY = '(max-width: 699px) and (not ((max-height: 499px) and (min-aspect-ratio: 1/1)))'
 /** Phone, either way up: top bar actions in a menu, dialogs full screen; in landscape the timeline folds into a strip. */
 export const COMPACT_QUERY = '(max-width: 699px), (max-height: 499px)'
 

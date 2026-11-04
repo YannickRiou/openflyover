@@ -94,6 +94,29 @@ describe('Timeline', () => {
     act(() => root.unmount())
   })
 
+  it('names each lane on the centred timeline of a phone, over the left end of the lane, with no column of headers', async () => {
+    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    globalThis.ResizeObserver ??= class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    } as unknown as typeof ResizeObserver
+    const segments = [{ points: [6.8, 6.81, 6.82].map((lon, i) => ({ lon, lat: 45.9, ele: 1000 + i * 10 })) }]
+    useAppStore.setState({ tracks: [buildTrack({ name: 'Sortie', source: 'gpx', segments })] })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<Timeline centred />))
+    const names = Array.from(host.querySelectorAll('[data-testid="timeline-lane-names"] span')).map((s) => s.textContent)
+    expect(names.length).toBeGreaterThan(2)
+    expect(names).toContain('Plans')
+    // the column of the headers stays hidden, the lanes keep the width
+    expect(host.querySelector('[data-testid="timeline-heads"]')!.className).toContain('hidden')
+    // and a timeline that is not centred has the column, not the floating names
+    await act(async () => root.render(<Timeline />))
+    expect(host.querySelector('[data-testid="timeline-lane-names"]')).toBeNull()
+    act(() => root.unmount())
+  })
+
   it('has a lane only for what has a key: none for the settings by default, one per keyed parameter, « Marqueur » with marker keys', async () => {
     ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
     globalThis.ResizeObserver ??= class {
