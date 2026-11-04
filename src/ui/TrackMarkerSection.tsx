@@ -158,7 +158,7 @@ const TRACK_BEYOND_WIDTH: SettingPath[] = ['trackTail', 'trackColorBy', 'trackLe
 const MARKER_BEYOND_SHAPE = pathsBut('marker', DEFAULT_MARKER, 'kind')
 
 /** Heading of a part of a section (« Ligne », « Halo », « Vol »). */
-const GROUP = 'border-t border-edge pt-2 font-body text-hint font-semibold tracking-wider text-text-2 uppercase first:border-t-0 first:pt-0'
+const GROUP = 'panel-subtitle border-t border-edge pt-2 first:border-t-0 first:pt-0'
 
 export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   const t = useT()

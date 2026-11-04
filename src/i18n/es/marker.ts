@@ -42,7 +42,7 @@ const messages: Messages['marker'] = {
   'image.remove': 'Quitar',
   'image.hint': 'Foto o avatar, recortado en círculo. En paralelo, los demás tracks conservan su bola.',
   'track.solid': 'Uniforme',
-  'track.title': 'Track',
+  'track.title': 'Estilo del track',
   'track.lineGroup': 'Línea',
   'track.haloGroup': 'Halo',
   'track.drawOn': 'Track que se dibuja',

@@ -74,6 +74,11 @@
   @apply font-heading text-body font-semibold tracking-[0.06em] text-text-1 uppercase;
 }
 
+/* A part of a section (« Ligne », « Halo », « Vol »): sentence case, smaller and muted, between the capitals of the section title and the row labels. */
+@utility panel-subtitle {
+  @apply font-body text-hint font-semibold text-text-2;
+}
+
 /* On the ink chrome (top bar, rail): the focus ring is the light accent, which reads on ink (7.3:1). */
 @utility chrome-focus {
   & :focus-visible {
