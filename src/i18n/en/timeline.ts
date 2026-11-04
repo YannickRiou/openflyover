@@ -85,8 +85,6 @@ const messages: Messages['timeline'] = {
   'bar.holdAt': 'Hold: {label}',
   'bar.addRow': 'Text, photo, music',
   'magnet.label': 'Snapping',
-  'bar.addHoldAtHighlight': 'Add a hold at a highlight',
-  'bar.holdAtHighlight': 'Hold at a highlight…',
   'bar.addSpeed': 'Speed up or slow down a section from the marker',
   'bar.addSpeedTip': 'Speed up or slow down a section (1 km at ×2) from the marker',
   'bar.addText': 'Add a text at the playhead',

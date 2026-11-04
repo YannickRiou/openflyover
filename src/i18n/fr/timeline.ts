@@ -83,8 +83,6 @@ export default {
   'bar.holdAt': 'Arrêt : {label}',
   'bar.addRow': 'Texte, photo, musique',
   'magnet.label': 'Aimantation',
-  'bar.addHoldAtHighlight': 'Ajouter un arrêt à un temps fort',
-  'bar.holdAtHighlight': 'Arrêt à un temps fort…',
   'bar.addSpeed': 'Accélérer ou ralentir une portion à partir du marqueur',
   'bar.addSpeedTip': 'Accélérer ou ralentir une portion (1 km à ×2) à partir du marqueur',
   'bar.addText': 'Ajouter un texte à la tête de lecture',

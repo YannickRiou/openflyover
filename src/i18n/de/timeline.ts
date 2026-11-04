@@ -85,8 +85,6 @@ const messages: Messages['timeline'] = {
   'bar.holdAt': 'Stopp: {label}',
   'bar.addRow': 'Text, Foto, Musik',
   'magnet.label': 'Einrasten',
-  'bar.addHoldAtHighlight': 'Stopp an einem Highlight hinzufügen',
-  'bar.holdAtHighlight': 'Stopp an einem Highlight…',
   'bar.addSpeed': 'Einen Abschnitt ab dem Marker beschleunigen oder verlangsamen',
   'bar.addSpeedTip': 'Einen Abschnitt (1 km bei ×2) ab dem Marker beschleunigen oder verlangsamen',
   'bar.addText': 'Text am Abspielkopf hinzufügen',

@@ -30,6 +30,9 @@ export const WHATS_NEW: readonly NewsVersion[] = [
       { icon: 'route', get title() { return t('news.v55.headings.title') }, get text() { return t('news.v55.headings.text') } },
       { icon: 'image', get title() { return t('news.v55.pictures.title') }, get text() { return t('news.v55.pictures.text') } },
       { icon: 'clapperboard', get title() { return t('news.v55.camera.title') }, get text() { return t('news.v55.camera.text') } },
+      { icon: 'plus', get title() { return t('news.v55.lanes.title') }, get text() { return t('news.v55.lanes.text') } },
+      { icon: 'map-pin', get title() { return t('news.v55.stops.title') }, get text() { return t('news.v55.stops.text') } },
+      { icon: 'clapperboard', get title() { return t('news.v55.clips.title') }, get text() { return t('news.v55.clips.text') } },
     ],
   },
   {

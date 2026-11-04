@@ -7,7 +7,7 @@ import { buildTrack } from '../import/stats'
 import { END_CARD_ID, TITLE_CARD_ID } from '../film/cards'
 import { filmClockFor } from '../film/clock'
 import { DEFAULT_DAY_CARDS, DEFAULT_FILM } from '../film/model'
-import { addCameraKey, addMarkerKey, addParamKey, removeFilmItem, updateMarkerKey } from '../film/timeline'
+import { addCameraKey, addMarkerKey, addParamKey, addText, removeFilmItem, updateMarkerKey } from '../film/timeline'
 import { filmSequenceOf } from '../flyover/sequence'
 import { useLandmarkStore } from '../osm/store'
 import { getSettingsHistory } from '../project/history'
@@ -110,7 +110,7 @@ describe('Timeline', () => {
     // the empty lanes are not drawn: only « Plans » here
     expect(names).toEqual(['Plans'])
     const hidden = (lane: string) => host.querySelector(`[data-lane-id="${lane}"]`)!.classList.contains('hidden')
-    expect(['param:speed', 'holds', 'texts', 'media', 'music'].map(hidden)).toEqual([true, true, true, true, true])
+    expect(['param:speed', 'texts', 'media', 'music'].map(hidden)).toEqual([true, true, true, true])
     // the row of the bar: three named buttons, nothing to scroll; a row under the lanes opens « Ajouter » too
     const tools = Array.from(host.querySelectorAll('[data-testid="timeline-tools"] button')).map((b) => b.textContent || b.getAttribute('aria-label'))
     expect(tools).toEqual(['Clés', 'Ajouter', 'Options du film'])
@@ -121,7 +121,92 @@ describe('Timeline', () => {
     await act(async () => root.render(<Timeline />))
     expect(host.querySelector('[data-testid="timeline-lane-names"]')).toBeNull()
     expect(host.querySelector('[data-testid="timeline-add-row"]')).toBeNull()
+    // the empty lanes are thin strips with their name and their « + », not hidden
     expect(hidden('texts')).toBe(false)
+    expect(host.querySelector('[data-lane-id="texts"]')!.className).toContain('h-4')
+    act(() => root.unmount())
+  })
+
+  it('has a « + » on the header of each lane that adds at the playhead, and a lane with nothing on it is a strip until it holds something', async () => {
+    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    globalThis.ResizeObserver ??= class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    } as unknown as typeof ResizeObserver
+    const segments = [{ points: [6.8, 6.81, 6.82].map((lon, i) => ({ lon, lat: 45.9, ele: 1000 + i * 10 })) }]
+    useAppStore.setState({ tracks: [buildTrack({ name: 'Sortie', source: 'gpx', segments })], settings: DEFAULT_SETTINGS })
+    useExportStore.setState({ phase: 'idle' })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<Timeline />))
+    // the bar keeps the playback and the view tools: nothing that adds
+    const bar = Array.from(host.querySelectorAll('[data-testid="timeline-bar"] button')).map((b) => b.getAttribute('aria-label'))
+    expect(bar.filter((name) => /^Ajouter|^Accélérer/.test(name ?? ''))).toEqual([])
+    // each lane that takes an item has its « + » (the others, none); the stops one is on « Plans »
+    // (the first head is the ruler's)
+    const heads = Array.from(host.querySelectorAll('[data-testid="timeline-heads"] [data-testid="timeline-head"]')).slice(1)
+    const plus = (head: Element) => Array.from(head.querySelectorAll('button')).map((b) => b.getAttribute('aria-label')).find((name) => /^Ajouter|^Accélérer/.test(name ?? '') && !/image clé|clé/.test(name ?? ''))
+    expect(heads.map((h) => [h.textContent, plus(h)])).toEqual([
+      ['Plans', 'Ajouter un arrêt à la position du marqueur'],
+      ['Vitesse', 'Accélérer ou ralentir une portion à partir du marqueur'],
+      ['Textes', 'Ajouter un texte à la tête de lecture'],
+      ['Médias', 'Ajouter des photos ou des vidéos à la tête de lecture'],
+      ['Musique', 'Ajouter une musique…'],
+    ])
+    // empty: a strip with its name and its « + », no fold nor lock button; it takes its height with its first item
+    const lane = () => host.querySelector<HTMLElement>('[data-lane-id="texts"]')!
+    const textsHead = () => heads[2]
+    expect(lane().className).toContain('h-4')
+    expect(textsHead().querySelectorAll('button')).toHaveLength(1)
+    await act(async () => textsHead().querySelector<HTMLElement>('button')!.click())
+    expect(useAppStore.getState().settings.film.texts).toHaveLength(1)
+    expect(lane().className).toContain('h-7')
+    expect(textsHead().querySelectorAll('button').length).toBeGreaterThan(1)
+    act(() => root.unmount())
+  })
+
+  it('lists every highlight in the stops menu: the ones with a stop are ticked and select it, the others add one', async () => {
+    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    globalThis.ResizeObserver ??= class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    } as unknown as typeof ResizeObserver
+    const segments = [{ points: [6.8, 6.81, 6.82].map((lon, i) => ({ lon, lat: 45.9, ele: 1000 + i * 10 })) }]
+    const track = buildTrack({ name: 'Sortie', source: 'gpx', segments })
+    const place = (id: string, name: string, share: number) => ({ id, kind: 'pass' as const, name, lon: 6.81, lat: 45.9, distanceM: 0, alongM: track.stats.distanceM * share, priority: 1, text: name })
+    useAppStore.setState({ tracks: [track], filmSelection: null })
+    await act(async () => useAppStore.getState().setSetting('film', { ...DEFAULT_FILM, autoStops: false }))
+    await act(async () => useLandmarkStore.setState({ landmarks: { [track.id]: [place('node/1', 'Col A', 0.3), place('node/2', 'Col B', 0.7)] } }))
+    useExportStore.setState({ phase: 'idle' })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<Timeline />))
+    const items = () => Array.from(document.querySelectorAll<HTMLElement>('[role^="menuitem"]'))
+    const open = () => act(async () => host.querySelector<HTMLElement>('button[aria-label="Ajouter un arrêt à la position du marqueur"]')!.click())
+    const film = () => useAppStore.getState().settings.film
+    await open()
+    expect(items().map((i) => i.textContent)).toEqual(['Ajouter un arrêt à la position du marqueur', expect.stringMatching(/^Arrêt : Col A · /), expect.stringMatching(/^Arrêt : Col B · /)])
+    expect(items().map((i) => i.getAttribute('aria-checked'))).toEqual(['false', 'false', 'false'])
+    // a highlight without a stop gets one, named after it
+    await act(async () => items()[1].click())
+    expect(film().stops.map((s) => s.label)).toEqual(['Col A'])
+    // it stays in the menu, ticked: picking it selects its stop and puts the playhead there, no second stop
+    await open()
+    expect(items()).toHaveLength(3)
+    expect(items().map((i) => i.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false'])
+    await act(async () => useAppStore.getState().setFilmSelection(null))
+    await act(async () => items()[1].click())
+    expect(film().stops).toHaveLength(1)
+    expect(useAppStore.getState().filmSelection).toBe(film().stops[0].id)
+    const stop = filmClockFor(getFilmSource()).stops[0]
+    const { playback } = useAppStore.getState()
+    expect(playback.timeS ?? 0).toBeCloseTo(stop.startS, 5)
+    // the stop is a block of « Plans », once
+    expect(host.querySelectorAll(`[data-item="${film().stops[0].id}"]`)).toHaveLength(1)
+    expect(host.querySelector(`[role="group"][aria-label="Plans"] [data-item="${film().stops[0].id}"]`)).not.toBeNull()
+    await act(async () => useLandmarkStore.setState({ landmarks: {} }))
     act(() => root.unmount())
   })
 
@@ -140,32 +225,32 @@ describe('Timeline', () => {
     await act(async () => root.render(<Timeline />))
     const lanes = () => Array.from(host.querySelectorAll('[data-testid="timeline-lane"]')).map((l) => l.getAttribute('aria-label'))
     const groups = () => Array.from(host.querySelectorAll('[data-testid="timeline-heads"] [role="group"]')).map((g) => g.getAttribute('aria-label'))
-    expect(lanes()).toEqual(['Plans', 'Vitesse', 'Arrêts', 'Textes', 'Médias', 'Musique'])
-    // the camera and speed keys have their ◀ ◇ ▶ in their lane header, with the names they had in the bar
-    expect(groups()).toEqual(['Images clés', 'Clés : Vitesse'])
+    expect(lanes()).toEqual(['Plans', 'Vitesse', 'Textes', 'Médias', 'Musique'])
+    // the camera keys have their ◀ ◇ ▶ in their lane header, with the name they had in the bar; the speed ones once « Vitesse » holds something
+    expect(groups()).toEqual(['Images clés'])
     const names = (label: string) => Array.from(host.querySelectorAll(`[role="group"][aria-label="${label}"] button`)).map((b) => b.getAttribute('aria-label'))
     expect(names('Images clés')).toEqual(['Image clé précédente', 'Ajouter une image clé', 'Image clé suivante'])
     expect(host.querySelector('[data-testid="timeline-bar"] [aria-label="Ajouter un réglage"]')).toBeNull()
     expect(host.querySelector('[data-testid="timeline-bar"] [aria-label="Ajouter un changement de marqueur"]')).toBeNull()
 
-    // a speed key stays on the « Vitesse » lane
-    const add = host.querySelector<HTMLButtonElement>('[aria-label="Vitesse : ajouter une clé"]')
-    await act(async () => add?.click())
+    // a speed key stays on the « Vitesse » lane, which then has its keys group
+    await act(async () => addParamKeyHere('speed'))
+    expect(groups()).toEqual(['Images clés', 'Clés : Vitesse'])
     expect(useAppStore.getState().settings.film.paramKeys).toMatchObject([{ param: 'speed', value: 1 }])
-    expect(lanes()).toEqual(['Plans', 'Vitesse', 'Arrêts', 'Textes', 'Médias', 'Musique'])
+    expect(lanes()).toEqual(['Plans', 'Vitesse', 'Textes', 'Médias', 'Musique'])
     expect(host.querySelectorAll('[role="group"][aria-label="Vitesse"]  [data-testid="timeline-key"]')).toHaveLength(1)
 
     // a keyed parameter gets a lane of its own, which goes with its last key
     await act(async () => addParamKeyHere('exposure'))
     await act(async () => addParamKeyHere('warmth'))
-    expect(lanes()).toEqual(['Plans', 'Vitesse', 'Exposition', 'Température', 'Arrêts', 'Textes', 'Médias', 'Musique'])
+    expect(lanes()).toEqual(['Plans', 'Vitesse', 'Exposition', 'Température', 'Textes', 'Médias', 'Musique'])
     expect(host.querySelectorAll('[role="group"][aria-label="Exposition"]  [data-testid="timeline-key"]')).toHaveLength(1)
     const exposure = useAppStore.getState().settings.film.paramKeys.find((k) => k.param === 'exposure')!
     await act(async () => useAppStore.getState().setSetting('film', removeFilmItem(useAppStore.getState().settings.film, exposure.id)))
-    expect(lanes()).toEqual(['Plans', 'Vitesse', 'Température', 'Arrêts', 'Textes', 'Médias', 'Musique'])
+    expect(lanes()).toEqual(['Plans', 'Vitesse', 'Température', 'Textes', 'Médias', 'Musique'])
 
     await act(async () => addMarkerKeyHere())
-    expect(lanes()).toEqual(['Plans', 'Vitesse', 'Température', 'Marqueur', 'Arrêts', 'Textes', 'Médias', 'Musique'])
+    expect(lanes()).toEqual(['Plans', 'Vitesse', 'Température', 'Marqueur', 'Textes', 'Médias', 'Musique'])
     expect(host.querySelectorAll('[role="group"][aria-label="Marqueur"] [data-testid="timeline-key"]')).toHaveLength(1)
     expect(lanes()).not.toContain('Réglages')
 
@@ -279,7 +364,7 @@ describe('Timeline', () => {
       act(() => root.unmount())
     })
 
-    it('the nights of a multi-day track are blocks of « Arrêts », without grips, removed by Delete (and restored from « Jours et nuits »)', async () => {
+    it('the nights of a multi-day track are blocks of « Plans », without grips, removed by Delete (and restored from « Jours et nuits »)', async () => {
       const { host, root, press } = await setup()
       const ride = (fromH: number, toH: number, lon0: number) =>
         Array.from({ length: (toH - fromH) * 2 + 1 }, (_, k) => ({ lon: lon0 + k / 77.35, lat: 45.92, time: Date.UTC(2026, 5, 1) + (fromH + k / 2) * 3_600_000 }))
@@ -287,7 +372,7 @@ describe('Timeline', () => {
       const days = buildTrack({ name: 'Deux jours', source: 'gpx', segments: [{ points: day1 }, { points: ride(30, 34, day1[day1.length - 1].lon) }] })
       await act(async () => useAppStore.setState({ tracks: [days] }))
       await act(async () => useAppStore.getState().setSetting('film', { ...DEFAULT_FILM, autoStops: false }))
-      const blocks = () => [...host.querySelectorAll<HTMLElement>('[role="group"][aria-label="Arrêts"] [data-item^="night-"]')]
+      const blocks = () => [...host.querySelectorAll<HTMLElement>('[role="group"][aria-label="Plans"] [data-item^="night-"]')]
       expect(blocks().map((b) => b.getAttribute('aria-label')?.split(',')[0])).toEqual(['Nuit : Nuit 1'])
       expect(blocks()[0].querySelector('span[class*="cursor-ew-resize"]')).toBeNull()
       await act(async () => blocks()[0].focus())
@@ -405,6 +490,8 @@ describe('Timeline', () => {
     it('a lane folds to a strip and locks against edits, each from the buttons of its head, and the choice is kept for the device', async () => {
       localStorage.removeItem('openflyover.lanes.v1')
       const { host, root } = await setup()
+      // a lane with nothing on it has no fold nor lock button: it is already a strip
+      await act(async () => useAppStore.getState().setSetting('film', addText(useAppStore.getState().settings.film, 1).film))
       const lane = () => host.querySelector<HTMLElement>('[role="group"][aria-label="Textes"]')!
       const tool = (label: string) => host.querySelector<HTMLElement>(`button[aria-label="${label}"]`)
       expect(lane().hasAttribute('inert')).toBe(false)
@@ -423,7 +510,7 @@ describe('Timeline', () => {
       expect(lane().hasAttribute('inert')).toBe(false)
       expect(JSON.parse(localStorage.getItem('openflyover.lanes.v1')!)).toEqual({ folded: [], locked: [] })
       // the other lanes are not touched, the blocks stay in the page when a lane is folded
-      expect(host.querySelectorAll('[data-testid="timeline-lane"]').length).toBeGreaterThan(5)
+      expect(host.querySelectorAll('[data-testid="timeline-lane"]').length).toBeGreaterThan(4)
       act(() => root.unmount())
     })
 
@@ -1053,7 +1140,7 @@ describe('Timeline: the modes of the interface', () => {
     expect(lanes()).toEqual(['Arrêts', 'Textes', 'Médias', 'Musique'])
     expect(heads()).toEqual([])
     await act(async () => setPreferences({ uiMode: 'confirme' }))
-    expect(lanes()).toEqual(['Plans', 'Vitesse', 'Arrêts', 'Textes', 'Médias', 'Musique'])
+    expect(lanes()).toEqual(['Plans', 'Vitesse', 'Textes', 'Médias', 'Musique'])
     // a speed change already in the film: its lane stays in Débutant
     await act(async () => setPreferences({ uiMode: 'debutant' }))
     const { settings, setSetting } = useAppStore.getState()

@@ -122,7 +122,13 @@ async function selectOption(page, scope, label, text) {
   await page.waitForSelector('[role="listbox"]', { hidden: true, timeout: STEP_MS })
 }
 
-/** Number of blocks in a timeline lane (« Plans », « Arrêts », « Textes »…). */
+/** Number of stops of the film: the blocks of « Plans » that are neither the opening nor the closing shot. */
+const stopCount = (page) =>
+  page.evaluate(
+    () => document.querySelectorAll('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]:not([data-item="opening"]):not([data-item="closing"])').length,
+  )
+
+/** Number of blocks in a timeline lane (« Textes », « Médias »…). */
 const laneCount = (page, lane) =>
   page.evaluate(
     (name) => document.querySelectorAll(`[role="group"][aria-label="${name}"] [data-testid="timeline-block"]`).length,
@@ -639,10 +645,10 @@ const SCENARIOS = [
       await page.keyboard.up('Control')
       await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Textes"] [data-testid="timeline-block"]').length === n, [texts])
 
-      const stops = await laneCount(page, 'Arrêts')
+      const stops = await stopCount(page)
       await blur(page)
       await page.keyboard.press('s')
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n + 1, [stops])
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]:not([data-item="opening"]):not([data-item="closing"])').length === n + 1, [stops])
       await page.keyboard.press('Escape')
       await blur(page)
       // one text kept for the project round trip
@@ -779,16 +785,16 @@ const SCENARIOS = [
       assert((await focusedText()) === 'Ajouter un texte ici', 'flèche bas dans le menu du clic droit')
       await page.keyboard.press('Escape')
       await gone(trackMenu)
-      const stops = await laneCount(page, 'Arrêts')
+      const stops = await stopCount(page)
       await openTrackMenu()
       await page.click(`${trackMenu} [role="menuitem"]::-p-text(Ajouter un arrêt ici)`)
       await gone(trackMenu)
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n + 1, [stops])
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]:not([data-item="opening"]):not([data-item="closing"])').length === n + 1, [stops])
       await blur(page)
       await page.keyboard.down('Control')
       await page.keyboard.press('z')
       await page.keyboard.up('Control')
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n, [stops])
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]:not([data-item="opening"]):not([data-item="closing"])').length === n, [stops])
       // « Point d'intérêt ici » turns the menu into the form that names it, its field focused; Escape closes it
       await rightClickTrack()
       await page.waitForSelector(trackMenu, { visible: true, timeout: STEP_MS })
@@ -862,14 +868,14 @@ const SCENARIOS = [
     title: 'Repères et points d’intérêt (onglet Carte) : un point au marqueur, son arrêt coché puis décoché, vu sur la timeline',
     async run({ page }) {
       await showTab(page, 'carte')
-      const stops = await laneCount(page, 'Arrêts')
+      const stops = await stopCount(page)
       await clickButton(page, "Point d'intérêt au marqueur")
       const box = '[data-testid="tab-panel-carte"] [data-testid="place"] input[aria-label^="Arrêt dans le film à « Point d"]'
       await page.waitForSelector(box, { timeout: STEP_MS })
       await page.click(box)
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n + 1, [stops])
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]:not([data-item="opening"]):not([data-item="closing"])').length === n + 1, [stops])
       await page.click(box)
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n, [stops])
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]:not([data-item="opening"]):not([data-item="closing"])').length === n, [stops])
       await page.click('[data-testid="tab-panel-carte"] button[aria-label^="Supprimer le point d\'intérêt"]')
       await blur(page)
     },
@@ -929,7 +935,7 @@ const SCENARIOS = [
     id: 'projet',
     title: 'Projet gardé tout seul et rouvert au rechargement, puis enregistré et ouvert depuis son fichier',
     async run({ page }) {
-      const before = { texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
+      const before = { texts: await laneCount(page, 'Textes'), stops: await stopCount(page) }
       const since = Date.now() - 1000
       // headless Chromium cannot answer the File System Access pickers: without them the project is downloaded, and opened
       // through a file input
@@ -974,7 +980,7 @@ const SCENARIOS = [
       await page.click('[data-testid="toast"] button[aria-label="Fermer le message"]')
       await until(page, () => ![...document.querySelectorAll('[data-testid="toast"]')].some((el) => el.textContent.includes('rouvert') && el.dataset.exiting !== 'true'))
       await until(page, () => (document.querySelector('[role="group"][aria-label="Plans"]')?.textContent ?? '').includes('Survol'))
-      const reopened = { exposure: await exposure(), texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
+      const reopened = { exposure: await exposure(), texts: await laneCount(page, 'Textes'), stops: await stopCount(page) }
       assert(
         reopened.exposure === changed && reopened.texts === before.texts && reopened.stops === before.stops,
         `projet rouvert différent : avant ${JSON.stringify({ exposure: changed, ...before })}, après ${JSON.stringify(reopened)}`,
@@ -986,7 +992,7 @@ const SCENARIOS = [
       await chooser.accept([file.path])
       await page.waitForSelector('[data-testid="toast"]::-p-text(» ouvert)', { visible: true, timeout: STEP_MS })
       await until(page, () => (document.querySelector('[role="group"][aria-label="Plans"]')?.textContent ?? '').includes('Survol'))
-      const after = { exposure: await exposure(), texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
+      const after = { exposure: await exposure(), texts: await laneCount(page, 'Textes'), stops: await stopCount(page) }
       assert(
         !after.exposure.startsWith('+') && after.texts === before.texts && after.stops === before.stops,
         `projet du fichier différent : avant ${JSON.stringify(before)}, après ${JSON.stringify(after)}`,
