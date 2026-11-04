@@ -154,6 +154,8 @@ function ProjectSection() {
                   {t('common.save')}
                 </Button>
               </Tip>
+              {/* without a file picker (Firefox, Safari, a phone) it would download a copy, like « Enregistrer » */}
+              {getPlatform().capabilities.canStreamToDisk && (
               <Tip text={withShortcut(t('project.panel.saveAsTip'), 'save-as')}>
                 <Button
                   onClick={() => void saveProjectAs()}
@@ -163,6 +165,7 @@ function ProjectSection() {
                   {t('project.panel.saveAs')}
                 </Button>
               </Tip>
+              )}
               <Button onClick={() => void run(closeProject)} disabled={busy || closing || !open}>
                 <Icon name="x" size={18} />
                 {t('project.panel.close')}
@@ -205,6 +208,8 @@ function LibrarySection() {
     setRenaming(null)
   }
 
+  // a browser without the Cache Storage keeps no project: nothing to list
+  if (!platform.projectLibrary) return null
   return (
     <section aria-labelledby={`${id}-title`}>
       <div className="panel-head">

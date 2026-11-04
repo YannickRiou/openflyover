@@ -8,6 +8,7 @@ import {
   PLATFORM_PRESETS,
   VIDEO_ASPECTS,
   VIDEO_RESOLUTIONS,
+  fitsDevice,
   buildFrameSchedule,
   buildFrameTimes,
   expandNameTemplate,
@@ -86,7 +87,7 @@ describe('video formats', () => {
     expect(expandNameTemplate('{track}', { ...vars, track: '' }, 'repli')).toBe('repli')
   })
 
-  it('platform presets: their format, H.264 and a bitrate by hand; the quality and the rest stay', () => {
+  it('platform presets: their format and H.264, the bitrate still following the quality; the quality and the rest stay', () => {
     const base: VideoSettings = { ...DEFAULT_VIDEO_SETTINGS, quality: 'max', keyframeIntervalS: 5, audioKbps: 256, nameTemplate: '{track}' }
     for (const preset of PLATFORM_PRESETS) {
       const next = withPlatformPreset(base, preset.id)
@@ -94,7 +95,8 @@ describe('video formats', () => {
       expect(next).toMatchObject({ quality: 'max', keyframeIntervalS: 5, audioKbps: 256, nameTemplate: '{track}' })
       expect(isValidVideoSettings(next), preset.id).toBe(true)
       expect(next.codec).toBe('avc')
-      expect(next.manualBitrate).toBe(true)
+      // a manual bitrate would make the quality choice change nothing to the size of the file
+      expect(next.manualBitrate).toBe(false)
     }
     expect(withPlatformPreset(base, 'vertical')).toMatchObject({ aspect: '9:16', resolution: '1080p' })
     expect(withPlatformPreset(base, 'youtube-4k')).toMatchObject({ aspect: '16:9', resolution: '4k', fps: 30 })
@@ -106,9 +108,17 @@ describe('video formats', () => {
     expect(platformPresetOf(base)).toBeNull()
     const feed = withPlatformPreset(base, 'feed')
     expect(platformPresetOf(feed)).toBe('feed')
-    expect(platformPresetOf({ ...feed, bitrateMbps: 9 })).toBeNull()
+    expect(platformPresetOf({ ...feed, manualBitrate: true })).toBeNull()
     expect(platformPresetOf({ ...feed, fps: 60 })).toBeNull()
     for (const preset of PLATFORM_PRESETS) expect(platformPresetOf(withPlatformPreset(base, preset.id))).toBe(preset.id)
+  })
+
+  it('offers the resolutions a device exports as they are: a phone up to 1080p, a tablet up to 1440p, a computer all', () => {
+    expect(VIDEO_RESOLUTIONS.filter((r) => fitsDevice(r.id, 1080)).map((r) => r.id)).toEqual(['720p', '1080p'])
+    expect(VIDEO_RESOLUTIONS.filter((r) => fitsDevice(r.id, 1440)).map((r) => r.id)).toEqual(['720p', '1080p', '1440p'])
+    expect(VIDEO_RESOLUTIONS.every((r) => fitsDevice(r.id, 2160))).toBe(true)
+    // the platform presets of a phone: no 4K one
+    expect(PLATFORM_PRESETS.filter((p) => fitsDevice(p.video.resolution, 1080)).map((p) => p.id)).not.toContain('youtube-4k')
   })
 
   it('loudness: off by default (as mixed), the encoder gets the target only when it is on; an older project is off', () => {

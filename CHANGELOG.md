@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **The export panel only offers what the output uses**: a phone no longer lists 1440p and 4K, nor the « YouTube 4K » preset (they gave a file in 1080p or 1440p under a 4K name; « Plusieurs formats » produced three identical files); the manual bitrate slider stops at what the device keeps in memory. A PNG sequence shows no bitrate, codec or key frames, and an overlay alone no render quality; « Son » and « Volume » only appear when the film has music or a clip with sound. The platform presets keep the bitrate following the quality, so changing the quality changes the size of the file again. In a sequence the summary no longer counts the held frames, and the « no codec » alert and the memory warning are gone. « Copier les crédits » shows once the film is done, the render history only after the first film, « Mes projets » only where the browser can keep projects, « Enregistrer sous… » only where a file picker exists.
+
 ## 5.1.1 (November 2026)
 
 - **The 3D markers keep their own colours**: a new « Couleurs du modèle 3D » choice in the marker settings (« Naturelles » by default, or « De la trace »). The horse is brown, the car blue, the skis red and the jacket green instead of everything being in the colour of the track, so the marker no longer merges with the track line. « De la trace » puts the colour of the track on the main part (jacket, hull, skis, body) as before. With several tracks in parallel, each racer keeps the colour of its track; a colour chosen by hand for the figure still wins.

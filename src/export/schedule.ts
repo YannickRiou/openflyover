@@ -35,6 +35,14 @@ export const VIDEO_RESOLUTIONS = [
 
 export type VideoResolution = (typeof VIDEO_RESOLUTIONS)[number]['id']
 
+/**
+ * A resolution this device exports as it is: its short side is within `maxShortSide` (a phone: 1080p, a tablet: 1440p),
+ * else `videoSize` shrinks it and the file is not what its label says.
+ */
+export function fitsDevice(resolution: VideoResolution, maxShortSide = deviceBudget().maxExportShortSide): boolean {
+  return (VIDEO_RESOLUTIONS.find((r) => r.id === resolution) ?? VIDEO_RESOLUTIONS[1]).shortSide <= maxShortSide
+}
+
 export const VIDEO_FPS = [24, 30, 60] as const
 export type VideoFps = (typeof VIDEO_FPS)[number]
 
@@ -52,15 +60,15 @@ export type VideoCodecChoice = (typeof VIDEO_CODEC_CHOICES)[number]
  * They set these fields and nothing else.
  */
 export const PLATFORM_PRESETS = [
-  { id: 'youtube-4k', get label() { return t('video.platform.youtube-4k') }, video: { aspect: '16:9', resolution: '4k', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 40, margins: true } },
-  { id: 'youtube', get label() { return t('video.platform.youtube') }, video: { aspect: '16:9', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 12, margins: true } },
-  { id: 'vertical', get label() { return t('video.platform.vertical') }, video: { aspect: '9:16', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 10, margins: true } },
-  { id: 'feed', get label() { return t('video.platform.feed') }, video: { aspect: '4:5', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 8, margins: true } },
-  { id: 'square', get label() { return t('video.platform.square') }, video: { aspect: '1:1', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: true, bitrateMbps: 8, margins: true } },
+  { id: 'youtube-4k', get label() { return t('video.platform.youtube-4k') }, video: { aspect: '16:9', resolution: '4k', fps: 30, codec: 'avc', manualBitrate: false, margins: true } },
+  { id: 'youtube', get label() { return t('video.platform.youtube') }, video: { aspect: '16:9', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: false, margins: true } },
+  { id: 'vertical', get label() { return t('video.platform.vertical') }, video: { aspect: '9:16', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: false, margins: true } },
+  { id: 'feed', get label() { return t('video.platform.feed') }, video: { aspect: '4:5', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: false, margins: true } },
+  { id: 'square', get label() { return t('video.platform.square') }, video: { aspect: '1:1', resolution: '1080p', fps: 30, codec: 'avc', manualBitrate: false, margins: true } },
 ] as const satisfies readonly {
   id: string
   label: string
-  video: Pick<VideoSettings, 'aspect' | 'resolution' | 'fps' | 'codec' | 'manualBitrate' | 'bitrateMbps' | 'margins'>
+  video: Pick<VideoSettings, 'aspect' | 'resolution' | 'fps' | 'codec' | 'manualBitrate' | 'margins'>
 }[]
 
 export type PlatformPresetId = (typeof PLATFORM_PRESETS)[number]['id']
