@@ -763,9 +763,9 @@ pointer (`appearance.css`).
   from `sunChipHour`; one `transaction`). The values of a chip are not a reason to show « Météo » and « Lumière »: `ambianceOf` (`uiMode.ts`) names the chip whose values the settings are, for the lit chip and for `HIDDEN_TABS` (`chips`: `clouds.mode`, `sunFromTrack`, `sunHour`); values that are no chip's show the tabs. Tests: `App.test.tsx` (rail, first launch), `SettingsPanel.test.tsx`, `CameraPanel.test.tsx`,
   `OverlayPanel.test.tsx`, `Timeline.test.tsx`, `TopBar.test.tsx`, `PreferencesPanel.test.tsx`, `searchSections.test.ts`, `shell.test.ts`.
 - **Render weight** (`src/ui/renderCost.ts`, pure, tested; `RenderWeight` and `TabWeightDot` in `PanelSection.tsx`): which settings lengthen
-  the export, as a pictogram (three bars like a signal icon: filled navy, the rest periwinkle; the heaviest tier in chartreuse on a navy
-  chip; `--color-navy` / `--color-periwinkle` / `--color-chartreuse` in `theme.css`) after the name of the setting (`weight` prop of
-  `SettingRow` and `RangeField`, export drawer included), and a chartreuse dot on a navy ring on a tab (rail and phone bar) while one
+  the export, as a pictogram (three bars like a signal icon: filled ink, the rest the line colour; the heaviest tier in light amber,
+  the app's « attention », on an ink chip; the app's own tokens in `theme.css`) after the name of the setting (`weight` prop of
+  `SettingRow` and `RangeField`, export drawer included), and a light amber dot on an ink ring on a tab (rail and phone bar) while one
   of its settings is at tier 3 (`tabHasHeavySetting`). Both read the store with their own selector (primitives), so the memoised panels
   and the 3D scene do not render again; `Tip` tooltip with the factor, visually hidden « Poids de rendu : léger / moyen / lourd »
   (the dot adds « réglage lourd actif » to the tab's name). Tiers come from the factors of the code; « ≈ ×N » only where N is one:
@@ -1292,8 +1292,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   direction of the atmosphere (ECEF) is brought into the scene frame and projected; the effect reads five taps of
   its pass input over the sun disc: the disc saturates the tone mapping unless the relief or a volumetric cloud
   (which writes no depth) hides it, so occlusion needs no extra pass. Glare, a horizontal streak, a faint ring and six
-  ghosts along the line from the sun through the centre (tinted with the palette's periwinkle, water green and
-  chartreuse), faded over the last 5% of the frame; none when the sun is off screen. Five texture reads per pixel.
+  ghosts along the line from the sun through the centre (tinted with the palette's glacier, light moss and light
+  amber), faded over the last 5% of the frame; none when the sun is off screen. Five texture reads per pixel.
 - **Motion blur**, export (exact and deterministic): each film frame is rendered up to `SHUTTER_SUBFRAMES` = 8 times at
   instants stratified over ± shutter / 2 frame intervals around it (`shutterSamples`, progress and film time
   interpolated between neighbouring frames of the schedule; an instant in another clock phase, i.e. across the cut of
@@ -2148,7 +2148,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   lit pin still follow the film time: `pinsMoveWithTime(labels, film)` makes the preview rig's view `timed` and the export's scene
   `sceneMovesWithTime`, so a held frame is not copied.
 - **The pins** (`scene/PhotoPins.tsx`, in `TerrainLayer` after `Labels`): three sprites per pin with `sizeAttenuation` off
-  (the foot, the post, the framed thumbnail drawn on a canvas from the table's 160 px thumbnail; lit: chartreuse frame and glow, ×1.25), drawn like the labels (`AlwaysDepth` with a depth write, so the atmosphere does not haze them as sky).
+  (the foot, the post, the framed thumbnail drawn on a canvas from the table's 160 px thumbnail; lit: light amber frame and glow, ×1.25, edged in ink), drawn like the labels (`AlwaysDepth` with a depth write, so the atmosphere does not haze them as sky).
   Size: a share of the height of the frame (`PIN_REFERENCE_HEIGHT_PX` = 720, or the height of a 16:9 frame of the same width in
   a tall frame), not CSS pixels, so the preview and every export resolution show the same pin (the 3D labels, in pixels, use
   `exportRenderScale` of the canvas); down to 50 % from 1 to 10 km. Hidden behind the relief and faded with « Portée » like the labels
@@ -3339,9 +3339,9 @@ exports) gets it from the terrain source of the settings.
   `adaptiveShutterSamples(…, max)` (and `subFrameCount(spanPx, max)`: window = max / (max − 1) of the span, still ≤ `SHUTTER_STEP_PX`
   between renders) and to `shutterSamples`. The count stays a function of the film time and the quality alone: same project + same
   quality → same frames. `subFrameSlices` still splits the clouds' slices exactly among the sub-frames.
-- **Badges** (`presetBadge`, `PresetBadge` in `PanelSection.tsx`, `preset` prop of `SettingRow` / `RangeField`): « Imposé par Haute » (periwinkle
+- **Badges** (`presetBadge`, `PresetBadge` in `PanelSection.tsx`, `preset` prop of `SettingRow` / `RangeField`): « Imposé par Haute » (glacier
   pill after the weight pictogram) on the clouds quality row (Météo) while it is `'auto'`, and on the motion blur slider (Objectif) only
-  when the tier lowers its 8 (Standard); « Personnalisé » (chartreuse pill) on the clouds row once chosen by hand, with the row's
+  when the tier lowers its 8 (Standard); « Personnalisé » (light amber pill) on the clouds row once chosen by hand, with the row's
   « Revenir au préréglage » button. The « Qualité » row of the export drawer then reads « Haute · Personnalisé » (`isCustomised`), lists
   what the quality drives and repeats the button. Depth of field has no lever of its own (see below), only the repetition at each
   sub-frame, which its pictogram counts.

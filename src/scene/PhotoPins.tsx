@@ -3,7 +3,7 @@
  * its framed thumbnail, at the point of the track where it was taken (`film/photoPins.ts`). Three sprites of constant
  * screen size per pin (the foot, the post, the picture), sized as a fraction of the height of the frame (so the preview and
  * every export resolution show the same pin, like the streams' minimum width), a little smaller far away. It lights up
- * (chartreuse frame, larger) while the photo is on screen. Close pins are stacked and give way to the 3D labels
+ * (amber frame, larger) while the photo is on screen. Close pins are stacked and give way to the 3D labels
  * (`pinLayout.ts`). The camera turns towards them in `computeFilmView` (`flyover/pinAim.ts`). Not drawn on the poster.
  * Must be rendered inside TerrainLayer.
  */
@@ -37,8 +37,9 @@ const MARGIN = 16
 const TEXTURE_SCALE = 2
 /** The look is drawn for a frame this high (pixels). */
 export const PIN_REFERENCE_HEIGHT_PX = 720
-const NAVY = '#113B54'
-const CHARTREUSE = '#DBE64C'
+/** the ink and the amber of the app's palette (`--color-ink`, `--color-amber-light`) */
+const INK = '#1B2832'
+const LIT = '#F0C35E'
 const WHITE = '#FFFFFF'
 // the pictures over the 3D labels (order 10), their posts under them; the lit pin over everything
 const PIN_RENDER_ORDER = 11
@@ -82,15 +83,15 @@ function drawCard(image: CanvasImageSource & { width: number; height: number }, 
   if (!made) return null
   const { canvas, ctx } = made
   ctx.save()
-  ctx.shadowColor = lit ? CHARTREUSE : 'rgba(0, 0, 0, 0.55)'
+  ctx.shadowColor = lit ? LIT : 'rgba(0, 0, 0, 0.55)'
   ctx.shadowBlur = lit ? 14 : 9
   ctx.shadowOffsetY = lit ? 0 : 3
-  ctx.fillStyle = lit ? CHARTREUSE : WHITE
+  ctx.fillStyle = lit ? LIT : WHITE
   ctx.beginPath()
   ctx.roundRect(MARGIN, MARGIN, FRAME_W, FRAME_H, 6)
   ctx.fill()
   ctx.restore()
-  ctx.strokeStyle = NAVY
+  ctx.strokeStyle = INK
   ctx.lineWidth = 1.5
   ctx.beginPath()
   ctx.roundRect(MARGIN, MARGIN, FRAME_W, FRAME_H, 6)
@@ -107,14 +108,14 @@ function drawCard(image: CanvasImageSource & { width: number; height: number }, 
   return textureOf(canvas)
 }
 
-/** The post (stretched along its length) and the foot, in white or in chartreuse, edged in navy. */
+/** The post (stretched along its length) and the foot, in white or in amber, edged in ink. */
 function drawPost(lit: boolean): CanvasTexture | null {
   const made = newCanvas(POST_W, 2)
   if (!made) return null
   const { canvas, ctx } = made
-  ctx.fillStyle = NAVY
+  ctx.fillStyle = INK
   ctx.fillRect(0, 0, POST_W, 2)
-  ctx.fillStyle = lit ? CHARTREUSE : WHITE
+  ctx.fillStyle = lit ? LIT : WHITE
   ctx.fillRect(1.25, 0, POST_W - 2.5, 2)
   return textureOf(canvas)
 }
@@ -126,9 +127,9 @@ function drawFoot(lit: boolean): CanvasTexture | null {
   const { canvas, ctx } = made
   ctx.beginPath()
   ctx.arc(size / 2, size / 2, DOT_R, 0, Math.PI * 2)
-  ctx.fillStyle = lit ? CHARTREUSE : WHITE
+  ctx.fillStyle = lit ? LIT : WHITE
   ctx.fill()
-  ctx.strokeStyle = NAVY
+  ctx.strokeStyle = INK
   ctx.lineWidth = 1.5
   ctx.stroke()
   return textureOf(canvas)

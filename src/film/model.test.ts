@@ -207,7 +207,7 @@ describe('film model', () => {
     const full = film({
       autoStops: false,
       stops: [stop('stop-1', { label: 'Sommet', source: { kind: 'landmark', ref: 'node/1' } }), stop('auto-4520', { camera: 'fixe' })],
-      texts: [text('text-1', { subtitle: '1 653 m', color: '#dbe64c', font: 'mono' }), text('text-2', { stopId: 'stop-1' })],
+      texts: [text('text-1', { subtitle: '1 653 m', color: '#f0c35e', font: 'mono' }), text('text-2', { stopId: 'stop-1' })],
       media: [
         media('media-1'),
         media('media-2', { layout: 'carte', anchor: 'top-right', size: 1.5, kenBurns: false, caption: 'Lac Blanc', stopId: 'auto-4520' }),

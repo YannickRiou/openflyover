@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **The app's own colours everywhere**: the weight bars of the settings, the « Imposé » and « Personnalisé » badges, the dot on a tab, the photo pins on the terrain, the lens flare and two of the bar colours offered in « Apparence » (now « Bleu nuit » and « Vert forêt ») take the colours of the app's palette (ink, glacier, moss, amber) instead of colours that did not belong to it. A bar colour chosen before is kept.
+
 - **The view in full screen on a phone**: a button at the bottom left of the view shows it over the whole screen, with play and ✕; turning the phone sideways while the film plays does the same, and turning it upright again leaves it.
 
 - **No title twice in a phone's sheet**: the head of the settings sheet no longer repeats the name of the tab (« Habillage » then « Habillage »); the tab bar, in sight under the sheet, shows which one is open.

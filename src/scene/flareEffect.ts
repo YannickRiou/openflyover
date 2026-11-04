@@ -10,11 +10,11 @@ uniform float flareAspect;
 uniform float flareSunRadius;
 uniform float flareStrength;
 
-// warm glare of the sun; ghost tints: periwinkle, water green, chartreuse (linear)
+// warm glare of the sun; ghost tints from the app's palette: glacier, light moss, light amber (linear, brightest channel at 1)
 const vec3 FLARE_GLARE = vec3(1.0, 0.85, 0.65);
-const vec3 FLARE_A = vec3(0.50, 0.64, 1.00);
-const vec3 FLARE_B = vec3(0.76, 0.91, 0.73);
-const vec3 FLARE_C = vec3(0.71, 0.79, 0.07);
+const vec3 FLARE_A = vec3(0.57, 0.87, 1.00);
+const vec3 FLARE_B = vec3(0.48, 1.00, 0.58);
+const vec3 FLARE_C = vec3(1.00, 0.63, 0.13);
 
 float flareSeen(const in vec2 uv) {
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;

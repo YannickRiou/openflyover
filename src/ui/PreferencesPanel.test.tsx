@@ -67,9 +67,9 @@ describe('PreferencesPanel, « Apparence »', () => {
   it('applies the accent and the bar colour', async () => {
     await act(async () => swatch("Couleur d'accentuation : Indigo").click())
     expect(document.documentElement.style.getPropertyValue('--color-accent')).toBe('#4a55b8')
-    await act(async () => swatch('Couleur de la barre et du rail : Bleu marine').click())
-    expect(document.documentElement.style.getPropertyValue('--surface-chrome')).toBe('#113b54')
-    expect(stored()).toMatchObject({ accent: '#4a55b8', chrome: '#113b54' })
+    await act(async () => swatch('Couleur de la barre et du rail : Bleu nuit').click())
+    expect(document.documentElement.style.getPropertyValue('--surface-chrome')).toBe('#20384a')
+    expect(stored()).toMatchObject({ accent: '#4a55b8', chrome: '#20384a' })
   })
 
   it('tells when a free colour is darkened to keep the text readable', async () => {
