@@ -5,7 +5,13 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **A taller view and sheets on a phone**: in portrait, the preview is as tall as the frame of the film at the width of the screen, instead of 42 % of the screen with a black band above and below (a 16:9 film goes from 219 px with 62 px of black to 219 px of view and 62 px more for the sheets); a 9:16 or 4:5 frame takes up to 55 % of the screen. The panels and the export sheet gain a « Agrandir » button in their head: the sheet takes the whole height under the top bar (« Réduire » or « Terminé » brings it back).
+
 - **The export button stays in sight on a phone**: in the export sheet (« Vidéo » and « Plusieurs formats »), « Exporter la vidéo » is pinned to the bottom of the sheet while the settings scroll under it. It used to be below the fold, after the tabs and the whole list of settings.
+
+- **Fewer buttons over the view on a phone**: in portrait, the capture and the safe zones fold behind one « Outils de la vue » button (four buttons took 176 px of a 219 px view). « Recadrer » and « Revenir à la vue du film » stay in sight. Computers and tablets are unchanged.
+
+- **The tab bar of a phone shows it scrolls**: five tabs and a half fit across the screen, so the sixth is cut at the edge. Before, a stub of 26 px was left under the fade and the bar looked complete, hiding Lens, Overlay, Project and Settings.
 
 ## 5.1.2 (November 2026)
 
