@@ -119,7 +119,7 @@ export const BACKGROUND_PRIORITY = 1_000_000
 export async function fetchTileBlob(url: string, signal?: AbortSignal, reload = false, priority: RequestPriority = 'auto'): Promise<Blob> {
   const response = await fetch(url, reload ? { signal, cache: 'reload', priority } : { signal, priority })
   if (!response.ok) throw new TileFetchError(url, response.status)
-  // update date of the IGN layers (Etalab licence), shown in « Sources et licences »
+  // update date of the IGN layers (Etalab licence), shown in « À propos et mises à jour »
   noteTileLastModified(url, response.headers?.get('Last-Modified'))
   return response.blob()
 }

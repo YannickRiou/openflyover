@@ -2,7 +2,6 @@ import type { Messages } from '../messages'
 
 const messages: Messages['news'] = {
   title: 'Novedades',
-  button: 'Ver las novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
   'v55.titlebar.title': 'Adiós a la barra de Windows',
@@ -26,6 +25,8 @@ const messages: Messages['news'] = {
   'v55.stops.text': 'Una parada aparece ahora en un solo sitio, en la barra de vuelo de la pista Planos, con su nombre. La pista Paradas desaparece, salvo en el modo Débutant, que no tiene pista Planos. Se mueve, se alarga y se borra como antes.',
   'v55.clips.title': 'Bloques con forma de clip',
   'v55.clips.text': 'Los bloques de la línea de tiempo llenan su pista, con un borde de color a la izquierda según su tipo: naranja para una parada, verde para un texto, azul claro para una foto, ámbar para una velocidad. Un bloque elegido muestra un tirador en cada extremo. En el teléfono son más grandes para tocar.',
+  'v55.menu.title': 'Un menú en el logo',
+  'v55.menu.text': 'Pulsa el logo, arriba a la izquierda: «Mis proyectos», «Novedades», la guía de uso y los atajos de teclado están reunidos ahí. «Acerca de y actualizaciones» muestra la versión, las fuentes y la búsqueda de actualizaciones. En un teléfono, todo encabeza el menú ⋯.',
   'v50.margins.title': 'Márgenes a elección',
   'v50.margins.text': 'La casilla «Márgenes de seguridad» de la exportación aleja los gráficos de los bordes y, en 9:16 y 4:5, de las zonas de Reels, TikTok y Shorts. Se marca sola al elegir una plataforma. Sin marcar, los gráficos se acercan a los bordes y toda la imagen sirve a la película.',
   'v50.modes.title': 'Tres modos de interfaz',

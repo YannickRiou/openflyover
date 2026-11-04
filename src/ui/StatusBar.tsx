@@ -1,17 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useT } from '../i18n'
 import { useRegionStore } from '../osm/region'
-import { hasOsmLandmarks, useForestStore, useGlacierStore, useLandmarkStore, useWaterStore } from '../osm/store'
-import { overlayCredits } from '../overlay/data'
-import { getPlatform } from '../platform'
+import { useLandmarkStore } from '../osm/store'
 import { useForestStatusStore } from '../scene/forestStatus'
-import { getPerfProbe } from '../scene/perfProbe'
 import { useGlacierStatusStore } from '../scene/glacierStatus'
 import { useWaterStatusStore } from '../scene/waterStatus'
-import { updateDateNote, useSourceDates } from '../terrain/sourceDates'
-import { getImagerySource } from '../terrain/sources'
 import { useAppStore } from '../state/store'
-import { useWeatherStore, weatherShown } from '../weather/store'
+import { useWeatherStore } from '../weather/store'
+import { useCreditSources } from './AboutDialog'
 import { formatPercent } from './format'
 import { Icon } from './icons'
 import {
@@ -21,17 +17,10 @@ import {
   fetchChip,
   layerNotices,
   nextMapStatus,
-  perfParts,
   type MapStatus,
-  type PerfSample,
-  type SystemStats,
 } from './mapStatus'
-import { setPreferences, usePreferences } from './preferences'
-import { PERF_ITEMS } from './shell'
-import type { PerfItem } from './shell'
-import { Button, Modal, Tip } from './primitives'
-import { LATEST_NEWS } from './whatsNew'
-import { WhatsNewDialog } from './WhatsNewDialog'
+import { usePreferences } from './preferences'
+import { Tip } from './primitives'
 
 /*
  * The strip's classes. It is a container (`@container/status`): narrower than 560 px the providers behind the credits fold
@@ -42,9 +31,6 @@ const BAR =
 /** The spinner: a ring with its light-accent arc. */
 const SPINNER = 'spin-fast size-2.5 flex-none rounded-full border-2 border-ink-soft border-t-accent-light'
 const CREDIT_LINK = 'text-inherit underline hover:text-white'
-
-/** Performance readout refresh. */
-const PERF_INTERVAL_MS = 1000
 
 /** Map state from the terrain stats, re-read when a load reaches its display delay. */
 function useMapStatus(): MapStatus {
@@ -73,74 +59,6 @@ function useMapStatus(): MapStatus {
   return status
 }
 
-/** Memory and processor of the machine (desktop app only, src-tauri/src/system.rs); null when they cannot be read. */
-async function readSystemStats(): Promise<SystemStats | null> {
-  try {
-    return await (await import('@tauri-apps/api/core')).invoke<SystemStats>('system_stats')
-  } catch {
-    return null
-  }
-}
-
-/**
- * Performance readout, read every second while it is open (behind the « i » button) and one of its parts is wanted: frames drawn by the 3D view (R3F's
- * after-render callback, the export's frames included), textures and geometries of its renderer, terrain tiles,
- * JavaScript heap (Chromium only), memory and processor of the machine on the desktop.
- */
-function usePerformance(shown: Record<PerfItem, boolean>, open: boolean): PerfSample | null {
-  const wanted = open && PERF_ITEMS.some((item) => shown[item])
-  const system = shown.system && getPlatform().capabilities.isDesktop
-  const [sample, setSample] = useState<PerfSample | null>(null)
-  useEffect(() => {
-    if (!wanted) return
-    let frames = 0
-    let since = performance.now()
-    let machine: SystemStats | undefined
-    let alive = true
-    // the 3D view registers its probe once its chunk is loaded: counting starts then
-    let stopCounting: (() => void) | undefined
-    const timer = window.setInterval(() => {
-      const now = performance.now()
-      // nobody sees it: no render of the bar, no question to the desktop app; the next shown tick counts from here
-      if (document.hidden) {
-        frames = 0
-        since = now
-        return
-      }
-      const probe = getPerfProbe()
-      // no frame rate on the tick that starts the count
-      const starting = !!probe && !stopCounting
-      if (probe && !stopCounting) {
-        stopCounting = probe.onFrame(() => {
-          frames++
-        })
-      }
-      const memory = probe?.memory()
-      const heap = (performance as { memory?: { usedJSHeapSize?: number } }).memory?.usedJSHeapSize
-      setSample({
-        fps: memory && !starting ? (frames * 1000) / (now - since) : undefined,
-        textures: memory?.textures,
-        geometries: memory?.geometries,
-        tiles: memory ? useAppStore.getState().terrainStats.loadedTiles : undefined,
-        heapBytes: heap,
-        system: machine,
-      })
-      frames = 0
-      since = now
-      if (system) {
-        void readSystemStats().then((stats) => {
-          if (alive) machine = stats ?? undefined
-        })
-      }
-    }, PERF_INTERVAL_MS)
-    return () => {
-      alive = false
-      window.clearInterval(timer)
-      stopCounting?.()
-    }
-  }, [wanted, system])
-  return wanted ? sample : null
-}
 
 /** Small ring filled with the share of the view drawn; it turns slowly while tiles arrive. */
 function ProgressRing({ value }: { value: number }) {
@@ -210,43 +128,16 @@ function FetchChips() {
 /**
  * Status strip under the timeline, calm: while something loads, the map (« Chargement de la carte… 72 % » ring while
  * the view waits for tiles), the import spinner and one indicator for the other fetches; what failed (tiles, a fetch)
- * stays in words; nothing once all is loaded. The short credits of the active sources are always visible; the ⓘ button
- * opens the full « Sources et licences » lines and the performance readout, which is not on the strip. Only the import
+ * stays in words; nothing once all is loaded. The short credits of the active sources are always visible; the full lines
+ * and the performance readout are in « À propos et mises à jour » (the OpenFlyover menu), not on the strip. Only the import
  * status is a live region: the map state changes several times a second and must not be announced by screen readers.
  */
 export function StatusBar() {
   const t = useT()
   const map = useMapStatus()
   const loading = useAppStore((s) => s.loading)
-  const terrainSourceId = useAppStore((s) => s.settings.terrainSourceId)
-  const imagerySourceId = useAppStore((s) => s.settings.imagerySourceId)
-  const weather = useWeatherStore(weatherShown)
-  const landmarks = useLandmarkStore((s) => hasOsmLandmarks(s.landmarks))
-  // OpenStreetMap is credited for the water, the forests and the highlighted region as well as for the landmarks
-  const water = useWaterStore((s) => s.polygons > 0)
-  const forest = useForestStore((s) => s.polygons > 0)
-  const glacier = useGlacierStore((s) => s.polygons > 0)
-  const region = useRegionStore((s) => s.region !== null)
-  const perfShown = usePreferences((s) => s.performance)
-  const [sourcesOpen, setSourcesOpen] = useState(false)
-  const perf = usePerformance(perfShown, sourcesOpen)
-  const sourceDates = useSourceDates((s) => s.dates)
-  const [newsOpen, setNewsOpen] = useState(false)
-  // the dot of the « i » button: the newest « Nouveautés » have not been opened yet
-  const newsUnseen = usePreferences((s) => s.whatsNewSeen !== LATEST_NEWS)
-  const openNews = () => {
-    setSourcesOpen(false)
-    setNewsOpen(true)
-    setPreferences({ whatsNewSeen: LATEST_NEWS })
-  }
-
-  const imagery = getImagerySource(imagerySourceId)
-  // IGN layers: the update date of the data (Etalab licence), as the service sends it
-  const dateNote = updateDateNote(imagery.urlTemplate, sourceDates)
-  const osm = landmarks || water || forest || glacier || region
-  const credits = overlayCredits({ terrainSourceId, imagerySourceId, weather, landmarks: osm, water, forests: forest, glaciers: glacier })
+  const { terrainSourceId, imagerySourceId, weather, osm } = useCreditSources()
   const short = compactCredits({ terrainSourceId, imagerySourceId, weather, osm })
-  const perfLines = perf ? perfParts(perf, perfShown) : []
 
   return (
     <footer className={BAR}>
@@ -308,65 +199,6 @@ export function StatusBar() {
           </span>
         ))}
       </div>
-      <Tip text={t('status.sources')} side="top" align="end">
-        <button
-          type="button"
-          className="relative inline-flex size-5 flex-none cursor-pointer items-center justify-center rounded-full p-0 text-glacier transition-ui hover:text-white touch:before:absolute touch:before:-inset-3.5 touch:before:content-['']"
-          aria-label={newsUnseen ? `${t('status.sources')} · ${t('news.title')}` : t('status.sources')}
-          onClick={() => setSourcesOpen(true)}
-        >
-          <Icon name="info" size={14} />
-          {newsUnseen && <span className="absolute top-0 right-0 size-2 rounded-full bg-accent-light" data-testid="news-dot" aria-hidden="true" />}
-        </button>
-      </Tip>
-
-      <WhatsNewDialog open={newsOpen} onClose={() => setNewsOpen(false)} />
-      <Modal open={sourcesOpen} onClose={() => setSourcesOpen(false)} title={t('status.sources')} closeLabel={t('common.close')} closeTip={t('common.closeEsc')}>
-        <Button className="mb-3" onClick={openNews}>
-          <Icon name="sparkles" size={16} />
-          {t('news.button')}
-          {newsUnseen && <span className="size-2 rounded-full bg-accent-light" aria-hidden="true" />}
-        </Button>
-        <ul className="mb-3 flex flex-col gap-2">
-          {credits.map((line) => (
-            <li key={line}>
-              {line}
-              {dateNote && line.includes(imagery.attribution) && ` · ${dateNote}`}
-            </li>
-          ))}
-        </ul>
-        <p>
-          {short
-            .filter((item) => item.href)
-            .map((item, i) => (
-              <span key={item.text}>
-                {i > 0 && ' · '}
-                <a className="underline" href={item.href} target="_blank" rel="noreferrer">
-                  {item.text.replace('© ', '')}
-                </a>
-              </span>
-            ))}
-        </p>
-        <p className="type-hint">{t('status.sourcesNote')}</p>
-        {perfLines.length > 0 && (
-          <>
-            <p className="type-hint mt-3">{t('status.perfTitle')}</p>
-            <ul className="mb-3 flex flex-col gap-1 tabular-nums">
-              {perfLines.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          </>
-        )}
-        <p className="type-hint">
-          {t('status.sourcesProject')}{' '}
-          <a className="underline" href="https://github.com/YannickRiou/openflyover" target="_blank" rel="noreferrer">
-            GitHub
-          </a>
-          .
-        </p>
-        {getPlatform().checkForUpdate && <p className="type-hint">{t('status.sourcesUpdates')}</p>}
-      </Modal>
     </footer>
   )
 }

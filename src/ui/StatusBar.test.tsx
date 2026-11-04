@@ -7,6 +7,7 @@ import { setForestStatus } from '../scene/forestStatus'
 import { setPerfProbe } from '../scene/perfProbe'
 import { setWaterStatus } from '../scene/waterStatus'
 import { useAppStore } from '../state/store'
+import { AboutDialog } from './AboutDialog'
 import { StatusBar } from './StatusBar'
 
 let host: HTMLElement
@@ -73,14 +74,13 @@ describe('StatusBar', () => {
     expect(bar()).toContain('Échec du chargement\u202f: Forêts')
   })
 
-  it('shows the technical figures behind the « i » button only', async () => {
+  it('never shows the technical figures: they are in « À propos et mises à jour »', async () => {
     await change(() => stats(40, 0), 1500)
-    expect(document.body.textContent).not.toContain('tuiles')
-    const info = host.querySelector<HTMLButtonElement>('button[aria-label^="Sources et licences"]')!
-    await act(async () => info.click())
-    await change(() => {}, 1500)
-    expect(document.body.textContent).toContain('40 tuiles')
-    expect(document.body.textContent).toContain('Performances')
     expect(bar()).not.toContain('tuiles')
+    expect(host.querySelector('button[aria-label^="Sources et licences"]')).toBeNull()
+    await act(async () => root.render(<AboutDialog open onClose={() => {}} />))
+    await change(() => {}, 1500)
+    expect(document.body.textContent).toContain('Performances')
+    expect(document.body.textContent).toContain('40 tuiles')
   })
 })

@@ -39,7 +39,7 @@ terrain, imagery, weather and landmarks from open services. It runs as a **stati
 Linux **desktop application** (Tauri), from the same code.
 
 The interface and the texts of the films are available in **French**, **English**, **Spanish** (Español), **Italian** (Italiano) and **German** (Deutsch): pick the
-language with the flag button of the top bar (next to « ? »). The first run follows the browser's language when the app offers it (else French) and the choice is
+language with the flag button of the top bar. The first run follows the browser's language when the app offers it (else French) and the choice is
 remembered on the device. The documentation is in English; the [user guide](docs/user-guide.html) quotes the interface labels in French (the reference language).
 
 ![The interface: top bar, tabs on the left, 3D view, timeline at the bottom](docs/images/interface.jpg)
@@ -138,7 +138,7 @@ application is built with `npm run tauri:build`; installers for the three system
 
 ### Automatic updates: maintainer setup
 
-The desktop application has a « Rechercher une mise à jour » button (« Réglages » tab) that reads the latest GitHub release
+The desktop application has a « Rechercher une mise à jour » button (logo menu › « À propos et mises à jour ») that reads the latest GitHub release
 **only when pressed** (nothing at start-up, nothing in the background; `github.com` is contacted only then). It needs an
 update signing key, created once (full guide, tests and common errors: [`docs/installers.md`](docs/installers.md#automatic-updates-maintainer-setup)).
 **This is already done for this repository**: the public key is committed in `plugins.updater.pubkey` of `src-tauri/updater.conf.json`, and

@@ -8,14 +8,10 @@ import { getPlatform } from '../platform'
 import { canCheckUpdate, canInstallUpdate, percentOf, shortNotes } from '../platform/updater'
 import type { UpdateState } from '../platform/updater'
 import { flushAutosave, projectCloseLoss, unsavedChangesText } from './library'
-import { PanelSection } from './PanelSection'
 import { Button } from './primitives'
 
-/** package.json version, set by vite.config.ts (the same number as the desktop installer's) */
-declare const __APP_VERSION__: string
-
 /**
- * « Mises à jour » (« Réglages » tab, desktop only): the check runs only when the button is pressed, and the
+ * « Mises à jour » (« À propos et mises à jour » of the OpenFlyover menu, desktop only): the check runs only when the button is pressed, and the
  * installation only after a question; the platform does the work (`checkForUpdate`, `installUpdate`).
  */
 export function UpdatesSection() {
@@ -78,8 +74,8 @@ export function UpdatesSection() {
   })()
 
   return (
-    <PanelSection title={t('settings.updates.title')}>
-      <p className="type-hint">{t('settings.updates.version', { version: __APP_VERSION__ })}</p>
+    <section className="flex flex-col gap-3">
+      <h3 className="font-heading text-title font-semibold text-text-1">{t('settings.updates.title')}</h3>
       <Button disabled={!canCheckUpdate(state)} onClick={() => void check()}>
         {t('settings.updates.check')}
       </Button>
@@ -103,6 +99,6 @@ export function UpdatesSection() {
         </>
       )}
       <p className="type-hint">{t('settings.updates.hint')}</p>
-    </PanelSection>
+    </section>
   )
 }

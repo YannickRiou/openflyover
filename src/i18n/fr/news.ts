@@ -1,6 +1,5 @@
 export default {
   title: 'Nouveautés',
-  button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
   'v55.titlebar.title': 'Plus de barre Windows en haut',
@@ -24,6 +23,8 @@ export default {
   'v55.stops.text': 'Un arrêt n’apparaît plus qu’à un endroit, sur la barre de survol de la piste Plans, avec son nom. La piste Arrêts disparaît, sauf en mode Débutant, qui n’a pas de piste Plans. On le déplace, on l’allonge et on le supprime comme avant.',
   'v55.clips.title': 'Des blocs en forme de clips',
   'v55.clips.text': 'Les blocs de la timeline remplissent leur piste, avec un bord coloré à gauche selon leur type\u202f: orange pour un arrêt, vert pour un texte, bleu pâle pour une photo, ambre pour une vitesse. Un bloc choisi montre une poignée à chaque bout. Sur téléphone, ils sont plus grands à toucher.',
+  'v55.menu.title': 'Un menu sur le logo',
+  'v55.menu.text': 'Cliquez sur le logo, en haut à gauche : « Mes projets », « Nouveautés », le guide d’utilisation et les raccourcis clavier sont réunis là. « À propos et mises à jour » donne la version, les sources et la recherche de mise à jour. Sur un téléphone, tout est en tête du menu ⋯.',
   'v50.margins.title': 'Des marges au choix',
   'v50.margins.text': 'La case « Marges de sécurité » de l’export garde l’habillage loin des bords et, en 9:16 et 4:5, hors des zones de Reels, TikTok et Shorts. Elle se coche d’elle-même quand vous choisissez une plateforme. Décochée, l’habillage se rapproche des bords et l’image entière sert au film.',
   'v50.modes.title': 'Trois modes d’interface',

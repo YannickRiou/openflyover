@@ -77,7 +77,6 @@ const messages: Messages['settings'] = {
   'preferences.timeline.snapRuler': 'The ruler marks',
   'preferences.timeline.snapMarks': 'Transitions and highlights',
   'updates.title': 'Updates',
-  'updates.version': 'Installed version: {version}',
   'updates.hint': 'OpenFlyover contacts GitHub (github.com) only when you press this button: nothing is checked or installed automatically.',
   'updates.check': 'Check for updates',
   'updates.checking': 'Checking…',

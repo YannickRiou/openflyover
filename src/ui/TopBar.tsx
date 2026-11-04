@@ -7,6 +7,7 @@ import { getPlatform } from '../platform'
 import type { WindowControls } from '../platform'
 import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
+import { LogoMenu, NewsDot, useAppMenu, usePortraitPhone } from './AppMenu'
 import { AspectIcon, Icon } from './icons'
 import { LanguageMenu } from './LanguageMenu'
 import type { IconName } from './icons'
@@ -14,7 +15,7 @@ import { saveProject } from './projectActions'
 import { effectiveProjectName, isProjectDirty } from './shell'
 import { withShortcut } from './shortcuts'
 import { Button, Menu, Radio, RadioGroup, TextField, Tip } from './primitives'
-import type { ButtonProps } from './primitives'
+import type { ButtonProps, MenuItem } from './primitives'
 
 /** Project name input: reads as text on the bar, a frame on hover, a light field while edited. */
 const NAME_INPUT =
@@ -169,23 +170,34 @@ interface MoreItem {
   disabled: boolean
 }
 
-/** « Plus d'actions » (condensed bar only): the actions of the bar that do not fit. */
-function MoreMenu({ items }: { items: MoreItem[] }) {
+/**
+ * « Plus d'actions » (condensed bar only): the actions of the bar that do not fit, after `lead` (the OpenFlyover menu on a
+ * portrait phone) and a line. `news`: the dot of the logo, which is not there on that phone.
+ */
+function MoreMenu({ items, lead = [], news = false }: { items: MoreItem[]; lead?: MenuItem[]; news?: boolean }) {
   const t = useT()
   return (
     <Menu
       label={t('topbar.more')}
       sheet
-      items={items.map((item) => ({
-        id: item.label,
-        label: item.label,
-        icon: <Icon name={item.icon} size={18} />,
-        disabled: item.disabled,
-        onSelect: item.onClick,
-      }))}
+      items={[
+        ...lead.map((item, i) => (i === lead.length - 1 ? { ...item, separator: true } : item)),
+        ...items.map((item) => ({
+          id: item.label,
+          label: item.label,
+          icon: <Icon name={item.icon} size={18} />,
+          disabled: item.disabled,
+          onSelect: item.onClick,
+        })),
+      ]}
       trigger={
-        <Button variant="icon" className="btn-chrome hidden w-control bar-condensed:inline-flex" aria-label={t('topbar.more')}>
+        <Button
+          variant="icon"
+          className="btn-chrome relative hidden w-control bar-condensed:inline-flex"
+          aria-label={news ? `${t('topbar.more')} · ${t('news.title')}` : t('topbar.more')}
+        >
           <Icon name="ellipsis" />
+          {news && <NewsDot />}
         </Button>
       }
     />
@@ -197,18 +209,21 @@ interface TopBarProps {
   onOpen(): void
   exportOpen: boolean
   onToggleExport(): void
-  /** open the keyboard shortcuts */
+  /** open the keyboard shortcuts (an entry of the OpenFlyover menu) */
   onHelp(): void
 }
 
 /**
- * Top bar: logo, project name (edited in place), undo / redo, open / save (icons; the save icon tells its state), output format,
- * shortcuts (« ? »), « Exporter » (the export drawer; « 42 % · Annuler » while exporting). In the desktop app it is also the
- * title bar of the window: dragged by its empty areas (`data-tauri-drag-region` works on the element that has it, not on its
- * children), a double click maximises, and the window buttons come after « Exporter ».
+ * Top bar: the logo (it opens the OpenFlyover menu), project name (edited in place), undo / redo, open / save (icons; the save
+ * icon tells its state), output format, « Exporter » (the export drawer; « 42 % · Annuler » while exporting). In the desktop app
+ * it is also the title bar of the window: dragged by its empty areas (`data-tauri-drag-region` works on the element that has it,
+ * not on its children; never on the logo, which is a button), a double click maximises, and the window buttons come after
+ * « Exporter ».
  */
 export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarProps) {
   const t = useT()
+  const appMenu = useAppMenu(onHelp)
+  const phone = usePortraitPhone()
   const { capabilities, windowControls } = getPlatform()
   // desktop without buttons of ours: macOS, whose traffic lights sit over the left of the bar
   const trafficLights = capabilities.isDesktop && !windowControls
@@ -245,7 +260,7 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
       className={`chrome-focus relative z-10 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-white/10 bg-chrome pr-2 text-white bar-condensed:flex bar-condensed:gap-2 phone-any:pt-[var(--safe-top)] ${trafficLights ? 'pl-20' : 'pl-3'}`}
     >
       <div data-tauri-drag-region className="flex min-w-0 items-center gap-1 bar-condensed:flex-auto">
-        <img data-tauri-drag-region className="mr-1 size-7 flex-none phone:hidden" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={28} height={28} title="OpenFlyover" />
+        <LogoMenu items={appMenu.items} newsUnseen={appMenu.newsUnseen} />
         <h1 className="sr-only">OpenFlyover</h1>
         <TextField
           className="min-w-16 flex-[0_1_220px] bar-condensed:flex-auto phone-any:min-w-0"
@@ -291,16 +306,13 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
       <FormatMenu disabled={busy} />
 
       <div data-tauri-drag-region className="flex items-center justify-self-end gap-2">
-        <Tip text={withShortcut(t('topbar.shortcuts'), 'help')}>
-          <BarButton className="phone-any:hidden" onClick={onHelp} aria-label={t('topbar.shortcuts')}>
-            <Icon name="circle-help" />
-          </BarButton>
-        </Tip>
         {/* a phone chooses its language in « Réglages »: the bar keeps undo and redo instead */}
         <div className="contents phone:hidden">
           <LanguageMenu />
         </div>
         <MoreMenu
+          lead={phone ? appMenu.items : undefined}
+          news={phone && appMenu.newsUnseen}
           items={[
             { label: t('topbar.openMore'), icon: 'folder-open', onClick: onOpen, disabled: busy },
             { label: t('topbar.save'), icon: 'save', onClick: saveProject, disabled: busy },
@@ -338,6 +350,7 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
         )}
         {windowControls && <WindowButtons controls={windowControls} />}
       </div>
+      {appMenu.dialogs}
     </header>
   )
 }

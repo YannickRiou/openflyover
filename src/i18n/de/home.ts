@@ -8,7 +8,6 @@ const messages: Messages['home'] = {
   'empty.pointLocal': 'Alles bleibt auf Ihrem Gerät',
   'empty.news': 'Neu in {version}',
   'empty.links': 'Links',
-  'empty.guide': 'Erste Schritte',
   'empty.download': 'Desktop-App (Windows, macOS, Linux)',
   'empty.hint': 'Eine oder mehrere GPX-, FIT-, IGC- oder KML-Dateien an eine beliebige Stelle im Fenster ziehen.',
   'empty.importing': 'Import läuft…',

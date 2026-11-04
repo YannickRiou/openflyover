@@ -2,7 +2,6 @@ import type { Messages } from '../messages'
 
 const messages: Messages['news'] = {
   title: 'Neuheiten',
-  button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
   'v55.titlebar.title': 'Keine Windows-Leiste mehr oben',
@@ -26,6 +25,8 @@ const messages: Messages['news'] = {
   'v55.stops.text': 'Ein Stopp erscheint nur noch an einer Stelle, auf der Flugleiste der Spur Einstellungen, mit seinem Namen. Die Spur Stopps entfällt, außer im Modus Débutant, der keine Spur Einstellungen hat. Man verschiebt, verlängert und löscht ihn wie bisher.',
   'v55.clips.title': 'Blöcke in Form von Clips',
   'v55.clips.text': 'Die Blöcke der Zeitleiste füllen ihre Spur, mit einem farbigen Rand links je nach Art: orange für einen Stopp, grün für einen Text, hellblau für ein Foto, bernsteinfarben für eine Geschwindigkeit. Ein gewählter Block zeigt an beiden Enden einen Griff. Auf dem Telefon sind sie größer zum Antippen.',
+  'v55.menu.title': 'Ein Menü am Logo',
+  'v55.menu.text': 'Klicken Sie oben links auf das Logo: „Meine Projekte“, „Neuheiten“, das Benutzerhandbuch und die Tastenkürzel sind dort vereint. „Info und Updates“ zeigt die Version, die Quellen und die Suche nach Updates. Auf dem Smartphone steht alles am Anfang des Menüs ⋯.',
   'v50.margins.title': 'Ränder nach Wahl',
   'v50.margins.text': 'Das Kästchen „Sicherheitsränder“ des Exports hält das Overlay von den Rändern fern und in 9:16 und 4:5 außerhalb der Bereiche von Reels, TikTok und Shorts. Es hakt sich selbst an, wenn Sie eine Plattform wählen. Ohne Haken rückt das Overlay an die Ränder und das ganze Bild gehört dem Film.',
   'v50.modes.title': 'Drei Modi der Oberfläche',

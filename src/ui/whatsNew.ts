@@ -2,7 +2,7 @@
  * « Nouveautés »: what changed, in the words of the people who use the application (features, not code), newest version
  * first. A minor version stands for its patches, unless a patch has its own entry. Each item is an icon, a title and a
  * sentence; the texts are in `i18n/<language>/news.ts`. Adding a version: its items first in `WHATS_NEW` and its keys
- * in the five languages; the dot of the « i » button shows again until the new version is opened
+ * in the five languages; the dot of the logo button shows again until the new version is opened
  * (`Preferences.whatsNewSeen`).
  */
 import { t } from '../i18n'
@@ -33,6 +33,7 @@ export const WHATS_NEW: readonly NewsVersion[] = [
       { icon: 'plus', get title() { return t('news.v55.lanes.title') }, get text() { return t('news.v55.lanes.text') } },
       { icon: 'map-pin', get title() { return t('news.v55.stops.title') }, get text() { return t('news.v55.stops.text') } },
       { icon: 'clapperboard', get title() { return t('news.v55.clips.title') }, get text() { return t('news.v55.clips.text') } },
+      { icon: 'info', get title() { return t('news.v55.menu.title') }, get text() { return t('news.v55.menu.text') } },
     ],
   },
   {

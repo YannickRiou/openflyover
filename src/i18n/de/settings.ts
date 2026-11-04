@@ -77,7 +77,6 @@ const messages: Messages['settings'] = {
   'preferences.timeline.snapRuler': 'Den Skalenstrichen',
   'preferences.timeline.snapMarks': 'Übergängen und Höhepunkten',
   'updates.title': 'Updates',
-  'updates.version': 'Installierte Version: {version}',
   'updates.hint': 'OpenFlyover kontaktiert GitHub (github.com) nur, wenn Sie diese Schaltfläche drücken: Nichts wird automatisch geprüft oder installiert.',
   'updates.check': 'Nach Updates suchen',
   'updates.checking': 'Suche läuft…',

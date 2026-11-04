@@ -21,6 +21,8 @@ const messages: Messages['topbar'] = {
   saveUnsavedTip: 'Save: unsaved changes',
   saveTip: 'Save the project',
   shortcuts: 'Keyboard shortcuts',
+  menu: 'OpenFlyover menu',
+  'menu.guide': 'User guide',
   cancelExportAria: 'Cancel export ({percent}%)',
   finalizingAria: 'Finalizing the file',
   finalizing: 'Finalizing…',

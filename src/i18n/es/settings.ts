@@ -77,7 +77,6 @@ const messages: Messages['settings'] = {
   'preferences.timeline.snapRuler': 'Las marcas de la regla',
   'preferences.timeline.snapMarks': 'Transiciones y momentos destacados',
   'updates.title': 'Actualizaciones',
-  'updates.version': 'Versión instalada: {version}',
   'updates.hint': 'OpenFlyover consulta GitHub (github.com) solo cuando pulsas este botón: nada se comprueba ni se instala automáticamente.',
   'updates.check': 'Buscar actualizaciones',
   'updates.checking': 'Buscando…',

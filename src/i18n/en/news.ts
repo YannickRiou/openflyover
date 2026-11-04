@@ -2,7 +2,6 @@ import type { Messages } from '../messages'
 
 const messages: Messages['news'] = {
   title: 'What’s new',
-  button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
   'v55.titlebar.title': 'No more Windows strip on top',
@@ -26,6 +25,8 @@ const messages: Messages['news'] = {
   'v55.stops.text': 'A stop now appears in one place only, on the flight bar of the Plans track, with its name. The Stops track is gone, except in Débutant mode, which has no Plans track. You move, stretch and delete a stop as before.',
   'v55.clips.title': 'Blocks shaped like clips',
   'v55.clips.text': 'The blocks of the timeline fill their track, with a coloured edge on the left for their type: orange for a stop, green for a text, pale blue for a photo, amber for a speed change. A selected block shows a handle at each end. On a phone they are bigger to touch.',
+  'v55.menu.title': 'A menu on the logo',
+  'v55.menu.text': 'Click the logo, at the top left: “My projects”, “What’s new”, the user guide and the keyboard shortcuts are gathered there. “About and updates” gives the version, the sources and the check for updates. On a phone, everything heads the ⋯ menu.',
   'v50.margins.title': 'Margins when you want them',
   'v50.margins.text': 'The “Marges de sécurité” box of the export keeps the overlay away from the edges and, in 9:16 and 4:5, out of the areas of Reels, TikTok and Shorts. It ticks itself when you pick a platform. Unticked, the overlay moves close to the edges and the whole picture serves the film.',
   'v50.modes.title': 'Three interface modes',

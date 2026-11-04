@@ -5,7 +5,10 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { buildTrack } from '../import/stats'
 import type { WindowControls } from '../platform'
 import { useAppStore } from '../state/store'
+import { guideUrl } from './AppMenu'
+import { setPreferences } from './preferences'
 import { TopBar } from './TopBar'
+import { LATEST_NEWS } from './whatsNew'
 
 // the desktop app, when a test sets `controls` or `isDesktop`: the website otherwise
 const desktop = vi.hoisted(() => ({ controls: null as WindowControls | null, isDesktop: false }))
@@ -160,6 +163,9 @@ describe('TopBar: the window buttons of the desktop app', () => {
     expect(button(host, 'Restaurer')).not.toBeNull()
     // the bar moves the window by its empty areas
     expect(host.querySelector('header')?.hasAttribute('data-tauri-drag-region')).toBe(true)
+    // but never by the logo: it is the button of the OpenFlyover menu
+    const logo = host.querySelector('[data-testid="logo-menu"]')!
+    expect(logo.hasAttribute('data-tauri-drag-region') || logo.querySelector('[data-tauri-drag-region]') !== null).toBe(false)
     act(() => root.unmount())
     expect(stop).toHaveBeenCalledTimes(1)
   })
@@ -170,5 +176,109 @@ describe('TopBar: the window buttons of the desktop app', () => {
     expect(button(host, 'Fermer')).toBeNull()
     expect(host.querySelector('header')?.className).toContain('pl-20')
     act(() => root.unmount())
+  })
+})
+
+describe('TopBar: the OpenFlyover menu', () => {
+  const ENTRIES = ['Mes projets', 'Nouveautés', "Guide d'utilisation", 'Raccourcis clavier', 'À propos et mises à jour']
+  const rows = () => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')]
+  const mount = async (onHelp = () => {}) => {
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<TopBar onOpen={() => {}} exportOpen={false} onToggleExport={() => {}} onHelp={onHelp} />))
+    return { host, root, logo: host.querySelector<HTMLButtonElement>('[data-testid="logo-menu"]')! }
+  }
+
+  it('opens under the logo with the five entries, and « ? » is no longer on the bar', async () => {
+    setPreferences({ whatsNewSeen: LATEST_NEWS })
+    const { host, root, logo } = await mount()
+    expect(logo.getAttribute('aria-label')).toBe('Menu OpenFlyover')
+    expect(logo.getAttribute('aria-haspopup')).toBe('true')
+    expect(logo.querySelector('img')).not.toBeNull()
+    expect(host.querySelector('[data-testid="news-dot"]')).toBeNull()
+    expect(host.querySelector('button[aria-label="Raccourcis clavier"]')).toBeNull()
+    await act(async () => logo.click())
+    expect(document.querySelector('[role="menu"]')?.getAttribute('aria-label')).toBe('Menu OpenFlyover')
+    expect(rows().map((r) => r.textContent)).toEqual(ENTRIES)
+    act(() => root.unmount())
+  })
+
+  it('shows a dot on the logo until « Nouveautés » is opened', async () => {
+    setPreferences({ whatsNewSeen: '' })
+    const { host, root, logo } = await mount()
+    expect(logo.querySelector('[data-testid="news-dot"]')).not.toBeNull()
+    expect(logo.getAttribute('aria-label')).toBe('Menu OpenFlyover · Nouveautés')
+    await act(async () => logo.click())
+    await act(async () => rows()[1].click())
+    expect(document.body.textContent).toContain(`Version ${LATEST_NEWS}`)
+    expect(host.querySelector('[data-testid="news-dot"]')).toBeNull()
+    act(() => root.unmount())
+  })
+
+  it('« Raccourcis clavier » asks for the shortcuts, « À propos » opens the version and the sources', async () => {
+    const onHelp = vi.fn()
+    const { root, logo } = await mount(onHelp)
+    await act(async () => logo.click())
+    await act(async () => rows()[3].click())
+    expect(onHelp).toHaveBeenCalledOnce()
+    await act(async () => logo.click())
+    await act(async () => rows()[4].click())
+    expect(document.body.textContent).toMatch(/Version\s*: \S+/)
+    expect(document.body.textContent).toContain('Sources et licences')
+    act(() => root.unmount())
+  })
+
+  it('« Guide d’utilisation » opens the guide of the language in a new tab', async () => {
+    const opened: string[] = []
+    const onClick = (e: Event) => {
+      const link = (e.target as Element).closest('a')
+      if (link) opened.push(`${link.target} ${link.href}`)
+      e.preventDefault()
+    }
+    document.addEventListener('click', onClick)
+    const { root, logo } = await mount()
+    await act(async () => logo.click())
+    await act(async () => rows()[2].click())
+    document.removeEventListener('click', onClick)
+    expect(opened).toEqual(['_blank https://yannickriou.github.io/openflyover/docs/user-guide.fr.html'])
+    act(() => root.unmount())
+  })
+
+  it('« Mes projets » has nothing to leave on the home screen', async () => {
+    useAppStore.setState({ tracks: [] })
+    const { root, logo } = await mount()
+    await act(async () => logo.click())
+    expect(rows()[0].getAttribute('aria-disabled')).toBe('true')
+    act(() => root.unmount())
+  })
+
+  it('on a portrait phone the same entries head « Plus d’actions », then a line and the actions of the bar', async () => {
+    const query = { matches: true, addEventListener: () => {}, removeEventListener: () => {} }
+    vi.stubGlobal('matchMedia', () => query)
+    setPreferences({ whatsNewSeen: '' })
+    const { host, root } = await mount()
+    // the logo is not there: the dot of the news is on the button of the menu that holds the entries
+    const more = host.querySelector<HTMLButtonElement>('button[aria-label^="Plus d\'actions"]')!
+    expect(more.querySelector('[data-testid="news-dot"]')).not.toBeNull()
+    await act(async () => more.click())
+    expect(rows().map((r) => r.textContent)).toEqual([...ENTRIES, 'Ouvrir…', 'Enregistrer'])
+    expect(document.querySelectorAll('[role="separator"]')).toHaveLength(1)
+    expect(rows()[4].nextElementSibling?.getAttribute('role')).toBe('separator')
+    act(() => root.unmount())
+    vi.unstubAllGlobals()
+  })
+
+  it('off a phone « Plus d’actions » keeps only the actions of the bar', async () => {
+    const { host, root } = await mount()
+    await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Plus d\'actions"]')!.click())
+    expect(rows().map((r) => r.textContent)).toEqual(['Ouvrir…', 'Enregistrer'])
+    act(() => root.unmount())
+  })
+})
+
+describe('guideUrl', () => {
+  it('English at user-guide.html, every other language at user-guide.<code>.html', () => {
+    expect(guideUrl('en')).toBe('https://yannickriou.github.io/openflyover/docs/user-guide.html')
+    expect(guideUrl('de')).toBe('https://yannickriou.github.io/openflyover/docs/user-guide.de.html')
   })
 })

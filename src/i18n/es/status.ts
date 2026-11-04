@@ -12,7 +12,9 @@ const messages: Messages['status'] = {
   layersLoading: 'Cargando: {layers}',
   layersFailed: 'Error de carga: {layers}',
   creditSources: 'Fuentes {name}',
-  sources: 'Fuentes y licencias',
+  about: 'Acerca de y actualizaciones',
+  sourcesTitle: 'Fuentes y licencias',
+  version: 'Versión: {version}',
   sourcesProject: 'OpenFlyover es de código abierto: código, documentación y descargas en',
   sourcesNote:
     'Estas menciones se incrustan en las películas exportadas (Gráficos, «Créditos de las fuentes»). Fuentes tipográficas: Fraunces e IBM Plex (SIL Open Font License 1.1). Iconos: Lucide (licencia ISC). OpenFlyover se publica bajo licencia MIT.',
@@ -31,7 +33,6 @@ const messages: Messages['status'] = {
   'perf.js': 'JS {value}',
   'perf.ram': 'RAM {used} / {total}',
   'perf.cpu': 'CPU {value} %',
-  sourcesUpdates: 'Aplicación de escritorio: se contacta con GitHub (github.com) solo cuando pulsas «Buscar actualizaciones» (Ajustes), para leer el archivo de versión.',
   // --- 4.1.0: « Forêts » chip, waiting for the other OpenStreetMap requests ---
   'source.forest': 'Bosques (OpenStreetMap)',
   'chip.queued': '{source}: en espera, las demás cargas de OpenStreetMap van primero',
