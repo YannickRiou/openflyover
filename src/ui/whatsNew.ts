@@ -21,19 +21,19 @@ export interface NewsVersion {
 
 export const WHATS_NEW: readonly NewsVersion[] = [
   {
-    version: '5.5',
+    version: '6.0',
     items: [
-      { icon: 'square', get title() { return t('news.v55.titlebar.title') }, get text() { return t('news.v55.titlebar.text') } },
-      { icon: 'info', get title() { return t('news.v55.status.title') }, get text() { return t('news.v55.status.text') } },
-      { icon: 'layers', get title() { return t('news.v55.groups.title') }, get text() { return t('news.v55.groups.text') } },
-      { icon: 'sliders-horizontal', get title() { return t('news.v55.summary.title') }, get text() { return t('news.v55.summary.text') } },
-      { icon: 'route', get title() { return t('news.v55.headings.title') }, get text() { return t('news.v55.headings.text') } },
-      { icon: 'image', get title() { return t('news.v55.pictures.title') }, get text() { return t('news.v55.pictures.text') } },
-      { icon: 'clapperboard', get title() { return t('news.v55.camera.title') }, get text() { return t('news.v55.camera.text') } },
-      { icon: 'plus', get title() { return t('news.v55.lanes.title') }, get text() { return t('news.v55.lanes.text') } },
-      { icon: 'map-pin', get title() { return t('news.v55.stops.title') }, get text() { return t('news.v55.stops.text') } },
-      { icon: 'clapperboard', get title() { return t('news.v55.clips.title') }, get text() { return t('news.v55.clips.text') } },
-      { icon: 'info', get title() { return t('news.v55.menu.title') }, get text() { return t('news.v55.menu.text') } },
+      { icon: 'square', get title() { return t('news.v60.titlebar.title') }, get text() { return t('news.v60.titlebar.text') } },
+      { icon: 'info', get title() { return t('news.v60.status.title') }, get text() { return t('news.v60.status.text') } },
+      { icon: 'layers', get title() { return t('news.v60.groups.title') }, get text() { return t('news.v60.groups.text') } },
+      { icon: 'sliders-horizontal', get title() { return t('news.v60.summary.title') }, get text() { return t('news.v60.summary.text') } },
+      { icon: 'route', get title() { return t('news.v60.headings.title') }, get text() { return t('news.v60.headings.text') } },
+      { icon: 'image', get title() { return t('news.v60.pictures.title') }, get text() { return t('news.v60.pictures.text') } },
+      { icon: 'clapperboard', get title() { return t('news.v60.camera.title') }, get text() { return t('news.v60.camera.text') } },
+      { icon: 'plus', get title() { return t('news.v60.lanes.title') }, get text() { return t('news.v60.lanes.text') } },
+      { icon: 'map-pin', get title() { return t('news.v60.stops.title') }, get text() { return t('news.v60.stops.text') } },
+      { icon: 'clapperboard', get title() { return t('news.v60.clips.title') }, get text() { return t('news.v60.clips.text') } },
+      { icon: 'info', get title() { return t('news.v60.menu.title') }, get text() { return t('news.v60.menu.text') } },
     ],
   },
   {
