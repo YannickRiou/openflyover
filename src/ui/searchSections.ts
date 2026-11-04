@@ -32,7 +32,8 @@ const SECTIONS: readonly SectionEntry[] = [
   { tab: 'lumiere', title: 'light.atmosphere.sun', min: 'confirme' },
   { tab: 'lumiere', title: 'light.nights.title', min: 'confirme' },
   { tab: 'lumiere', title: 'light.grading.title', min: 'confirme' },
-  { tab: 'survol', title: 'camera.panel.camera' },
+  // « Mouvement » and « Hauteur » are the two questions of « Caméra »; the older words (preset, style, distance, tilt) still lead there
+  { tab: 'survol', title: 'camera.panel.camera', also: ['camera.panel.motion', 'camera.panel.height', 'camera.panel.preset', 'camera.panel.style', 'camera.slider.distance', 'camera.slider.pitch'] },
   { tab: 'survol', title: 'camera.panel.durationSection' },
   { tab: 'objectif', title: 'lens.title', min: 'expert' },
   { tab: 'habillage', title: 'overlay.panel.title' },

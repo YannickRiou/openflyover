@@ -155,6 +155,35 @@ export const CAMERA_PRESETS: readonly CameraPreset[] = [
   { id: 'free', get name() { return t('camera.preset.free') }, camera: { ...DEFAULT_CAMERA, style: 'free' } },
 ]
 
+/**
+ * « Hauteur »: named stops from close to far, each setting the distance and the tilt together, nothing else. Their
+ * values are those of the presets of the same vehicle (`CAMERA_PRESETS`: Drone rapide, Poursuite, Hélicoptère, Drone
+ * haut, Avion, Satellite), ordered by height above the ground (distance × sin of the tilt); the names and sentences
+ * are `camera.height.<id>` and `camera.heightHint.<id>`.
+ */
+export const CAMERA_HEIGHTS = [
+  { id: 'ground', distance: 0.5, pitchDeg: 20 },
+  { id: 'close', distance: DEFAULT_CAMERA.distance, pitchDeg: DEFAULT_CAMERA.pitchDeg },
+  { id: 'helicopter', distance: 1.3, pitchDeg: 25 },
+  { id: 'high-drone', distance: 1.8, pitchDeg: 55 },
+  { id: 'plane', distance: 3, pitchDeg: 35 },
+  { id: 'satellite', distance: 4, pitchDeg: 85 },
+] as const
+
+/**
+ * The stop of `CAMERA_HEIGHTS` that `camera` is at, or, when its distance and tilt match none (`custom`), the nearest one
+ * (each as a share of its slider range) so that the slider has a place to stand without changing anything.
+ */
+export function cameraHeightStop(camera: Pick<CameraSettings, 'distance' | 'pitchDeg'>): { index: number; custom: boolean } {
+  const span = (key: 'distance' | 'pitchDeg') => CAMERA_RANGES[key].max - CAMERA_RANGES[key].min
+  const gap = (h: (typeof CAMERA_HEIGHTS)[number]) => ((camera.distance - h.distance) / span('distance')) ** 2 + ((camera.pitchDeg - h.pitchDeg) / span('pitchDeg')) ** 2
+  let index = 0
+  CAMERA_HEIGHTS.forEach((h, i) => {
+    if (gap(h) < gap(CAMERA_HEIGHTS[index])) index = i
+  })
+  return { index, custom: gap(CAMERA_HEIGHTS[index]) !== 0 }
+}
+
 /** The preset whose camera equals `camera`, if any. */
 export function findCameraPreset(camera: CameraSettings): CameraPreset | undefined {
   const keys = Object.keys(DEFAULT_CAMERA) as (keyof CameraSettings)[]

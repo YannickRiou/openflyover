@@ -2,7 +2,7 @@
  * Update date of the IGN Géoplateforme layers in use: the Licence Ouverte Etalab 2.0 asks to mention « la date de la
  * dernière mise à jour de l'Information réutilisée ». It is read from the `Last-Modified` header of the tiles
  * (a CORS-safelisted header, `fetchTileBlob`), the most recent one per layer for this session; nothing is known when
- * the service does not send it (« Sources et licences » says so, no date is made up).
+ * the service does not send it (« À propos et mises à jour » says so, no date is made up).
  */
 import { create } from 'zustand'
 import { t } from '../i18n'
@@ -35,7 +35,7 @@ export function formatUpdateDate(time: number): string {
   return formatDate(time, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
 }
 
-/** What « Sources et licences » adds after the line of an IGN source (`urlTemplate`); null for other sources. */
+/** What « À propos et mises à jour » adds after the line of an IGN source (`urlTemplate`); null for other sources. */
 export function updateDateNote(urlTemplate: string, dates: Readonly<Record<string, number>>): string | null {
   const layer = ignLayerOf(urlTemplate)
   if (layer === null) return null

@@ -70,7 +70,7 @@ export function applyProject(project: LoadedProject): void {
 }
 
 /**
- * Replace the open project by an empty one, with the default settings and playback speed (« Fermer le projet »,
+ * Replace the open project by an empty one, with the default settings and playback speed (« Mes projets » of the OpenFlyover menu,
  * « Nouveau projet »): no track, so the home screen shows. The settings are set as a whole, not key by key through
  * `setSetting`: the default imagery is not a choice of the user, the next import may still pick the regional one.
  */

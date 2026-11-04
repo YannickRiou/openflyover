@@ -40,7 +40,7 @@ export default {
   'image.remove': 'Retirer',
   'image.hint': 'Photo ou avatar, recadré en rond. En parallèle, les autres traces gardent leur boule.',
   'track.solid': 'Unie',
-  'track.title': 'Trace',
+  'track.title': 'Style de la trace',
   'track.lineGroup': 'Ligne',
   'track.haloGroup': 'Halo',
   'track.drawOn': 'Trace qui se dessine',

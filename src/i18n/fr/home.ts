@@ -6,7 +6,6 @@ export default {
   'empty.pointLocal': 'Tout reste sur votre appareil',
   'empty.news': 'Nouveau en {version}',
   'empty.links': 'Liens',
-  'empty.guide': 'Premiers pas',
   'empty.download': 'Appli de bureau (Windows, macOS, Linux)',
   'empty.hint': 'Glissez une ou plusieurs traces GPX, FIT, IGC ou KML n’importe où dans la fenêtre.',
   'empty.importing': 'Import en cours…',

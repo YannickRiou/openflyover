@@ -554,7 +554,7 @@ export function OverlayPanel() {
 
   return (
     <>
-      <PanelSection title={t('overlay.panel.title')} keys={['overlay']}>
+      <PanelSection title={t('overlay.panel.title')} summary={OVERLAY_STYLE_LABELS[overlay.style]} keys={['overlay']}>
         <Switch checked={overlay.enabled} onChange={(on) => set({ enabled: on })}>{t('overlay.panel.show')}</Switch>
         <p className="type-hint">{t('overlay.panel.showHint')}</p>
 

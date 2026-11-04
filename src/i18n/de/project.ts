@@ -74,8 +74,6 @@ const messages: Messages['project'] = {
   'panel.saveTip': 'Projekt speichern (nach dem ersten Mal in dieselbe Datei)',
   'panel.saveAs': 'Speichern unter…',
   'panel.saveAsTip': 'Projekt unter anderem Namen oder an anderem Ort speichern',
-  'panel.close': 'Projekt schließen',
-  'panel.closeHint': 'Schließen führt zurück zum Startbildschirm; ein abgelegtes Projekt bleibt in „Meine Projekte“.',
   'panel.library': 'Meine Projekte',
   'panel.noLibrary': 'Dieser Browser kann keine Projekte ablegen (ungesicherte Seite, ohne HTTPS).',
   'panel.keptDesktop': 'Auf diesem Computer abgelegt, bei jeder Änderung automatisch gespeichert.',

@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import { useLanguage, useT } from '../i18n'
-import type { LanguageCode } from '../i18n'
+import { Suspense, lazy, useState } from 'react'
+import { useT } from '../i18n'
 import { getPlatform, type ProjectEntry } from '../platform'
 import { useAppStore } from '../state/store'
 import { Icon, type IconName } from './icons'
@@ -10,7 +9,9 @@ import { chooseProjectToOpen, chooseTracksToImport, loadSample, openProject } fr
 import { StravaImport } from './StravaImport'
 import { Button } from './primitives'
 import { LATEST_NEWS, WHATS_NEW } from './whatsNew'
-import { WhatsNewDialog } from './WhatsNewDialog'
+
+// opened from the « Nouveau en … » card only: loaded when first asked for, out of the first screen
+const WhatsNewDialog = lazy(() => import('./WhatsNewDialog').then((m) => ({ default: m.WhatsNewDialog })))
 
 /** The thumbnail of a project of the list, an empty frame for an older entry that has none. */
 const THUMB = 'library-thumb row-span-2'
@@ -32,11 +33,6 @@ const RECENT_COUNT = 3
 /** Titles of the newest « Nouveautés » named on the home screen. */
 const NEWS_TITLES = 3
 
-/** The user guide in `language`, published with the website (pages.yml): English at user-guide.html, the others at user-guide.<code>.html. */
-export function guideUrl(language: LanguageCode): string {
-  return `https://yannickriou.github.io/openflyover/docs/user-guide${language === 'en' ? '' : `.${language}`}.html`
-}
-
 /** The desktop installers of the latest release. */
 export const DOWNLOAD_URL = 'https://github.com/YannickRiou/openflyover/releases/latest'
 
@@ -50,17 +46,19 @@ const POINTS: { icon: IconName; key: 'home.empty.pointFree' | 'home.empty.pointN
 /**
  * Home screen until a track is loaded, over the whole view: what the app does, import (drop anywhere or the file
  * picker), Strava, the sample, open a project, what is new (« Nouveautés »), the latest projects of « Mes projets », and
- * links to the user guide, the desktop app (on the website) and the sources.
+ * links to the desktop app (on the website) and the sources.
  */
 export function EmptyState() {
   const t = useT()
-  const language = useLanguage()
   const loading = useAppStore((s) => s.loading)
   // the list is read by the « Projet » tab, always mounted; the open entry (emptied of its tracks) is not offered
   const entries = useLibraryStore((s) => s.entries)
   const currentId = useLibraryStore((s) => s.currentId)
   const recent = entries.filter((e) => e.id !== currentId).slice(0, RECENT_COUNT)
   const [newsOpen, setNewsOpen] = useState(false)
+  // stays mounted once loaded, so that it closes with its own animation
+  const [newsLoaded, setNewsLoaded] = useState(false)
+  if (newsOpen && !newsLoaded) setNewsLoaded(true)
   const news = WHATS_NEW[0]
   const openNews = () => {
     setNewsOpen(true)
@@ -116,7 +114,11 @@ export function EmptyState() {
             <span className="type-hint block">{news.items.slice(0, NEWS_TITLES).map((item) => item.title).join(' · ')}</span>
           </span>
         </button>
-        <WhatsNewDialog open={newsOpen} onClose={() => setNewsOpen(false)} />
+        {newsLoaded && (
+          <Suspense fallback={null}>
+            <WhatsNewDialog open={newsOpen} onClose={() => setNewsOpen(false)} />
+          </Suspense>
+        )}
 
         {recent.length > 0 && (
           <section className="mt-6 w-full border-t border-edge pt-4 text-left" aria-labelledby="empty-recent">
@@ -138,10 +140,6 @@ export function EmptyState() {
         )}
 
         <nav className="mt-3 flex flex-wrap justify-center gap-x-2" aria-label={t('home.empty.links')}>
-          <a className={FOOT_LINK} href={guideUrl(language)} target="_blank" rel="noreferrer" data-testid="home-guide">
-            <Icon name="circle-help" size={14} />
-            {t('home.empty.guide')}
-          </a>
           {web && (
             <a className={FOOT_LINK} href={DOWNLOAD_URL} target="_blank" rel="noreferrer" data-testid="home-download">
               <Icon name="download" size={14} />

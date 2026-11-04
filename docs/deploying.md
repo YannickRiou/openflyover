@@ -20,8 +20,8 @@ landmarks itself.
 ### GitHub Pages
 
 The repository publishes the site itself at <https://yannickriou.github.io/openflyover/> (workflow
-`.github/workflows/pages.yml`, on every push to `master` or by hand), with the user guide at `docs/user-guide.html` (« Premiers pas »
-on the home screen; its links to the repository's Markdown files rewritten to GitHub). GitHub Pages only serves the files: the 3D view,
+`.github/workflows/pages.yml`, on every push to `master` or by hand), with the user guide at `docs/user-guide.html` (« Guide d'utilisation »
+in the OpenFlyover menu; its links to the repository's Markdown files rewritten to GitHub). GitHub Pages only serves the files: the 3D view,
 the clouds and the export run in each visitor's browser, on their graphics card, as with any other host. One-time
 setting: *Settings* › *Pages* › *Build and deployment* › *Source*: **GitHub Actions**. The site lives under
 `/openflyover/`, so the build gets `BASE_PATH=/openflyover/` (Vite `base`); a build without it serves from the domain
@@ -163,8 +163,19 @@ tag, which publishes a release with the installers), signed as soon as the certi
 [`installers.md`](installers.md), which also explains the update key that enables « Rechercher une mise à jour » in the
 application.
 
-The icons in `src-tauri/icons/` come from `public/favicon.svg`. To regenerate them: `npx tauri icon public/favicon.svg`
-(then keep only the files listed in `src-tauri/tauri.conf.json`).
+The icons come from three sources. `src-tauri/icons/source/icon.svg` is the full icon (a glass mark over contour lines),
+`icon-maskable.svg` is its Android version (full-bleed ground, mark inside the 80 % circle) and `public/favicon.svg` is the
+flat logo used below 64 px. To regenerate the files, render them with a headless browser at their exact size:
+
+- `icon.svg` gives `public/icons/icon-512.png`, `icon-192.png` and, in `src-tauri/icons/`, `icon.png` (512), `128x128.png`
+  and `128x128@2x.png` (256);
+- the same file without the rounded corners (`rx="112"` removed) gives `apple-touch-icon.png` (180 px, opaque);
+- `icon-maskable.svg` gives `icon-maskable-512.png`;
+- `favicon.svg` gives `32x32.png`, and the frames of 16, 24, 32 and 48 px of `icon.ico` and of 16 and 32 px of `icon.icns`;
+  the larger frames come from `icon.svg`.
+
+`npx tauri icon` does not fit here: it scales one image to every size, so the small frames would keep the glass and the
+contour lines. The `.ico` and `.icns` are lists of PNG frames; keep only the files listed in `src-tauri/tauri.conf.json`.
 
 ### Current limitations
 

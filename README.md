@@ -39,7 +39,7 @@ terrain, imagery, weather and landmarks from open services. It runs as a **stati
 Linux **desktop application** (Tauri), from the same code.
 
 The interface and the texts of the films are available in **French**, **English**, **Spanish** (Español), **Italian** (Italiano) and **German** (Deutsch): pick the
-language with the flag button of the top bar (next to « ? »). The first run follows the browser's language when the app offers it (else French) and the choice is
+language with the flag button of the top bar. The first run follows the browser's language when the app offers it (else French) and the choice is
 remembered on the device. The documentation is in English; the [user guide](docs/user-guide.html) quotes the interface labels in French (the reference language).
 
 ![The interface: top bar, tabs on the left, 3D view, timeline at the bottom](docs/images/interface.jpg)
@@ -48,7 +48,7 @@ remembered on the device. The documentation is in English; the [user guide](docs
 |---|---|
 | Import | GPX and FIT, several tracks at once, Strava activities, or a route drawn on the map along the paths (IGN in France, OpenStreetMap elsewhere); heart rate, cadence, power and temperature when present; distance, elevation gain / loss (D+ / D−), duration, elevations |
 | Terrain and imagery | Mapterhorn or AWS Terrain Tiles terrain; IGN orthophotos in France and swisstopo in Switzerland, chosen automatically; Esri World Imagery elsewhere, with national aerial photos to pick by hand (Austria, Japan, United States); topographic maps; terrain exaggeration; OpenStreetMap lakes and rivers rendered as water that reflects the sky and the sun, with ripples |
-| Flyover | six camera styles (chase, sway, orbit, top-down view, cinematic shot, free: keyframes only), thirteen presets, duration from 15 s to 10 min, camera smoothing, opening and closing shots (including one that dives from the highlighted region onto the track), clickable elevation profile |
+| Flyover | six camera styles (chase, sway, orbit, top-down view, cinematic shot, free: keyframes only), a « Hauteur » slider with six named stops, duration from 15 s to 10 min, camera smoothing, opening and closing shots (including one that dives from the highlighted region onto the track), clickable elevation profile |
 | Pacing | stops (automatic ones at passes and nearby summits, or your own) and speed sections you set on the timeline |
 | Light | physically based sky and haze, sun at the actual time of the outing, terrain shadows, starry night, automatic exposure |
 | Weather | historical weather for the day of the outing (Open-Meteo), or the forecast for an upcoming outing (up to 16 days), shown in a panel and in the scene; volumetric clouds derived from low, mid and high cloud cover (a station about every 10 km, so the sky changes along the track; or set by hand), pushed by the wind, with their shadows on the terrain; a sea of clouds filling the valleys, as volumetric clouds or as a lit surface |
@@ -138,7 +138,7 @@ application is built with `npm run tauri:build`; installers for the three system
 
 ### Automatic updates: maintainer setup
 
-The desktop application has a « Rechercher une mise à jour » button (« Réglages » tab) that reads the latest GitHub release
+The desktop application has a « Rechercher une mise à jour » button (logo menu › « À propos et mises à jour ») that reads the latest GitHub release
 **only when pressed** (nothing at start-up, nothing in the background; `github.com` is contacted only then). It needs an
 update signing key, created once (full guide, tests and common errors: [`docs/installers.md`](docs/installers.md#automatic-updates-maintainer-setup)).
 **This is already done for this repository**: the public key is committed in `plugins.updater.pubkey` of `src-tauri/updater.conf.json`, and
@@ -169,7 +169,7 @@ Without the secret the installers are built as before and the button says that u
 The suite has **about 2,700 tests** in 164 files (15 October 2026), each file next to its module (`src/**/*.test.ts`,
 `*.test.tsx` for the components); network calls and the video encoder are mocked. `npm run e2e` drives the app in a headless Chromium
 through 21 scenarios (home, tabs, language, timeline, project, export, phone…); its options (`OPENFLYOVER_CHROME`,
-`OPENFLYOVER_E2E_SKIP_EXPORT`, `OPENFLYOVER_E2E_ONLY`) are documented at the top of `e2e/run.mjs`. On Windows or macOS
+`OPENFLYOVER_E2E_SKIP_EXPORT`, `OPENFLYOVER_E2E_GPU`, `OPENFLYOVER_E2E_ONLY`) are documented at the top of `e2e/run.mjs`. On Windows or macOS
 the default Chromium path (a Linux one) does not exist: point `OPENFLYOVER_CHROME` at your Chrome, for example
 `C:\Program Files\Google\Chrome\Application\chrome.exe` (PowerShell: `$env:OPENFLYOVER_CHROME = '…'`), and use a UTF-8 locale
 (the project scenario checks the name of a downloaded file with accents). The rendering

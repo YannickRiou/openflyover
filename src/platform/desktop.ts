@@ -5,11 +5,12 @@
  * Storage stays localStorage: the webview keeps it in the app data folder. A film is written while it is encoded
  * through a file handle (`open`, `seek`, `write`), removed if the export does not finish. Offline tiles are files
  * under `<app data>/tiles/`, « Mes projets » under `<app data>/projects/` (the only folders the capability adds to the
- * fs scope). Closing the window waits for `guardClose` (last write, question when something would be lost). « Rechercher
+ * fs scope). Closing the window waits for `guardClose` (last write, question when something would be lost). The window has
+ * no system title bar (the top bar is it, `windowControls`). « Rechercher
  * une mise à jour » goes through the updater and process plugins, when the build has them (src-tauri/updater.conf.json).
  */
 import { droppedFiles, fileNameOf, keyValueStore, mimeTypeOf, rememberFileTarget, saveFilters } from './platform'
-import type { Capabilities, DocumentOutcome, FileFilter, FileTarget, Platform, SaveDocumentOptions, SaveFileOptions, SaveOutcome, WritableFile } from './platform'
+import type { Capabilities, DocumentOutcome, FileFilter, FileTarget, Platform, SaveDocumentOptions, SaveFileOptions, SaveOutcome, WindowControls, WritableFile } from './platform'
 import { joinPath } from './folder'
 import { createDesktopLibraryFiles, createProjectLibrary } from './projectLibrary'
 import { createDesktopTileCache } from './tileCache'
@@ -163,6 +164,30 @@ function desktopUpdater(): Pick<Platform, 'checkForUpdate' | 'installUpdate'> {
   }
 }
 
+const currentWindow = () => import('@tauri-apps/api/window').then(({ getCurrentWindow }) => getCurrentWindow())
+
+const windowControls: WindowControls = {
+  minimize: () => void currentWindow().then((w) => w.minimize()),
+  toggleMaximize: () => void currentWindow().then((w) => w.toggleMaximize()),
+  // `close` (not `destroy`) raises the close request that `guardClose` listens to
+  close: () => void currentWindow().then((w) => w.close()),
+  watchMaximized(listener) {
+    let stopped = false
+    let unlisten: (() => void) | undefined
+    void currentWindow().then(async (w) => {
+      const sync = () => void w.isMaximized().then((maximized) => !stopped && listener(maximized))
+      sync()
+      const off = await w.onResized(sync)
+      if (stopped) off()
+      else unlisten = off
+    })
+    return () => {
+      stopped = true
+      unlisten?.()
+    }
+  },
+}
+
 export function createDesktopPlatform(capabilities: Capabilities): Platform {
   return {
     capabilities,
@@ -193,6 +218,8 @@ export function createDesktopPlatform(capabilities: Capabilities): Platform {
       return () => void listening.then((unlisten) => unlisten())
     },
     ...desktopUpdater(),
+    // macOS keeps its own buttons (`titleBarStyle: Overlay`, src-tauri/tauri.macos.conf.json)
+    ...(/Macintosh/.test(globalThis.navigator?.userAgent ?? '') ? {} : { windowControls }),
     async ask({ title, text, yes, no, cancel }) {
       const { message } = await import('@tauri-apps/plugin-dialog')
       const buttons = no === undefined ? { ok: yes, cancel } : { yes, no, cancel }

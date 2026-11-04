@@ -23,7 +23,7 @@ import {
   unsavedChangesText,
   useLibraryStore,
 } from './library'
-import { chooseFilesToOpen, closeProject, newProject, openProject, restoreVersion, saveProject, saveProjectAs } from './projectActions'
+import { chooseFilesToOpen, newProject, openProject, restoreVersion, saveProject, saveProjectAs } from './projectActions'
 import type { CloseAnswer } from './projectActions'
 import { withShortcut } from './shortcuts'
 import { showToast } from './toast'
@@ -40,7 +40,7 @@ const EMPTY = 'rounded-md bg-surface-card p-3 text-center text-hint text-text-2'
 const CARD = 'grid grid-cols-[96px_minmax(0,1fr)] gap-x-2 gap-y-0.5 rounded-md border p-2'
 
 /**
- * "Projet" tab: the actions on the open project (new, open, save as a file, close), « Mes projets », the versions of
+ * "Projet" tab: the actions on the open project (new, open, save as a file; closing is « Mes projets » in the OpenFlyover menu), « Mes projets », the versions of
  * the open project, then the presets of the settings. Open and save are also in the top bar, with their shortcuts.
  */
 export function ProjectPanel() {
@@ -54,23 +54,18 @@ export function ProjectPanel() {
   )
 }
 
-/** The open project: new, open, save as a file, close; « Fermer sans enregistrer ? » in place when changes would be lost. */
+/** The open project: new, open, save as a file; « Fermer sans enregistrer ? » in place when changes would be lost. */
 function ProjectSection() {
   const t = useT()
-  const hasTracks = useAppStore((s) => s.tracks.length > 0)
-  const named = useAppStore((s) => s.projectName !== '')
-  const kept = useLibraryStore((s) => s.currentId !== null)
   const exporting = useExportStore((s) => isExportBusy(s.phase))
   // a batch is busy between two films too (the export store is idle then)
   const batchRunning = useBatchStore((s) => s.phase === 'running')
-  /** « Nouveau projet » or « Fermer le projet » running (waiting for the last write or the answer) */
+  /** « Nouveau projet » running (waiting for the last write or the answer) */
   const [closing, setClosing] = useState(false)
   /** the question in place, answered by its buttons */
   const [question, setQuestion] = useState<{ text: string; answer(a: CloseAnswer): void } | null>(null)
   const id = useId()
   const busy = exporting || batchRunning
-  // nothing open: no track, no entry, no name
-  const open = hasTracks || kept || named
 
   // the question is about the project it was asked for: another one opened or imported meanwhile, or an export
   // started, cancels it
@@ -166,12 +161,7 @@ function ProjectSection() {
                 </Button>
               </Tip>
               )}
-              <Button onClick={() => void run(closeProject)} disabled={busy || closing || !open}>
-                <Icon name="x" size={18} />
-                {t('project.panel.close')}
-              </Button>
             </div>
-            <p className="type-hint">{t('project.panel.closeHint')}</p>
           </>
         )}
       </div>

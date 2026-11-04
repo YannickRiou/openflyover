@@ -9,6 +9,7 @@ import {
   CINEMATIC_DISTANCE_FACTOR,
   CINEMATIC_PITCH_FACTOR,
   computeCameraView,
+  flightDistanceM,
   type FlightView,
   MIN_GROUND_CLEARANCE_M,
   MIN_TERRAIN_CLEARANCE_M,
@@ -244,6 +245,14 @@ describe('computeCameraView — styles', () => {
     const headingUp = computeCameraView(eastbound, 0.5, frame, null, options({ style: 'top', pitchDeg: 85 }))
     expect(pitchDeg(headingUp.position, headingUp.target)).toBeCloseTo(85, 6)
     expect(azimuthFromTarget(headingUp.position, headingUp.target)).toBeCloseTo(-Math.PI / 2, 3) // west: heading up
+  })
+
+  it('flightDistanceM is the distance the flight camera stands from its aim, whatever the style', () => {
+    for (const style of ['chase', 'sway', 'top', 'cinematic'] as const) {
+      const camera = { ...DEFAULT_CAMERA, style, distance: 1.5 }
+      const view = computeCameraView(northbound, 0, frame, null, options({ style, distance: 1.5 }))
+      expect(flightDistanceM(northbound, camera)).toBeCloseTo(view.position.distanceTo(view.target), 3)
+    }
   })
 
   it('cinematic is farther and lower, with a slow lateral swing', () => {

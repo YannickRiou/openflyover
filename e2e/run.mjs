@@ -8,6 +8,7 @@
  * Environment:
  *   OPENFLYOVER_CHROME            Chromium / Chrome executable (default: Playwright's headless shell when present)
  *   OPENFLYOVER_E2E_SKIP_EXPORT=1 skip the export scenario (the slowest, it needs the tile servers)
+ *   OPENFLYOVER_E2E_GPU=1         use the real GPU instead of SwiftShader (quicker on a workstation, not what CI runs)
  *   OPENFLYOVER_E2E_ONLY=a,b      run only the scenarios whose id is listed (ids: see SCENARIOS)
  *
  * Fails on any console error or page error that is not network noise (ALLOWED_ERRORS). Screenshots of failed
@@ -28,6 +29,8 @@ const DEFAULT_CHROME = join(
 )
 const CHROME = process.env.OPENFLYOVER_CHROME || (existsSync(DEFAULT_CHROME) ? DEFAULT_CHROME : '')
 const SKIP_EXPORT = process.env.OPENFLYOVER_E2E_SKIP_EXPORT === '1'
+// opt-in, for a quicker local run on a real GPU (WSL: also set MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA GALLIUM_DRIVER=d3d12 LD_LIBRARY_PATH=/usr/lib/wsl/lib)
+const GPU = process.env.OPENFLYOVER_E2E_GPU === '1'
 const ONLY = (process.env.OPENFLYOVER_E2E_ONLY ?? '').split(',').filter(Boolean)
 const OUT = mkdtempSync(join(tmpdir(), 'openflyover-e2e-'))
 const DOWNLOADS = join(OUT, 'downloads')
@@ -58,6 +61,27 @@ const seconds = (ms) => `${(ms / 1000).toFixed(1)} s`
 
 /** The tabs of the side panel, in the order of the rail (SHELL_TABS in src/ui/shell.ts). */
 const TABS = ['trace', 'carte', 'meteo', 'lumiere', 'survol', 'objectif', 'habillage', 'projet', 'reglages']
+/** The rail shows five groups of tabs (`TAB_GROUPS`): the tab of a group, then its switch in the panel. */
+const GROUP_IDS = ['trace', 'decor', 'camera', 'habillage', 'projet']
+const GROUPS = { trace: 'trace', carte: 'decor', meteo: 'decor', lumiere: 'decor', survol: 'camera', objectif: 'camera', habillage: 'habillage', projet: 'projet', reglages: 'projet' }
+const TAB_NAMES = { carte: 'Carte', meteo: 'Météo', lumiere: 'Lumière', survol: 'Survol', objectif: 'Objectif', projet: 'Projet', reglages: 'Réglages' }
+/**
+ * Shows the tab `tab` with its panel unfolded: its group in the rail (a click on the open group would fold the panel), then
+ * the button of its switch. A computer opens the first section of a tab and folds the others (their rows are then hidden):
+ * the scenarios work on rows, so every section of the tab is opened.
+ */
+async function showTab(page, tab) {
+  const shown = () => page.evaluate((t) => document.querySelector(`[data-testid="tab-panel-${t}"]`)?.getAttribute('role') === 'tabpanel' && !document.querySelector('[data-testid="side-panel"]')?.hidden, tab)
+  const openSections = () =>
+    page.evaluate((t) => document.querySelectorAll(`[data-testid="tab-panel-${t}"] details[data-panel-section]`).forEach((d) => (d.open = true)), tab)
+  if (await shown()) return openSections()
+  const group = GROUPS[tab]
+  const folded = await page.evaluate((g) => document.querySelector(`[data-testid="tab-${g}"]`)?.getAttribute('aria-selected') === 'true', group)
+  if (!folded || (await page.$eval('[data-testid="side-panel"]', (el) => el.hidden))) await page.click(`[data-testid="tab-${group}"]`)
+  if (!(await shown())) await page.click(`[data-testid="tab-group-switch"] button::-p-text(${TAB_NAMES[tab]})`)
+  await until(page, (t) => document.querySelector(`[data-testid="tab-panel-${t}"]`)?.getAttribute('role') === 'tabpanel', tab)
+  await openSections()
+}
 
 /** Waits until `fn` (run in the page) returns a truthy value. */
 const until = (page, fn, arg, timeout = STEP_MS) => page.waitForFunction(fn, { timeout, polling: 250 }, arg)
@@ -108,7 +132,13 @@ async function selectOption(page, scope, label, text) {
   await page.waitForSelector('[role="listbox"]', { hidden: true, timeout: STEP_MS })
 }
 
-/** Number of blocks in a timeline lane (« Plans », « Arrêts », « Textes »…). */
+/** Number of stops of the film: the blocks of « Plans » that are neither the opening nor the closing shot. */
+const stopCount = (page) =>
+  page.evaluate(
+    () => document.querySelectorAll('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]:not([data-item="opening"]):not([data-item="closing"])').length,
+  )
+
+/** Number of blocks in a timeline lane (« Textes », « Médias »…). */
 const laneCount = (page, lane) =>
   page.evaluate(
     (name) => document.querySelectorAll(`[role="group"][aria-label="${name}"] [data-testid="timeline-block"]`).length,
@@ -186,23 +216,34 @@ const cameraPose = (page) =>
     return { position: camera.position.toArray(), quaternion: camera.quaternion.toArray(), fov: camera.fov }
   })
 
-/** Distance (m) and angle (°) between two poses. */
+/** Distance (m), height (m, along y) and angle (°) between two poses. */
 function poseGap(a, b) {
   const metres = Math.hypot(...a.position.map((v, i) => v - b.position[i]))
   const dot = Math.min(1, Math.abs(a.quaternion.reduce((sum, v, i) => sum + v * b.quaternion[i], 0)))
-  return { metres, degrees: (2 * Math.acos(dot) * 180) / Math.PI, fov: Math.abs(a.fov - b.fov) }
+  return {
+    metres,
+    across: Math.hypot(a.position[0] - b.position[0], a.position[2] - b.position[2]),
+    height: Math.abs(a.position[1] - b.position[1]),
+    degrees: (2 * Math.acos(dot) * 180) / Math.PI,
+    fov: Math.abs(a.fov - b.fov),
+  }
 }
 
-/** Waits until the camera shows `pose` again (within 5 cm and 0.1°), the film time at `timeS`. */
+/**
+ * Waits until the camera shows `pose` again, the film time at `timeS`: within 5 cm across, 2 m in height and 0.25°.
+ * A key is kept above the ground under its aim, and that ground follows the terrain tiles drawn now (`sampleHeight`):
+ * back from another part of the film, they can be of another detail, so the same key sits a metre or two higher or
+ * lower (seen: 1.5 m and 0.1°, on a camera hundreds of metres from the ground). Across the view, nothing moves.
+ */
 async function expectPose(page, pose, timeS, label) {
   let gap = null
   for (const end = Date.now() + STEP_MS; Date.now() < end; ) {
     const state = await page.evaluate(() => window.__e2e.appStore.getState().playback)
     gap = poseGap(await cameraPose(page), pose)
-    if (Math.abs((state.timeS ?? -1) - timeS) < 1e-3 && gap.metres < 0.05 && gap.degrees < 0.1 && gap.fov === 0) return
+    if (Math.abs((state.timeS ?? -1) - timeS) < 1e-3 && gap.across < 0.05 && gap.height < 2 && gap.degrees < 0.25 && gap.fov === 0) return
     await new Promise((resolve) => setTimeout(resolve, 250))
   }
-  throw new Error(`${label} : la vue n’est pas celle de l’image clé (${gap.metres.toFixed(3)} m, ${gap.degrees.toFixed(3)}°)`)
+  throw new Error(`${label} : la vue n’est pas celle de l’image clé (${gap.across.toFixed(3)} m à côté, ${gap.height.toFixed(3)} m en hauteur, ${gap.degrees.toFixed(3)}°)`)
 }
 
 async function waitForExport(page, label) {
@@ -245,7 +286,7 @@ const SCENARIOS = [
       })
       assert(!(await page.$('[data-testid="empty-state"]')), "l'accueil est resté affiché après le chargement de l'exemple")
       // the tabs come back, on « Trace »
-      await until(page, (all) => [...document.querySelectorAll('[role="tablist"] [role="tab"]')].map((t) => t.dataset.testid.replace('tab-', '')).join() === all, TABS.join())
+      await until(page, (all) => [...document.querySelectorAll('[role="tablist"] [role="tab"]')].map((t) => t.dataset.testid.replace('tab-', '')).join() === all, GROUP_IDS.join())
       assert(await page.$eval('[data-testid="tab-trace"]', (t) => t.getAttribute('aria-selected') === 'true'), "l'onglet Trace n'est pas ouvert après l'exemple")
       assert(await page.$('[data-testid="topbar-export"]'), "« Exporter » manque après l'exemple")
       // the project name is a text field named by its label: typing renames the project
@@ -262,14 +303,9 @@ const SCENARIOS = [
     title: 'Onglets du rail et aide des raccourcis',
     async run({ page }) {
       const shown = await page.$$eval('[role="tablist"] [role="tab"]', (tabs) => tabs.map((t) => t.dataset.testid.replace('tab-', '')))
-      assert(shown.join() === TABS.join(), `onglets du rail : ${shown.join(', ')}`)
+      assert(shown.join() === GROUP_IDS.join(), `groupes du rail : ${shown.join(', ')}`)
       for (const tab of TABS) {
-        const open = await page.evaluate(
-          (t) => document.querySelector(`[data-testid="tab-${t}"]`)?.getAttribute('aria-selected') === 'true' && !document.querySelector('[data-testid="side-panel"]')?.hidden,
-          tab,
-        )
-        // a click on the open tab folds the panel
-        if (!open) await page.click(`[data-testid="tab-${tab}"]`)
+        await showTab(page, tab)
         await until(
           page,
           (t) => {
@@ -296,26 +332,27 @@ const SCENARIOS = [
         await page.keyboard.press(key)
         await until(page, (t) => document.activeElement?.dataset.testid === t && document.querySelector('[role="tab"][aria-selected="true"]')?.dataset.testid === t, expected)
       }
-      await page.focus('[data-testid="tab-reglages"]')
+      await page.focus('[data-testid="tab-projet"]')
       assert(await page.$eval('[data-testid="side-panel"]', (el) => !el.hidden), 'le focus clavier sur l’onglet ouvert replie le panneau')
       await press('Home', 'tab-trace')
-      await press('ArrowDown', 'tab-carte')
-      await press('End', 'tab-reglages')
+      await press('ArrowDown', 'tab-decor')
+      await press('End', 'tab-projet')
       await press('ArrowDown', 'tab-trace')
-      await press('ArrowUp', 'tab-reglages')
+      await press('ArrowUp', 'tab-projet')
       const tabStops = await page.$$eval('[role="tablist"] [role="tab"]', (all) => all.filter((t) => t.tabIndex === 0).map((t) => t.dataset.testid))
-      assert(tabStops.join() === 'tab-reglages', `un seul onglet dans l'ordre de tabulation : ${tabStops.join(', ')}`)
+      assert(tabStops.join() === 'tab-projet', `un seul onglet dans l'ordre de tabulation : ${tabStops.join(', ')}`)
       // the open tab pressed again folds the panel (with the mouse, with Enter), pressed once more shows it
-      await page.click('[data-testid="tab-reglages"]')
+      await page.click('[data-testid="tab-projet"]')
       await until(page, () => document.querySelector('[data-testid="side-panel"]')?.hidden)
-      await page.click('[data-testid="tab-reglages"]')
+      await page.click('[data-testid="tab-projet"]')
       await until(page, () => !document.querySelector('[data-testid="side-panel"]')?.hidden)
       await page.keyboard.press('Enter')
       await until(page, () => document.querySelector('[data-testid="side-panel"]')?.hidden)
       await page.keyboard.press('Enter')
       await until(page, () => !document.querySelector('[data-testid="side-panel"]')?.hidden)
-      // the « ? » button, then the « ? » key; Escape closes the dialog both times
-      await page.click('button[aria-label="Raccourcis clavier"]')
+      // « Raccourcis clavier » of the OpenFlyover menu (the logo), then the « ? » key; Escape closes the dialog both times
+      await page.click('[data-testid="logo-menu"]')
+      await (await page.waitForSelector('[role="menuitem"]::-p-text(Raccourcis clavier)', { visible: true, timeout: STEP_MS })).click()
       await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
       await page.keyboard.press('Escape')
       await modalClosed(page)
@@ -339,7 +376,7 @@ const SCENARIOS = [
       await pick('English')
       await until(page, () => document.documentElement.lang === 'en' && document.querySelector('[role="group"][aria-label="Shots"]'))
       const tabs = await page.$$eval('[role="tablist"] [role="tab"]', (all) => all.map((t) => t.textContent.trim()))
-      assert(tabs.join() === 'Track,Map,Weather,Light,Flyover,Lens,Overlay,Project,Settings', `onglets en anglais : ${tabs.join(', ')}`)
+      assert(tabs.join() === 'Track,Scene,Camera,Overlay,Project', `onglets en anglais : ${tabs.join(', ')}`)
       assert(await page.$('button[data-testid="topbar-export"]::-p-text(Export)'), '« Export » manque dans la barre du haut')
       // remembered on the device: another page of the same browser starts in English
       const second = await newPage()
@@ -357,7 +394,7 @@ const SCENARIOS = [
     id: 'diagnostic',
     title: 'Rapport de diagnostic (onglet Réglages) : appareil et réglages, sans nom de trace',
     async run({ page }) {
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-reglages"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-reglages"]')
+      await showTab(page, 'reglages')
       await page.click('[data-testid="tab-panel-reglages"] [data-testid="setting-row-head"]::-p-text(Diagnostic)')
       await clickButton(page, 'Afficher le rapport')
       await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
@@ -374,7 +411,7 @@ const SCENARIOS = [
     id: 'couleur',
     title: 'Couleur (onglet Réglages) : préréglage en un geste, panneau pour une couleur libre, Échap rend le focus',
     async run({ page }) {
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-reglages"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-reglages"]')
+      await showTab(page, 'reglages')
       // a preset: one tap, the choice announced as selected
       const indigo = await page.waitForSelector('[role="option"][aria-label="Couleur d\'accentuation : Indigo"]', { visible: true, timeout: STEP_MS })
       await indigo.click()
@@ -407,9 +444,7 @@ const SCENARIOS = [
     id: 'reglage-repli',
     title: 'Réglage replié (onglet Lumière) : nom et valeur, curseur au clavier, retour par défaut (↺)',
     async run({ page }) {
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-lumiere"]')?.getAttribute('aria-selected') !== 'true')) {
-        await page.click('[data-testid="tab-lumiere"]')
-      }
+      await showTab(page, 'lumiere')
       const head = '[data-testid="tab-panel-lumiere"] [data-testid="setting-row-head"]::-p-text(Exposition)'
       const rowState = () =>
         page.evaluate(() => {
@@ -432,7 +467,7 @@ const SCENARIOS = [
       await page.keyboard.press('Home')
       await until(page, () => document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]')?.textContent.startsWith('−2,0'))
       // the section's ↺ button puts it back
-      await page.click('[data-testid="tab-panel-lumiere"] button[aria-label="Rétablir les réglages par défaut : Atmosphère"]')
+      await page.click('[data-testid="tab-panel-lumiere"] button[aria-label="Rétablir les réglages par défaut : Couleurs"]')
       await until(page, () => !document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]'))
       // Enter on the row folds it again
       await page.evaluate(() =>
@@ -454,23 +489,23 @@ const SCENARIOS = [
           const { settings, setSetting } = window.__e2e.appStore.getState()
           setSetting(k, { ...settings[k], ...p })
         }, key, patch)
-      const dot = (tab) => page.evaluate((t) => !!document.querySelector(`[data-testid="tab-${t}"] [data-testid="tab-weight"]`), tab)
+      const dot = (tab) => page.evaluate((t) => !!document.querySelector(`[data-testid="tab-${t}"] [data-testid="tab-weight"]`), GROUPS[tab])
       try {
         // clouds « Fine »: three bars, « lourd », and the dot on « Météo »
         await set('clouds', { mode: 'meteo', quality: 'high' })
-        await page.click('[data-testid="tab-meteo"]')
+        await showTab(page, 'meteo')
         await page.waitForSelector('[data-testid="tab-panel-meteo"] [data-testid="setting-row-label"] [data-testid="render-weight"][data-tier="3"]', { timeout: STEP_MS })
         const name = await page.$eval('[data-testid="tab-panel-meteo"] [data-testid="setting-row-label"] [data-testid="render-weight"]', (el) => el.textContent)
         assert(name === 'Poids de rendu : lourd', `nom accessible du pictogramme : ${name}`)
-        await until(page, () => !!document.querySelector('[data-testid="tab-meteo"] [data-testid="tab-weight"]'))
+        await until(page, () => !!document.querySelector('[data-testid="tab-decor"] [data-testid="tab-weight"]'))
         // « Aucun »: no pictogram, no dot
         await set('clouds', { mode: 'aucun' })
-        await until(page, () => !document.querySelector('[data-testid="tab-panel-meteo"] [data-testid="render-weight"]') && !document.querySelector('[data-testid="tab-meteo"] [data-testid="tab-weight"]'))
+        await until(page, () => !document.querySelector('[data-testid="tab-panel-meteo"] [data-testid="render-weight"]') && !document.querySelector('[data-testid="tab-decor"] [data-testid="tab-weight"]'))
         // « Moyenne » with the motion blur: the dot moves to « Objectif »
         await set('clouds', { mode: 'meteo', quality: 'medium' })
         assert(!(await dot('meteo')) && !(await dot('objectif')), 'point sur un onglet avec les réglages par défaut')
         await set('lens', { shutter: 0.5 })
-        await until(page, () => !!document.querySelector('[data-testid="tab-objectif"] [data-testid="tab-weight"]'))
+        await until(page, () => !!document.querySelector('[data-testid="tab-camera"] [data-testid="tab-weight"]'))
         assert(!(await dot('meteo')), 'point sur Météo avec des nuages « Moyenne »')
       } finally {
         await set('clouds', { mode: 'meteo', quality: 'medium' })
@@ -491,7 +526,7 @@ const SCENARIOS = [
       // a click on the open tab folds the panel
       const openTab = async (tab) => {
         const shown = await page.evaluate((t) => document.querySelector(`[data-testid="tab-panel-${t}"]`)?.offsetParent !== null, tab)
-        if (!shown) await page.click(`[data-testid="tab-${tab}"]`)
+        if (!shown) await showTab(page, tab)
       }
       const badge = (tab, knob) => page.evaluate((t, k) => document.querySelector(`[data-testid="tab-panel-${t}"] [data-testid="preset-badge-${k}"]`)?.textContent ?? null, tab, knob)
       try {
@@ -515,7 +550,7 @@ const SCENARIOS = [
         await until(page, () => document.querySelector('[data-testid="tab-panel-meteo"] [data-testid="preset-badge-clouds"]')?.textContent === 'Personnalisé')
         // the way back: the row's button
         await page.click('[data-testid="tab-panel-meteo"] [data-testid="setting-row-head"]:has([data-testid="preset-badge-clouds"])')
-        await clickButton(page, 'Revenir au préréglage')
+        await clickButton(page, 'Revenir à « Selon la qualité de l’export »')
         await until(page, () => window.__e2e.appStore.getState().settings.clouds.quality === 'auto')
         assert((await badge('meteo', 'clouds')) === 'Imposé par Maximale', `pastille après le retour : ${await badge('meteo', 'clouds')}`)
         // motion blur: only a quality that lowers the 8 sub-frames is badged
@@ -562,6 +597,8 @@ const SCENARIOS = [
       for (let i = 1; i <= 15; i++) await page.mouse.move(x + i * 16, y - i * 3)
       await page.mouse.up()
       await new Promise((resolve) => setTimeout(resolve, 500))
+      // the key is kept above the ground under its aim, read on the tiles drawn: those of this view, all loaded
+      await until(page, () => window.__e2e.appStore.getState().terrainStats.pendingVisibleTiles === 0)
       const orbited = await cameraPose(page)
       assert(poseGap(orbited, film).metres > 100, 'la vue n’a pas tourné sous la souris')
 
@@ -632,10 +669,10 @@ const SCENARIOS = [
       await page.keyboard.up('Control')
       await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Textes"] [data-testid="timeline-block"]').length === n, [texts])
 
-      const stops = await laneCount(page, 'Arrêts')
+      const stops = await stopCount(page)
       await blur(page)
       await page.keyboard.press('s')
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n + 1, [stops])
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]:not([data-item="opening"]):not([data-item="closing"])').length === n + 1, [stops])
       await page.keyboard.press('Escape')
       await blur(page)
       // one text kept for the project round trip
@@ -666,7 +703,7 @@ const SCENARIOS = [
       await waitForScene(page)
       const traceOpen = () =>
         page.evaluate(() => document.querySelector('[data-testid="tab-trace"]')?.getAttribute('aria-selected') === 'true' && !document.querySelector('[data-testid="side-panel"]')?.hidden)
-      if (!(await traceOpen())) await page.click('[data-testid="tab-trace"]')
+      if (!(await traceOpen())) await showTab(page, 'trace')
       await until(page, () => !document.querySelector('[data-testid="tab-panel-trace"]')?.hidden)
       const inspectorShown = () => page.evaluate(() => document.querySelector('aside[aria-label="Inspecteur"]')?.hidden === false)
       const focusedText = () => page.evaluate(() => document.activeElement?.textContent.trim())
@@ -676,19 +713,19 @@ const SCENARIOS = [
         await page.waitForSelector('aside[aria-label="Inspecteur"]:not([hidden])', { visible: true, timeout: STEP_MS })
       }
 
-      // « + Ajouter »: a menu of two rows under the button, the arrows move in it
+      // « + Ajouter »: a menu of three rows under the button, the arrows move in it
       const add = '[data-testid="tab-panel-trace"] button[aria-haspopup]::-p-text(Ajouter)'
       const addMenu = '[role="menu"][aria-label="Ajouter des traces"]'
       await page.click(add)
       await page.waitForSelector(addMenu, { visible: true, timeout: STEP_MS })
-      assert((await page.$$eval(`${addMenu} [role="menuitem"]`, (rows) => rows.map((r) => r.textContent.trim()))).join() === 'Fichiers GPX ou FIT…,Activités Strava…', 'lignes du menu « Ajouter »')
+      assert((await page.$$eval(`${addMenu} [role="menuitem"]`, (rows) => rows.map((r) => r.textContent.trim()))).join() === 'Fichiers GPX, FIT, IGC ou KML…,Activités Strava…,Tracer sur la carte…', 'lignes du menu « Ajouter »')
       assert(await page.$eval(add, (b) => b.getAttribute('aria-expanded') === 'true'), '« Ajouter » ne dit pas que son menu est ouvert')
       await page.keyboard.press('ArrowDown')
-      assert((await focusedText()) === 'Fichiers GPX ou FIT…', `flèche bas : ${await focusedText()}`)
+      assert((await focusedText()) === 'Fichiers GPX, FIT, IGC ou KML…', `flèche bas : ${await focusedText()}`)
       await page.keyboard.press('ArrowDown')
       assert((await focusedText()) === 'Activités Strava…', `flèche bas : ${await focusedText()}`)
       await page.keyboard.press('ArrowUp')
-      assert((await focusedText()) === 'Fichiers GPX ou FIT…', `flèche haut : ${await focusedText()}`)
+      assert((await focusedText()) === 'Fichiers GPX, FIT, IGC ou KML…', `flèche haut : ${await focusedText()}`)
       // Escape closes the menu first, then the block selected on the timeline (the application's own Escape)
       await page.keyboard.press('Escape')
       await gone(addMenu)
@@ -721,8 +758,10 @@ const SCENARIOS = [
       await page.waitForSelector(panel, { visible: true, timeout: STEP_MS })
       assert(await page.$eval(options, (b) => b.getAttribute('aria-expanded') === 'true'), '« Options du film » ne dit pas que son panneau est ouvert')
       assert(await page.$(`${panel} button::-p-text(Ajouter une musique)`), 'bouton « Ajouter une musique… » du panneau')
-      assert(await page.$(`${panel} input[type="checkbox"]`), 'case « Arrêts automatiques » du panneau')
-      assert(await page.$eval(`${panel} input[type="checkbox"]`, (i) => i.labels?.[0]?.textContent.trim() === 'Arrêts automatiques'), 'la case du panneau ne s’appelle pas « Arrêts automatiques »')
+      assert(
+        await page.$$eval(`${panel} input[type="checkbox"]`, (all) => all.some((i) => i.labels?.[0]?.textContent.trim() === 'Arrêts automatiques')),
+        'case « Arrêts automatiques » du panneau',
+      )
       await page.keyboard.press('Escape')
       await gone(panel)
       assert(await inspectorShown(), 'Échap sur les options du film a aussi désélectionné le bloc')
@@ -772,16 +811,16 @@ const SCENARIOS = [
       assert((await focusedText()) === 'Ajouter un texte ici', 'flèche bas dans le menu du clic droit')
       await page.keyboard.press('Escape')
       await gone(trackMenu)
-      const stops = await laneCount(page, 'Arrêts')
+      const stops = await stopCount(page)
       await openTrackMenu()
       await page.click(`${trackMenu} [role="menuitem"]::-p-text(Ajouter un arrêt ici)`)
       await gone(trackMenu)
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n + 1, [stops])
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]:not([data-item="opening"]):not([data-item="closing"])').length === n + 1, [stops])
       await blur(page)
       await page.keyboard.down('Control')
       await page.keyboard.press('z')
       await page.keyboard.up('Control')
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n, [stops])
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]:not([data-item="opening"]):not([data-item="closing"])').length === n, [stops])
       // « Point d'intérêt ici » turns the menu into the form that names it, its field focused; Escape closes it
       await rightClickTrack()
       await page.waitForSelector(trackMenu, { visible: true, timeout: STEP_MS })
@@ -802,7 +841,7 @@ const SCENARIOS = [
     id: 'heure',
     title: 'Réglages › Timeline : « Afficher l’heure enregistrée » montre l’heure de la trace dans la barre de la timeline',
     async run({ page }) {
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-reglages"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-reglages"]')
+      await showTab(page, 'reglages')
       const toggle = await switchOf(page, 'reglages', "Afficher l'heure enregistrée")
       assert(!(await page.$('[data-testid="timeline-clock"]')), 'l’heure est affichée avant d’avoir été demandée')
       await toggle.evaluate((el) => el.click())
@@ -816,21 +855,26 @@ const SCENARIOS = [
     id: 'cartes',
     title: 'Titre d’ouverture et carte de clôture : blocs de la piste Textes, inspecteur, Suppr les désactive',
     async run({ page }) {
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-habillage"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-habillage"]')
-      const overlay = await switchOf(page, 'habillage', "Afficher l'habillage")
+      await showTab(page, 'habillage')
+      // each card has its own switch (Habillage › Titres), the overlay switch leaves them alone
+      const title = await switchOf(page, 'habillage', "Titre d'ouverture")
+      const end = await switchOf(page, 'habillage', 'Carte de clôture')
       const cards = () => page.$$eval('[role="group"][aria-label="Textes"] [data-item^="card-"]', (blocks) => blocks.map((b) => b.getAttribute('title')))
-      assert((await cards()).length === 0, 'des cartes sont affichées sans habillage')
-      await overlay.evaluate((el) => el.click())
+      assert((await cards()).length === 0, 'des cartes sont affichées avec leurs interrupteurs éteints')
+      await title.evaluate((el) => el.click())
+      await end.evaluate((el) => el.click())
       await until(page, () => document.querySelectorAll('[role="group"][aria-label="Textes"] [data-item^="card-"]').length === 2)
       assert((await cards()).join() === "Titre d'ouverture,Carte de clôture", `blocs de cartes : ${(await cards()).join()}`)
-      await page.click('[role="group"][aria-label="Textes"] [data-item^="card-"]')
+      // the title block opens the panel of the start of the film, the title in its first group
+      await page.click('[role="group"][aria-label="Textes"] [data-item="card-title"]')
       await page.waitForSelector('[data-testid="film-inspector"]', { visible: true, timeout: STEP_MS })
-      assert((await page.$eval('[data-testid="film-inspector"] h2', (h) => h.textContent)).includes("Titre d'ouverture"), 'l’inspecteur n’est pas celui du titre')
+      assert((await page.$eval('[data-testid="film-inspector"]', (s) => s.textContent)).includes("Titre d'ouverture"), 'l’inspecteur n’est pas celui du titre')
       await page.keyboard.press('Delete')
       await until(page, () => document.querySelectorAll('[role="group"][aria-label="Textes"] [data-item^="card-"]').length === 1)
-      // back as it was: the title on again, the overlay off
+      assert(!(await title.evaluate((el) => el.checked)), 'Suppr n’a pas éteint l’interrupteur du titre')
+      // back as it was: the closing card off
       await page.keyboard.press('Escape')
-      await overlay.evaluate((el) => el.click())
+      await end.evaluate((el) => el.click())
       await until(page, () => document.querySelectorAll('[role="group"][aria-label="Textes"] [data-item^="card-"]').length === 0)
       await blur(page)
     },
@@ -839,7 +883,7 @@ const SCENARIOS = [
     id: 'cles-etiquettes',
     title: 'Habillage › Étiquettes 3D : une clé crée la piste « Étiquettes », Suppr la retire',
     async run({ page }) {
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-habillage"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-habillage"]')
+      await showTab(page, 'habillage')
       const lane = '[role="group"][aria-label="Étiquettes"]'
       assert(!(await page.$(lane)), 'la piste Étiquettes existe sans clé')
       await page.click('button[aria-label="Étiquettes : ajouter une clé"]')
@@ -854,15 +898,15 @@ const SCENARIOS = [
     id: 'reperes',
     title: 'Repères et points d’intérêt (onglet Carte) : un point au marqueur, son arrêt coché puis décoché, vu sur la timeline',
     async run({ page }) {
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-carte"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-carte"]')
-      const stops = await laneCount(page, 'Arrêts')
+      await showTab(page, 'carte')
+      const stops = await stopCount(page)
       await clickButton(page, "Point d'intérêt au marqueur")
       const box = '[data-testid="tab-panel-carte"] [data-testid="place"] input[aria-label^="Arrêt dans le film à « Point d"]'
       await page.waitForSelector(box, { timeout: STEP_MS })
       await page.click(box)
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n + 1, [stops])
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]:not([data-item="opening"]):not([data-item="closing"])').length === n + 1, [stops])
       await page.click(box)
-      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Arrêts"] [data-testid="timeline-block"]').length === n, [stops])
+      await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]:not([data-item="opening"]):not([data-item="closing"])').length === n, [stops])
       await page.click('[data-testid="tab-panel-carte"] button[aria-label^="Supprimer le point d\'intérêt"]')
       await blur(page)
     },
@@ -922,7 +966,7 @@ const SCENARIOS = [
     id: 'projet',
     title: 'Projet gardé tout seul et rouvert au rechargement, puis enregistré et ouvert depuis son fichier',
     async run({ page }) {
-      const before = { texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
+      const before = { texts: await laneCount(page, 'Textes'), stops: await stopCount(page) }
       const since = Date.now() - 1000
       // headless Chromium cannot answer the File System Access pickers: without them the project is downloaded, and opened
       // through a file input
@@ -946,9 +990,7 @@ const SCENARIOS = [
               ?.querySelector('[data-testid="setting-row-value"]').textContent ?? '',
         )
       // the sample is kept in « Mes projets » by itself: a change is written by the autosave (« Enregistré » again)
-      if (await page.evaluate(() => document.querySelector('[data-testid="tab-lumiere"]')?.getAttribute('aria-selected') !== 'true')) {
-        await page.click('[data-testid="tab-lumiere"]')
-      }
+      await showTab(page, 'lumiere')
       // centred first: scrolled to the top edge, the row would sit under the sticky section title and the click hit it
       await page.$eval('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-head"]::-p-text(Exposition)', (el) => el.scrollIntoView({ block: 'center' }))
       await page.click('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-head"]::-p-text(Exposition)')
@@ -969,7 +1011,7 @@ const SCENARIOS = [
       await page.click('[data-testid="toast"] button[aria-label="Fermer le message"]')
       await until(page, () => ![...document.querySelectorAll('[data-testid="toast"]')].some((el) => el.textContent.includes('rouvert') && el.dataset.exiting !== 'true'))
       await until(page, () => (document.querySelector('[role="group"][aria-label="Plans"]')?.textContent ?? '').includes('Survol'))
-      const reopened = { exposure: await exposure(), texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
+      const reopened = { exposure: await exposure(), texts: await laneCount(page, 'Textes'), stops: await stopCount(page) }
       assert(
         reopened.exposure === changed && reopened.texts === before.texts && reopened.stops === before.stops,
         `projet rouvert différent : avant ${JSON.stringify({ exposure: changed, ...before })}, après ${JSON.stringify(reopened)}`,
@@ -981,7 +1023,7 @@ const SCENARIOS = [
       await chooser.accept([file.path])
       await page.waitForSelector('[data-testid="toast"]::-p-text(» ouvert)', { visible: true, timeout: STEP_MS })
       await until(page, () => (document.querySelector('[role="group"][aria-label="Plans"]')?.textContent ?? '').includes('Survol'))
-      const after = { exposure: await exposure(), texts: await laneCount(page, 'Textes'), stops: await laneCount(page, 'Arrêts') }
+      const after = { exposure: await exposure(), texts: await laneCount(page, 'Textes'), stops: await stopCount(page) }
       assert(
         !after.exposure.startsWith('+') && after.texts === before.texts && after.stops === before.stops,
         `projet du fichier différent : avant ${JSON.stringify(before)}, après ${JSON.stringify(after)}`,
@@ -1073,9 +1115,10 @@ const SCENARIOS = [
       await until(page, () => !!document.querySelector('[role="group"][aria-label="Plans"]'))
       await exposeStores(page)
       if (!(await page.$('[data-testid="export-dock"]:not([hidden])'))) await page.click('button[data-testid="topbar-export"]')
-      // « Vidéo » mode: the history is the last child of the panel shown (the batch panel has its own, hidden)
+      // « Vidéo » mode: the history is the last child of the panel shown (the batch panel has its own, hidden). It draws
+      // nothing before the first film, so it is waited for once the renders below are written.
       const H = '[data-testid="export-dock"] section:not([hidden]) [data-testid="export-history"]'
-      await page.waitForSelector(H, { timeout: STEP_MS })
+      await page.waitForSelector('[data-testid="export-dock"] section:not([hidden])', { timeout: STEP_MS })
       // two renders as the recorder writes them: an old one with other settings, a failed one
       const before = await page.evaluate(async () => {
         const { history, historyStore: store } = window.__e2e
@@ -1091,6 +1134,7 @@ const SCENARIOS = [
         )
         return { fps: settings.video.fps, quality: settings.video.quality, style: settings.camera.style }
       })
+      await page.waitForSelector(H, { timeout: STEP_MS })
       if (!(await page.$eval(H, (d) => d.open))) await page.click(`${H} > summary`)
       await page.waitForSelector(`${H} [data-testid="history-item"]`, { visible: true })
       const names = await page.$$eval(`${H} [data-testid="history-name"]`, (els) => els.map((e) => e.textContent))
@@ -1101,7 +1145,7 @@ const SCENARIOS = [
       // detail of the old render, then its settings put back as one step
       await page.click(`${H} [data-testid="history-item"]:last-child [data-testid="history-head"]`)
       await page.waitForSelector(`${H} [data-testid="history-item"]:last-child [data-testid="history-rows"]`, { visible: true })
-      assert((await page.$eval(`${H} [data-testid="history-item"]:last-child [data-testid="history-body"]`, (e) => e.textContent)).includes('Vue du dessus'), 'détail : style de caméra absent')
+      assert((await page.$eval(`${H} [data-testid="history-item"]:last-child [data-testid="history-body"]`, (e) => e.textContent)).includes('Du dessus'), 'détail : style de caméra absent')
       await page.click(`${H} [data-testid="history-item"]:last-child [data-testid="history-body"] button::-p-text(Réutiliser ces réglages)`)
       const reused = await page.evaluate(() => {
         const { settings } = window.__e2e.appStore.getState()
@@ -1115,8 +1159,10 @@ const SCENARIOS = [
       })
       assert(JSON.stringify(undone) === JSON.stringify(before), `annulation d’un coup : ${JSON.stringify(undone)} au lieu de ${JSON.stringify(before)}`)
       // delete one, then clear (confirmed)
+      // centred first: scrolled to the top edge, the row would sit under the dock's sticky title and the click hit it
+      await page.$eval(`${H} [data-testid="history-item"]:first-child [data-testid="history-head"]`, (el) => el.scrollIntoView({ block: 'center' }))
       await page.click(`${H} [data-testid="history-item"]:first-child [data-testid="history-head"]`)
-      await page.click(`${H} [data-testid="history-item"]:first-child [data-testid="history-body"] button::-p-text(Supprimer)`)
+      await (await page.waitForSelector(`${H} [data-testid="history-item"]:first-child [data-testid="history-body"] button::-p-text(Supprimer)`, { visible: true })).click()
       await until(page, () => document.querySelectorAll('[data-testid="export-dock"] section:not([hidden]) [data-testid="history-item"]').length === 1)
       // inside the section: a toast has its own « Annuler »
       const inHistory = async (text) => (await page.waitForSelector(`${H} button::-p-text(${text})`, { visible: true })).click()
@@ -1125,7 +1171,8 @@ const SCENARIOS = [
       assert((await page.$$(`${H} [data-testid="history-item"]`)).length === 1, 'l’historique est vidé sans confirmation')
       await inHistory('Vider l’historique')
       await inHistory('Vider définitivement')
-      await until(page, () => document.querySelectorAll('[data-testid="export-dock"] section:not([hidden]) [data-testid="history-item"]').length === 0 && document.querySelector('[data-testid="export-dock"] section:not([hidden]) [data-testid="export-history"]')?.textContent.includes('Aucun rendu pour l’instant'))
+      // an empty history draws nothing: the whole section goes
+      await until(page, () => !document.querySelector('[data-testid="export-dock"] [data-testid="export-history"]'))
       assert(await page.evaluate(() => localStorage.getItem('openflyover.exportHistory.v1') === null), 'le stockage n’est pas vidé')
     },
   },
@@ -1143,18 +1190,37 @@ const SCENARIOS = [
         })
         await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true })
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: STEP_MS })
-        const tap = async (selector) => (await page.waitForSelector(selector, { visible: true, timeout: STEP_MS })).tap()
+        // a button that React draws again between the lookup and the touch gives « Node is detached from document »: the touch
+        // may have landed on the old one, so a second look is short and, if the button is gone, the step after it tells
+        const tap = async (selector) => {
+          for (let attempt = 1; ; attempt++) {
+            try {
+              const button = await page.waitForSelector(selector, { visible: true, timeout: attempt === 1 ? STEP_MS : 3000 })
+              return await button.tap()
+            } catch (error) {
+              if (attempt === 1 && /detached/.test(error.message)) continue
+              if (attempt > 1 && error.name === 'TimeoutError') return
+              throw error
+            }
+          }
+        }
         await tap("button::-p-text(Essayer avec l'exemple)")
         // the timeline is open under the preview, its playhead in the middle
         await page.waitForSelector('[data-testid="timeline"][data-centred] [role="group"][aria-label="Plans"] [data-testid="timeline-block"]', { visible: true, timeout: STEP_MS })
-        /** the preview is whole on screen, at least a third of its height */
+        /**
+         * the preview is whole on screen: the frame of the format at the full width, never under 30 % of the screen height
+         * (PHONE_PREVIEW_MIN_SHARE, src/ui/shell.ts: a 16:9 frame on a 390 px phone is only 219 px)
+         */
         const previewShown = () =>
           page.evaluate(() => {
             const r = document.querySelector('[role="region"][aria-label="Vue 3D"]').getBoundingClientRect()
-            return r.top >= 0 && r.height > innerHeight / 3 && r.width === innerWidth
+            return r.top >= 0 && r.height >= innerHeight * 0.3 - 1 && r.width === innerWidth
           })
         assert(await previewShown(), 'l’aperçu n’occupe pas le haut de l’écran')
-        /** the open panel or drawer is a half sheet under the preview, as wide as the screen, down to the status bar */
+        /**
+         * the open panel or drawer is a half sheet under the preview, as wide as the screen, down to the status bar; the
+         * settings sheet stops above the tab bar since 5.4.0 (another tab is one touch away)
+         */
         const isHalfSheet = (selector) =>
           until(
             page,
@@ -1162,9 +1228,11 @@ const SCENARIOS = [
               const sheet = document.querySelector(sel)
               const preview = document.querySelector('[role="region"][aria-label="Vue 3D"]')?.getBoundingClientRect()
               const status = document.querySelector('footer')?.getBoundingClientRect()
+              const tabs = document.querySelector('nav[aria-label="Panneaux"]')
               if (!sheet || sheet.hidden || !preview || !status) return false
               const r = sheet.getBoundingClientRect()
-              return r.width === innerWidth && r.top >= preview.bottom && Math.abs(r.bottom - status.top) < 2 && r.height > 150
+              const floors = [status.top, ...(tabs && !tabs.hidden ? [tabs.getBoundingClientRect().top] : [])]
+              return r.width === innerWidth && r.top >= preview.bottom && floors.some((y) => Math.abs(r.bottom - y) < 2) && r.height > 150
             },
             selector,
           )
@@ -1174,14 +1242,32 @@ const SCENARIOS = [
             const [m, s] = document.querySelector('[data-testid="timeline-time"]').textContent.split(':')
             return Number(m) * 60 + Number(s.replace(',', '.'))
           })
-        // previous / add / next keyframe leading the tool row, on screen
-        const keyNav = await page.$$eval('[data-testid="timeline-tools"] [aria-label="Images clés"] button', (buttons) =>
+        // the tool row holds three named buttons, all on screen and at least 36 px (the floor of a touch target since the proportional scale of 5.4.0): « Clés », « Ajouter » and the film options
+        const tools = await page.$$eval('[data-testid="timeline-tools"] button', (buttons) =>
           buttons.map((b) => {
             const r = b.getBoundingClientRect()
-            return r.width >= 44 && r.left >= 0 && r.right <= innerWidth
+            return { name: b.textContent.trim() || b.getAttribute('aria-label'), ok: r.height >= 36 && r.width >= 36 && r.left >= 0 && r.right <= innerWidth }
           }),
         )
+        assert(tools.length === 3 && tools.every((t) => t.ok), `boutons de la barre de la timeline : ${JSON.stringify(tools)}`)
+        assert(tools[0].name === 'Clés' && tools[1].name === 'Ajouter', `noms des boutons de la barre de la timeline : ${tools.map((t) => t.name).join()}`)
+        // « Clés » opens a sheet with the previous / add / next buttons of the camera keys, on screen and at least 36 px wide
+        await tap('[data-testid="timeline-tools"] button::-p-text(Clés)')
+        // the group of the desktop row stays in the DOM with no width: only the one that shows counts
+        await until(page, () => [...document.querySelectorAll('[role="group"][aria-label="Images clés"]')].some((g) => g.getBoundingClientRect().width > 0))
+        const keyNav = await page.evaluate(() =>
+          [...document.querySelectorAll('[role="group"][aria-label="Images clés"]')]
+            .filter((g) => g.getBoundingClientRect().width > 0)
+            .flatMap((g) =>
+              [...g.querySelectorAll('button')].map((b) => {
+                const r = b.getBoundingClientRect()
+                return r.width >= 36 && r.left >= 0 && r.right <= innerWidth
+              }),
+            ),
+        )
         assert(keyNav.length === 3 && keyNav.every(Boolean), `boutons image clé précédente / ◆ / suivante : ${JSON.stringify(keyNav)}`)
+        await page.keyboard.press('Escape')
+        await until(page, () => ![...document.querySelectorAll('[role="group"][aria-label="Images clés"]')].some((g) => g.getBoundingClientRect().width > 0))
         // a slide on the lanes scrolls them under the playhead: the film time follows
         const before = await playhead()
         const lanes = await page.$eval('[data-testid="timeline-scroller"]', (el) => {
@@ -1195,13 +1281,12 @@ const SCENARIOS = [
           const [m, s] = document.querySelector('[data-testid="timeline-time"]').textContent.split(':')
           return Number(m) * 60 + Number(s.replace(',', '.')) > t + 1
         }, before)
-        // the eight tabs do not fit: the bar scrolls, and the open tab is brought into sight
-        assert(await page.evaluate(() => {
-          const bar = document.querySelector('[role="tablist"]')
-          return bar.scrollWidth > bar.clientWidth
-        }), 'la barre d’onglets ne défile pas')
+        // the groups of tabs fit the width of the phone
+        assert(await page.evaluate(() => document.querySelector('[role="tablist"]').clientWidth <= innerWidth), 'la barre d’onglets dépasse la largeur de l’écran')
+        // the nine tabs show as five groups on a phone: a group opens the tab of it last shown, the first one here
+        const GROUP = { carte: 'decor', projet: 'projet', survol: 'camera' }
         for (const tab of ['carte', 'projet', 'survol']) {
-          await tap(`[data-testid="tab-${tab}"]`)
+          await tap(`[data-testid="tab-${GROUP[tab]}"]`)
           await until(page, (t) => !document.querySelector(`[data-testid="tab-panel-${t}"]`)?.hidden, tab)
           await isHalfSheet('[data-testid="side-panel"]')
           assert(await previewShown(), `l’onglet ${tab} couvre l’aperçu`)
@@ -1215,19 +1300,20 @@ const SCENARIOS = [
               const r = document.querySelector(`[data-testid="tab-${t}"]`).getBoundingClientRect()
               return r.left >= 0 && r.right <= innerWidth && r.height >= 44
             },
-            tab,
+            GROUP[tab],
           )
         }
-        const tile = (text) => `[data-testid="tab-panel-survol"] [role="radiogroup"] label::-p-text(${text})`
-        const tileChecked = (text) =>
-          page.evaluate((t) => [...document.querySelectorAll('[data-testid="tab-panel-survol"] input[type="radio"]')].find((i) => i.labels?.[0]?.textContent.startsWith(t))?.checked === true, text)
-        await tap(tile('Oiseau'))
-        await until(page, () => [...document.querySelectorAll('[data-testid="tab-panel-survol"] input[type="radio"]')].some((i) => i.labels?.[0]?.textContent.startsWith('Oiseau') && i.checked))
-        assert(await tileChecked('Oiseau'), 'le préréglage « Oiseau » n’est pas choisi')
+        const motion = (text) => `[data-testid="tab-panel-survol"] [role="radiogroup"][aria-label="Mouvement"] button::-p-text(${text})`
+        const motionChecked = (text) =>
+          page.evaluate((t) => [...document.querySelectorAll('[data-testid="tab-panel-survol"] [aria-label="Mouvement"] [role="radio"]')].find((b) => b.textContent === t)?.getAttribute('aria-checked') === 'true', text)
+        await tap(motion('Balancer'))
+        await until(page, () => [...document.querySelectorAll('[aria-label="Mouvement"] [role="radio"]')].some((b) => b.textContent === 'Balancer' && b.getAttribute('aria-checked') === 'true'))
+        assert(await motionChecked('Balancer'), 'le mouvement « Balancer » n’est pas choisi')
         await tap('[data-testid="side-panel"] button[aria-label="Terminé"]')
         await until(page, () => document.querySelector('[data-testid="side-panel"]').hidden)
         // the sample has no stop of its own: one at the marker
-        await tap('button[aria-label="Ajouter un arrêt à la position du marqueur"]')
+        await tap('[data-testid="timeline-tools"] button::-p-text(Ajouter)')
+        await tap('[role^="menuitem"]::-p-text(Ajouter un arrêt à la position du marqueur)')
         await page.waitForSelector('[data-item^="stop-"]', { timeout: STEP_MS })
         // a tap on a stop selects it: its actions take the place of the tab bar; « Modifier » opens its inspector
         await page.$eval('[data-item^="stop-"]', (el) => el.scrollIntoView({ block: 'nearest', inline: 'center' }))
@@ -1278,7 +1364,7 @@ async function main() {
   const browser = await puppeteer.launch({
     executablePath: CHROME,
     headless: 'shell',
-    args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--lang=fr', '--window-size=1440,900'],
+    args: [...(GPU ? ['--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=gl'] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']), '--no-sandbox', '--lang=fr', '--window-size=1440,900'],
     defaultViewport: { width: 1440, height: 900 },
     protocolTimeout: EXPORT_MS,
   })

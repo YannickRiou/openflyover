@@ -85,8 +85,6 @@ const messages: Messages['timeline'] = {
   'bar.holdAt': 'Sosta: {label}',
   'bar.addRow': 'Testo, foto, musica',
   'magnet.label': 'Aggancio',
-  'bar.addHoldAtHighlight': 'Aggiungi una sosta in un punto saliente',
-  'bar.holdAtHighlight': 'Sosta in un punto saliente…',
   'bar.addSpeed': 'Accelera o rallenta un tratto a partire dal marcatore',
   'bar.addSpeedTip': 'Accelera o rallenta un tratto (1 km a ×2) a partire dal marcatore',
   'bar.addText': 'Aggiungi un testo sulla testina di lettura',

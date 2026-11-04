@@ -1,4 +1,5 @@
 import { Dropdown } from '@heroui/react/dropdown'
+import { Separator } from '@heroui/react/separator'
 import { useRef, useState } from 'react'
 import type { ReactElement, ReactNode } from 'react'
 import { Icon } from '../icons'
@@ -16,6 +17,8 @@ export interface MenuItem {
   /** drawn before the text */
   icon?: ReactNode
   disabled?: boolean
+  /** A line under the row, to set the rows after it apart (a group of the menu). */
+  separator?: boolean
   /** The chosen one of a list of choices: the row is lit and ends with a check. Set it on every row of such a menu. */
   selected?: boolean
   /** Called when it is picked (click, tap, Enter, Space); the menu closes after it. */
@@ -61,7 +64,7 @@ export function Menu({ label, items, trigger, point, onClose, placement = 'botto
       selectedKeys={choices ? items.filter((item) => item.selected).map((item) => item.id) : undefined}
       onAction={point ? () => onClose?.() : undefined}
     >
-      {items.map((item) => (
+      {items.flatMap((item) => [
         <Dropdown.Item key={item.id} id={item.id} textValue={item.label} isDisabled={item.disabled} className="overlay-item" onAction={item.onSelect}>
           {item.icon}
           {item.label}
@@ -70,8 +73,9 @@ export function Menu({ label, items, trigger, point, onClose, placement = 'botto
               <Icon name="check" size={18} />
             </span>
           )}
-        </Dropdown.Item>
-      ))}
+        </Dropdown.Item>,
+        item.separator && <Separator key={`${item.id}-line`} className="my-1 h-px flex-none bg-white/15" />,
+      ])}
     </Dropdown.Menu>
   )
   const popover = { placement, offset: 6, containerPadding: 8, className: panelClass(PANEL, sheet), 'data-local-escape': '' }

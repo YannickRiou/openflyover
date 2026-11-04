@@ -58,12 +58,12 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/terrain/tileJob.ts`, `tile.worker.ts`, `tileWorker.ts` | decoding and meshing off the main thread | `runTileJob(job: TileJob): TileResult` (decode + clean + mesh arrays), `resultBuffers`; `buildTileOffThread(job): Promise<TileResult \| undefined>` (pool of workers; undefined = build it on the main thread) |
 | `src/terrain/quadtree.ts` + `engine.ts` | LOD, loading, Three group | `createTerrainEngine(options: TerrainEngineOptions, deps?: Partial<EngineDeps>, tuning?: Partial<EngineTuning>): TerrainEngine` (deps injectable for tests) |
 | `src/scene/*.tsx` | R3F components | `FlyoverCanvas`, `TerrainLayer` (+ `useTerrainContext` in `terrainContext.ts`, its pure setup in `terrainLayerSetup.ts`), `TrackLines` (+ `trackLineSet.ts`), `TrackPicker` (+ `TrackMenu`, DOM), `CameraRig`, `FlyoverRig`, `useDebouncedCallback` |
-| `src/scene/marker*.ts` + `trackLineStyle.ts` | track and marker (see "Track and marker") | pure: `TrackStyle`, `DEFAULT_TRACK_STYLE`, `TrackTailSettings`, `DEFAULT_TRACK_TAIL`, `isValidTrackTail`, `MarkerSettings`, `DEFAULT_MARKER`, `isValidTrackStyle`, `isValidMarker`, `withTrackStyleDefaults`, `withMarkerDefaults` (`markerSettings.ts`); `MARKER_FIGURE_PATHS`, `circlePath` (`markerFigures.ts`); `drawBadge`, `readableInk`, `squareCrop`, `fileToAvatarDataUrl`, `loadMarkerImage` (`markerBadge.ts`, 2D canvas); `markerBadge`, `badgeTexture`, `headsLeft`, `placeMarker`, `reliefClearance`, `occludeMarker`, `useMarkerImages`, `MARKER_SCREEN_FACTOR`, `MARKER_MIN_RADIUS_PX`, `setMarkerViewportHeight` (`markerSprite.ts`); `createGlowMaterial`, `applyDash`, `quantizedPixelSize`, `cumulativeDistances`, `cutAt`, `cutLine`, `setTrackDistances`, `addTrailCut`, `setTrailStart` (`trackLineStyle.ts`); `TrackStyleSection`, `MarkerSection` (`src/ui/TrackMarkerSection.tsx`) |
+| `src/scene/marker*.ts` + `trackLineStyle.ts` | track and marker (see "Track and marker") | pure: `TrackStyle`, `DEFAULT_TRACK_STYLE`, `TrackTailSettings`, `DEFAULT_TRACK_TAIL`, `isValidTrackTail`, `MarkerSettings`, `DEFAULT_MARKER`, `isValidTrackStyle`, `isValidMarker`, `withTrackStyleDefaults`, `withMarkerDefaults` (`markerSettings.ts`); `MARKER_FIGURE_PATHS`, `circlePath` (`markerFigures.ts`); `drawBadge`, `readableInk`, `squareCrop`, `fileToAvatarDataUrl`, `loadMarkerImage` (`markerBadge.ts`, 2D canvas); `markerBadge`, `badgeTexture`, `headsLeft`, `placeMarker`, `reliefClearance`, `occludeMarker`, `useMarkerImages`, `MARKER_SCREEN_FACTOR`, `MARKER_MIN_RADIUS_PX`, `MARKER_MIN_REAL_RADIUS_PX`, `setMarkerViewportHeight`, `setMarkerReferenceDistance` (`markerSprite.ts`); `createGlowMaterial`, `applyDash`, `quantizedPixelSize`, `cumulativeDistances`, `cutAt`, `cutLine`, `setTrackDistances`, `addTrailCut`, `setTrailStart` (`trackLineStyle.ts`); `TrackStyleSection`, `MarkerSection` (`src/ui/TrackMarkerSection.tsx`) |
 | `src/flyover/path.ts` | flyover path | `buildTrackPath(track): TrackPath` (concatenated segments, cumulative distances, `time` in ms or NaN), `trackPathOf(track)` (same path, cached per track), `samplePath(path, distanceM): PathSample` (`ele` and `time` interpolated only if both neighbors have them), `recordedTimeAt(path, distanceM)` (fills points without a time), `elevationProfile(path, samples)`, `nearestOnPath(path, lonLat, timeMs?)`, `distanceAtTime(path, timeMs, toleranceMs?)`, `pickProjectedPath(screen, distM, px, py, maxPx)` (point of the projected track closest to the pointer) |
 | `src/flyover/smooth.ts` | track smoothing (see "Track and marker") | `smoothPoints(points, windowM)`, `smoothTrack(track, windowM)`, `smoothedTrackPath(track, windowM)` (smoothed positions, recorded distances and times) |
 | `src/flyover/camera.ts` | flyover camera | `computeCameraView(path, progress, frame, sampler, { exaggeration, liftM, camera?, durationS?, timeS?, orbitRad?, aimProgress?, cameraProgress? })` → `{ target, position, marker }`, `autoDistanceM`, `smoothedTurn`, `smoothHeadingAt`, `movesWithTime` |
 | `src/flyover/flightSpeed.ts` | flyover duration ↔ marker speed (« × temps réel », km/h) | `clampDuration`, `speedKmh`, `speedUpFactor`, `durationForKmh`, `durationForSpeedUp`, `hasSpeedUp`, `kmhRange`, `speedUpRange`, `speedPosition`, `durationAtPosition` |
-| `src/flyover/cameraSettings.ts` | camera styles and presets | `CAMERA_STYLES`, `DEFAULT_CAMERA`, `CAMERA_RANGES`, `CAMERA_PRESETS`, `isValidCamera`, `withCameraDefaults`, `turnSmoothingM(camera, lengthM)`, `advanceProgress(progress, dt, speed, durationS)` |
+| `src/flyover/cameraSettings.ts` | camera styles and presets | `CAMERA_STYLES`, `DEFAULT_CAMERA`, `CAMERA_RANGES`, `CAMERA_PRESETS`, `CAMERA_HEIGHTS`, `cameraHeightStop(camera)`, `isValidCamera`, `withCameraDefaults`, `turnSmoothingM(camera, lengthM)`, `advanceProgress(progress, dt, speed, durationS)` |
 | `src/flyover/timeSmoothing.ts` | camera smoothing in film time | `timeSmoothing(clock, timeS, motionS, camera)` → `{ aimProgress, cameraProgress, timeS }`, `windowAverage`, `easedEndTimeS`, `smoothsInTime`, `TIME_SMOOTHING_SAMPLES` |
 | `src/flyover/climbs.ts` | detected climbs | `detectClimbs`, `climbsOf(track)` (cached per track), exported thresholds, `CATEGORY_THRESHOLDS` |
 | `src/flyover/flights.ts` | stretches in the air | `detectFlights(path, ground)`, `flightOffsetAt(flights, distanceM)`, `trackHeightM(terrain, ele, flightOffset)`, `pathHeightM(path, distanceM, at, sample)`, exported thresholds |
@@ -125,7 +125,7 @@ full customization through a single project document, WebCodecs video export, Ta
   (with the first-screen size budget), `types-os` (`tsc -b` on Windows and macOS, whose file systems ignore casing),
   `rust` only when `src-tauri/` or the workflow changed, `badge` on master for the README coverage badge),
   `security.yml` (CodeQL for TypeScript and the workflows, `cargo audit`, Dependency Review on pull requests),
-  `e2e.yml` (the end-to-end scenarios every night), `links.yml` (dead links of the documentation every week), `pages.yml` (website on GitHub
+  `e2e.yml` (the end-to-end scenarios, on pull requests from a `release/` branch and by hand), `links.yml` (dead links of the documentation every week), `pages.yml` (website on GitHub
   Pages), `desktop.yml` (installers; a `v*` tag also publishes a release, see "Desktop application"), `release-pr.yml`
   (a shipped dependency changed on master: opens the patch release pull request `release/X.Y.Z`), `release-tag.yml`
   (a `release/*` pull request merged: tags it and starts `desktop.yml`).
@@ -454,10 +454,10 @@ Semantic roles over the palette (component CSS uses these): `--surface-chrome`, 
 `--shadow-pop`. Selected states (tiles, chips, switches, sliders, checkboxes) are in the accent; segmented controls
 are a card well with a white pill; the only filled accent buttons are the primary action of a view.
 
-Headings: IBM Plex Sans Condensed (`--font-heading`; a section title in spaced capitals, `panel-title`); body and buttons: IBM
+Headings: Manrope (`--font-heading`; a section title in bold sentence case, `panel-title`; a part of a section in semi-bold, smaller and muted, `panel-subtitle`; a row name in IBM Plex Sans, `type-label`); body and buttons: IBM
 Plex Sans; the map and the overlay may take Barlow Semi Condensed 600/700 (`barlow` in `OVERLAY_FONT_IDS`); Fraunces stays
 among the fonts of the overlay and the posters. Fonts **bundled** (no network access): WOFF2 in `public/fonts/` (Fraunces
-variable opsz + wght, IBM Plex Sans variable wght, IBM Plex Sans Condensed 500/600/700, Barlow Semi Condensed 600/700), `latin` and `latin-ext` subsets declared through `unicode-range` in
+variable opsz + wght, IBM Plex Sans variable wght, IBM Plex Sans Condensed 500/600/700 for the film, Barlow Semi Condensed 600/700, Manrope 600/700), `latin` and `latin-ext` subsets declared through `unicode-range` in
 `src/ui/fonts.css` (imported by `src/main.tsx`); the browser downloads a subset only if a character requires it.
 Sources, versions and licenses: `public/fonts/README.md`. `src/ui/fonts.test.ts` checks that every referenced file exists and
 that every drawn font (UI, overlay, 3D labels) has its face. Text contrast ≥ 4.5:1.
@@ -481,7 +481,7 @@ controls, same two modes). Both are portalled out of their container (into the o
 `data-local-escape`, so an open one closes before the app's own Escape; their skin is utilities (`overlay-frame`, `overlay-sheet`, `overlay-item` in
 `utilities.css`), HeroUI's CSS for them is not imported. `Tabs` / `TabList` / `Tab` / `TabPanel` (the rail: panels kept mounted, the shown one the only `tabpanel`, the others inert and hidden by the skin; the arrows follow `orientation`; a press on the shown tab calls `onReselect`; the DOM ids of tabs and panels are the library's, the screens and tests key on `data-testid`), `Toast` (the messages, see "Messages") and `Disclosure` (the button and folded body of a `SettingRow`). Tabs and Disclosure import no HeroUI CSS: their look is the screen's. The choice controls: `Switch` (a whole feature on
 or off), `Checkbox`, `Chip` (one of several choices, a pill ticked when chosen), `RadioGroup` with `Radio` (`look` `segmented`,
-`chips`, or `plain` for options the screen draws: the 3 × 3 `AnchorPicker`, the output-format buttons, the proportion and camera-preset tiles; the arrows move and choose, the screens' CSS keys on
+`chips`, or `plain` for options the screen draws: the 3 × 3 `AnchorPicker`, the output-format buttons, the proportion tiles; the arrows move and choose, the screens' CSS keys on
 `.option__label`; a `Radio` forwards its `ref` for a `Tip`) and `ToggleButtonGroup` (the segmented look for buttons that switch what the screen shows). Their `checked` /
 `value` / `onChange` take the values, not events; a `title` is a native tooltip over the whole control; a `<fieldset disabled>`
 around them dims them. `Select` (`options` of `{ value, label, disabled? }` or groups of them, `value` / `onChange` on the value, `look` `field` or `bar`) is the browser's own `<select>` on a touch screen (`pointer: coarse`, for its native picker) and a button that opens a list (typed letters, arrows, own Escape, portalled like the menus) elsewhere; one list of options feeds both, and a `<label htmlFor={id}>` names either. The fields: `Slider` (a track and thumb with the value written out in an `<output>`; the range input inside keeps
@@ -522,14 +522,26 @@ has a tiny inline script for the theme before the first paint. Free colours are 
 keeps 4.5:1, the bar for its secondary text (hint in the panel). Compact: spacing scale ×0.85, `--control-h` 28 px with a fine
 pointer (`appearance.css`).
 
-- **Top bar** (`TopBar.tsx`): logo, project name editable in place (`projectName` in the store, empty = name of the
+- **Top bar** (`TopBar.tsx`): the logo with a chevron, one button that opens the **OpenFlyover menu** (see below), project name editable in place (`projectName` in the store, empty = name of the
   first track, `effectiveProjectName`) and the saved state, told by the save icon (a dot while modified, the accent colour for 3 s once saved: `data-save-state` `unsaved` /
   `saved` on the button; `savedProject`: settings, tracks and name at the
   last save or the last open, compared by reference, `isProjectDirty`; a project with a track is saved
   automatically in « Mes projets », see "Project (phase 4)"), undo / redo, "Ouvrir" (open, icon only; a single picker: `.opnflvr` / `.json` → project, anything else → track import,
   `routeOpenedFiles`; opening a project clears the history), "Enregistrer" (save); in the center the **output format** ("Libre" (free),
-  16:9, 9:16, 1:1, 4:5, 21:9); on the right "?" (shortcuts) and "Exporter" (export), the only primary button of the shell, which opens
-  the export drawer and becomes "42 % · Annuler" (cancel) during an export.
+  16:9, 9:16, 1:1, 4:5, 21:9); on the right the language and "Exporter" (export), the only primary button of the shell, which opens
+  the export drawer and becomes "42 % · Annuler" (cancel) during an export. In the desktop app it is the title bar of the window
+  (see "Desktop application", « Title bar »): `data-tauri-drag-region` on the bar and on each of its empty containers (the attribute works only on the
+  element that carries it), and `WindowButtons` after "Exporter" when `Platform.windowControls` exists (`btn-chrome-close`, `utilities.css`: red under the pointer).
+- **OpenFlyover menu** (`AppMenu.tsx`: `useAppMenu` builds the entries and their dialogs, `LogoMenu` is the button, `Menu` primitive): what is about the
+  application itself and not used all the time. « Mes projets » (back to the home screen: `closeProject` with the question of `openChoice.ts`,
+  the waiting change written first, disabled without a track or while a film renders), « Nouveautés » (`WhatsNewDialog`: what changed, in the words of
+  the users and by version, newest first; `ui/whatsNew.ts`: `WHATS_NEW`, an icon, a title and a sentence per item, the texts in the `news` domain of
+  the five languages; a minor version stands for its patches), « Guide d'utilisation » (the guide of the language in a new tab, `guideUrl`),
+  « Raccourcis clavier » (`HelpDialog`, also opened by `?`) and « À propos et mises à jour » (`AboutDialog.tsx`: version, « Rechercher une mise à jour » on
+  the desktop, then the sources and licences). A dot on the logo button shows until the newest version was opened (`Preferences.whatsNewSeen`,
+  compared with `LATEST_NEWS`): adding a version means its items first in `WHATS_NEW` and its keys in the five `news.ts` files. On a portrait phone the logo is hidden
+  (`usePortraitPhone`) and the same entries head « Plus d'actions », above a line (`separator` of `MenuItem`). The button is not a drag region of the
+  desktop title bar: a click on it must open the menu.
 - **Output format**: a format writes `settings.video.aspect` (saved, undoable); "Libre" is a preview
   flag (`freeFraming` in the store, neither saved nor undoable). Outside "Libre", `Stage.tsx` frames the 3D view to the format
   (`frameRect`, ink bars): the stage (`stage-frame`, `data-stage`), which holds the 3D canvas, the overlay and the legend, takes the framed
@@ -538,11 +550,11 @@ pointer (`appearance.css`).
   one centred column: what the app does (one sentence and three points: free, no account, everything stays on the device),
   "Choisir un fichier" (choose a file), "Importer depuis Strava", "Essayer avec l'exemple" (try the
   sample), "Ouvrir un projet…" (open a project; a single picker whose `accept` changes), a « Nouveau en <version> » card
-  (the first titles of `WHATS_NEW[0]`, opens « Nouveautés » and marks them seen like the « i » button), then "Récents": the three latest
+  (the first titles of `WHATS_NEW[0]`, opens « Nouveautés » and marks them seen like the menu entry), then "Récents": the three latest
   entries of « Mes projets » but the open one (`useLibraryStore`, kept fresh by the always-mounted Projet tab), and links:
-  « Premiers pas » (the user guide, published with the site by `pages.yml` under `docs/`), the desktop installers of the
-  latest release (website only) and GitHub.
-- **Rail and panel**: vertical rail of icon + label tabs (64 px; `Tabs` primitive: `tablist`, one tab stop, arrows (up / down in the rail, left / right in the phone's bar) and Home / End, a press on the open tab folds the panel) and a
+  the desktop installers of the latest release (website only) and GitHub. The user guide (published with the site by
+  `pages.yml` under `docs/`) is an entry of the OpenFlyover menu.
+- **Rail and panel**: vertical rail of icon + label tabs, five groups on every device (`TAB_GROUPS`: Trace, Scène (Carte, Météo, Lumière), Caméra (Survol, Objectif), Habillage, Projet (Projet, Réglages); a group opens the tab of it last shown, a `ToggleButtonGroup` at the top of the panel, `data-sheet-fixed`, switches between its tabs; Ctrl+K and the saved tab name a tab, its group follows) (64 px; `Tabs` primitive: `tablist`, one tab stop, arrows (up / down in the rail, left / right in the phone's bar) and Home / End, a press on the open tab folds the panel) and a
   320 px panel, one tab at a time, nine tabs in montage order (`SHELL_TABS`), one question each: **Trace** (track; track list with "+ Ajouter" (add; a menu: « Fichiers GPX ou FIT… », « Activités Strava… »), waiting message without a track, then the « Trace » line settings, « Marqueur » and « Étiquettes », hidden without a track),
   **Carte** (map; base map and water, relief, OSM landmarks and points of interest),
   **Météo** (weather; weather of the outing, clouds, weather in the image), **Lumière** (light; atmosphere, shadows,
@@ -622,31 +634,30 @@ pointer (`appearance.css`).
   While a film plays the timeline does not render at each frame either: it selects only `playing` and `speed`; what
   follows the playhead (readouts, playhead, flown part of the profile, ruler slider, ◀ ◇ ▶ of `KeyGroup`) selects the
   playback itself, and the scrolling that follows the playhead runs from a store subscription.
-- **Status bar** (24 px, below the timeline): map state of the current view (`ui/mapStatus.ts`, pure): a ring and
-  "Carte · 72 %" (drawn tiles over drawn + awaited ones, `pendingVisibleTiles`; never back during one load, at most
-  99 % until complete; a load under 0.5 s does not show), then "Carte prête" (map ready) with a check, "N tuiles en
-  erreur" (N tiles in error) in yellow with a tip; nothing before the first tile; not a live region, the ring is a
-  `progressbar`. Import in progress; chips for the other fetches (Météo / Repères / Région / Eau / Forêts / Glaciers from `useWeatherStore`,
-  `useLandmarkStore`, `useRegionStore`, `useWaterStatusStore` in `scene/waterStatus.ts`, `useForestStatusStore` in `scene/forestStatus.ts`, `useGlacierStatusStore` in `scene/glacierStatus.ts`; `STATUS_CHIPS`
-  in `shell.ts` lists them, the « Réglages » preferences hide any of them and a preference saved before a chip existed shows it; `fetchChip` in `mapStatus.ts`;
-  spinner / check / attention with the store message / muted; « Forêts » has a fifth state, `queued` « en attente », spinner like loading:
-  the request waits for the Overpass queue, `onStart` of `cachedOverpassQuery`); a performance readout when the bar is at least 900 px
-  wide (`perfParts`: frames per second counted with R3F `addAfterEffect`, textures and geometries of the renderer
-  through R3F `_roots`, loaded tiles, JS heap where `performance.memory` exists, desktop RAM and CPU through the Tauri
-  command `system_stats`), each part chosen in « Réglages »; then the short credits of the active sources, always
+- **Status bar** (24 px, below the timeline), calm: it says what loads and what failed, nothing else. Map state of the
+  current view (`ui/mapStatus.ts`, pure): a ring and "Chargement de la carte… 72 %" (drawn tiles over drawn + awaited
+  ones, `pendingVisibleTiles`; never back during one load, at most 99 % until complete; a load under 0.5 s does not
+  show); nothing once the map is complete; "N tuiles en erreur" (N tiles in error) in yellow with a tip, loaded or not;
+  nothing before the first tile; not a live region, the ring is a `progressbar`. Import in progress. The other fetches
+  (Météo / Repères / Région / Eau / Forêts / Glaciers from `useWeatherStore`, `useLandmarkStore`, `useRegionStore`,
+  `useWaterStatusStore` in `scene/waterStatus.ts`, `useForestStatusStore` in `scene/forestStatus.ts`,
+  `useGlacierStatusStore` in `scene/glacierStatus.ts`) are summed up by `layerNotices` (`mapStatus.ts`, from `fetchChip`):
+  one indicator "Chargement : Météo, Eau" for those loading (`queued` « en attente » counts as loading: the request
+  waits for the Overpass queue, `onStart` of `cachedOverpassQuery`), one yellow "Échec du chargement : Forêts" for those
+  in error (tip: their store messages); loaded and « nothing here » (`unavailable`, `none`) say nothing. `STATUS_CHIPS`
+  in `shell.ts` lists them, the « Réglages » preferences hide any of them and a preference saved before a chip existed
+  shows it. The performance readout is not on the bar: it is read every second only while « Sources et licences » is
+  open (`usePerformance`, `perfParts`: frames per second counted with R3F `addAfterEffect`, textures and geometries of
+  the renderer through R3F `_roots`, loaded tiles, JS heap where `performance.memory` exists, desktop RAM and CPU through
+  the Tauri command `system_stats`), each part chosen in « Réglages »; the bar itself keeps the short credits of the active sources, always
   visible (`compactCredits`, `SOURCE_CREDITS`; OpenStreetMap first and linked to its copyright page; OpenTopoMap and
   Esri never collapsed, Esri's providers behind « … » below 560 px: OSMF, OpenTopoMap and Esri ask for a credit visible
-  without interaction), and ⓘ, which opens "Sources et licences" (sources and licenses) (`Modal`) with the full lines
-  (`overlayCredits`, same strings as in the film), licence links, and for IGN layers the update date of the data read
+  without interaction), (the full lines are in « À propos et mises à jour » of the OpenFlyover menu: `AboutDialog.tsx`, `overlayCredits`, same
+  strings as in the film, licence links, and for IGN layers the update date of the data read
   from the tiles' `Last-Modified` (`terrain/sourceDates.ts`, Licence Ouverte Etalab 2.0) or « date de mise à jour non
-  communiquée par le service ». The window also holds the link to the GitHub repository and the « Voir les nouveautés »
-  button, which opens « Nouveautés » (`WhatsNewDialog`): what changed, in the words of the users and by version, newest
-  first (`ui/whatsNew.ts`: `WHATS_NEW`, an icon, a title and a sentence per item, the texts in the `news` domain of the five
-  languages; a minor version stands for its patches). A dot on the ⓘ button shows until the newest version was opened
-  (`Preferences.whatsNewSeen`, compared with `LATEST_NEWS`): adding a version means its items first in `WHATS_NEW` and
-  its keys in the five `news.ts` files.
+  communiquée par le service »; `useCreditSources` gives the sources on the map to both).
 - **Shortcuts** (`src/ui/shortcuts.ts`): `SHORTCUTS` registry (id, keys, label, group Lecture / Montage / Projet /
-  Vue (playback / editing / project / view)) shown by the "Raccourcis clavier" (keyboard shortcuts) box (`HelpDialog.tsx`, `Modal`, "?" or the bar button)
+  Vue (playback / editing / project / view)) shown by the "Raccourcis clavier" (keyboard shortcuts) box (`HelpDialog.tsx`, `Modal`, "?" or the OpenFlyover menu)
   and reused in tooltips (`withShortcut`). `matchShortcut(key, keyFocus(target))`, pure: Ctrl/Cmd+S save,
   Ctrl/Cmd+O open, Ctrl/Cmd+E export drawer, F reframe, G safe zones, S stop at the marker, T text at the playhead, `[` collapse
   and `?` help (AltGr / Shift accepted), Esc, ← / →
@@ -670,10 +681,10 @@ pointer (`appearance.css`).
   become icon-only; below 1024 px (tablet) the panel, the export drawer and the inspector become side sheets over the view
   (rail and timeline kept).
 - **Phone and tablet** (`BOTTOM_SHEET_QUERY` and `COMPACT_QUERY` in `shell.ts`, same strings as the CSS):
-  - *Compact* (`max-width: 699px` or `max-height: 499px`, a phone either way up): top bar reduced to the logo, the
+  - *Compact* (`max-width: 699px` or `max-height: 499px`, a phone either way up): top bar reduced to the logo (its menu), the
     project name, undo and redo (always in the bar), the format button (`FormatMenu` in `TopBar.tsx`, in the place of the
     `FormatSwitcher` row: the icon of the chosen format, a bottom sheet of the formats; both call `pickFormat`), « Plus
-    d'actions » (⋯, `MoreMenu` in `TopBar.tsx`: open, save) and « Exporter » with its label; no « ? ». A portrait phone has
+    d'actions » (⋯, `MoreMenu` in `TopBar.tsx`: open, save; on a portrait phone the entries of the OpenFlyover menu come first) and « Exporter » with its label. A portrait phone has
     no logo and no language flag: the language is a section of « Réglages » (`PreferencesPanel`), as everywhere; in landscape the timeline starts folded (`Timeline`: strip
     with play and time) and unfolds as a sheet over the view; panel and drawer sheets fold it (`sheetOpen`), its
     unfolding folds them (`onUnfold` → shell event `fold`): one sheet at a time. Dialogs (`Modal`) are full screen. Safe areas
@@ -689,8 +700,8 @@ pointer (`appearance.css`).
     « ⋯ » (`FilmOptions` with an `extra` part: playback speed, mute when there is sound, snapping, clear the work area); no ■,
     readout, zoom nor fold), the timeline (`Timeline` `centred`, below; its empty lanes are not drawn, `emptyLanes`, and a dashed
     « Texte, photo, musique » row under them, sticky to the left, opens the same menu), the bottom tab bar (five groups of tabs,
-    `TAB_GROUPS` in `shell.ts`, a fifth of the width each; a group opens the tab of it last shown, a `ToggleButtonGroup` at the top
-    of the sheet, `data-sheet-fixed`, switches between its tabs; the same groups in the rail of a landscape phone, `COMPACT_QUERY`),
+    `TAB_GROUPS` in `shell.ts`, a fifth of the width each; the same groups, with the same switch at the top of the panel, in the rail of
+    a landscape phone and of a computer),
     the status bar. Panel, export drawer and inspector are half sheets from under the transport row, over the timeline,
     never over the preview; the panel stops above the tab bar (`bottom-14`: another tab is one touch away), the export
     drawer and the inspector go down to the status bar (sliding in, not under `prefers-reduced-motion`). Their
@@ -725,14 +736,16 @@ pointer (`appearance.css`).
     (`tap`), a long press shows any other tip. Every other `:hover` style sits in `@media (hover: hover)`,
     in place (same cascade on a computer): no grey background or border left on a button after a tap.
 - **Sections of the tabs** (`PanelSection.tsx`): `PanelSection` = flat collapsible section (`fold-head` utility,
-  sticky header: title, the ↺ "modifié" reset button of its keys, chevron), open initially, then as last left: open / folded
+  sticky header: title and, folded, its optional one-line `summary` (what is set, worded by the section's component: « Unie · 4 px · Plein »),
+  the ↺ "modifié" reset button of its keys, chevron), then as last left, else open on a phone and, on a computer, open only for the first
+  section of its tab (`useLayoutEffect` on mount: the others fold): open / folded
   state remembered by title in the platform storage (`FOLDS_KEY` `openflyover.folds.v1`, `parseFoldPrefs` in `shell.ts`,
   read once on mount, written on `toggle`; without storage or with an unreadable value every section opens; a title no longer used is ignored). Carte: "Fond de carte" (base map)
   (imagery, water), "Relief" (exaggeration), "Repères et points d'intérêt" (`LandmarkPanel`, absent without a track).
-  Trace: « Trace » (line settings, track colouring included; `TrackStyleSection`), « Marqueur » (`MarkerSection`). The 3D labels are all in « Habillage » › « Étiquettes 3D » (`LabelSettings`, `LabelColors`, the `labels` keys). Réglages: « Apparence », « Barre d'état », « Timeline » (`PreferencesPanel`).
+  Trace: « Style de la trace » (line settings, track colouring included; `TrackStyleSection`), « Marqueur » (`MarkerSection`). The 3D labels are all in « Habillage » › « Étiquettes 3D » (`LabelSettings`, `LabelColors`, the `labels` keys). Réglages: « Apparence », « Barre d'état », « Timeline » (`PreferencesPanel`).
   Météo: "Météo de la sortie" (`WeatherPanel`), "Nuages" (clouds), "Pluie et brume" (weather in the scene and its intensity;
   `WeatherSettings`). Lumière: "Atmosphère" (atmosphere, shadows, exposure), "Soleil" (sun time and date; `LightSettings`), « Jours et nuits » (`NightSettings`: « Montrer les nuits », « Crépuscule » / « Nuit » / « Aube » in seconds, « Cartes de jour »: switch, informations, titre, position, taille, couleurs et polices, durée, « Vue haute pendant la nuit »; `film.dayCards`),
-  "Couleurs" (`GradingPanel`). Survol: "Caméra" (camera; preset tiles, each implying a style, north up),
+  "Couleurs" (`GradingPanel`). Survol: "Caméra" (camera: « Mouvement », the six styles as a `ToggleButtonGroup` in a 3 × 2 grid, then « Hauteur », one slider of six stops; the fine rows below; north up),
   "Durée et rythme" (duration; duration with « − » / « + » buttons (one slider notch) around the slider and the acceleration over the recorded time (`formatSpeedUp`: elapsed time start to end, nights included, over the duration; hidden for an untimed track), film duration, « Garder la durée du survol », « Plan de situation » switches for the opening and the closing). Objectif: "Effets d'objectif" (`LensPanel`).
   The two or three essential settings of a section stay open; every other one is a `SettingRow`: one button row with
   its name and current value (iOS Settings style, `aria-expanded`), whose control stays hidden (mounted, `hidden`)
@@ -853,7 +866,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   `formatList(items)` (« a, b et c » / « a, b and c »). `src/ui/format.ts` (`formatNumber`, `formatDistance`, `formatDuration`,
   `formatBytes`, `formatClock`…) builds on them and on the `format.*` messages (units: « Mo » / « MB », « D+ » / « Gain »).
 - **The language** is a device preference, `Preferences.language` (`ui/shell.ts`, stored with `Preferences.appearance`). The
-  top bar has the selector (`LanguageMenu`, between « ? » and « Exporter »: flag and code, a menu of native names; the flags are
+  top bar has the selector (`LanguageMenu`, before « Exporter »: flag and code, a menu of native names; the flags are
   inline SVG, `ui/Flag.tsx`, because Windows draws the flag emoji as two letters;
   `role="menuitemradio"`, arrows, Escape, focus back to the button). `installLanguage()` (`ui/preferences.ts`, called by `main.tsx`
   only, so the tests stay French) applies the preference now and on every change, sets `<html lang>`, and on a first run with nothing
@@ -899,7 +912,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   climbs, landmarks: it is then derived from the progress through the pacing). Reaching 1 without a film time pauses, restarting
   from the end rewinds; `requestFit` pauses, removing a track resets to 0.
 - **`FlyoverRig`** (in `TerrainLayer`): advances `progress` in `useFrame`, places the marker (unlit white sphere,
-  `depthTest: false`, constant screen size) and drives the camera during playback or when `progress` changes while paused
+  `depthTest: false`, a real size: see "Size on a small view") and drives the camera during playback or when `progress` changes while paused
   (scrub); otherwise the orbit stays free around the marker.
 - **Camera** (`src/flyover/camera.ts`, `computeCameraView`): pure function of (progress, film time, settings,
   terrain sampler), with no state from one frame to the next, so the video export can render any frame in isolation.
@@ -1094,7 +1107,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   aimSmoothingS, cameraSmoothingS, endingS, orbitTurns, leadRoomPct, bankDeg, focalMm }` (a camera saved before the smoothings,
   `leadRoomPct`, `bankDeg` or `focalMm` gets them from `DEFAULT_CAMERA`, `withCameraDefaults` in `SETTING_UPGRADES`: « Auto »
   keeps its multiplier, so the turns look the same) and named
-  presets (`CAMERA_PRESETS`, 13: Poursuite (chase), Drone rapide, Oiseau, Hélicoptère, Orbite, Cinéma, Drone haut, Planeur, Montgolfière, Avion, Vue du dessus, Satellite, then Libre (style `free`, left out of `markerVisible.test.ts`: it does not follow the marker); `findCameraPreset`; « Préréglage » is a grid of tiles with distance and tilt, all twelve shown at once, plus a « Personnalisé » tile when the settings match no preset) in
+  presets (`CAMERA_PRESETS`, 13: Poursuite (chase), Drone rapide, Oiseau, Hélicoptère, Orbite, Cinéma, Drone haut, Planeur, Montgolfière, Avion, Vue du dessus, Satellite, then Libre (style `free`, left out of `markerVisible.test.ts`: it does not follow the marker); `findCameraPreset`; kept as data for the gabarits of « Film automatique » (« Cinéma ») and as the corpus of the camera tests, but no longer shown) and the six « Hauteur » stops (`CAMERA_HEIGHTS`: Au ras 0.5 / 20°, Proche 1 / 30° (the default), Hélicoptère 1.3 / 25°, Drone haut 1.8 / 55°, Avion 3 / 35°, Satellite 4 / 85°, the values of the presets of the same vehicle; one slider sets the distance and the tilt, nothing else, and `cameraHeightStop` gives the stop a camera is at or, with `custom`, the nearest one for « Personnalisé »; a project stores camera values, never a preset id) in
   `src/flyover/cameraSettings.ts`; `settings.flyoverDurationS` (15–600 s in 1 s steps, 60 by default) = duration at ×1, the timeline
   speed applies on top. **Duration or speed** (`src/flyover/flightSpeed.ts`, pure; `src/ui/FlightDurationField.tsx`): the one setting
   has two faces, chosen by « Régler par » (panel state only, it opens on « Durée »; nothing new is stored, no format change). The
@@ -1788,11 +1801,9 @@ The interface and the texts drawn into the films and posters exist in **French**
   strip below the 3D view (the stage above, the view shrinks accordingly; ~150 px, collapsible lanes). Bar, a single
   control style (Lucide icon buttons, `Tip` tooltip with the shortcut from the registry, short label hidden at
   1280 px): play, ■ (pause and back to the first frame), time `m:ss,d / m:ss`, distance / elevation / time at the
-  marker, "Arrêt" (stop; S: at the marker position, to the meter, source `manual`, 4 s, orbit), "Arrêt à un temps fort…" (stop at a highlight)
-  (passes and summits without a stop), "Texte" (text; T: at the playhead, 4 s, bottom center), "Média" (media; see "Photos" and
-  "Videos"), speaker (mutes or unmutes the preview sound, music and videos, `useMusicPreview`, shown when the film has
-  music or a video with sound; neither saved nor undoable, the export keeps the sound), speed,
-  zoom (− / logarithmic slider / + / "Ajuster" (fit) = the whole film), "Options" menu ("Ajouter une musique…" (add music), see
+  marker, speaker (mutes or unmutes the preview sound, music and videos, `useMusicPreview`, shown when the film has
+  music or a video with sound; neither saved nor undoable, the export keeps the sound), playback speed,
+  zoom (− / logarithmic slider / + / "Ajuster" (fit) = the whole film), magnet, "Options" menu ("Ajouter une musique…" (add music), see
   "Music"; "Arrêts automatiques" (automatic stops) checkbox, `setAutoStops`:
   checked, `autoStops` + `'temps-forts'`, own stops cleared; unchecked, generated stops written; "modifié" /
   ↺ "modifié" button for the film, `ModifiedMarker keys={['film']}`; a dot on the button when the film departs from the default; it
@@ -1803,22 +1814,28 @@ The interface and the texts drawn into the films and posters exist in **French**
   `src/ui/KeyControls.tsx`: previous key / add or remove at the playhead / next key; Alt+← / Alt+→ unchanged) sits under the label
   of the « Plans » lane header; on a portrait phone (centred timeline, no lane headers) it is in the « Clés » sheet of the
   transport row; with a mouse its ◀ and ▶ show while the pointer is over the lane head or the focus is in it (`lane-keys`). Look
-  (phone and computer alike): the lanes share one ground with a hairline between them, blocks are rounded (`rounded-md`), a tick of
+  (phone and computer alike): the lanes share one ground with a hairline between them, blocks are clips (`BLOCK`: they fill the lane, 4 px corners, a flat fill `--clip-bg` and a 3 px edge on the left set by their kind, a fade at the end of a name that does not fit, a 2 px accent ring and a handle at each end when selected), a tick of
   the ruler is its time and a short mark at the bottom, the playhead a white line with a round cap in the accent (the colours are
-  the app's tokens, the accent the one chosen in « Réglages »). Lanes: « Plans », « Vitesse », one lane per keyed parameter, « Marqueur » (only with marker keys), « Arrêts »,
-  « Textes », « Médias », « Musique »; « Textes » also carries the opening title and the closing card (see below); there is no « Réglages » lane and the bar has no « Ajouter un réglage » or
+  the app's tokens, the accent the one chosen in « Réglages »). Lanes: « Plans », « Vitesse », one lane per keyed parameter, « Marqueur » (only with marker keys),
+  « Textes », « Médias », « Musique » (« Arrêts » only in « Débutant », which has no « Plans »: the stops and nights are blocks of « Plans » otherwise); « Textes » also carries the opening title and the closing card (see below); there is no « Réglages » lane and the bar has no « Ajouter un réglage » or
   « Ajouter un changement de marqueur » button. `seekKeyframe` puts the film time exactly on the key
   (`adjacentKey`, one under the playhead skipped) and moves the inspector to it when it showed a keyframe. Lanes "Plans" (shots; opening, flyover with profile, closing;
-  "aucune" (none) = selectable dotted stub; stops are also marked on the flyover bar, tinted window
-  and top edge in the accent color, white for the selected stop; keyframes are small diamonds (◆) where the marker passes,
-  selectable, focusable and draggable; a click without dragging (a tap on a phone) also seeks to it), "Arrêts" (stops; window of each stop, entry and exit
-  included; dotted while they are generated), "Textes" (texts), "Médias" (media; photos and videos, with their thumbnail; a
+  "aucune" (none) = selectable dotted stub; the stops (window of each stop, entry and exit included; dotted while they are
+  generated) and the nights are blocks over the flyover bar (`holdBlocks`), each shown once; keyframes are small diamonds (◆) where the marker passes,
+  selectable, focusable and draggable; a click without dragging (a tap on a phone) also seeks to it), "Textes" (texts), "Médias" (media; photos and videos, with their thumbnail; a
   video also carries a small camera icon). "Vitesse" (speed) lane under "Plans": one block per section, from its entry to
-  its exit in film time, label "×2" (solid frame if sped up, dotted if slowed down); "Vitesse" in the bar
+  its exit in film time, label "×2" (solid frame if sped up, dotted if slowed down); the « + » of its header
   (`addSpeed`: ×2 over 1 km from the marker, shortened or moved forward to stay on the track and outside the other
   sections; message if the marker is already in a section or if there are not 50 m free). "Musique" (music) lane under
   "Médias": one block per music track, file name, note icon and waveform (`waveformPath`, the part of the file
-  played, as a symmetric band, scaled to the loudest passage); when empty, it says where to drop a file.
+  played, as a symmetric band, scaled to the loudest passage).
+  **Adding**: the header of each lane that takes an item has a « + » (`LaneAdd`) that adds it at the playhead: « Plans » opens
+  the stops menu (`holdItems`: a stop at the marker, S, then **every** highlight of `stopCandidates`; the ones that already have a
+  stop are ticked and picking one selects that stop and moves the playhead to it, the others get a stop named after them),
+  « Vitesse » a speed section, « Textes » a text (T), « Médias » the file picker, « Musique » the music picker. The phone's
+  « Ajouter » menu lists the same items. **Empty lanes** (`emptyLanes`: no speed section nor speed key, no text nor card, no media,
+  no music): a strip of `EMPTY_HEIGHT` with the name and the « + » on the computer (no fold nor lock button, no keys group
+  under « Vitesse » until it holds something), not drawn on a portrait phone.
 - **Gestures** (`dragFilm`, pure): dragging a stop moves it along the track — the start of its hold follows the pointer,
   position found by bisection on the clock (`stopPositionAt`, 32 steps); its right edge lengthens it (proportionally to the
   `keepDuration` cap); a text or a photo moves or stretches by either edge; the inner edge of the opening changes its duration; the inner edge of the
@@ -2175,11 +2192,12 @@ The interface and the texts drawn into the films and posters exist in **French**
   chosen carries « Appliquer », the others only their facts): the format as a small outline of its proportions (« 9:16 Reels » /
   « 16:9 YouTube »), the name, the total length as a big figure, then three or four facts with an icon (the camera preset, the
   title and closing card, the stops and slow motion, the counters and cards; `autoFilmFacts`, strings `film.auto.fact.*`), each
-  card with an accent of the palette (`ACCENTS`). All three use the « Cinéma » camera preset. Above them one sentence: everything stays editable and « Annuler » reverts.
-  The cards stack under 760 px. « Reel 30 s » (9:16, 30 s, no stops, closing card of three figures, style `app`),
-  « Résumé 1 min » (16:9, 60 s, stops, counters, day or stage cards, `broadcast`) and « Souvenir 3 min » (16:9, 3 min,
-  slow motion on the climbs, counters, `app`: a style with a panel stays readable on the forest and the snow, unlike the styles drawn
-  straight on the image). **No music.** A gabarit is a row of `AUTO_FILM_TEMPLATES`
+  card with an accent of the palette (`ACCENTS`). All three start from the same look: the « Cinéma » camera preset and the
+  « Cinéma » overlay style (its figures sit on black bars, so they stay readable on the forest and the snow, unlike the styles
+  drawn straight on the image). Above them one sentence: everything stays editable and « Annuler » reverts.
+  The cards stack under 760 px. « Reel 30 s » (9:16, 30 s, no stops, closing card of three figures),
+  « Résumé 1 min » (16:9, 60 s, stops, counters, day or stage cards) and « Souvenir 3 min » (16:9, 3 min,
+  slow motion on the climbs, counters). **No music.** A gabarit is a row of `AUTO_FILM_TEMPLATES`
   (`src/film/autoFilm.ts`): total length and the length of the opening and closing shots (`settings.flyoverDurationS` = total −
   the two shots, so the length announced is the film's, before the nights and the passages between stages), the platform preset of
   « Vidéo » › « Format » (`withPlatformPreset`: `vertical` or `youtube`), a camera preset (`CAMERA_PRESETS` id), the overlay style,
@@ -3002,8 +3020,8 @@ exports) gets it from the terrain source of the settings.
   (container and codec as strings) so that `png/png` fits. **ProRes** is not offered: WebCodecs cannot encode it (mediabunny only
   muxes it), and the desktop route would be the system's ffmpeg (`prores_ks`, `.mov`) with a new choice of the native encoder.
 - Render scale `exportRenderScale` = short side / 1080 (1 outside export): track width and label size, in
-  pixels, are multiplied so that a 4K film looks like the 1080p one. Markers do not need it (size proportional to the
-  camera distance, hence a constant screen fraction).
+  pixels, are multiplied so that a 4K film looks like the 1080p one. Markers do not need it (their size is a fraction of the
+  flight camera's distance, hence a constant fraction of the frame).
 - Still image ("Image fixe" button in the « Affiche » mode, `startStill` in `src/poster/export.ts`, type from `settings.poster.type`): same request with `still { progress, type }`, the current playback
   progress, at the video's format × resolution size. Same path as the film (size, pixel ratio 1,
   render scale, `renderSettledFrame`, `composeFrame` with the overlay if it is shown), a single frame rendered at the
@@ -3087,7 +3105,10 @@ exports) gets it from the terrain source of the settings.
   the frames whose film time is inside, never fewer than two), exported without encoding (the tab flag « Export de test
   sans encodage » set for the run) with `ExportRequest.probe`: no tile fetched ahead, no soundtrack, nothing in the render
   history. The ms per image count the frames after the first. The reference is run twice (the first only warms the tiles and
-  the shaders up); a layer that is off already is not measured. The run holds the batch store `running` (no autosave, no edit),
+  the shaders up) and once more at the end (`REFERENCE_END_LABEL`): a gap between the two means the device slowed down during the
+  run (heat, on a phone), so its rows do not compare. The « Export » section tells « Nuages de l'export » (the resolution of the
+  cloud pass, lowered when the preview had to be lightened, `exportCloudScale`): two reports compare only when it is the same.
+  A layer that is off already is not measured. The run holds the batch store `running` (no autosave, no edit),
   suspends the undo history, and puts the same `settings` object, the flag and the export store back whatever happens (a
   cancel keeps what was measured, a failure throws after that). Nothing runs at start-up and nothing changes on a computer
   unless the button is pressed.
@@ -3609,6 +3630,7 @@ default 'aucune'; checked by `isValidMarkerValue`; in « Marqueur » › « Plus
   overrides included); a style whose text is dark gets a white figure. `u` = a tenth of the canvas height. The canvas
   (512 × 128) is redrawn only when the text or `valueLookKey` (style, overrides, fonts loaded) changes.
 - **Size on a small view**: `markerRadius` takes the larger of `MARKER_SCREEN_FACTOR` (0.007 of the view's height) and `MARKER_MIN_RADIUS_PX` (5 px) over the view's height, which FlyoverRig sets each frame (`setMarkerViewportHeight`): on a phone's preview the ball, and with it the figure above (sized in balls), keeps a readable size. A view of 714 px or more is unchanged, an export too.
+- **A real size** (`setMarkerReferenceDistance`, set by FlyoverRig each frame from `flightDistanceM(path, camera)`, the distance the flight camera stands from its aim before the ground lifts it): the ball has the radius the formula above gives at that distance, one world size for the whole film, so the perspective does the rest. In the flight the camera stays about that far and the marker keeps about its apparent size (on the sample film, 4.4 to 5.7 px of radius against 5.4 px before, within ±5 % over a steady stretch; it shrinks a little where the ground lifts the camera); in the opening and closing shots, the stops, the high views of the nights and the keyframes, where the camera comes closer or goes away, it grows or shrinks with the relief like a real object instead of swelling against it (the 3D models, the badges, the stick, the ghost racers and the value label derive from the same radius). It is never under `MARKER_MIN_REAL_RADIUS_PX` (1.5 px) on the screen, so it stays a dot at the top of an overview. The reference follows the device by the same formula: a phone's marker is bigger in the world than a computer's, as it is on screen.
 - **Place**: `scene/MarkerValueLabel.tsx` (a `Sprite`, after `FlyoverRig`) stands above `leadMarkerAnchor` (point, ball radius and
   height of the drawing in ball diameters, set by FlyoverRig: 1 for a ball, 2.6 on a stick, `MODEL_BALLS` for a 3D model),
   pulled towards the camera like the marker (`pullMarkerForward`). Colours divided by the exposure, like the marker's.
@@ -4135,7 +4157,7 @@ differs goes through `src/platform/`.
   `saveFile(blob, { fileName, filters? })` and `saveUrl(objectUrl, …)` → `{ saved: true, fileName } | { saved: false }`, `saveDocument` (save in place, see "Project (phase 4)"),
   `createWritableFile({ fileName, filters? })` → `WritableFile { fileName, path?, write(data, position), close, discard }` or null
   (dialog closed; `discard` stops and deletes the partial file, no effect after `close`, can be called several times),
-  `droppedFiles(dataTransfer)`. Filters are those of native dialogs (`{ name, extensions }` without a dot); the website
+  `droppedFiles(dataTransfer)`, `windowControls?` (desktop except macOS: the buttons of the window, see « Title bar »). Filters are those of native dialogs (`{ name, extensions }` without a dot); the website
   derives the `accept` attribute from them.
 - **Selection** (`index.ts`): `getPlatform()` (singleton) calls `selectPlatform(globalThis)`: desktop if Tauri has set
   `isTauri` / `__TAURI_INTERNALS__` on the window, website otherwise. `videoEncoder`: `'webcodecs'` if `VideoEncoder` exists, otherwise `'native'` on the desktop (ffmpeg, see
@@ -4178,7 +4200,7 @@ differs goes through `src/platform/`.
   a command missing from this list or from `capabilities/default.json` is refused. `main` window
   1440 × 900 (at least 1024 × 700). `dragDropEnabled: false`: otherwise Tauri intercepts drops and the HTML no longer receives
   `drop`. Permissions (`capabilities/default.json`): `core:window:allow-destroy` and `dialog:allow-message` (closing, see
-  "Mes projets"), `dialog:allow-open`, `dialog:allow-save`, `fs:allow-read-file`,
+  "Mes projets"), `core:window:allow-minimize`, `allow-toggle-maximize` and `allow-start-dragging` (title bar, below), `dialog:allow-open`, `dialog:allow-save`, `fs:allow-read-file`,
   `fs:allow-write-file`, `fs:allow-open`, `fs:allow-seek`, `fs:allow-write`, `fs:allow-remove` (film streamed
   to disk), `fs:allow-mkdir`, `fs:allow-read-dir`, `fs:allow-exists`, `fs:allow-rename` (offline packs, "Mes projets": a project is written to a `.tmp` file, then renamed), `allow-video-available`, `allow-video-sound`, `allow-video-open`,
   `allow-video-frame`, `allow-video-finish`, `allow-video-cancel` (native encoder), `allow-cli-render`, `allow-cli-exit`
@@ -4191,10 +4213,21 @@ differs goes through `src/platform/`.
   plus `https://www.strava.com` (`connect-src` only, Strava import), `ipc:` and `blob:`; `style-src 'unsafe-inline'` with `dangerousDisableAssetCspModification:
   ["style-src"]` (Tauri would otherwise add a nonce that cancels `unsafe-inline`). **Any new source must also be added
   to the CSP in `tauri.conf.json`.**
-- **Updates** (« Réglages » › « Mises à jour », desktop only, on demand only: no check at start-up, no polling, no silent install).
+- **Title bar** (desktop only): the `main` window has no system title bar (`decorations: false` in `tauri.conf.json`; Tauri's `shadow` is on by
+  default, so the window keeps its shadow on Windows) and the top bar takes its place. `Platform.windowControls` (`WindowControls`: `minimize`,
+  `toggleMaximize`, `close`, `watchMaximized`) is set in `desktop.ts` except on macOS, so the website never shows the buttons. `close` calls the
+  window's `close()`, not `destroy()`: it raises the same close request as Alt+F4, which `guardClose` answers (last write, question about unsaved
+  changes or an export under way), so the button cannot skip it. The maximise icon follows `isMaximized`, read at start and at each `onResized`.
+  The three permissions above are the only additions: `is-maximized`, `internal-toggle-maximize` (the double click on a drag region) and the
+  events are in `core:default`. **macOS** keeps its traffic lights: `src-tauri/tauri.macos.conf.json` replaces the `windows` list (Tauri merges a
+  per-system file into `tauri.conf.json` as a JSON merge patch, so an array is replaced whole, hence the repeated window) with
+  `titleBarStyle: "Overlay"` and `hiddenTitle: true`, and the top bar leaves 5 rem on its left (`pl-20`) for them. The « File de rendus » window
+  (`renderWindow.ts`) is created at run time and keeps its native bar. Not possible without the native bar: the Windows 11 snap layouts shown on
+  the maximise button (Win+Z and dragging to a screen edge still work).
+- **Updates** (OpenFlyover menu › « À propos et mises à jour », desktop only, on demand only: no check at start-up, no polling, no silent install).
   Contract: two optional `Platform` methods, `checkForUpdate()` → `UpdateCheck` (never throws: `current`, `available { update:
   { version, date, notes } }`, `offline`, `unavailable`, `error { message }`) and `installUpdate(onProgress?)` (download, signature check,
-  install, then `relaunch`); absent on the website, where `PreferencesPanel` and the « Sources et licences » line do not show them. `desktop.ts` imports
+  install, then `relaunch`); absent on the website, where `AboutDialog` does not show the section. `desktop.ts` imports
   `@tauri-apps/plugin-updater` and `@tauri-apps/plugin-process` dynamically (the web bundle never loads them) and keeps the `Update` of the last check
   for `installUpdate`. The pure part (`updater.ts`, tested with the plugins mocked in `updater.test.ts`) maps results and failures to the state of
   `UpdatesSection.tsx`: a rejection `plugin updater not found` (Tauri's answer for a plugin that is not registered) is `unavailable`, a network failure
@@ -4294,7 +4327,7 @@ JavaScript.
   (`nativeEncoder.test.ts`); GPU probe without a GPU (both fail, `libx264` kept). To be checked on a Linux desktop
   (`cargo test`, real export, NVENC / VAAPI): the manual checks of `docs/handbook/index.html`.
 - **Machine load** (`src-tauri/src/system.rs`): read-only command `system_stats` → used / total RAM and CPU %, for the
-  status bar's performance readout (`sysinfo` 0.36, the last release for `rust-version` 1.77, `system` feature only;
+  performance readout behind the status bar's ⓘ button (`sysinfo` 0.36, the last release for `rust-version` 1.77, `system` feature only;
   permission `allow-system-stats` in `capabilities/default.json`).
 
 ## Offline packs (phase 6)

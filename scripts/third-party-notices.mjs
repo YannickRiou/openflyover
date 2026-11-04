@@ -53,6 +53,22 @@ const ASSETS = [
     text: () => readText('public/fonts/OFL-Fraunces.txt'),
   },
   {
+    name: 'Barlow Semi Condensed (fonts, public/fonts)',
+    licence: 'OFL-1.1',
+    note:
+      'https://github.com/jpt/barlow, through Fontsource 5.3.0 (`@fontsource/barlow-semi-condensed`), weights 600 and 700, ' +
+      '`latin` and `latin-ext`, copied without modification. Full text: `public/fonts/OFL-Barlow.txt`.',
+    text: () => readText('public/fonts/OFL-Barlow.txt'),
+  },
+  {
+    name: 'Manrope (fonts, public/fonts)',
+    licence: 'OFL-1.1',
+    note:
+      'https://github.com/sharanda/manrope, through Fontsource 5.2.8 (`@fontsource/manrope`), weights 600 and 700, ' +
+      '`latin` and `latin-ext`, copied without modification. Full text: `public/fonts/OFL-Manrope.txt`.',
+    text: () => readText('public/fonts/OFL-Manrope.txt'),
+  },
+  {
     name: 'IBM Plex Sans and IBM Plex Sans Condensed (fonts, public/fonts)',
     licence: 'OFL-1.1',
     note: 'https://github.com/IBM/plex, copied without modification.',

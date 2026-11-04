@@ -38,7 +38,7 @@ The images and licence pages are build inputs committed in `src-tauri/installer/
 1. Put the same number in the five places that carry it, for example `2.2.0`: `package.json` (`version`), `package-lock.json`
    (the two `version` fields at the top), `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and the `openflyover` entry of
    `src-tauri/Cargo.lock` (`cargo test --locked` fails if the lock file disagrees). The one in `tauri.conf.json` appears in
-   the file names and the update check; the one in `package.json` is shown by the diagnostic report and « Réglages › Mises à jour ».
+   the file names and the update check; the one in `package.json` is shown by the diagnostic report and « À propos et mises à jour » (the OpenFlyover menu).
 2. Rename the `## Unreleased` heading of `CHANGELOG.md` to the version and month, and add the « Nouveautés » entry of the
    version (`src/ui/whatsNew.ts` and `news.vNN.*` in each `src/i18n/<language>/news.ts`): the handbook's « Release procedure » has the details.
 3. Only if a dependency changed: regenerate the third-party licenses with `npm run notices` (after `npm ci`; a few seconds: the licences already in
@@ -117,7 +117,7 @@ Gatekeeper warning.
 
 ## Automatic updates: maintainer setup
 
-The desktop application has a **« Rechercher une mise à jour »** button (« Réglages » tab, « Mises à jour » section). It
+The desktop application has a **« Rechercher une mise à jour »** button (the OpenFlyover menu on the logo, « À propos et mises à jour »). It
 reads the release feed on GitHub **only when pressed** (no check at start-up, nothing in the background, nothing
 installed silently), shows the new version and its notes, then « Installer et redémarrer » downloads it, checks its
 signature, installs it and restarts the app (it asks first, and is refused during an export). The website never shows it.
@@ -181,8 +181,8 @@ The release must be **published**: the endpoint is `releases/latest`, which igno
 
    Install it (the `.exe`, the `.dmg`, or run the AppImage), then raise the version in the three files, tag and push to
    publish a newer release from GitHub.
-2. Start the old build, open « Réglages », press « Rechercher une mise à jour »: the new version and its notes show up;
-   « Installer et redémarrer » asks, installs and restarts on the new version (check « Version installée »).
+2. Start the old build, open the OpenFlyover menu › « À propos et mises à jour », press « Rechercher une mise à jour »: the new version and its notes show up;
+   « Installer et redémarrer » asks, installs and restarts on the new version (check the version in the same window).
 
 ### Common errors
 
@@ -204,5 +204,5 @@ the same warnings as for a first install (SmartScreen on Windows, Gatekeeper on 
 The application contacts `github.com` (the release feed and, if you install, the update package) **only when you press
 « Rechercher une mise à jour »**, and sends nothing but the usual request (no account, no identifier, no track or
 project). The request is made by the Rust side of the application (updater plugin), so the web page's content security
-policy needs no extra host. The same sentence is in « Sources et licences » of the application and in
+policy needs no extra host. The same sentence is in « À propos et mises à jour » of the application and in
 [`sources.md`](sources.md).

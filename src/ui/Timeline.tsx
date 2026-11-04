@@ -1,8 +1,8 @@
 /**
  * Film timeline under the 3D view, in film time (opening and closing included): bar, ruler, and the lanes « Plans »,
- * « Vitesse », a lane per keyed parameter, « Marqueur » (marker keys), « Arrêts », « Textes », « Médias », « Musique »
- * (ARCHITECTURE.md "Film and timeline"). The inspector of the selected block (`filmSelection` in the store) is in the
- * right dock (`FilmInspector`).
+ * « Vitesse », a lane per keyed parameter, « Marqueur » (marker keys), « Textes », « Médias », « Musique »
+ * (the stops are blocks of « Plans », or of « Arrêts » in Débutant, which has no « Plans »; ARCHITECTURE.md "Film and
+ * timeline"). The inspector of the selected block (`filmSelection` in the store) is in the right dock (`FilmInspector`).
  *
  * « Textes » also carries the opening title and the closing card while they are on (`film/cards.ts`: blocks of the
  * overlay settings, placed freely: their edges and body set `title.window` / `end.window`; their settings are in the
@@ -128,7 +128,7 @@ const PILL_LIGHT = 'rounded-full [--button-bg-hover:var(--color-glacier)] [--but
 const BAR_PLAY = '[--button-bg-hover:rgb(255_255_255/0.22)] [--button-bg-pressed:rgb(255_255_255/0.3)] [--button-bg:rgb(255_255_255/0.12)] [--button-fg:var(--color-white)]'
 /** The checkbox of the dark options panel: the roles it reads, turned to their on-chrome values. */
 const CHECKBOX_ON_DARK =
-  'whitespace-nowrap [--accent:var(--accent-on-dark)] [--focus-ring:var(--focus-ring-on-dark)] [--line-strong:var(--color-glacier)] [--surface-control:transparent] [--text-1:var(--color-white)]'
+  '[--accent:var(--accent-on-dark)] [--focus-ring:var(--focus-ring-on-dark)] [--line-strong:var(--color-glacier)] [--surface-control:transparent] [--text-1:var(--color-white)]'
 
 const HEAD = 'flex px-2 text-caption font-semibold text-glacier'
 const LANE = 'relative border-b border-white/5'
@@ -136,44 +136,58 @@ const LANE = 'relative border-b border-white/5'
 const KEYED_HEIGHT = 'h-11.5 touch:h-13.5'
 /** A folded lane: a thin strip, its name and the button that unfolds it. */
 const FOLDED_HEIGHT = 'h-4'
+/** A lane with nothing on it: a thin strip too, its name and its « + » (taller on a touch screen, for the target). */
+const EMPTY_HEIGHT = 'h-4 touch:h-8'
 /** The fold and lock buttons of a lane's head. */
 const LANE_TOOL = 'inline-flex size-5 items-center justify-center rounded-sm text-glacier hover:bg-white/15 aria-pressed:bg-white/20 aria-pressed:text-white focus-visible:outline-2 focus-visible:outline-white touch:size-8'
+/** The « + » of a lane's head: a small button on the chrome (`btn-chrome`), the size of the fold and lock buttons. */
+const LANE_ADD = 'btn-chrome size-5! min-h-0! min-w-0! flex-none p-0! touch:size-8!'
 /** A tick of the ruler: its time, quiet, and a short mark at the bottom (no line across the ruler). */
 const TICK = "pointer-events-none absolute top-0 h-full text-[11px] tabular-nums whitespace-nowrap text-glacier/80 after:absolute after:bottom-0 after:h-1.5 after:w-px after:bg-white/30 after:content-['']"
 
-/** A block of a lane: the common part, then its kind (`BLOCK_KINDS`). */
-const BLOCK = 'absolute inset-y-[3px] box-border flex min-w-1.5 items-center overflow-hidden rounded-md px-1.5 text-caption font-semibold aria-pressed:z-1 aria-pressed:ring-2 aria-pressed:ring-white data-[lifted]:z-2 data-[lifted]:shadow-pop'
+/**
+ * A block of a lane is a clip, as in a video editor: it fills the lane (2 px above and below), a flat fill (`--clip-bg`, set by
+ * its kind), its name from the left with a fade at the end where it does not fit; the kind sets the fill, a 3 px edge on the
+ * left in the colour of its type, and the cursor. Selected: a ring in the accent, and the handles of its two ends (`GRIP`).
+ */
+const BLOCK =
+  "absolute inset-y-0.5 box-border flex min-w-1.5 items-center overflow-hidden rounded-[4px] bg-(--clip-bg) px-1.5 text-caption font-semibold after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-3 after:bg-linear-to-l after:from-(--clip-bg) after:to-transparent after:content-[''] aria-pressed:z-1 aria-pressed:ring-2 aria-pressed:ring-accent-light data-[lifted]:z-2 data-[lifted]:shadow-pop"
+const RAISED = '[--clip-bg:var(--color-chrome-raised)]'
+/** The frame of a stop made by itself, or of a slower portion: dashed, the edge on the left stays plain. */
+const DASHED = 'border-y border-r border-dashed [border-left-style:solid]'
 const BLOCK_KINDS = {
   /** shots: glacier; « aucune » is a stub that can still be selected */
-  shot: 'cursor-pointer bg-glacier text-ink',
-  shotNone: 'min-w-2.5! cursor-pointer border border-dashed border-glacier bg-transparent text-ink',
-  stop: 'cursor-grab bg-accent-light text-ink',
-  /** generated stops: dashed until they are edited */
-  stopAuto: 'cursor-grab border border-dashed border-ink bg-accent-light text-ink',
+  shot: 'cursor-pointer text-ink [--clip-bg:var(--color-glacier)]',
+  shotNone: 'min-w-2.5! cursor-pointer border border-dashed border-glacier text-ink [--clip-bg:transparent]',
+  /** stops: the orange of the beacon; generated ones are dashed until they are edited */
+  stop: `cursor-grab border-l-[3px] border-l-accent-light text-white ${RAISED}`,
+  stopAuto: `cursor-grab border-l-[3px] border-accent-light text-white ${RAISED} ${DASHED}`,
   /** nights: the moss of a night junction; no grip (the track places them, « Jours et nuits » sets how long) */
-  night: 'cursor-pointer gap-1 border border-glacier bg-moss/60 text-white',
-  /** speed portions: glacier frame, full for a faster portion, dashed for a slower one */
-  speed: 'cursor-grab justify-center border border-glacier bg-glacier/20 text-white',
-  slow: 'cursor-grab justify-center border border-dashed border-glacier bg-glacier/20 text-white',
-  text: 'cursor-grab bg-moss text-white',
-  /** photos: paper block, thumbnail at its start */
-  media: 'cursor-grab gap-1 bg-card pl-0.5 text-ink',
-  /** music: moss block, the waveform in glacier behind the icon and the file name */
-  music: 'cursor-grab gap-1 bg-moss/60 text-white',
-  /** opening title and closing card: the moss of a text, framed (its inner edge stretches it, its body drags its shot's edge) */
-  card: 'cursor-pointer gap-1 border border-glacier bg-moss/60 text-white',
+  night: 'cursor-pointer gap-1 border border-glacier text-white [--clip-bg:var(--color-moss)]',
+  /** speed portions: amber edge, dashed for a slower portion */
+  speed: `cursor-grab border-l-[3px] border-l-amber-light text-white ${RAISED}`,
+  slow: `cursor-grab border-l-[3px] border-amber-light text-white ${RAISED} ${DASHED}`,
+  /** texts: moss */
+  text: `cursor-grab border-l-[3px] border-l-moss-light text-white ${RAISED}`,
+  /** photos: glacier edge, thumbnail at its start */
+  media: `cursor-grab gap-1 border-l-[3px] border-l-glacier text-white ${RAISED}`,
+  /** music: moss edge, the waveform in glacier behind the icon and the file name */
+  music: `cursor-grab gap-1 border-l-[3px] border-l-moss-light text-white ${RAISED}`,
+  /** opening title and closing card: the moss of a text (its inner edge stretches it, its body drags its shot's edge) */
+  card: `cursor-pointer gap-1 border-l-[3px] border-l-moss-light text-white ${RAISED}`,
   /** « Étapes »: a band per stage; one lifted to be reordered follows the pointer over the others */
-  stage: 'cursor-grab bg-white/10 text-white data-[lifted]:cursor-grabbing data-[lifted]:bg-white/30',
+  stage: `cursor-grab text-white ${RAISED} data-[lifted]:cursor-grabbing data-[lifted]:[--clip-bg:var(--color-ink-soft)]`,
 }
 /** The junction between two stages: a cut is a thin white mark, a fade the colour it fades to, a night the moss. */
 const JUNCTION_KINDS_LOOK: Record<string, string> = {
-  coupe: 'cursor-grab border border-white bg-white text-transparent',
-  'fondu-noir': 'cursor-grab border border-glacier bg-chrome text-white',
-  'fondu-blanc': 'cursor-grab border border-glacier bg-white text-ink',
-  nuit: 'cursor-grab border border-glacier bg-moss/60 text-white',
+  coupe: 'cursor-grab border border-white text-transparent [--clip-bg:var(--color-white)]',
+  'fondu-noir': 'cursor-grab border border-glacier text-white [--clip-bg:var(--color-chrome)]',
+  'fondu-blanc': 'cursor-grab border border-glacier text-ink [--clip-bg:var(--color-white)]',
+  nuit: 'cursor-grab border border-glacier text-white [--clip-bg:var(--color-moss)]',
 }
-const GRIP = 'absolute inset-y-0 z-1 w-2.5 cursor-ew-resize hover:bg-chrome/30 touch:w-4'
-const BLOCK_LABEL = 'pointer-events-none relative min-w-0 truncate'
+const GRIP =
+  "absolute inset-y-0 z-1 w-2.5 cursor-ew-resize hover:bg-white/10 touch:w-4 after:absolute after:top-1/2 after:left-1/2 after:h-3 after:w-0.5 after:-translate-1/2 after:rounded-full after:bg-white after:opacity-0 after:content-[''] in-aria-pressed:after:opacity-100"
+const BLOCK_LABEL = 'pointer-events-none relative min-w-0 overflow-hidden whitespace-nowrap'
 /** Keys: a diamond on its lane (a dot for the marker keys, in the colour of the marker from there on); a larger target on touch. */
 const KEY =
   "absolute top-1/2 z-1 -mt-1.5 -ml-1.5 size-2.5 cursor-grab border before:absolute before:-inset-2 before:content-[''] touch:-mt-[9px] touch:-ml-[9px] touch:size-4"
@@ -517,6 +531,18 @@ function BarButton({ icon, name, tip = name, onClick, disabled, on, className }:
       </Button>
     </Tip>
   )
+}
+
+/** The « + » of a lane's head: adds that kind of item at the playhead, or opens `items` where there is a choice. */
+function LaneAdd({ name, tip = name, onAdd, items, disabled }: { name: string; tip?: string; onAdd?(): void; items?: readonly MenuItem[]; disabled?: boolean }) {
+  const button = (
+    <Tip text={tip} side="top">
+      <Button variant="icon" className={LANE_ADD} onClick={onAdd} disabled={disabled} aria-label={name}>
+        <Icon name="plus" size={14} />
+      </Button>
+    </Tip>
+  )
+  return items ? <Menu label={name} placement="bottom start" items={items} trigger={button} /> : button
 }
 
 /**
@@ -894,7 +920,6 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const pad = centred ? width / 2 : PAD_PX
   const xOf = (t: number) => pad + t * pxPerS
   const contentWidth = timelineContentWidth(width, total, pxPerS, pad)
-  const freeCandidates = candidates.filter((c) => !stopAt(shownClock.stops, c.atM))
   const places: RulerPlace[] = candidates.map((c) => ({ timeS: shownClock.timeAtProgress(c.atM / lengthM), atM: c.atM, label: c.label }))
   // the places have a row of their own under the times of the ruler, so that their names never cover them
   const rulerHeight = places.length > 0 ? (centred ? 'h-10' : 'h-9 touch:h-11') : centred ? 'h-6' : 'h-5 touch:h-7'
@@ -1541,22 +1566,18 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   // a lane folded to a strip or locked (per device, `laneState.ts`): its blocks are hidden or untouchable (`inert`: no focus, no pointer, so a press falls through to the scrub); not on the phone's centred timeline
   const isFolded = (id: string) => !centred && laneState.folded.includes(id)
   const isLocked = (id: string) => !centred && laneState.locked.includes(id)
-  /** a phone upright: a lane with nothing on it is not drawn, « Ajouter » and the row under the lanes fill it */
-  const emptyLanes = new Set(
-    centred
-      ? [
-          ...(shownClock.speeds.length === 0 && keysOfParam(shownClock.paramKeys, 'speed').length === 0 ? ['param:speed'] : []),
-          ...(shownClock.stops.length === 0 && shownClock.nights.length === 0 ? ['holds'] : []),
-          ...(shownCards(shownOverlay).length + stageCardsOf(shownClock, shownFilm, shownOverlay).length + dayCardsOf(shownClock, shownFilm).length + shownFilm.texts.length === 0
-            ? ['texts']
-            : []),
-          ...(shownFilm.media.length === 0 ? ['media'] : []),
-          ...(shownFilm.audio.length === 0 ? ['music'] : []),
-        ]
-      : [],
-  )
+  /** a lane with nothing on it: not drawn on a phone upright (« Ajouter » and the row under the lanes fill it), a thin strip with its « + » elsewhere */
+  const emptyLanes = new Set([
+    ...(shownClock.speeds.length === 0 && keysOfParam(shownClock.paramKeys, 'speed').length === 0 ? ['param:speed'] : []),
+    ...(shownClock.stops.length === 0 && shownClock.nights.length === 0 ? ['holds'] : []),
+    ...(shownCards(shownOverlay).length + stageCardsOf(shownClock, shownFilm, shownOverlay).length + dayCardsOf(shownClock, shownFilm).length + shownFilm.texts.length === 0
+      ? ['texts']
+      : []),
+    ...(shownFilm.media.length === 0 ? ['media'] : []),
+    ...(shownFilm.audio.length === 0 ? ['music'] : []),
+  ])
   const laneProps = (id: string, keyed = false) => ({
-    className: `${LANE} ${centred ? 'h-9' : isFolded(id) ? FOLDED_HEIGHT : keyed ? KEYED_HEIGHT : 'h-7 touch:h-10'}${isFolded(id) ? ' [&>*]:invisible' : ''}${isLocked(id) ? ' opacity-60' : ''}${emptyLanes.has(id) ? ' hidden' : ''}`,
+    className: `${LANE} ${centred ? 'h-9' : isFolded(id) ? FOLDED_HEIGHT : emptyLanes.has(id) ? EMPTY_HEIGHT : keyed ? KEYED_HEIGHT : 'h-7 touch:h-10'}${isFolded(id) || (!centred && emptyLanes.has(id)) ? ' [&>*]:invisible' : ''}${isLocked(id) ? ' opacity-60' : ''}${centred && emptyLanes.has(id) ? ' hidden' : ''}`,
     inert: isFolded(id) || isLocked(id),
     'data-lane-id': id,
   })
@@ -1628,7 +1649,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       : []),
     ...paramLanes(shownClock).map((param) => ({ id: `param:${param}`, name: PARAM_LANE_LABELS[param] })),
     ...(shownClock.markerKeys.length > 0 ? [{ id: 'marker', name: t('timeline.lane.marker') }] : []),
-    { id: 'holds', name: t('timeline.lane.holds') },
+    // with « Plans »: the stops are on its flight bar; without it (Débutant), they have their own lane
+    ...(plans ? [] : [{ id: 'holds', name: t('timeline.lane.holds') }]),
     { id: 'texts', name: t('timeline.lane.texts') },
     { id: 'media', name: t('timeline.lane.media') },
     { id: 'music', name: t('timeline.lane.music') },
@@ -1680,6 +1702,25 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
       }
       return blocks
     })
+  /** the nights of a multi-day track (no grip: the track places them, « Jours et nuits » sets how long) and the stops of the film */
+  const holdBlocks = () => [
+    ...shownClock.nights.map((n, k) => {
+      const label = t('timeline.night.label', { n: k + 1 })
+      return block(nightItemId(n), n.startS, n.endS, label, t('timeline.night.description', { label }), BLOCK_KINDS.night, [], undefined, 'moon')
+    }),
+    ...shownClock.stops.map((s) => {
+      const label = s.label || t('film.snap.hold')
+      return block(
+        s.id,
+        s.startS,
+        s.endS,
+        label,
+        t('timeline.hold.description', { camera: STOP_CAMERA_LABELS[s.camera].toLowerCase(), label, auto: shownFilm.autoStops ? t('timeline.hold.auto') : '' }),
+        shownFilm.autoStops ? BLOCK_KINDS.stopAuto : BLOCK_KINDS.stop,
+        ['move', 'end'],
+      )
+    }),
+  ]
   /** a parameter key ◆ on its lane: click goes to it, drag moves it, Delete removes it */
   const paramKeyDot = (k: FilmParamKey & { timeS: number }) => {
     const spec = PARAM_SPECS[k.param]
@@ -1703,21 +1744,45 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     )
   }
   const mediaLabel = (m: FilmMedia) => m.caption?.trim() || pictures[m.src]?.name || (m.kind === 'video' ? t('film.snap.video') : t('film.snap.photo'))
-  /** « Ajouter » of a phone upright: what the bar of a wider timeline offers as buttons, named */
+  /** what the « + » of a lane header adds at the playhead, and what « Ajouter » of a phone upright lists */
   const pickMedia = () => void pickFiles({ filters: MEDIA_FILTERS, multiple: true }).then((files) => (files.length > 0 ? addMediaFiles(files) : undefined))
+  const addSpeedHere = () => addSpeedAt(Math.round(shownPlayback().progress * lengthM))
+  const addTextHere = () => editFilm((f) => addText(f, playheadNow()))
+  /** a stop at the marker, then every highlight: the ticked ones already have a stop, which is selected (and the playhead goes to it) */
+  const holdItems: MenuItem[] = [
+    { id: 'hold', label: t('timeline.bar.addHold'), icon: <Icon name="map-pin" size={16} />, selected: false, onSelect: () => addStopAt(Math.round(shownPlayback().progress * lengthM)) },
+    ...candidates.map((c, i) => {
+      const stop = stopAt(shownClock.stops, c.atM)
+      return {
+        id: `hold-${i}`,
+        label: `${t('timeline.bar.holdAt', { label: c.label })} · ${formatDistance(c.atM)}`,
+        icon: <Icon name="map-pin" size={16} />,
+        selected: stop !== undefined,
+        onSelect: () => {
+          if (!stop) return addStopAt(c.atM, { label: c.label, source: c.source })
+          setSelected(stop.id)
+          seek(stop.startS)
+        },
+      }
+    }),
+  ]
   const addItems: MenuItem[] = [
-    { id: 'hold', label: t('timeline.bar.addHold'), icon: <Icon name="map-pin" size={16} />, onSelect: () => addStopAt(Math.round(shownPlayback().progress * lengthM)) },
-    ...freeCandidates.map((c, i) => ({
-      id: `hold-${i}`,
-      label: `${t('timeline.bar.holdAt', { label: c.label })} · ${formatDistance(c.atM)}`,
-      icon: <Icon name="map-pin" size={16} />,
-      onSelect: () => addStopAt(c.atM, { label: c.label, source: c.source }),
-    })),
-    { id: 'speed', label: t('timeline.bar.addSpeed'), icon: <Icon name="gauge" size={16} />, onSelect: () => addSpeedAt(Math.round(shownPlayback().progress * lengthM)) },
-    { id: 'text', label: t('timeline.bar.addText'), icon: <Icon name="type" size={16} />, onSelect: () => editFilm((f) => addText(f, playheadNow())) },
+    ...holdItems,
+    { id: 'speed', label: t('timeline.bar.addSpeed'), icon: <Icon name="gauge" size={16} />, onSelect: addSpeedHere },
+    { id: 'text', label: t('timeline.bar.addText'), icon: <Icon name="type" size={16} />, onSelect: addTextHere },
     { id: 'media', label: reading ? t('timeline.bar.readingFiles') : t('timeline.bar.addMedia'), icon: <Icon name="image" size={16} />, disabled: reading, onSelect: pickMedia },
     { id: 'music', label: t('timeline.options.addMusic'), icon: <Icon name="music" size={16} />, disabled: reading, onSelect: pickMusic },
-  ]
+  ].map((item) => ({ selected: false, ...item }))
+  /** the « + » of the lane headers; the stops lane opens the stops menu (« Arrêts » is its lane in Débutant, which has no « Plans ») */
+  const holdAdd = { name: t('timeline.bar.addHold'), tip: withShortcut(t('timeline.bar.addHold'), 'add-stop'), items: holdItems }
+  const laneAdds: Record<string, Parameters<typeof LaneAdd>[0]> = {
+    shots: holdAdd,
+    holds: holdAdd,
+    'param:speed': { name: t('timeline.bar.addSpeed'), tip: t('timeline.bar.addSpeedTip'), onAdd: addSpeedHere },
+    texts: { name: t('timeline.bar.addText'), tip: withShortcut(t('timeline.bar.addText'), 'add-text'), onAdd: addTextHere },
+    media: { name: reading ? t('timeline.bar.readingFiles') : t('timeline.bar.addMedia'), tip: t('timeline.bar.addMediaTip'), onAdd: pickMedia, disabled: reading },
+    music: { name: t('timeline.options.addMusic'), onAdd: pickMusic, disabled: reading },
+  }
 
   return (
     <div
@@ -1865,49 +1930,6 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
         )}
         {!centred && (
         <div className={`contents${collapsed ? ' phone-any:hidden' : ''}`} data-testid="timeline-tools">
-          <BarButton
-            icon="map-pin"
-            name={t('timeline.bar.addHold')}
-            tip={withShortcut(t('timeline.bar.addHold'), 'add-stop')}
-            onClick={() => addStopAt(Math.round(shownPlayback().progress * lengthM))}
-          />
-          {freeCandidates.length > 0 && (
-            <Select
-              look="bar"
-              aria-label={t('timeline.bar.addHoldAtHighlight')}
-              value=""
-              options={[
-                { value: '', label: t('timeline.bar.holdAtHighlight'), disabled: true },
-                ...freeCandidates.map((c, i) => ({ value: String(i), label: `${c.label} · ${formatDistance(c.atM)}` })),
-              ]}
-              onChange={(index) => {
-                const c = freeCandidates[Number(index)]
-                if (c) addStopAt(c.atM, { label: c.label, source: c.source })
-              }}
-            />
-          )}
-          <BarButton
-            icon="gauge"
-            name={t('timeline.bar.addSpeed')}
-            tip={t('timeline.bar.addSpeedTip')}
-            onClick={() => addSpeedAt(Math.round(shownPlayback().progress * lengthM))}
-          />
-          <BarButton
-            icon="type"
-            name={t('timeline.bar.addText')}
-            tip={withShortcut(t('timeline.bar.addText'), 'add-text')}
-            onClick={() => editFilm((f) => addText(f, playheadNow()))}
-          />
-          <BarButton
-            icon="image"
-            name={reading ? t('timeline.bar.readingFiles') : t('timeline.bar.addMedia')}
-            tip={t('timeline.bar.addMediaTip')}
-            onClick={() =>
-              void pickFiles({ filters: MEDIA_FILTERS, multiple: true }).then((files) => (files.length > 0 ? addMediaFiles(files) : undefined))
-            }
-            disabled={reading}
-          />
-          <span className={centred ? 'hidden' : 'h-5 w-px flex-none bg-white/15'} aria-hidden="true" />
           {(film.audio.length > 0 || film.media.some(clipHasSound)) && (
             <BarButton
               icon={muted ? 'volume-x' : 'volume-2'}
@@ -1995,38 +2017,46 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
               ))}
             </div>
           )}
-          <div className={`w-28 flex-none border-r border-white/10 touch:w-32 ${centred ? 'hidden' : ''}`} data-testid="timeline-heads">
+          <div className={`w-32 flex-none border-r border-white/10 touch:w-36 ${centred ? 'hidden' : ''}`} data-testid="timeline-heads">
             <div className={`${HEAD} ${rulerHeight} items-center`} data-testid="timeline-head" />
             {/* the lanes carry the same names; the camera and speed keys have their ◀ ◇ ▶ under theirs */}
             {lanes.map((lane) => {
               const folded = isFolded(lane.id)
               const locked = isLocked(lane.id)
+              const empty = emptyLanes.has(lane.id) && !folded
+              const thin = folded || empty
+              const add = laneAdds[lane.id]
               return (
                 <div
                   key={lane.id}
-                  className={`${HEAD} group relative ${folded ? `${FOLDED_HEIGHT} items-center` : lane.keys ? `${KEYED_HEIGHT} flex-col items-start justify-center gap-px` : 'h-7 items-center touch:h-10'}`}
+                  className={`${HEAD} group relative ${folded ? `${FOLDED_HEIGHT} items-center` : empty ? `${EMPTY_HEIGHT} items-center` : lane.keys ? `${KEYED_HEIGHT} flex-col items-start justify-center gap-px` : 'h-7 items-center touch:h-10'}`}
                   data-testid="timeline-head"
                 >
-                  <span className={`max-w-full truncate pr-11 ${folded ? 'text-[10px] leading-none' : ''}`} title={lane.name}>
-                    {lane.name}
+                  <span className={`flex max-w-full min-w-0 items-center gap-1${empty ? '' : ' pr-11'}`}>
+                    <span className={`truncate ${thin ? 'text-[10px] leading-none' : ''}`} title={lane.name}>
+                      {lane.name}
+                    </span>
+                    {add && <LaneAdd {...add} />}
                   </span>
-                  {lane.keys && !folded && (
+                  {lane.keys && !thin && (
                     <span className="lane-keys">
                       <KeyGroup target={lane.keys} clock={clock} timeS={frozenS} disabled={!hasTrack} />
                     </span>
                   )}
-                  <span
-                    className={`absolute right-1 ${lane.keys && !folded ? 'top-1' : 'top-1/2 -translate-y-1/2'} flex gap-0.5 ${folded || locked ? '' : 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 touch:opacity-100'}`}
-                  >
-                    <button type="button" className={LANE_TOOL} aria-pressed={folded} aria-label={t(folded ? 'timeline.lane.unfold' : 'timeline.lane.fold', { name: lane.name })} title={t(folded ? 'timeline.lane.unfold' : 'timeline.lane.fold', { name: lane.name })} onClick={() => toggleLaneState('folded', lane.id)}>
-                      <Icon name={folded ? 'chevron-right' : 'chevron-down'} size={14} />
-                    </button>
-                    {!folded && (
-                      <button type="button" className={LANE_TOOL} aria-pressed={locked} aria-label={t(locked ? 'timeline.lane.unlock' : 'timeline.lane.lock', { name: lane.name })} title={t(locked ? 'timeline.lane.unlock' : 'timeline.lane.lock', { name: lane.name })} onClick={() => toggleLaneState('locked', lane.id)}>
-                        <Icon name={locked ? 'lock' : 'lock-open'} size={14} />
+                  {!empty && (
+                    <span
+                      className={`absolute right-1 ${lane.keys && !folded ? 'top-1' : 'top-1/2 -translate-y-1/2'} flex gap-0.5 ${folded || locked ? '' : 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 touch:opacity-100'}`}
+                    >
+                      <button type="button" className={LANE_TOOL} aria-pressed={folded} aria-label={t(folded ? 'timeline.lane.unfold' : 'timeline.lane.fold', { name: lane.name })} title={t(folded ? 'timeline.lane.unfold' : 'timeline.lane.fold', { name: lane.name })} onClick={() => toggleLaneState('folded', lane.id)}>
+                        <Icon name={folded ? 'chevron-right' : 'chevron-down'} size={14} />
                       </button>
-                    )}
-                  </span>
+                      {!folded && (
+                        <button type="button" className={LANE_TOOL} aria-pressed={locked} aria-label={t(locked ? 'timeline.lane.unlock' : 'timeline.lane.lock', { name: lane.name })} title={t(locked ? 'timeline.lane.unlock' : 'timeline.lane.lock', { name: lane.name })} onClick={() => toggleLaneState('locked', lane.id)}>
+                          <Icon name={locked ? 'lock' : 'lock-open'} size={14} />
+                        </button>
+                      )}
+                    </span>
+                  )}
                 </div>
               )
             })}
@@ -2126,7 +2156,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                   opening.style === 'aucune' ? [] : ['end'],
                 )}
                 <div
-                  className="absolute inset-y-[3px] box-border flex cursor-pointer items-center overflow-hidden rounded-sm bg-white/10 px-1.5 text-caption font-semibold"
+                  className="absolute inset-y-0.5 box-border flex cursor-pointer items-center overflow-hidden rounded-[4px] bg-white/10 px-1.5 text-caption font-semibold"
                   style={{ left: xOf(flightStart), width: (flightEnd - flightStart) * pxPerS }}
                   aria-hidden="true"
                 >
@@ -2137,15 +2167,6 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                       <path className="fill-accent-light opacity-80" d={area} clipPath={`url(#${clipId})`} />
                     </svg>
                   )}
-                  {/* the stops inside the flight: where the flyover holds */}
-                  {shownClock.stops.map((s) => (
-                    <span
-                      key={s.id}
-                      data-selected={s.id === selected || undefined}
-                      className="pointer-events-none absolute inset-y-0 box-border min-w-[3px] border-t-[3px] border-accent-light before:absolute before:inset-0 before:bg-accent-light before:opacity-20 data-[selected]:border-t-white"
-                      style={{ left: (s.startS - flightStart) * pxPerS, width: (s.endS - s.startS) * pxPerS }}
-                    />
-                  ))}
                   {sequence ? (
                     // « À la suite »: one segment per stage, from cut to cut
                     sequence.stages.map((stage, k) => {
@@ -2164,6 +2185,8 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                     <span className={BLOCK_LABEL}>{t('timeline.flight.label', { distance: formatDistance(lengthM) })}</span>
                   )}
                 </div>
+                {/* the stops and the nights, over the flight bar: where the flyover holds */}
+                {holdBlocks()}
                 {shownClock.cameraKeys.map((k) => (
                   <div
                     key={k.id}
@@ -2251,25 +2274,11 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                 </div>
               )}
 
-              <div data-testid="timeline-lane" {...laneProps('holds')} role="group" aria-label={t('timeline.lane.holds')}>
-                {/* the nights of a multi-day track: no grip, the track places them and « Jours et nuits » sets how long */}
-                {shownClock.nights.map((n, k) => {
-                  const label = t('timeline.night.label', { n: k + 1 })
-                  return block(nightItemId(n), n.startS, n.endS, label, t('timeline.night.description', { label }), BLOCK_KINDS.night, [], undefined, 'moon')
-                })}
-                {shownClock.stops.map((s) => {
-                  const label = s.label || t('film.snap.hold')
-                  return block(
-                    s.id,
-                    s.startS,
-                    s.endS,
-                    label,
-                    t('timeline.hold.description', { camera: STOP_CAMERA_LABELS[s.camera].toLowerCase(), label, auto: shownFilm.autoStops ? t('timeline.hold.auto') : '' }),
-                    shownFilm.autoStops ? BLOCK_KINDS.stopAuto : BLOCK_KINDS.stop,
-                    ['move', 'end'],
-                  )
-                })}
-              </div>
+              {!plans && (
+                <div data-testid="timeline-lane" {...laneProps('holds')} role="group" aria-label={t('timeline.lane.holds')}>
+                  {holdBlocks()}
+                </div>
+              )}
 
               <div data-testid="timeline-lane" {...laneProps('texts')} role="group" aria-label={t('timeline.lane.texts')}>
                 {/* the opening title and the closing card (overlay settings): placed freely, edges and body */}

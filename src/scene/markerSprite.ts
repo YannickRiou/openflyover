@@ -1,7 +1,7 @@
 /**
  * Progress markers as camera-facing sprites: the lead marker of FlyoverRig and the ghost racers of RaceMarkers.
  * Each marker is one Sprite showing a texture chosen by `settings.marker` (ball, pictogram or picture, with its
- * optional stick and label), with the constant on-screen size of the original ball. A pictogram faces the way its
+ * optional stick and label), with the size of the original ball in the flight (its real size elsewhere: `setMarkerReferenceDistance`). A pictogram faces the way its
  * track heads on screen and leans with its slope there (`figureHeading`, from the track itself around the marker): it
  * changes side only when the track clearly runs the other way, and turns round over `FIGURE_TURN_S`. It walks at the
  * pace of the marker (`figureMotion`), and a pulsing ball takes the phase of the film time, so every frame of the film
@@ -24,7 +24,7 @@ import type { MarkerFigure, MarkerSettings } from './markerSettings'
 import { NEUTRAL_MARKER_LIGHT } from './exposure'
 import type { MarkerLight } from './exposure'
 
-/** Ball radius as a fraction of its distance to the camera, at the default field of view (constant on-screen size, ~7 px at 1000 px). */
+/** Ball radius as a fraction of its distance to the camera, at the default field of view (the size it keeps on the screen in the flight, ~7 px at 1000 px). */
 export const MARKER_SCREEN_FACTOR = 0.007
 /** Smallest radius of the ball on the screen (px): on a small view (a phone) the marker and the figure above it stay readable. */
 export const MARKER_MIN_RADIUS_PX = 5
@@ -492,14 +492,33 @@ export function setMarkerLight(light: MarkerLight): void {
   markerLight = light
 }
 
+/** Smallest radius of the ball on the screen (px) once it has a real size: far above the track it stays a dot, never gone. */
+export const MARKER_MIN_REAL_RADIUS_PX = 1.5
+let referenceDistanceM: number | null = null
 /**
- * Radius (world metres) of the ball of a marker at `position`: the constant on-screen size, times `size`. MARKER_SCREEN_FACTOR is
- * for the default field of view: a narrower or wider lens (« Focale », the camera stands farther or closer for it) scales it,
- * so the marker keeps its size on the screen.
+ * The marker is a real object: its ball has the size it shows from `distanceM`, the distance of the flight camera
+ * (`flightDistanceM`), in every shot of the film, so the perspective grows and shrinks it with the relief (a constant size
+ * on the screen made it swell against the landscape in the opening zoom). null: the constant on-screen size, at any distance.
+ * Set by FlyoverRig each frame, before the markers are placed.
+ */
+export function setMarkerReferenceDistance(distanceM: number | null): void {
+  referenceDistanceM = distanceM !== null && distanceM > 0 ? distanceM : null
+}
+
+/**
+ * Radius (world metres) of the ball of a marker at `position`, times `size`: that of its distance to the camera (the constant
+ * on-screen size), or, with a reference distance (`setMarkerReferenceDistance`), the real size of that distance, kept
+ * whatever the camera does but never under MARKER_MIN_REAL_RADIUS_PX on the screen. MARKER_SCREEN_FACTOR is for the default
+ * field of view: a narrower or wider lens (« Focale », the camera stands farther or closer for it) scales it, so the marker
+ * keeps its size on the screen.
  */
 export function markerRadius(camera: Camera, position: Vector3, size: number): number {
   const lens = 'fov' in camera ? Math.tan(((camera as PerspectiveCamera).fov * Math.PI) / 360) / Math.tan((CAMERA_FOV_DEG * Math.PI) / 360) : 1
-  return Math.max(1, camera.position.distanceTo(position) * Math.max(MARKER_SCREEN_FACTOR, MARKER_MIN_RADIUS_PX / viewportHeightPx) * lens) * size
+  const distance = camera.position.distanceTo(position)
+  const factor = Math.max(MARKER_SCREEN_FACTOR, MARKER_MIN_RADIUS_PX / viewportHeightPx)
+  if (referenceDistanceM === null) return Math.max(1, distance * factor * lens) * size
+  const floor = distance * (MARKER_MIN_REAL_RADIUS_PX / viewportHeightPx) * lens
+  return Math.max(1, referenceDistanceM * factor * lens, floor) * size
 }
 
 /**
@@ -510,8 +529,11 @@ export const leadMarkerAnchor = { position: new Vector3(), radius: 1, heightBall
 
 /** Track length looked at on each side of the marker to tell which way a 3D model faces (metres). */
 export const MODEL_WINDOW_M = 30
-/** A 3D model is this many marker balls tall on screen (the lead marker and the ghost racers). */
-export const MODEL_BALLS = 7
+/**
+ * A 3D model is this many marker balls tall (the lead marker and the ghost racers): 4.9 (was 7), about 12 % of a phone
+ * view and 5 % of a computer one in flight, clearly visible without taking the view (the plane, the hiker still readable).
+ */
+export const MODEL_BALLS = 4.9
 /** Phase of a model that does not move (a marker that is not animated). */
 export const MODEL_REST_PHASE = 0.6
 const modelBehind = new Vector3()
@@ -541,7 +563,7 @@ export function litColor(hex: string, gain: number, target = new Color()): Color
 }
 
 /**
- * Put `sprite` at `position` with the texture of `look` at film time `timeS`, at the constant on-screen size times
+ * Put `sprite` at `position` with the texture of `look` at film time `timeS`, at the size of `markerRadius` times
  * `marker.size`, its colours divided by the exposure (`gain`) like the track lines and tinted by the light of the scene.
  * The track point is the anchor of the texture: the centre of the badge, the tip of a pin or the foot of the stick.
  * `facing` and `lean` come from `figureHeading`, `motion` (the bounce and sway of a walking figure, `figureMotion`) from the rig.

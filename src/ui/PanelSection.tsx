@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { presetBadge } from '../export/qualityTier'
 import { useT } from '../i18n'
@@ -13,7 +13,7 @@ import { Icon } from './icons'
 import { ModifiedMarker } from './ModifiedMarker'
 import { tabHasHeavySetting, tierName, weightOf } from './renderCost'
 import type { WeightKey } from './renderCost'
-import { FOLDS_KEY, parseFoldPrefs } from './shell'
+import { COMPACT_QUERY, FOLDS_KEY, matchesQuery, parseFoldPrefs } from './shell'
 import type { ShellTab, UiMode } from './shell'
 import { usePreferences } from './preferences'
 import { useModeShows } from './uiMode'
@@ -40,11 +40,14 @@ function saveFold(title: string, open: boolean) {
 
 /**
  * Foldable section of a tab, flat with a sticky header (title, « modifié / Par défaut » of `keys` if given, chevron).
- * Open at first, then as last left (remembered by title in the browser, `FOLDS_KEY`); the content stays mounted when
- * folded. From the mode `min` on (every mode without it), or while one of `paths` (`keys` without them) is modified.
+ * Then as last left (remembered by title in the browser, `FOLDS_KEY`); before that open, on a computer except when it is not
+ * the first section of its tab (a phone's sheet shows one tab at a time and keeps them open). The content stays mounted
+ * when folded, and `summary` (what is set, in a few words) shows under the title meanwhile. From the mode `min` on (every
+ * mode without it), or while one of `paths` (`keys` without them) is modified.
  */
 export function PanelSection({
   title,
+  summary,
   keys,
   hidden = false,
   min,
@@ -52,6 +55,7 @@ export function PanelSection({
   children,
 }: {
   title: string
+  summary?: string
   keys?: (keyof Settings)[]
   hidden?: boolean
   min?: UiMode
@@ -60,11 +64,35 @@ export function PanelSection({
 }) {
   // read once: the element then keeps its own state
   const [open] = useState(() => loadFolds()[title] ?? true)
+  const section = useRef<HTMLDetailsElement>(null)
+  const mounted = useRef(false)
+  /** the default fold below is not a choice: its toggle event is not remembered (a phone would then open the section folded) */
+  const defaultFold = useRef(false)
+  // a computer, nothing remembered: the tab opens on its first section, the others wait folded (the DOM keeps the state, as below)
+  useLayoutEffect(() => {
+    const el = section.current
+    // once, as mounted: a new title (another language) must not fold what the person opened
+    if (!el || mounted.current) return
+    mounted.current = true
+    if (loadFolds()[title] !== undefined || matchesQuery(COMPACT_QUERY)) return
+    const tab = el.closest('.tabpanel-frame')
+    if (tab && tab.querySelector('details[data-panel-section]') !== el) {
+      defaultFold.current = true
+      el.open = false
+    }
+  }, [title])
   if (!useModeShows(min, paths)) return null
   return (
-    <details className="group" data-panel-section={title} open={open} hidden={hidden} onToggle={(e) => saveFold(title, e.currentTarget.open)}>
+    <details ref={section} className="group" data-panel-section={title} open={open} hidden={hidden} onToggle={(e) => (defaultFold.current ? (defaultFold.current = false) : saveFold(title, e.currentTarget.open))}>
       <summary className="panel-head cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-        <h2 className="panel-title flex-1">{title}</h2>
+        <div className="min-w-0 flex-1">
+          <h2 className="panel-title">{title}</h2>
+          {summary && (
+            <p className="type-hint truncate group-open:hidden" data-testid="section-summary">
+              {summary}
+            </p>
+          )}
+        </div>
         {/* the marker's button must not fold the section; its box is in the flow here, not at the corner of a card */}
         {keys && (
           <span className="shrink-0" onClick={(e) => e.preventDefault()}>

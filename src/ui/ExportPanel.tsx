@@ -162,7 +162,7 @@ const PANEL = 'flex flex-col gap-3 px-4 pb-4 *:shrink-0'
 /** What the « Encodage » group sets: shown from « Expert » on, or while one of them is not at its default. */
 const ENCODING_PATHS: SettingPath[] = ['video.manualBitrate', 'video.bitrateMbps', 'video.codec', 'video.nameTemplate', 'video.keyframeIntervalS', 'video.audioKbps', 'video.normalizeLoudness', 'video.loudnessLufs']
 
-const GROUP = 'mt-3 border-t border-edge pt-2 font-body text-hint font-semibold tracking-wider text-text-2 uppercase'
+const GROUP = 'panel-subtitle mt-3 border-t border-edge pt-2'
 /** The buttons of the panel, one per line. */
 const ACTIONS = 'flex flex-col gap-2 *:min-w-0'
 /** The buttons that start an export: on a portrait phone they stay at the bottom of the sheet while its settings scroll (the sheet is short: the button used to be below the fold). */

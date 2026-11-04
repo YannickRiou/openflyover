@@ -74,8 +74,6 @@ const messages: Messages['project'] = {
   'panel.saveTip': 'Salva il progetto (nello stesso file, una volta salvato)',
   'panel.saveAs': 'Salva con nome…',
   'panel.saveAsTip': 'Salva il progetto con un altro nome o in un altro percorso',
-  'panel.close': 'Chiudi il progetto',
-  'panel.closeHint': 'Chiudere riporta alla schermata iniziale; un progetto conservato resta in I miei progetti.',
   'panel.library': 'I miei progetti',
   'panel.noLibrary': 'Questo browser non può conservare progetti (pagina non sicura, senza HTTPS).',
   'panel.keptDesktop': 'Conservati su questo computer, salvati automaticamente a ogni modifica.',

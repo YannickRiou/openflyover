@@ -2,7 +2,7 @@
  * « Nouveautés »: what changed, in the words of the people who use the application (features, not code), newest version
  * first. A minor version stands for its patches, unless a patch has its own entry. Each item is an icon, a title and a
  * sentence; the texts are in `i18n/<language>/news.ts`. Adding a version: its items first in `WHATS_NEW` and its keys
- * in the five languages; the dot of the « i » button shows again until the new version is opened
+ * in the five languages; the dot of the logo button shows again until the new version is opened
  * (`Preferences.whatsNewSeen`).
  */
 import { t } from '../i18n'
@@ -20,6 +20,22 @@ export interface NewsVersion {
 }
 
 export const WHATS_NEW: readonly NewsVersion[] = [
+  {
+    version: '6.0',
+    items: [
+      { icon: 'square', get title() { return t('news.v60.titlebar.title') }, get text() { return t('news.v60.titlebar.text') } },
+      { icon: 'info', get title() { return t('news.v60.status.title') }, get text() { return t('news.v60.status.text') } },
+      { icon: 'layers', get title() { return t('news.v60.groups.title') }, get text() { return t('news.v60.groups.text') } },
+      { icon: 'sliders-horizontal', get title() { return t('news.v60.summary.title') }, get text() { return t('news.v60.summary.text') } },
+      { icon: 'route', get title() { return t('news.v60.headings.title') }, get text() { return t('news.v60.headings.text') } },
+      { icon: 'image', get title() { return t('news.v60.pictures.title') }, get text() { return t('news.v60.pictures.text') } },
+      { icon: 'clapperboard', get title() { return t('news.v60.camera.title') }, get text() { return t('news.v60.camera.text') } },
+      { icon: 'plus', get title() { return t('news.v60.lanes.title') }, get text() { return t('news.v60.lanes.text') } },
+      { icon: 'map-pin', get title() { return t('news.v60.stops.title') }, get text() { return t('news.v60.stops.text') } },
+      { icon: 'clapperboard', get title() { return t('news.v60.clips.title') }, get text() { return t('news.v60.clips.text') } },
+      { icon: 'info', get title() { return t('news.v60.menu.title') }, get text() { return t('news.v60.menu.text') } },
+    ],
+  },
   {
     version: '5.0',
     items: [

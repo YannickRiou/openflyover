@@ -166,7 +166,7 @@ export interface MarkerSettings {
   figure: MarkerFigureChoice
   /** picture of an 'image' marker: small square PNG data URL, '' = none (the marker is then a ball) */
   image: string
-  /** multiplier of the on-screen size (1 = the ball of a 1000-pixel frame, about 14 pixels across) */
+  /** multiplier of the size of the ball (1 = about 14 pixels across in a 1000-pixel frame, in the flight) */
   size: number
   /** a 'figurine' marker bounces and sways as it walks at the marker's pace (`figureMotion`) */
   animated: boolean

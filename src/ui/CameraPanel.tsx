@@ -2,22 +2,19 @@ import { useId } from 'react'
 import { t, useT } from '../i18n'
 import type { MessageKey } from '../i18n'
 import {
-  CAMERA_PRESETS,
+  CAMERA_HEIGHTS,
   CAMERA_RANGES,
   CAMERA_STYLE_LABELS,
-  CAMERA_STYLES,
-  findCameraPreset,
+  cameraHeightStop,
   turnSmoothingM,
 } from '../flyover/cameraSettings'
 import { TOP_MIN_PITCH_DEG } from '../flyover/cameraSettings'
-import type { CameraPreset, CameraSettings, CameraStyle } from '../flyover/cameraSettings'
+import type { CameraSettings, CameraStyle } from '../flyover/cameraSettings'
 import { PACING_RANGES } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
 import { playsBilan } from '../flyover/sequence'
 import { setFlightTiming, useFilmClock, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
-import { getSettingsHistory } from '../project/history'
-import { showToast } from './toast'
 import { formatDegrees, formatDistance, formatNumber, formatPercent, formatSecondsShort } from './format'
 import { Icon } from './icons'
 import type { IconName } from './icons'
@@ -25,7 +22,7 @@ import { ModeGate, PanelSection, RangeField, SettingRow } from './PanelSection'
 import type { UiMode } from './shell'
 import { retryRegion, useRegionStore } from '../osm/region'
 import type { RegionStatus } from '../osm/region'
-import { Button, Checkbox, Radio, RadioGroup, Select } from './primitives'
+import { Button, Checkbox, Slider, ToggleButton, ToggleButtonGroup } from './primitives'
 import { AutoFilmSection } from './AutoFilmDialog'
 import { FlightDurationField } from './FlightDurationField'
 
@@ -59,26 +56,20 @@ export function RegionHint({ id, highlight }: { id: string; highlight: boolean }
   )
 }
 
-const PRESET_ICONS: Record<string, IconName> = {
+/** « Mouvement » in the order of the panel: the views that follow the marker from behind, then the cinematic and top views, then the free one. */
+const MOTIONS: readonly CameraStyle[] = ['chase', 'sway', 'orbit', 'cinematic', 'top', 'free']
+
+/** Picture of each movement (the keyframe diamond for « Libre »). */
+const STYLE_ICONS: Record<CameraStyle, IconName> = {
   chase: 'navigation',
-  'fast-drone': 'drone',
-  bird: 'bird',
-  helicopter: 'wind',
+  sway: 'wind',
   orbit: 'orbit',
-  cinema: 'clapperboard',
-  'high-drone': 'eye',
-  glider: 'feather',
-  balloon: 'cloud',
-  plane: 'plane',
-  'top-view': 'locate-fixed',
-  satellite: 'satellite',
+  cinematic: 'clapperboard',
+  top: 'locate-fixed',
   free: 'diamond',
 }
 
-/** `value` of the tile that shows the settings when they match no preset. */
-const CUSTOM_PRESET = 'custom'
-
-/** A preset tile is a Radio of a `plain` group: the label is the tile, framed, tinted and ringed with the accent once chosen. */
+/** The tile of a choice of the settings (the basemap radios of `SettingsPanel`): framed, tinted and ringed with the accent once chosen. */
 export const TILE = 'group flex min-w-0 flex-row items-stretch'
 export const TILE_LABEL =
   'relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-start gap-0.5 rounded-sm border border-edge bg-surface-control px-1 pt-2 pb-1.5 text-center transition-ui hover:border-text-1 ' +
@@ -86,13 +77,6 @@ export const TILE_LABEL =
   'data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-offset-2 data-[focus-visible=true]:outline-brand'
 export const TILE_GRID = 'grid grid-cols-3 gap-2'
 export const TILE_NAME = 'max-w-full truncate text-hint font-medium'
-const TILE_FIGURES = 'text-caption whitespace-nowrap text-text-2 tabular-nums'
-
-/** Key figures of a preset tile: distance multiplier and tilt (none for 'free', which does not use them). */
-function presetFigures(camera: CameraSettings): string {
-  if (camera.style === 'free') return '—'
-  return `×${formatNumber(camera.distance, 1)} · ${formatDegrees(camera.pitchDeg)}`
-}
 
 type NumericKey = keyof typeof CAMERA_RANGES
 
@@ -162,10 +146,7 @@ const SLIDERS: Slider[] = [
   },
 ]
 
-/** What a preset tile shows of a camera: its style and framing; the rest (smoothings, end, turns, north) goes with it unseen. */
-const FRAMING_KEYS: readonly (keyof CameraSettings)[] = ['style', 'distance', 'pitchDeg', 'headingOffsetDeg']
-
-/** One-line description of each style (hint under the preset tiles). */
+/** One-line description of each style (hint under « Mouvement »). */
 const STYLE_HINTS: Record<CameraStyle, string> = {
   get chase() { return t('camera.styleHint.chase') },
   get sway() { return t('camera.styleHint.sway') },
@@ -200,7 +181,7 @@ function ShotSummary() {
 }
 
 /**
- * « Survol » tab: sections Caméra (preset tiles; style and fine parameters as rows), Durée et rythme (flyover duration,
+ * « Survol » tab: sections Caméra (« Mouvement » and « Hauteur » as two questions; fine parameters as rows), Durée et rythme (flyover duration,
  * situation shots of the opening and closing; their details as rows). A row shows a setting's name
  * and value, its control on demand. Stops are chosen on the timeline and in « Repères et points d'intérêt » (Carte).
  */
@@ -215,25 +196,12 @@ export function CameraPanel() {
   const paced = film.stops.length > 0 || film.speeds.length > 0 || film.nights.length > 0 || film.junctions.length > 0
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
-  const preset = findCameraPreset(camera)
-
-  const presetTile = (p: CameraPreset) => (
-    <Radio key={p.id} value={p.id} className={TILE} labelClassName={TILE_LABEL} title={CAMERA_STYLE_LABELS[p.camera.style]}>
-      <Icon name={PRESET_ICONS[p.id]} size={20} />
-      <span className={TILE_NAME}>{p.name}</span>
-      <span className={TILE_FIGURES}>{presetFigures(p.camera)}</span>
-    </Radio>
-  )
-  /** a preset is the whole camera: when it also changes the smoothings, the end or the turns, a message says so, with « Annuler » */
-  const pickPreset = (presetId: string) => {
-    const picked = CAMERA_PRESETS.find((p) => p.id === presetId)
-    if (!picked) return
-    setSetting('camera', { ...picked.camera })
-    const beyondFraming = (Object.keys(picked.camera) as (keyof CameraSettings)[]).some(
-      (key) => !FRAMING_KEYS.includes(key) && picked.camera[key] !== camera[key],
-    )
-    const history = getSettingsHistory()
-    if (beyondFraming) showToast({ kind: 'info', text: t('camera.preset.applied', { name: picked.name }), action: { label: t('common.undo'), run: () => history.undo() } })
+  const height = cameraHeightStop(camera)
+  const heightName = height.custom ? t('camera.panel.custom') : t(`camera.height.${CAMERA_HEIGHTS[height.index].id}` as MessageKey)
+  /** « Hauteur » sets the distance and the tilt, no other setting: smoothings, banking and the end stay as they are */
+  const pickHeight = (index: number) => {
+    const { distance, pitchDeg } = CAMERA_HEIGHTS[index]
+    update({ distance, pitchDeg })
   }
   const update = (patch: Partial<CameraSettings>) => setSetting('camera', { ...camera, ...patch })
   const updatePacing = (patch: Partial<PacingSettings>) => setFlightTiming({ pacing: { ...pacing, ...patch } })
@@ -245,28 +213,47 @@ export function CameraPanel() {
   return (
     <>
       <AutoFilmSection />
-      <PanelSection title={t('camera.panel.camera')} keys={['camera']}>
+      <PanelSection title={t('camera.panel.camera')} summary={camera.style === 'free' ? CAMERA_STYLE_LABELS.free : `${CAMERA_STYLE_LABELS[camera.style]} · ${heightName}`} keys={['camera']}>
         {bilan && <p className="type-hint">{t('track.bilan.fixed')}</p>}
         {/* a Bilan shows the whole outing from above: only the lens counts */}
         {!bilan && (
-        <fieldset className="field min-w-0">
-          <legend id={`${id}-preset`} className="type-label mb-1">
-            {t('camera.panel.preset')}
-          </legend>
-          <RadioGroup look="plain" className={TILE_GRID} aria-labelledby={`${id}-preset`} value={preset?.id ?? CUSTOM_PRESET} onChange={pickPreset}>
-            {CAMERA_PRESETS.map(presetTile)}
-            {!preset && (
-              <Radio value={CUSTOM_PRESET} className={TILE} labelClassName={TILE_LABEL} title={t('camera.panel.customTip')}>
-                <Icon name="sliders-horizontal" size={20} />
-                <span className={TILE_NAME}>{t('camera.panel.custom')}</span>
-                <span className={TILE_FIGURES}>{presetFigures(camera)}</span>
-              </Radio>
-            )}
-          </RadioGroup>
-          <p id={`${id}-style-hint`} className="type-hint">
-            {STYLE_HINTS[camera.style]}
-          </p>
-        </fieldset>
+          <div className="field min-w-0">
+            <span className="type-label">{t('camera.panel.motion')}</span>
+            <ToggleButtonGroup<CameraStyle> className="grid grid-cols-3 [&>*]:w-full" aria-label={t('camera.panel.motion')} value={camera.style} onChange={(style) => update({ style })}>
+              {MOTIONS.map((style) => (
+                <ToggleButton key={style} value={style}>
+                  <span className="flex flex-col items-center gap-0.5 py-0.5">
+                    <Icon name={STYLE_ICONS[style]} size={20} />
+                    <span className={TILE_NAME}>{CAMERA_STYLE_LABELS[style]}</span>
+                  </span>
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+            <p className="type-hint">{STYLE_HINTS[camera.style]}</p>
+          </div>
+        )}
+
+        {/* 'free' follows the keyframes alone: there is no height to choose */}
+        {!bilan && camera.style !== 'free' && (
+          <div className="field min-w-0">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="type-label">{t('camera.panel.height')}</span>
+              <span className="text-body font-medium tabular-nums" data-testid="camera-height-name">{heightName}</span>
+            </div>
+            <Slider
+              aria-label={t('camera.panel.height')}
+              aria-describedby={`${id}-height-hint`}
+              min={0}
+              max={CAMERA_HEIGHTS.length - 1}
+              step={1}
+              value={height.index}
+              spoken={() => heightName}
+              onChange={pickHeight}
+            />
+            <p id={`${id}-height-hint`} className="type-hint">
+              {height.custom ? t('camera.heightHint.custom') : t(`camera.heightHint.${CAMERA_HEIGHTS[height.index].id}` as MessageKey)}
+            </p>
+          </div>
         )}
 
         <ModeGate min="confirme" paths={['camera.orbitTurns', 'camera.northUp']}>
@@ -286,22 +273,6 @@ export function CameraPanel() {
         )}
         </ModeGate>
 
-        {!bilan && (
-        <SettingRow label={t('camera.panel.style')} value={CAMERA_STYLE_LABELS[camera.style]} paths={['camera.style']} min="confirme">
-          <div className="field">
-            <label className="type-label" htmlFor={`${id}-style`}>
-              {t('camera.panel.style')}
-            </label>
-            <Select
-              id={`${id}-style`}
-              value={camera.style}
-              aria-describedby={`${id}-style-hint`}
-              options={CAMERA_STYLES.map((style) => ({ value: style, label: CAMERA_STYLE_LABELS[style] }))}
-              onChange={(style) => update({ style })}
-            />
-          </div>
-        </SettingRow>
-        )}
         {/* the lens of the whole film, whatever the style (« Libre » too) */}
         <SettingRow label={t('camera.slider.focal')} value={focalLabel} paths={['camera.focalMm']} min="confirme">
           <RangeField

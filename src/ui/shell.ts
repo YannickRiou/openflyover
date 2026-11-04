@@ -128,8 +128,8 @@ export const SHELL_TABS = ['trace', 'carte', 'meteo', 'lumiere', 'survol', 'obje
 export type ShellTab = (typeof SHELL_TABS)[number]
 
 /**
- * A phone, either way up, shows the tabs in five groups (nine tabs do not fit across): the tab of a group opens the one of
- * its tabs last shown, and the sheet switches between them. In montage order, like the tabs.
+ * The rail shows the tabs in five groups, on a computer as on a phone either way up (nine tabs do not fit across a phone):
+ * the tab of a group opens the one of its tabs last shown, and the panel switches between them. In montage order, like the tabs.
  */
 export const TAB_GROUPS = {
   trace: ['trace'],
@@ -334,7 +334,7 @@ export interface Preferences {
   appearance: Appearance
   /** language of the interface and of the film overlay (`i18n/`) */
   language: LanguageCode
-  /** version of « Nouveautés » last opened (`whatsNew.ts`), '' when never: the dot of the « i » button shows until then */
+  /** version of « Nouveautés » last opened (`whatsNew.ts`), '' when never: the dot of the logo button shows until then */
   whatsNewSeen: string
   /** pixels and clouds of the 3D preview (`scene/previewQuality.ts`); never the export's */
   previewQuality: PreviewQuality

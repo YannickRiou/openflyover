@@ -222,6 +222,7 @@ const PATHS = {
       <path d="m6 6 12 12" />
     </>
   ),
+  minus: <path d="M5 12h14" />,
   ellipsis: (
     <>
       <circle cx="12" cy="12" r="1" />
@@ -287,6 +288,19 @@ const PATHS = {
       <circle cx="12" cy="12" r="10" />
       <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
       <path d="M12 17h.01" />
+    </>
+  ),
+  keyboard: (
+    <>
+      <path d="M10 8h.01" />
+      <path d="M12 12h.01" />
+      <path d="M14 8h.01" />
+      <path d="M16 12h.01" />
+      <path d="M18 8h.01" />
+      <path d="M6 8h.01" />
+      <path d="M7 16h10" />
+      <path d="M8 12h.01" />
+      <rect width="20" height="16" x="2" y="4" rx="2" />
     </>
   ),
   upload: (
