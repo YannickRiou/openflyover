@@ -12,11 +12,17 @@
 <meta name="description" content="So nutzen Sie OpenFlyover: einen Track importieren, eine Tour planen, den Look wählen, den Film in der Zeitleiste schneiden, ein Video oder ein Poster exportieren und offline arbeiten.">
 <style>
 /* The project's bundled faces (public/fonts, SIL OFL), read from the repository when this page is opened from a clone; anything else falls back to the system faces. */
-@font-face { font-family: 'Fraunces'; font-style: normal; font-weight: 100 900; font-display: swap;
-  src: local('Fraunces'), url('../public/fonts/fraunces-variable-latin.woff2') format('woff2');
+@font-face { font-family: 'IBM Plex Sans Condensed'; font-style: normal; font-weight: 600; font-display: swap;
+  src: local('IBM Plex Sans Condensed'), url('../public/fonts/ibm-plex-sans-condensed-600-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215; }
-@font-face { font-family: 'Fraunces'; font-style: normal; font-weight: 100 900; font-display: swap;
-  src: url('../public/fonts/fraunces-variable-latin-ext.woff2') format('woff2');
+@font-face { font-family: 'IBM Plex Sans Condensed'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('../public/fonts/ibm-plex-sans-condensed-600-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'IBM Plex Sans Condensed'; font-style: normal; font-weight: 700; font-display: swap;
+  src: local('IBM Plex Sans Condensed'), url('../public/fonts/ibm-plex-sans-condensed-700-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215; }
+@font-face { font-family: 'IBM Plex Sans Condensed'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('../public/fonts/ibm-plex-sans-condensed-700-latin-ext.woff2') format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 @font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 100 700; font-display: swap;
   src: local('IBM Plex Sans'), url('../public/fonts/ibm-plex-sans-variable-latin.woff2') format('woff2');
@@ -26,21 +32,21 @@
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 
 
-/* "Carte alpine", the project's own palette (src/ui/theme.css): map paper, ink, trail-marker red, glacier, moss. */
+/* « Ligne de crête », the charter of the project (docs/charter.md), drawn from the logo: ink, cream, glacier and the balise. */
 :root {
   --paper: #f5f2ea;
   --card: #eae4d6;
   --band: #ece6d8;
   --ink: #1c2a33;
-  --ink-soft: #55626b;
+  --ink-soft: #4e5c65;
   --line: #d6cdbb;
-  --accent: #c23b22;
-  --accent-ink: #a3301a;
+  --accent: #b8361a;
+  --accent-ink: #b8361a;
   --glacier: #a9ccd9;
   --glacier-ink: #2f5d70;
   --moss: #3f6b4a;
   --contour: rgb(28 42 51 / 0.07);
-  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-display: 'IBM Plex Sans Condensed', 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   --step--1: 0.85rem;
@@ -59,8 +65,8 @@
     --ink: #ece6d8;
     --ink-soft: #a6b1b8;
     --line: #34434d;
-    --accent: #ff8a5c;
-    --accent-ink: #ff8a5c;
+    --accent: #ff5a36;
+    --accent-ink: #ff5a36;
     --glacier: #6f9fb2;
     --glacier-ink: #8fc0d3;
     --moss: #7fb08b;
@@ -75,8 +81,8 @@
   --ink: #ece6d8;
   --ink-soft: #a6b1b8;
   --line: #34434d;
-  --accent: #ff8a5c;
-  --accent-ink: #ff8a5c;
+  --accent: #ff5a36;
+  --accent-ink: #ff5a36;
   --glacier: #6f9fb2;
   --glacier-ink: #8fc0d3;
   --moss: #7fb08b;
@@ -121,7 +127,7 @@ pre {
   max-width: 100%;
 }
 pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
-h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 650; line-height: 1.2; text-wrap: balance; margin: 0; }
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height: 1.2; text-wrap: balance; margin: 0; }
 h2 { font-size: var(--step-2); }
 h3 { font-size: var(--step-1); font-weight: 500; }
 h4 { font-family: var(--font-body); font-size: var(--step-0); font-weight: 600; }

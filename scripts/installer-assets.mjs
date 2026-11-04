@@ -5,8 +5,8 @@
  *
  * The picture of the app is `scripts/installer-hero.jpg`, a real screenshot of the 3D view (relief, track, labels,
  * counters, profile, weather): replace that file to change it. One headless Chromium composes each image in HTML with
- * the « Carte alpine » palette
- * (src/ui/theme.css), the committed fonts (Fraunces, IBM Plex Sans) and the logo (public/favicon.svg). The pixels are
+ * the « Ligne de crête » charter
+ * (docs/charter.md, src/ui/theme.css), the committed fonts (IBM Plex Sans and Sans Condensed) and the logo (public/favicon.svg). The pixels are
  * read back with canvas getImageData and written as 24-bit BMP (no alpha, no compression: what NSIS and WiX ask for).
  *
  *   nsis-header.bmp     150 x 57   NSIS pages header (bundle.windows.nsis.headerImage / uninstallerHeaderImage)
@@ -28,14 +28,14 @@ import puppeteer from 'puppeteer-core'
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const OUT = join(ROOT, 'src-tauri/installer')
 
-// « Carte alpine » (src/ui/theme.css)
+// « Ligne de crête » (docs/charter.md, src/ui/theme.css)
 const C = {
-  paper: '#f6f3ec',
+  paper: '#f5f2ea',
   card: '#ece7da',
-  ink: '#1b2832',
+  ink: '#1c2a33',
   inkSoft: '#4e5c65',
-  accent: '#b9391f',
-  accentLight: '#ff9b73',
+  accent: '#b8361a',
+  accentLight: '#ff5a36',
   glacier: '#a9ccd9',
   line: '#ddd6c6',
 }
@@ -89,21 +89,21 @@ const logo = readFileSync(join(ROOT, 'public/favicon.svg'), 'utf8')
   .replace('<svg ', '<svg width="100%" height="100%" ')
 
 const BASE_CSS = `
-${fontFace('Fraunces', 'fraunces-variable-latin.woff2', '100 900')}
+${fontFace('IBM Plex Sans Condensed', 'ibm-plex-sans-condensed-700-latin.woff2', '700')}
 ${fontFace('IBM Plex Sans', 'ibm-plex-sans-variable-latin.woff2', '100 700')}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#fff}
 .root{position:relative;overflow:hidden;font-family:'IBM Plex Sans',system-ui,sans-serif;color:${C.ink}}
 .abs{position:absolute}
-.name{font-family:Fraunces,Georgia,serif;font-weight:600;letter-spacing:-0.01em;white-space:nowrap}
+.name{font-family:'IBM Plex Sans Condensed','IBM Plex Sans',sans-serif;font-weight:700;letter-spacing:0.01em;white-space:nowrap}
 `
 
 /** The side picture of the welcome and finish pages: the 3D view as a full-height crop, the logo and the name on top. */
 function sidebar(w, h) {
   return `<div class="root" style="width:${w}px;height:${h}px;background:${C.ink}">
     <img class="abs" src="__SHOT__" style="left:0;top:0;width:${w}px;height:${h}px;object-fit:cover;object-position:41% 52%">
-    <div class="abs" style="left:0;top:0;width:${w}px;height:178px;background:linear-gradient(${C.ink},${C.ink} 52%,rgb(27 40 50 / 0))"></div>
-    <div class="abs" style="left:0;top:${h - 96}px;width:${w}px;height:96px;background:linear-gradient(rgb(27 40 50 / 0),${C.ink} 78%)"></div>
+    <div class="abs" style="left:0;top:0;width:${w}px;height:178px;background:linear-gradient(${C.ink},${C.ink} 52%,rgb(28 42 51 / 0))"></div>
+    <div class="abs" style="left:0;top:${h - 96}px;width:${w}px;height:96px;background:linear-gradient(rgb(28 42 51 / 0),${C.ink} 78%)"></div>
     <div class="abs" style="left:54px;top:18px;width:56px;height:56px;border-radius:13px;background:${C.ink};box-shadow:0 0 0 2px ${C.accent}">${logo}</div>
     <div class="abs name" style="left:0;right:0;top:84px;text-align:center;font-size:23px;color:#fff">OpenFlyover</div>
     <div class="abs" style="left:0;right:0;top:116px;text-align:center;font-size:12.5px;color:${C.glacier}">Films de survol 3D</div>
@@ -151,7 +151,7 @@ const DESIGNS = [
     h: 400,
     html: () => `<div class="root" style="width:660px;height:400px;background:${C.paper}">
       <img class="abs" src="__SHOT__" style="left:0;top:0;width:660px;height:170px;object-fit:cover;object-position:50% 48%">
-      <div class="abs" style="left:0;top:0;width:660px;height:170px;background:linear-gradient(90deg,rgb(27 40 50 / 0.86),rgb(27 40 50 / 0.1) 62%)"></div>
+      <div class="abs" style="left:0;top:0;width:660px;height:170px;background:linear-gradient(90deg,rgb(28 42 51 / 0.86),rgb(28 42 51 / 0.1) 62%)"></div>
       <div class="abs" style="left:0;top:164px;width:660px;height:6px;background:${C.accent}"></div>
       <div class="abs" style="left:40px;top:42px;width:56px;height:56px;border-radius:13px;background:${C.ink};box-shadow:0 0 0 2px ${C.accent}">${logo}</div>
       <div class="abs name" style="left:112px;top:40px;font-size:34px;line-height:40px;color:#fff">OpenFlyover</div>
