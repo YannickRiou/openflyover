@@ -184,7 +184,7 @@ const messages: Messages['light'] = {
   'snow.line': 'Schneegrenze',
   'snow.hintWeather': 'Schnee oberhalb von {altitude} m (Wetter des Starttags).',
   'snow.hintManual': 'Schnee oberhalb von {altitude} m, egal bei welchem Wetter.',
-  'snow.hintNone': 'Kein Schnee: Der Boden bleibt wie auf dem Foto.',
+  'snow.hintNone': 'Kein Schnee und keine Gletscher: Der Boden bleibt wie auf dem Foto.',
   'snow.hintOff': 'Kein Schnee: Das Wetter des Tages ist ausgeschaltet (Kästchen « Wetter am Tag der Tour », weiter oben).',
   'snow.hintWaiting': 'Kein Schnee: Das Wetter des Tages ist nicht geladen (siehe die Meldung weiter oben).',
   'snow.hintNoSnow': 'An diesem Tag kein Schnee: Das Wetter meldet weder Schnee am Boden noch Schneefall auf der Höhe der Strecke.',

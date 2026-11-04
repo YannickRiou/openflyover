@@ -184,7 +184,7 @@ const messages: Messages['light'] = {
   'snow.line': 'Snow line',
   'snow.hintWeather': 'Snow above {altitude} m (weather of the starting day).',
   'snow.hintManual': 'Snow above {altitude} m, whatever the weather.',
-  'snow.hintNone': 'No snow: the ground stays as in the photo.',
+  'snow.hintNone': 'No snow and no glaciers: the ground stays as in the photo.',
   'snow.hintOff': 'No snow: the weather of the day is turned off (the “Weather on the day of the outing” box, above).',
   'snow.hintWaiting': 'No snow: the weather of the day is not loaded (see the message above).',
   'snow.hintNoSnow': 'No snow that day: the weather reports neither snow on the ground nor snowfall at the altitude of the track.',

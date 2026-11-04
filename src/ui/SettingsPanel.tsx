@@ -1,3 +1,4 @@
+import { deviceBudget } from '../core/deviceBudget'
 import { useEffect, useId, useMemo, useState } from 'react'
 import { CLOUD_QUALITY_NAMES, effectiveRender } from '../export/qualityTier'
 import { t, useT } from '../i18n'
@@ -491,7 +492,7 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
         </SettingRow>
       )}
 
-      {clouds.mode !== 'aucun' && (
+      {clouds.mode !== 'aucun' && !(clouds.mode === 'mer' && clouds.seaRender === 'surface') && (
         <SettingRow
           label={t('light.clouds.quality')}
           value={qualityLabel}
@@ -683,23 +684,28 @@ function BasemapChoice() {
  */
 function AmbianceSection() {
   const t = useT()
+  const atmosphere = useAppStore((s) => s.settings.atmosphere)
+  const weatherScene = useAppStore((s) => s.settings.weatherScene)
   const clouds = useAppStore((s) => s.settings.clouds)
   const sunFromTrack = useAppStore((s) => s.settings.sunFromTrack)
   const sunHour = useAppStore((s) => s.settings.sunHour)
   const setSetting = useAppStore((s) => s.setSetting)
   const day = useSolarDay()
   const hours = ambianceHours(day)
-  const chosen = ambianceOf({ clouds, sunFromTrack, sunHour }, day)
+  const chosen = ambianceOf({ clouds, sunFromTrack, sunHour, weatherScene }, day)
   const pick = (ambiance: Ambiance | '') => {
     if (!ambiance) return
     const hour = hours[ambiance]
     if (hour === null) return
     getSettingsHistory().transaction(() => {
       setSetting('clouds', { ...clouds, mode: AMBIANCE_CLOUDS[ambiance] })
+      setSetting('weatherScene', { ...weatherScene, enabled: ambiance !== 'sunny' })
       setSetting('sunFromTrack', hour === undefined)
       if (hour !== undefined) setSetting('sunHour', hour)
     })
   }
+  // the chips set the sky and the sun: without the atmosphere there is neither
+  if (!atmosphere) return null
   return (
     <PanelSection title={t('light.ambiance.title')}>
       <RadioGroup look="chips" aria-label={t('light.ambiance.title')} value={chosen ?? ''} onChange={pick}>
@@ -784,7 +790,7 @@ export function MapSettings() {
               value={settings.imageryZoomOffset}
               onChange={(offset) => setSetting('imageryZoomOffset', offset)}
             >
-              {ZOOM_OFFSETS.map((option) => (
+              {ZOOM_OFFSETS.filter((option) => option.value <= deviceBudget().maxImageryZoomOffset || option.value === settings.imageryZoomOffset).map((option) => (
                 <Radio key={option.value} value={option.value}>
                   {option.label}
                 </Radio>
@@ -1020,6 +1026,10 @@ export function LightSettings() {
   const cloudShadows = useAppStore((s) => s.settings.cloudShadows)
   // the shadows fall from clouds in volume: none with « Aucun » nor with a sea of clouds drawn as a flat layer
   const noCloudVolume = useAppStore((s) => s.settings.clouds.mode === 'aucun' || (s.settings.clouds.mode === 'mer' && s.settings.clouds.seaRender === 'surface'))
+  // clouds of the weather of the day, which is not loaded: none are drawn yet
+  const meteoClouds = useAppStore((s) => s.settings.clouds.mode === 'meteo')
+  const weatherReady = useWeatherReady()
+  const waitingWeather = meteoClouds && !weatherReady
   const nightLightEv = useAppStore((s) => s.settings.nightLightEv)
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
@@ -1035,8 +1045,9 @@ export function LightSettings() {
 
         {atmosphere && (
           <>
-            <Checkbox id={`${id}-cloud-shadows`} checked={cloudShadows} disabled={noCloudVolume} onChange={(on) => setSetting('cloudShadows', on)}>{t('light.atmosphere.cloudShadows')}</Checkbox>
+            <Checkbox id={`${id}-cloud-shadows`} checked={cloudShadows} disabled={noCloudVolume || waitingWeather} onChange={(on) => setSetting('cloudShadows', on)}>{t('light.atmosphere.cloudShadows')}</Checkbox>
             {noCloudVolume && <p className="type-hint">{t('light.atmosphere.cloudShadowsNone')}</p>}
+            {waitingWeather && !noCloudVolume && <p className="type-hint">{t('light.clouds.hintWaiting')}</p>}
           </>
         )}
 

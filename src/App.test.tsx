@@ -116,9 +116,16 @@ describe('Tabs and the « Ambiance » chips', () => {
       setSetting('clouds', { ...settings.clouds, mode: 'aucun' })
       setSetting('sunFromTrack', false)
       setSetting('sunHour', 12)
+      // « Grand beau » also leaves the weather of the day out of the scene
+      setSetting('weatherScene', { ...settings.weatherScene, enabled: false })
     })
     expect(rail()).not.toContain('meteo')
     expect(rail()).not.toContain('lumiere')
+    // the weather acting on the scene again is no chip's « Grand beau »: the tab shows it
+    await act(async () => setSetting('weatherScene', { ...settings.weatherScene, enabled: true }))
+    expect(rail()).toContain('meteo')
+    await act(async () => setSetting('weatherScene', { ...settings.weatherScene, enabled: false }))
+    expect(rail()).not.toContain('meteo')
     // the sun at an hour no chip sets: the values are no chip's any more, both tabs show them
     await act(async () => setSetting('sunHour', 11))
     expect(rail()).toContain('lumiere')

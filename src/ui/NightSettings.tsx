@@ -69,7 +69,7 @@ export function NightSettings() {
       )}
       {sequence && <p className="type-hint">{tr('light.nights.sequenceHint')}</p>}
       {/* « À la suite », the « Nuit » transitions use these seconds whether the nights inside the stages show or not */}
-      {(nights.enabled || sequence) &&
+      {((nights.enabled && shown > 0) || sequence) &&
         NIGHT_PARTS.map(({ key, label, tip }) => (
           <SettingRow key={key} label={label} value={formatSecondsShort(nights[key])} paths={['film.nights']}>
             <RangeField label={label} tip={tip} {...NIGHT_PART_RANGE} value={nights[key]} format={formatSecondsShort} onChange={(v) => setNights({ [key]: v }, false)} />
