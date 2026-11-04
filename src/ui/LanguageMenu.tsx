@@ -6,7 +6,7 @@ import { setPreferences } from './preferences'
 import { Button, Tip } from './primitives'
 
 /**
- * Language of the interface, in the top bar after « ? »: a button with the flag and the code of the current language
+ * Language of the interface, in the top bar: a button with the flag and the code of the current language
  * opens the list of the languages (native names). Arrows move in the list, Escape closes it and gives the focus back.
  * The choice is a preference of the device (`preferences.ts`).
  */

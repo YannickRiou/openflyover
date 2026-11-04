@@ -75,7 +75,6 @@ export default {
   'preferences.timeline.snapRuler': 'Les graduations',
   'preferences.timeline.snapMarks': 'Transitions et temps forts',
   'updates.title': 'Mises à jour',
-  'updates.version': 'Version installée : {version}',
   'updates.hint': "OpenFlyover interroge GitHub (github.com) uniquement quand vous appuyez sur ce bouton : rien n'est vérifié ni installé automatiquement.",
   'updates.check': 'Rechercher une mise à jour',
   'updates.checking': 'Recherche en cours…',

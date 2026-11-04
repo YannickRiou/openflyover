@@ -2,9 +2,10 @@ import type { Messages } from '../messages'
 
 const messages: Messages['news'] = {
   title: 'What’s new',
-  button: 'See what’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v55.menu.title': 'A menu on the logo',
+  'v55.menu.text': 'Click the logo, at the top left: “My projects”, “What’s new”, the user guide and the keyboard shortcuts are gathered there. “About and updates” gives the version, the sources and the check for updates. On a phone, everything heads the ⋯ menu.',
   'v50.margins.title': 'Margins when you want them',
   'v50.margins.text': 'The “Marges de sécurité” box of the export keeps the overlay away from the edges and, in 9:16 and 4:5, out of the areas of Reels, TikTok and Shorts. It ticks itself when you pick a platform. Unticked, the overlay moves close to the edges and the whole picture serves the film.',
   'v50.modes.title': 'Three interface modes',

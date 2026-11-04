@@ -17,6 +17,8 @@ const messages: Messages['topbar'] = {
   saveUnsavedTip: 'Guardar: cambios sin guardar',
   saveTip: 'Guardar el proyecto',
   shortcuts: 'Atajos de teclado',
+  menu: 'Menú de OpenFlyover',
+  'menu.guide': 'Guía de uso',
   cancelExportAria: 'Cancelar la exportación ({percent} %)',
   finalizingAria: 'Finalizando el archivo',
   finalizing: 'Finalizando…',

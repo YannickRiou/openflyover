@@ -39,7 +39,7 @@ screen: Open-Meteo while the weather shows, and Esri) and the **full form** (the
 the « Displayed attribution » column above, one per source in use) that always closes the film, whatever the choice: under the
 closing card (at the end of its credits roll, which then stops with the sources on screen; without a roll, along the bottom edge
 over the last seconds of the film, lifted above the closing card or any widget it would cover, whatever the window of the card). The
-poster keeps the full form (print); the status bar keeps the full text in « Sources et licences ». « Copier les crédits » in the
+poster keeps the full form (print); « À propos et mises à jour » (the OpenFlyover menu) keeps the full text. « Copier les crédits » in the
 export drawer copies the full form with the page that states each attribution, for the description of the video. The short form is
 the name of the holder and nothing more, except where the terms ask for more (read 2026-10-22):
 
@@ -63,7 +63,7 @@ A project with the credits switched off before this setting existed opens with �
 
 The desktop application can check for a new version of itself, on demand: it contacts `github.com` (the release feed
 `latest.json`, then the update package if you install it) only when you press « Rechercher une mise à jour »
-(« Réglages »), from its Rust side (the page's content security policy lists no GitHub host). Nothing else is sent; the
+(« À propos et mises à jour »), from its Rust side (the page's content security policy lists no GitHub host). Nothing else is sent; the
 website has no such button. Setup: [`installers.md`](installers.md#automatic-updates-maintainer-setup).
 
 The optional Strava import is not one of these sources: it reads your own activities through your own Strava

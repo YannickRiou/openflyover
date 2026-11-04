@@ -1,17 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useT } from '../i18n'
 import { useRegionStore } from '../osm/region'
-import { hasOsmLandmarks, useForestStore, useGlacierStore, useLandmarkStore, useWaterStore } from '../osm/store'
-import { overlayCredits } from '../overlay/data'
+import { useLandmarkStore } from '../osm/store'
 import { getPlatform } from '../platform'
 import { useForestStatusStore } from '../scene/forestStatus'
 import { getPerfProbe } from '../scene/perfProbe'
 import { useGlacierStatusStore } from '../scene/glacierStatus'
 import { useWaterStatusStore } from '../scene/waterStatus'
-import { updateDateNote, useSourceDates } from '../terrain/sourceDates'
-import { getImagerySource } from '../terrain/sources'
 import { useAppStore } from '../state/store'
-import { useWeatherStore, weatherShown } from '../weather/store'
+import { useWeatherStore } from '../weather/store'
+import { useCreditSources } from './AboutDialog'
 import { formatPercent } from './format'
 import { Icon } from './icons'
 import {
@@ -26,12 +24,10 @@ import {
   type PerfSample,
   type SystemStats,
 } from './mapStatus'
-import { setPreferences, usePreferences } from './preferences'
+import { usePreferences } from './preferences'
 import { PERF_ITEMS } from './shell'
 import type { PerfItem } from './shell'
-import { Button, Modal, Tip } from './primitives'
-import { LATEST_NEWS } from './whatsNew'
-import { WhatsNewDialog } from './WhatsNewDialog'
+import { Tip } from './primitives'
 
 /*
  * The strip's classes. It is a container (`@container/status`): narrower than 900 px the performance readout goes, narrower
@@ -221,41 +217,17 @@ function FetchChips() {
 /**
  * Status strip under the timeline: map state (« Carte · 72 % » ring while the view waits for tiles, « Carte prête »
  * once it is complete, tiles in error), import spinner, the other fetches, the performance readout when there is
- * room, and the short credits of the active sources, always visible; the ⓘ button opens the full « Sources et
- * licences » lines. Only the import status is a live region: the map state changes several times a second and must not
+ * room, and the short credits of the active sources, always visible (the full lines are in « À propos et mises à jour »,
+ * the OpenFlyover menu). Only the import status is a live region: the map state changes several times a second and must not
  * be announced by screen readers.
  */
 export function StatusBar() {
   const t = useT()
   const map = useMapStatus()
   const loading = useAppStore((s) => s.loading)
-  const terrainSourceId = useAppStore((s) => s.settings.terrainSourceId)
-  const imagerySourceId = useAppStore((s) => s.settings.imagerySourceId)
-  const weather = useWeatherStore(weatherShown)
-  const landmarks = useLandmarkStore((s) => hasOsmLandmarks(s.landmarks))
-  // OpenStreetMap is credited for the water, the forests and the highlighted region as well as for the landmarks
-  const water = useWaterStore((s) => s.polygons > 0)
-  const forest = useForestStore((s) => s.polygons > 0)
-  const glacier = useGlacierStore((s) => s.polygons > 0)
-  const region = useRegionStore((s) => s.region !== null)
   const perfShown = usePreferences((s) => s.performance)
   const perf = usePerformance(perfShown)
-  const sourceDates = useSourceDates((s) => s.dates)
-  const [sourcesOpen, setSourcesOpen] = useState(false)
-  const [newsOpen, setNewsOpen] = useState(false)
-  // the dot of the « i » button: the newest « Nouveautés » have not been opened yet
-  const newsUnseen = usePreferences((s) => s.whatsNewSeen !== LATEST_NEWS)
-  const openNews = () => {
-    setSourcesOpen(false)
-    setNewsOpen(true)
-    setPreferences({ whatsNewSeen: LATEST_NEWS })
-  }
-
-  const imagery = getImagerySource(imagerySourceId)
-  // IGN layers: the update date of the data (Etalab licence), as the service sends it
-  const dateNote = updateDateNote(imagery.urlTemplate, sourceDates)
-  const osm = landmarks || water || forest || glacier || region
-  const credits = overlayCredits({ terrainSourceId, imagerySourceId, weather, landmarks: osm, water, forests: forest, glaciers: glacier })
+  const { terrainSourceId, imagerySourceId, weather, osm } = useCreditSources()
   const short = compactCredits({ terrainSourceId, imagerySourceId, weather, osm })
   const perfText = perf ? perfParts(perf, perfShown).join(' · ') : ''
 
@@ -331,55 +303,6 @@ export function StatusBar() {
           </span>
         ))}
       </div>
-      <Tip text={t('status.sources')} side="top" align="end">
-        <button
-          type="button"
-          className="relative inline-flex size-5 flex-none cursor-pointer items-center justify-center rounded-full p-0 text-glacier transition-ui hover:text-white touch:before:absolute touch:before:-inset-3.5 touch:before:content-['']"
-          aria-label={newsUnseen ? `${t('status.sources')} · ${t('news.title')}` : t('status.sources')}
-          onClick={() => setSourcesOpen(true)}
-        >
-          <Icon name="info" size={14} />
-          {newsUnseen && <span className="absolute top-0 right-0 size-2 rounded-full bg-accent-light" data-testid="news-dot" aria-hidden="true" />}
-        </button>
-      </Tip>
-
-      <WhatsNewDialog open={newsOpen} onClose={() => setNewsOpen(false)} />
-      <Modal open={sourcesOpen} onClose={() => setSourcesOpen(false)} title={t('status.sources')} closeLabel={t('common.close')} closeTip={t('common.closeEsc')}>
-        <Button className="mb-3" onClick={openNews}>
-          <Icon name="sparkles" size={16} />
-          {t('news.button')}
-          {newsUnseen && <span className="size-2 rounded-full bg-accent-light" aria-hidden="true" />}
-        </Button>
-        <ul className="mb-3 flex flex-col gap-2">
-          {credits.map((line) => (
-            <li key={line}>
-              {line}
-              {dateNote && line.includes(imagery.attribution) && ` · ${dateNote}`}
-            </li>
-          ))}
-        </ul>
-        <p>
-          {short
-            .filter((item) => item.href)
-            .map((item, i) => (
-              <span key={item.text}>
-                {i > 0 && ' · '}
-                <a className="underline" href={item.href} target="_blank" rel="noreferrer">
-                  {item.text.replace('© ', '')}
-                </a>
-              </span>
-            ))}
-        </p>
-        <p className="type-hint">{t('status.sourcesNote')}</p>
-        <p className="type-hint">
-          {t('status.sourcesProject')}{' '}
-          <a className="underline" href="https://github.com/YannickRiou/openflyover" target="_blank" rel="noreferrer">
-            GitHub
-          </a>
-          .
-        </p>
-        {getPlatform().checkForUpdate && <p className="type-hint">{t('status.sourcesUpdates')}</p>}
-      </Modal>
     </footer>
   )
 }

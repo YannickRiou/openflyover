@@ -17,6 +17,8 @@ const messages: Messages['topbar'] = {
   saveUnsavedTip: 'Speichern: ungespeicherte Änderungen',
   saveTip: 'Projekt speichern',
   shortcuts: 'Tastenkürzel',
+  menu: 'OpenFlyover-Menü',
+  'menu.guide': 'Benutzerhandbuch',
   cancelExportAria: 'Export abbrechen ({percent} %)',
   finalizingAria: 'Datei wird abgeschlossen',
   finalizing: 'Abschluss…',

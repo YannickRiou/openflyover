@@ -2,9 +2,10 @@ import type { Messages } from '../messages'
 
 const messages: Messages['news'] = {
   title: 'Neuheiten',
-  button: 'Neuheiten ansehen',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v55.menu.title': 'Ein Menü am Logo',
+  'v55.menu.text': 'Klicken Sie oben links auf das Logo: „Meine Projekte“, „Neuheiten“, das Benutzerhandbuch und die Tastenkürzel sind dort vereint. „Info und Updates“ zeigt die Version, die Quellen und die Suche nach Updates. Auf dem Smartphone steht alles am Anfang des Menüs ⋯.',
   'v50.margins.title': 'Ränder nach Wahl',
   'v50.margins.text': 'Das Kästchen „Sicherheitsränder“ des Exports hält das Overlay von den Rändern fern und in 9:16 und 4:5 außerhalb der Bereiche von Reels, TikTok und Shorts. Es hakt sich selbst an, wenn Sie eine Plattform wählen. Ohne Haken rückt das Overlay an die Ränder und das ganze Bild gehört dem Film.',
   'v50.modes.title': 'Drei Modi der Oberfläche',

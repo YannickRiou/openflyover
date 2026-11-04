@@ -12,7 +12,9 @@ const messages: Messages['status'] = {
   importing: 'Import läuft…',
   perfTip: 'Leistung (Auswahl unter „Einstellungen“)',
   creditSources: 'Quellen {name}',
-  sources: 'Quellen und Lizenzen',
+  about: 'Info und Updates',
+  sourcesTitle: 'Quellen und Lizenzen',
+  version: 'Version: {version}',
   sourcesProject: 'OpenFlyover ist quelloffen: Code, Dokumentation und Downloads auf',
   sourcesNote: 'Diese Angaben werden in die exportierten Filme eingeblendet (Overlay, „Quellenangaben“). Schriften: Fraunces und IBM Plex (SIL Open Font License 1.1). Icons: Lucide (ISC-Lizenz). OpenFlyover wird unter der MIT-Lizenz veröffentlicht.',
   'source.weather': 'Wetter der Tour (Open-Meteo)',
@@ -30,7 +32,6 @@ const messages: Messages['status'] = {
   'perf.js': 'JS {value}',
   'perf.ram': 'RAM {used} / {total}',
   'perf.cpu': 'CPU {value} %',
-  sourcesUpdates: 'Desktop-App: GitHub (github.com) wird nur kontaktiert, wenn Sie „Nach Updates suchen“ (Einstellungen) drücken, um die Versionsdatei zu lesen.',
   // --- 4.1.0: « Forêts » chip, waiting for the other OpenStreetMap requests ---
   'source.forest': 'Wälder (OpenStreetMap)',
   'chip.queued': '{source}: wartet, die anderen OpenStreetMap-Ladevorgänge kommen zuerst',

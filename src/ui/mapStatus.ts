@@ -149,7 +149,7 @@ export function perfParts(sample: PerfSample, shown: Record<PerfItem, boolean>):
 }
 
 // ---------------------------------------------------------------------------
-// Short credits of the active sources: always on the status bar, the full lines in « Sources et licences »
+// Short credits of the active sources: always on the status bar, the full lines in « À propos et mises à jour »
 // ---------------------------------------------------------------------------
 
 export interface CreditItem {

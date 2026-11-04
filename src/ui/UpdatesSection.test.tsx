@@ -47,7 +47,6 @@ describe('UpdatesSection', () => {
   it('checks nothing until the button is pressed', () => {
     expect(platform.checkForUpdate).not.toHaveBeenCalled()
     expect(status()).toBeNull()
-    expect(host.textContent).toContain('Version installée')
     expect(host.textContent).toContain('uniquement quand vous appuyez')
   })
 

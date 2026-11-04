@@ -15,6 +15,8 @@ export default {
   saveUnsavedTip: 'Enregistrer : modifications non enregistrées',
   saveTip: 'Enregistrer le projet',
   shortcuts: 'Raccourcis clavier',
+  menu: 'Menu OpenFlyover',
+  'menu.guide': "Guide d'utilisation",
   cancelExportAria: "Annuler l'export ({percent} %)",
   finalizingAria: 'Finalisation du fichier',
   finalizing: 'Finalisation…',

@@ -522,15 +522,24 @@ has a tiny inline script for the theme before the first paint. Free colours are 
 keeps 4.5:1, the bar for its secondary text (hint in the panel). Compact: spacing scale ×0.85, `--control-h` 28 px with a fine
 pointer (`appearance.css`).
 
-- **Top bar** (`TopBar.tsx`): logo, project name editable in place (`projectName` in the store, empty = name of the
+- **Top bar** (`TopBar.tsx`): the logo with a chevron, one button that opens the **OpenFlyover menu** (see below), project name editable in place (`projectName` in the store, empty = name of the
   first track, `effectiveProjectName`) and the saved state, told by the save icon (a dot while modified, the accent colour for 3 s once saved: `data-save-state` `unsaved` /
   `saved` on the button; `savedProject`: settings, tracks and name at the
   last save or the last open, compared by reference, `isProjectDirty`; a project with a track is saved
   automatically in « Mes projets », see "Project (phase 4)"), undo / redo, "Ouvrir" (open, icon only; a single picker: `.opnflvr` / `.json` → project, anything else → track import,
   `routeOpenedFiles`; opening a project clears the history), "Enregistrer" (save); in the center the **output format** ("Libre" (free),
-  16:9, 9:16, 1:1, 4:5, 21:9); on the right "?" (shortcuts) and "Exporter" (export), the only primary button of the shell, which opens
+  16:9, 9:16, 1:1, 4:5, 21:9); on the right the language and "Exporter" (export), the only primary button of the shell, which opens
   the export drawer and becomes "42 % · Annuler" (cancel) during an export.
-- **Output format**: a format writes `settings.video.aspect` (saved, undoable); "Libre" is a preview
+- **OpenFlyover menu** (`AppMenu.tsx`: `useAppMenu` builds the entries and their dialogs, `LogoMenu` is the button, `Menu` primitive): what is about the
+  application itself and not used all the time. « Mes projets » (back to the home screen: `closeProject` with the question of `openChoice.ts`,
+  the waiting change written first, disabled without a track or while a film renders), « Nouveautés » (`WhatsNewDialog`: what changed, in the words of
+  the users and by version, newest first; `ui/whatsNew.ts`: `WHATS_NEW`, an icon, a title and a sentence per item, the texts in the `news` domain of
+  the five languages; a minor version stands for its patches), « Guide d'utilisation » (the guide of the language in a new tab, `guideUrl`),
+  « Raccourcis clavier » (`HelpDialog`, also opened by `?`) and « À propos et mises à jour » (`AboutDialog.tsx`: version, « Rechercher une mise à jour » on
+  the desktop, then the sources and licences). A dot on the logo button shows until the newest version was opened (`Preferences.whatsNewSeen`,
+  compared with `LATEST_NEWS`): adding a version means its items first in `WHATS_NEW` and its keys in the five `news.ts` files. On a portrait phone the logo is hidden
+  (`usePortraitPhone`) and the same entries head « Plus d'actions », above a line (`separator` of `MenuItem`). The button is not a drag region of the
+  desktop title bar: a click on it must open the menu.- **Output format**: a format writes `settings.video.aspect` (saved, undoable); "Libre" is a preview
   flag (`freeFraming` in the store, neither saved nor undoable). Outside "Libre", `Stage.tsx` frames the 3D view to the format
   (`frameRect`, ink bars): the stage (`stage-frame`, `data-stage`), which holds the 3D canvas, the overlay and the legend, takes the framed
   rectangle; the overlay therefore follows the exported area with no change to `src/overlay`. The export renders into this visible canvas.
@@ -538,10 +547,10 @@ pointer (`appearance.css`).
   one centred column: what the app does (one sentence and three points: free, no account, everything stays on the device),
   "Choisir un fichier" (choose a file), "Importer depuis Strava", "Essayer avec l'exemple" (try the
   sample), "Ouvrir un projet…" (open a project; a single picker whose `accept` changes), a « Nouveau en <version> » card
-  (the first titles of `WHATS_NEW[0]`, opens « Nouveautés » and marks them seen like the « i » button), then "Récents": the three latest
+  (the first titles of `WHATS_NEW[0]`, opens « Nouveautés » and marks them seen like the menu entry), then "Récents": the three latest
   entries of « Mes projets » but the open one (`useLibraryStore`, kept fresh by the always-mounted Projet tab), and links:
-  « Premiers pas » (the user guide, published with the site by `pages.yml` under `docs/`), the desktop installers of the
-  latest release (website only) and GitHub.
+  the desktop installers of the latest release (website only) and GitHub. The user guide (published with the site by
+  `pages.yml` under `docs/`) is an entry of the OpenFlyover menu.
 - **Rail and panel**: vertical rail of icon + label tabs (64 px; `Tabs` primitive: `tablist`, one tab stop, arrows (up / down in the rail, left / right in the phone's bar) and Home / End, a press on the open tab folds the panel) and a
   320 px panel, one tab at a time, nine tabs in montage order (`SHELL_TABS`), one question each: **Trace** (track; track list with "+ Ajouter" (add; a menu: « Fichiers GPX ou FIT… », « Activités Strava… »), waiting message without a track, then the « Trace » line settings, « Marqueur » and « Étiquettes », hidden without a track),
   **Carte** (map; base map and water, relief, OSM landmarks and points of interest),
@@ -636,17 +645,12 @@ pointer (`appearance.css`).
   command `system_stats`), each part chosen in « Réglages »; then the short credits of the active sources, always
   visible (`compactCredits`, `SOURCE_CREDITS`; OpenStreetMap first and linked to its copyright page; OpenTopoMap and
   Esri never collapsed, Esri's providers behind « … » below 560 px: OSMF, OpenTopoMap and Esri ask for a credit visible
-  without interaction), and ⓘ, which opens "Sources et licences" (sources and licenses) (`Modal`) with the full lines
-  (`overlayCredits`, same strings as in the film), licence links, and for IGN layers the update date of the data read
+  without interaction), (the full lines are in « À propos et mises à jour » of the OpenFlyover menu: `AboutDialog.tsx`, `overlayCredits`, same
+  strings as in the film, licence links, and for IGN layers the update date of the data read
   from the tiles' `Last-Modified` (`terrain/sourceDates.ts`, Licence Ouverte Etalab 2.0) or « date de mise à jour non
-  communiquée par le service ». The window also holds the link to the GitHub repository and the « Voir les nouveautés »
-  button, which opens « Nouveautés » (`WhatsNewDialog`): what changed, in the words of the users and by version, newest
-  first (`ui/whatsNew.ts`: `WHATS_NEW`, an icon, a title and a sentence per item, the texts in the `news` domain of the five
-  languages; a minor version stands for its patches). A dot on the ⓘ button shows until the newest version was opened
-  (`Preferences.whatsNewSeen`, compared with `LATEST_NEWS`): adding a version means its items first in `WHATS_NEW` and
-  its keys in the five `news.ts` files.
+  communiquée par le service »; `useCreditSources` gives the sources on the map to both).
 - **Shortcuts** (`src/ui/shortcuts.ts`): `SHORTCUTS` registry (id, keys, label, group Lecture / Montage / Projet /
-  Vue (playback / editing / project / view)) shown by the "Raccourcis clavier" (keyboard shortcuts) box (`HelpDialog.tsx`, `Modal`, "?" or the bar button)
+  Vue (playback / editing / project / view)) shown by the "Raccourcis clavier" (keyboard shortcuts) box (`HelpDialog.tsx`, `Modal`, "?" or the OpenFlyover menu)
   and reused in tooltips (`withShortcut`). `matchShortcut(key, keyFocus(target))`, pure: Ctrl/Cmd+S save,
   Ctrl/Cmd+O open, Ctrl/Cmd+E export drawer, F reframe, G safe zones, S stop at the marker, T text at the playhead, `[` collapse
   and `?` help (AltGr / Shift accepted), Esc, ← / →
@@ -670,10 +674,10 @@ pointer (`appearance.css`).
   become icon-only; below 1024 px (tablet) the panel, the export drawer and the inspector become side sheets over the view
   (rail and timeline kept).
 - **Phone and tablet** (`BOTTOM_SHEET_QUERY` and `COMPACT_QUERY` in `shell.ts`, same strings as the CSS):
-  - *Compact* (`max-width: 699px` or `max-height: 499px`, a phone either way up): top bar reduced to the logo, the
+  - *Compact* (`max-width: 699px` or `max-height: 499px`, a phone either way up): top bar reduced to the logo (its menu), the
     project name, undo and redo (always in the bar), the format button (`FormatMenu` in `TopBar.tsx`, in the place of the
     `FormatSwitcher` row: the icon of the chosen format, a bottom sheet of the formats; both call `pickFormat`), « Plus
-    d'actions » (⋯, `MoreMenu` in `TopBar.tsx`: open, save) and « Exporter » with its label; no « ? ». A portrait phone has
+    d'actions » (⋯, `MoreMenu` in `TopBar.tsx`: open, save; on a portrait phone the entries of the OpenFlyover menu come first) and « Exporter » with its label. A portrait phone has
     no logo and no language flag: the language is a section of « Réglages » (`PreferencesPanel`), as everywhere; in landscape the timeline starts folded (`Timeline`: strip
     with play and time) and unfolds as a sheet over the view; panel and drawer sheets fold it (`sheetOpen`), its
     unfolding folds them (`onUnfold` → shell event `fold`): one sheet at a time. Dialogs (`Modal`) are full screen. Safe areas
@@ -853,7 +857,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   `formatList(items)` (« a, b et c » / « a, b and c »). `src/ui/format.ts` (`formatNumber`, `formatDistance`, `formatDuration`,
   `formatBytes`, `formatClock`…) builds on them and on the `format.*` messages (units: « Mo » / « MB », « D+ » / « Gain »).
 - **The language** is a device preference, `Preferences.language` (`ui/shell.ts`, stored with `Preferences.appearance`). The
-  top bar has the selector (`LanguageMenu`, between « ? » and « Exporter »: flag and code, a menu of native names; the flags are
+  top bar has the selector (`LanguageMenu`, before « Exporter »: flag and code, a menu of native names; the flags are
   inline SVG, `ui/Flag.tsx`, because Windows draws the flag emoji as two letters;
   `role="menuitemradio"`, arrows, Escape, focus back to the button). `installLanguage()` (`ui/preferences.ts`, called by `main.tsx`
   only, so the tests stay French) applies the preference now and on every change, sets `<html lang>`, and on a first run with nothing
@@ -4191,10 +4195,10 @@ differs goes through `src/platform/`.
   plus `https://www.strava.com` (`connect-src` only, Strava import), `ipc:` and `blob:`; `style-src 'unsafe-inline'` with `dangerousDisableAssetCspModification:
   ["style-src"]` (Tauri would otherwise add a nonce that cancels `unsafe-inline`). **Any new source must also be added
   to the CSP in `tauri.conf.json`.**
-- **Updates** (« Réglages » › « Mises à jour », desktop only, on demand only: no check at start-up, no polling, no silent install).
+- **Updates** (OpenFlyover menu › « À propos et mises à jour », desktop only, on demand only: no check at start-up, no polling, no silent install).
   Contract: two optional `Platform` methods, `checkForUpdate()` → `UpdateCheck` (never throws: `current`, `available { update:
   { version, date, notes } }`, `offline`, `unavailable`, `error { message }`) and `installUpdate(onProgress?)` (download, signature check,
-  install, then `relaunch`); absent on the website, where `PreferencesPanel` and the « Sources et licences » line do not show them. `desktop.ts` imports
+  install, then `relaunch`); absent on the website, where `AboutDialog` does not show the section. `desktop.ts` imports
   `@tauri-apps/plugin-updater` and `@tauri-apps/plugin-process` dynamically (the web bundle never loads them) and keeps the `Update` of the last check
   for `installUpdate`. The pure part (`updater.ts`, tested with the plugins mocked in `updater.test.ts`) maps results and failures to the state of
   `UpdatesSection.tsx`: a rejection `plugin updater not found` (Tauri's answer for a plugin that is not registered) is `unavailable`, a network failure

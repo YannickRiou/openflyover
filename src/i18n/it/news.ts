@@ -2,9 +2,10 @@ import type { Messages } from '../messages'
 
 const messages: Messages['news'] = {
   title: 'Novità',
-  button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v55.menu.title': 'Un menu sul logo',
+  'v55.menu.text': 'Tocca il logo, in alto a sinistra: «I miei progetti», «Novità», la guida utente e le scorciatoie da tastiera sono riuniti lì. «Informazioni e aggiornamenti» mostra la versione, le fonti e la ricerca di aggiornamenti. Su un telefono, tutto è in testa al menu ⋯.',
   'v50.margins.title': 'Margini a scelta',
   'v50.margins.text': 'La casella “Margini di sicurezza” dell’esportazione tiene la grafica lontana dai bordi e, in 9:16 e 4:5, fuori dalle zone di Reels, TikTok e Shorts. Si spunta da sola quando si sceglie una piattaforma. Senza spunta la grafica si avvicina ai bordi e tutta l’immagine serve al film.',
   'v50.modes.title': 'Tre modalità dell’interfaccia',

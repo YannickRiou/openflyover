@@ -12,7 +12,6 @@ import { PERF_ITEMS, PREVIEW_QUALITIES, STATUS_CHIPS, UI_MODES } from './shell'
 import type { PerfItem, PreviewQuality, StatusChip } from './shell'
 import { usePreviewMeasure } from '../scene/previewQuality'
 import { Button, Chip, ColorField, Radio, RadioGroup, Switch } from './primitives'
-import { UpdatesSection } from './UpdatesSection'
 
 const STATUS_LABELS: Record<StatusChip, string> = {
   get weather() { return t('settings.preferences.status.weather') },
@@ -227,7 +226,6 @@ export function PreferencesPanel() {
         <p className="type-hint">{t('settings.preferences.preview.hint')}</p>
         {prefs.previewQuality === 'auto' && measuredSlow && <p className="type-hint">{t('settings.preferences.preview.measuredSlow')}</p>}
       </PanelSection>
-      {getPlatform().checkForUpdate && <UpdatesSection />}
       <DiagnosticRow />
     </>
   )

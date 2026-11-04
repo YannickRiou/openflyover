@@ -314,8 +314,9 @@ const SCENARIOS = [
       await until(page, () => document.querySelector('[data-testid="side-panel"]')?.hidden)
       await page.keyboard.press('Enter')
       await until(page, () => !document.querySelector('[data-testid="side-panel"]')?.hidden)
-      // the « ? » button, then the « ? » key; Escape closes the dialog both times
-      await page.click('button[aria-label="Raccourcis clavier"]')
+      // « Raccourcis clavier » of the OpenFlyover menu (the logo), then the « ? » key; Escape closes the dialog both times
+      await page.click('[data-testid="logo-menu"]')
+      await (await page.waitForSelector('[role="menuitem"]::-p-text(Raccourcis clavier)', { visible: true, timeout: STEP_MS })).click()
       await page.waitForSelector(MODAL, { visible: true, timeout: STEP_MS })
       await page.keyboard.press('Escape')
       await modalClosed(page)

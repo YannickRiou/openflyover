@@ -7,7 +7,7 @@ import { startTour } from './tourSteps'
 const KEY =
   'inline-block min-w-[22px] rounded-sm border border-b-2 border-edge bg-surface-control px-1.5 text-center font-body text-hint leading-normal font-semibold whitespace-nowrap text-text-1'
 
-/** « Raccourcis clavier » (modal dialog, Escape closes it), opened by « ? » or the button of the top bar. */
+/** « Raccourcis clavier » (modal dialog, Escape closes it), opened by « ? » or by the OpenFlyover menu of the top bar. */
 export function HelpDialog({ open, onClose }: { open: boolean; onClose(): void }) {
   const t = useT()
   return (
