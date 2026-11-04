@@ -5,6 +5,8 @@ const messages: Messages['news'] = {
   button: 'Vedi le novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v55.status.title': 'Una barra di stato più calma',
+  'v55.status.text': 'La barra in basso mostra solo ciò che si sta caricando e ciò che non è riuscito. Quando tutto è pronto, non dice nulla. Le prestazioni sono dietro il pulsante «i».',
   'v50.margins.title': 'Margini a scelta',
   'v50.margins.text': 'La casella “Margini di sicurezza” dell’esportazione tiene la grafica lontana dai bordi e, in 9:16 e 4:5, fuori dalle zone di Reels, TikTok e Shorts. Si spunta da sola quando si sceglie una piattaforma. Senza spunta la grafica si avvicina ai bordi e tutta l’immagine serve al film.',
   'v50.modes.title': 'Tre modalità dell’interfaccia',

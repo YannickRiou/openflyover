@@ -1,7 +1,7 @@
 /**
- * What the status bar says, pure: the map state (« Carte · 72 % » / « Carte prête », derived from the terrain stats;
- * the caller passes the time, so the smoothing is testable), the chips of the other fetches, the performance readout
- * and the short credits of the active sources.
+ * What the status bar says, pure: the map state (« Chargement de la carte… 72 % », derived from the terrain stats;
+ * the caller passes the time, so the smoothing is testable), what the other fetches have to say, the performance
+ * readout (behind the « i » button) and the short credits of the active sources.
  */
 import type { TerrainStats } from '../core/types'
 import { t } from '../i18n'
@@ -9,7 +9,7 @@ import { getImagerySource, getTerrainSource } from '../terrain/sources'
 import { formatBytes, formatNumber } from './format'
 import type { PerfItem, StatusChip } from './shell'
 
-/** A load shorter than this never shows: a small camera move stays « Carte prête ». */
+/** A load shorter than this never shows: a small camera move shows nothing. */
 export const MAP_LOADING_DELAY_MS = 500
 /** Shown progress stops here until the view has every tile (never « 100 % » while loading). */
 const MAX_LOADING_PROGRESS = 0.99
@@ -47,7 +47,7 @@ export function nextMapStatus(prev: MapStatus, stats: TerrainStats, nowMs: numbe
   const continuing = prev.phase === 'loading'
   const since = continuing ? prev.since : nowMs
   const progress = continuing ? Math.max(prev.progress, raw) : raw
-  // until the delay, the previous resting state stays on screen (nothing at the very start, « Carte prête » later)
+  // until the delay, the previous resting state stays on screen (nothing at the very start, ready later)
   const shown = nowMs - since >= MAP_LOADING_DELAY_MS ? 'loading' : continuing ? prev.shown : prev.phase
   return { phase: 'loading', shown, progress, since, failed }
 }
@@ -104,6 +104,11 @@ export function fetchChip(chip: StatusChip, status: string, message: string | nu
     default:
       return null
   }
+}
+
+/** What the bar says of the fetches: the labels of those still loading (one indicator) and the failed ones; loaded or « nothing here » stay quiet. */
+export function layerNotices(chips: FetchChip[]): { loading: string[]; failed: FetchChip[] } {
+  return { loading: chips.filter((c) => c.tone === 'loading').map((c) => c.label), failed: chips.filter((c) => c.tone === 'attention') }
 }
 
 // ---------------------------------------------------------------------------

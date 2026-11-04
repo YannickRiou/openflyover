@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { TerrainStats } from '../core/types'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
-import { IDLE_MAP_STATUS, SOURCE_CREDITS, compactCredits, fetchChip, nextMapStatus, perfParts, viewProgress, type MapStatus } from './mapStatus'
+import { IDLE_MAP_STATUS, SOURCE_CREDITS, compactCredits, fetchChip, layerNotices, nextMapStatus, perfParts, viewProgress, type MapStatus } from './mapStatus'
 
 function stats(visibleTiles: number, pendingVisibleTiles: number, failedTiles = 0): TerrainStats {
   return { visibleTiles, loadedTiles: visibleTiles, pendingTiles: pendingVisibleTiles, failedTiles, pendingVisibleTiles }
@@ -42,7 +42,7 @@ describe('nextMapStatus', () => {
     expect(third).toMatchObject({ shown: 'loading', progress: 0.99 })
   })
 
-  it('keeps « Carte prête » on screen during a short load', () => {
+  it('keeps the resting state on screen during a short load', () => {
     const ready = nextMapStatus(IDLE_MAP_STATUS, stats(40, 0), 0)
     const [a, b] = run([stats(40, 4), stats(44, 0)], 250, ready)
     expect(a).toMatchObject({ phase: 'loading', shown: 'ready' })
@@ -82,6 +82,17 @@ describe('fetchChip', () => {
     expect(fetchChip('forest', 'error', 'Pas d’arbres')).toEqual({ label: 'Forêts', tone: 'attention', tip: 'Pas d’arbres' })
     expect(fetchChip('forest', 'idle')).toBeNull()
     expect(fetchChip('weather', 'unavailable', 'Trace sans horaires')?.tip).toBe('Trace sans horaires')
+  })
+})
+
+describe('layerNotices', () => {
+  const chip = (status: string, label: Parameters<typeof fetchChip>[0] = 'water') => fetchChip(label, status, status === 'error' ? 'Serveur saturé' : null)!
+
+  it('groups the loading layers in one list, keeps failures, says nothing of the others', () => {
+    const notices = layerNotices([chip('loading', 'weather'), chip('queued', 'forest'), chip('error', 'landmarks'), chip('ready'), chip('none', 'region')])
+    expect(notices.loading).toEqual(['Météo', 'Forêts'])
+    expect(notices.failed).toEqual([{ label: 'Repères', tone: 'attention', tip: 'Serveur saturé' }])
+    expect(layerNotices([chip('ready'), chip('none', 'region')])).toEqual({ loading: [], failed: [] })
   })
 })
 

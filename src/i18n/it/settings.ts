@@ -57,7 +57,7 @@ const messages: Messages['settings'] = {
   'preferences.statusBar.title': 'Barra di stato',
   'preferences.statusBar.loads': 'Caricamenti',
   'preferences.statusBar.performance': 'Prestazioni',
-  'preferences.statusBar.hint': 'Le prestazioni compaiono quando la barra ha spazio. I crediti delle fonti restano sempre visibili.',
+  'preferences.statusBar.hint': 'Le prestazioni compaiono dietro il pulsante «i» della barra di stato. I crediti delle fonti restano sempre visibili.',
   'preferences.timeline.title': 'Timeline',
   'preferences.timeline.clock': 'Mostra l’ora registrata',
   'preferences.timeline.clockHint': 'Ora della traccia sulla posizione del marcatore, dopo la durata del film.',

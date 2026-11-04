@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 5.5.0 (unreleased)
+
+- **A calmer status bar**: while something loads, the bar shows « Loading the map… 29 % » and one line for the other layers (« Loading: Landmarks, Water »). When all is loaded it shows nothing but the source credits. A tile or a layer that failed stays on the bar in words (« Loading failed: Forests »). The performance figures (frames per second, tiles, memory, processor) moved behind the « i » button, in « Sources and licences », and are read only while that window is open.
+
 ## 5.4.0 (November 2026)
 
 - **A charter drawn from the logo, « Ligne de crête »**: the ink of the logo's ground (`#1C2A33`), the cream of its ridge (`#F5F2EA`), the glacier of its route and, for the accent, the orange of the point at its summit, the « balise » (`#FF5A36` on the ink: playhead, stops, focus; `#B8361A` on the cream: the main button). The headings move from Fraunces to IBM Plex Sans Condensed, the section titles in spaced capitals like the names on a map. Barlow Semi Condensed, semibold and bold, joins the fonts of the overlay and the posters for the labels, titles and figures over the view. The default accent is named « Balise »; an accent chosen before is kept. The charter is in `docs/charter.md`; the user guide (five languages), the « How it works » page, the handbook and the images of the desktop installers follow it too.
