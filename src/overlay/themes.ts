@@ -91,12 +91,15 @@ export interface OverlayPhotoStyle {
 export const FRAUNCES = '"Fraunces", Georgia, serif'
 export const PLEX = '"IBM Plex Sans", system-ui, sans-serif'
 export const PLEX_CONDENSED = '"IBM Plex Sans Condensed", "IBM Plex Sans", system-ui, sans-serif'
+/** the charter's font of the map: signage-born, condensed, semibold and bold, legible over the view */
+export const BARLOW = '"Barlow Semi Condensed", "IBM Plex Sans Condensed", system-ui, sans-serif'
 
 /** Families of the fonts the user can pick (`OverlayOverrides`): bundled faces, or system ones with fallbacks. */
 export const OVERLAY_FONT_FAMILIES: Record<OverlayFontId, string> = {
   fraunces: FRAUNCES,
   plex: PLEX,
   'plex-condensed': PLEX_CONDENSED,
+  barlow: BARLOW,
   georgia: 'Georgia, "Times New Roman", serif',
   system: 'system-ui, sans-serif',
   mono: 'ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace',
@@ -334,6 +337,8 @@ export const OVERLAY_FONTS: readonly string[] = [
   `500 32px ${PLEX_CONDENSED}`,
   `600 32px ${PLEX_CONDENSED}`,
   `700 32px ${PLEX_CONDENSED}`,
+  `600 32px ${BARLOW}`,
+  `700 32px ${BARLOW}`,
 ]
 
 // ---------------------------------------------------------------------------

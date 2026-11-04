@@ -19,11 +19,11 @@ export interface Appearance {
   chrome: string
 }
 
-export const DEFAULT_APPEARANCE: Appearance = { theme: 'light', accent: '#b9391f', chrome: '#1b2832' }
+export const DEFAULT_APPEARANCE: Appearance = { theme: 'light', accent: '#b8361a', chrome: '#1c2a33' }
 
 /** Accent colours offered beside the free picker; each keeps white text at 4.5:1 or more as it is. */
 export const ACCENT_PRESETS: readonly { color: string; label: string }[] = [
-  { color: '#b9391f', get label() { return t('settings.preferences.accent.red') } },
+  { color: '#b8361a', get label() { return t('settings.preferences.accent.red') } },
   { color: '#2f6a8a', get label() { return t('settings.preferences.accent.blue') } },
   { color: '#3a6446', get label() { return t('settings.preferences.accent.green') } },
   { color: '#8a5700', get label() { return t('settings.preferences.accent.amber') } },
@@ -35,7 +35,7 @@ export const ACCENT_PRESETS: readonly { color: string; label: string }[] = [
 
 /** Colours offered for the bar and the rail; the secondary text of the bar keeps 4.5:1 on each. */
 export const CHROME_PRESETS: readonly { color: string; label: string }[] = [
-  { color: '#1b2832', get label() { return t('settings.preferences.chrome.ink') } },
+  { color: '#1c2a33', get label() { return t('settings.preferences.chrome.ink') } },
   { color: '#20384a', get label() { return t('settings.preferences.chrome.night') } },
   { color: '#1f3d33', get label() { return t('settings.preferences.chrome.forest') } },
   { color: '#3b1d38', get label() { return t('settings.preferences.chrome.plum') } },

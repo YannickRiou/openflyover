@@ -44,7 +44,7 @@ describe('PreferencesPanel, « Apparence »', () => {
     expect(host.textContent).toContain('Apparence')
     expect(radio('Clair').checked).toBe(true)
     expect(host.textContent).not.toContain('Densité')
-    expect(swatch("Couleur d'accentuation : Rouge balisage").getAttribute('aria-selected')).toBe('true')
+    expect(swatch("Couleur d'accentuation : Balise").getAttribute('aria-selected')).toBe('true')
     expect(swatch('Couleur de la barre et du rail : Encre').getAttribute('aria-selected')).toBe('true')
     expect(reset().hasAttribute('disabled')).toBe(true)
     expect(document.documentElement.dataset.theme).toBe('light')

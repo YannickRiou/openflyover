@@ -30,7 +30,7 @@ export default {
   'preferences.theme.light': 'Clair',
   'preferences.theme.dark': 'Sombre',
   'preferences.theme.system': 'Système',
-  'preferences.accent.red': 'Rouge balisage',
+  'preferences.accent.red': 'Balise',
   'preferences.accent.blue': 'Bleu glacier',
   'preferences.accent.green': 'Mousse',
   'preferences.accent.amber': 'Ambre',

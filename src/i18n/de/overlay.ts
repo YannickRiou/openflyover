@@ -72,6 +72,7 @@ const messages: Messages['overlay'] = {
   'font.fraunces': 'Fraunces',
   'font.plex': 'IBM Plex Sans',
   'font.plex-condensed': 'IBM Plex Sans Condensed',
+  'font.barlow': 'Barlow Semi Condensed',
   'font.georgia': 'Georgia (System)',
   'font.system': 'Systemschrift',
   'font.mono': 'Festbreite (System)',

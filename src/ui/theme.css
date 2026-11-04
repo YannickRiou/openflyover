@@ -16,18 +16,21 @@
   --radius-*: initial;
   --shadow-*: initial;
 
-  /* « Carte alpine » : papier de carte topographique, encre, rouge de balisage, glacier, mousse. */
-  --color-paper: #f6f3ec;
+  /*
+   * The charter « Ligne de crête », from the logo: its ink ground, its cream ridge, its glacier route and the point of its
+   * summit, the « balise » (`--color-accent-light` on the ink, `--color-accent` on the cream); moss and amber for the states.
+   */
+  --color-paper: #f5f2ea;
   --color-card: #ece7da;
-  --color-ink: #1b2832;
+  --color-ink: #1c2a33;
   --color-ink-raised: #263540;
   --color-ink-soft: #4e5c65;
   --color-line: #ddd6c6;
   --color-line-strong: #8e8777;
-  --color-accent: #b9391f;
+  --color-accent: #b8361a;
   --color-accent-strong: #962c15;
   --color-accent-tint: #f7ddd3;
-  --color-accent-light: #ff9b73;
+  --color-accent-light: #ff5a36;
   --color-glacier: #a9ccd9;
   --color-glacier-deep: #2f5d70;
   --color-moss: #3a6446;
@@ -38,7 +41,8 @@
   /* named for HeroUI's Switch stylesheet (`text-black` on its thumb); no skin of the app shows it */
   --color-black: #000000;
 
-  --font-heading: 'Fraunces', Georgia, serif;
+  /* the charter: IBM Plex in two widths, condensed for the titles (Fraunces stays among the fonts of the films' texts) */
+  --font-heading: 'IBM Plex Sans Condensed', 'IBM Plex Sans', system-ui, sans-serif;
   --font-body: 'IBM Plex Sans', system-ui, sans-serif;
 
   /*
@@ -111,7 +115,7 @@
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
 @theme static {
-  --color-accent: #b9391f;
+  --color-accent: #b8361a;
   --radius-sm: 6px;
   --radius-md: 10px;
 }
@@ -327,7 +331,7 @@
   --line: #2e3a43;
   --line-strong: #6c7a84;
   /* the accent on a panel is its light variant; the tint is the accent in the panel colour (derived for another accent) */
-  --color-accent-tint: #392221;
+  --color-accent-tint: #392220;
   --accent: var(--color-accent-light);
   --accent-hover: var(--color-accent-light);
   --status-attention: var(--color-amber-light);

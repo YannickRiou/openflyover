@@ -117,6 +117,16 @@ FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
 
+### Barlow Semi Condensed (fonts, public/fonts)
+
+License: OFL-1.1. https://github.com/jpt/barlow, through Fontsource 5.3.0 (`@fontsource/barlow-semi-condensed`), weights 600 and 700, `latin` and `latin-ext`, copied without modification. Full text: `public/fonts/OFL-Barlow.txt`.
+
+```text
+Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+```
+
 ### IBM Plex Sans and IBM Plex Sans Condensed (fonts, public/fonts)
 
 License: OFL-1.1. https://github.com/IBM/plex, copied without modification.

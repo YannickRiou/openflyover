@@ -223,7 +223,7 @@ MIT, TypeScript and puppeteer-core (end-to-end tests) under Apache-2.0.
 
 Embedded files:
 
-- **Fonts** Fraunces and IBM Plex, under SIL Open Font License 1.1 ([`public/fonts/README.md`](public/fonts/README.md)).
+- **Fonts** IBM Plex, Barlow Semi Condensed and Fraunces, under SIL Open Font License 1.1 ([`public/fonts/README.md`](public/fonts/README.md)).
 - Interface **icons**: paths from [Lucide](https://lucide.dev) (ISC license, notice in `src/ui/icons.tsx`),
   built into the code.
 - **Sky textures** and star catalog, from the `@takram/three-atmosphere` package (MIT), and **cloud

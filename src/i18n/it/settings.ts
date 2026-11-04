@@ -32,7 +32,7 @@ const messages: Messages['settings'] = {
   'preferences.theme.light': 'Chiaro',
   'preferences.theme.dark': 'Scuro',
   'preferences.theme.system': 'Sistema',
-  'preferences.accent.red': 'Rosso segnavia',
+  'preferences.accent.red': 'Segnavia',
   'preferences.accent.blue': 'Blu ghiacciaio',
   'preferences.accent.green': 'Muschio',
   'preferences.accent.amber': 'Ambra',
