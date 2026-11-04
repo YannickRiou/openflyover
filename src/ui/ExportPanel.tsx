@@ -20,7 +20,7 @@ import {
 import { currentReport } from '../export/guard'
 import { useQueueStore } from '../export/queue'
 import { copyText, showDiagnostic } from '../export/diagnostic'
-import { targetBitrate, type CodecCandidate } from '../export/encoder'
+import { deviceBitrateCap, targetBitrate, type CodecCandidate } from '../export/encoder'
 import { containerFor, encodableCodecs, exportCodec } from '../export/nativeEncoder'
 import { estimateRenderSeconds, lastFilm, layersRatio, rateFromHistory } from '../export/history'
 import { useExportHistory } from '../export/historyStore'
@@ -29,6 +29,7 @@ import { CLOUD_QUALITY_NAMES, QUALITY_NAMES, effectiveRender, isCustomised } fro
 import { t, t as translate, useT } from '../i18n'
 import type { MessageKey } from '../i18n'
 import { LOUDNESS_TARGETS_LUFS } from '../film/loudness'
+import { clipHasSound } from '../film/model'
 import {
   AUDIO_BITRATES_KBPS,
   BITRATE_RANGE_MBPS,
@@ -45,6 +46,7 @@ import {
   exportDeviceNote,
   exportResolutionNote,
   expandNameTemplate,
+  fitsDevice,
   platformPresetOf,
   videoEncoding,
   videoSize,
@@ -230,6 +232,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   // what the output ignores: a PNG sequence is not encoded, neither it nor the overlay alone has sound
   const pngSequence = sequence && !overlayOnly
   const silent = overlayOnly || pngSequence
+  // the film has music or a clip with sound: without them « Son » and « Volume » change nothing
+  const hasSound = useAppStore((s) => s.settings.film.audio.length > 0 || s.settings.film.media.some(clipHasSound))
   const downloadedRef = useRef<ExportResult | null>(null)
   const streams = getPlatform().capabilities.canStreamToDisk
 
@@ -242,8 +246,9 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const totalFrames = buildFrameSchedule({
     durationS,
     fps: video.fps,
-    holdStartS: EXPORT_HOLD_START_S,
-    holdEndS: EXPORT_HOLD_END_S,
+    // a PNG sequence holds no frame at the ends (`start`)
+    holdStartS: pngSequence ? 0 : EXPORT_HOLD_START_S,
+    holdEndS: pngSequence ? 0 : EXPORT_HOLD_END_S,
   }).length
   // the time of the film at the speed of the last one rendered (this session's, else the history's): known before the first film of a session
   const measuredRate = useExportStore((s) => s.secondsPerMegapixel)
@@ -400,7 +405,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       <fieldset className="field min-w-0" disabled={busy}>
         <legend className="type-label">{t('export.panel.platforms')}</legend>
         <div className="chips">
-          {PLATFORM_PRESETS.map((preset) => (
+          {PLATFORM_PRESETS.filter((preset) => fitsDevice(preset.video.resolution) || platformPresetOf(video) === preset.id).map((preset) => (
             <Chip key={preset.id} checked={platformPresetOf(video) === preset.id} disabled={busy} onChange={() => applyPlatform(preset.id)}>
               {preset.label}
             </Chip>
@@ -451,7 +456,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           value={video.resolution}
           disabled={busy}
           aria-describedby={`${id}-size`}
-          options={VIDEO_RESOLUTIONS.map((r) => ({ value: r.id, label: r.label }))}
+          options={VIDEO_RESOLUTIONS.filter((r) => fitsDevice(r.id) || r.id === video.resolution).map((r) => ({ value: r.id, label: r.label }))}
           onChange={(resolution) => update({ resolution })}
         />
         <p id={`${id}-size`} className="type-hint">
@@ -477,7 +482,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       <ModeGate min="expert" paths={ENCODING_PATHS} also={pngSequence}>
       <h3 className={GROUP}>{t('export.panel.encodingGroup')}</h3>
       {pngSequence && <p className="type-hint">{t('export.panel.sequenceNoEncoding')}</p>}
-      <fieldset className="field min-w-0" disabled={busy || overlayOnly || pngSequence}>
+      {!pngSequence && (
+      <fieldset className="field min-w-0" disabled={busy || overlayOnly}>
         <legend className="type-label">{t('export.panel.bitrate')}</legend>
         <RadioGroup
           aria-label={t('export.panel.bitrate')}
@@ -489,11 +495,13 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           <Radio value="manual">{t('export.panel.manual')}</Radio>
         </RadioGroup>
       </fieldset>
+      )}
       {video.manualBitrate && !overlayOnly && !pngSequence && (
         <RangeField
           label={t('export.panel.manualBitrate')}
           min={BITRATE_RANGE_MBPS.min}
-          max={BITRATE_RANGE_MBPS.max}
+          // not above what this device keeps in memory (a computer that writes to disk has no ceiling)
+          max={Math.max(BITRATE_RANGE_MBPS.min, Math.min(BITRATE_RANGE_MBPS.max, Math.floor(deviceBitrateCap() / 1e6)))}
           step={BITRATE_RANGE_MBPS.step}
           value={video.bitrateMbps}
           disabled={busy}
@@ -514,6 +522,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </p>
       )}
 
+      {!pngSequence && (
       <SettingRow label={t('export.panel.codec')} value={overlayOnly ? 'VP9 (WebM)' : CODEC_CHOICE_LABELS[video.codec]} paths={['video.codec']}>
         <div className="field">
           <label className="type-label" htmlFor={`${id}-codec`}>
@@ -522,7 +531,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           <Select
             id={`${id}-codec`}
             value={video.codec}
-            disabled={busy || overlayOnly || pngSequence}
+            disabled={busy || overlayOnly}
             options={VIDEO_CODEC_CHOICES.filter((c) => offered.includes(c) || c === video.codec).map((c) => ({ value: c, label: CODEC_CHOICE_LABELS[c] }))}
             onChange={(codec) => update({ codec })}
           />
@@ -533,6 +542,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           </p>
         </div>
       </SettingRow>
+      )}
       <SettingRow label={t('export.panel.nameTemplate')} value={video.nameTemplate === '' ? t('export.panel.nameTemplatePlaceholder') : video.nameTemplate} paths={['video.nameTemplate']}>
         <TextField
           label={t('export.panel.nameTemplate')}
@@ -544,6 +554,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         />
         <p className="type-hint">{t('export.panel.nameTemplateHint')}</p>
       </SettingRow>
+      {!pngSequence && (
       <SettingRow label={t('export.panel.keyframes')} value={t('export.panel.keyframesValue', { value: seconds(video.keyframeIntervalS) })} paths={['video.keyframeIntervalS']}>
         <div className="field">
           <label className="type-label" htmlFor={`${id}-keyframes`}>
@@ -552,13 +563,16 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           <Select
             id={`${id}-keyframes`}
             value={video.keyframeIntervalS}
-            disabled={busy || pngSequence}
+            disabled={busy}
             options={KEYFRAME_INTERVALS_S.map((s) => ({ value: s, label: seconds(s) }))}
             onChange={(keyframeIntervalS) => update({ keyframeIntervalS })}
           />
           <p className="type-hint">{t('export.panel.keyframesHint')}</p>
         </div>
       </SettingRow>
+      )}
+      {/* a silent output (a PNG sequence, the overlay alone) or a film without music nor sound clip has no sound to set */}
+      {!silent && hasSound && (<>
       <SettingRow label={t('export.panel.sound')} value={`${video.audioKbps} kbit/s`} paths={['video.audioKbps']}>
         <div className="field">
           <label className="type-label" htmlFor={`${id}-audio`}>
@@ -567,11 +581,11 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           <Select
             id={`${id}-audio`}
             value={video.audioKbps}
-            disabled={busy || silent}
+            disabled={busy}
             options={AUDIO_BITRATES_KBPS.map((k) => ({ value: k, label: `${k} kbit/s` }))}
             onChange={(audioKbps) => update({ audioKbps })}
           />
-          <p className="type-hint">{silent ? t(overlayOnly ? 'export.panel.overlayNoSound' : 'export.panel.sequenceNoSound') : t('export.panel.audioHint')}</p>
+          <p className="type-hint">{t('export.panel.audioHint')}</p>
         </div>
       </SettingRow>
       <SettingRow
@@ -580,7 +594,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         paths={['video.normalizeLoudness', 'video.loudnessLufs']}
       >
         <div className="field">
-          <Checkbox checked={video.normalizeLoudness} disabled={busy || silent} onChange={(normalizeLoudness) => update({ normalizeLoudness })}>
+          <Checkbox checked={video.normalizeLoudness} disabled={busy} onChange={(normalizeLoudness) => update({ normalizeLoudness })}>
             {t('export.panel.loudnessNormalize')}
           </Checkbox>
           {video.normalizeLoudness && (
@@ -591,7 +605,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
               <Select
                 id={`${id}-loudness`}
                 value={video.loudnessLufs}
-                disabled={busy || silent}
+                disabled={busy}
                 options={LOUDNESS_TARGETS_LUFS.map((lufs) => ({ value: lufs, label: t(`export.panel.loudnessTarget${-lufs}` as MessageKey, { lufs }) }))}
                 onChange={(loudnessLufs) => update({ loudnessLufs })}
               />
@@ -600,13 +614,15 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           <p className="type-hint">{t('export.panel.loudnessHint')}</p>
         </div>
       </SettingRow>
+      </>)}
 
       </ModeGate>
 
       <ModeGate min="confirme" paths={['video.quality', 'clouds.quality']} also={overlayOnly}>
       <h3 className={GROUP}>{t('export.panel.renderGroup')}</h3>
       {overlayOnly && <p className="type-hint">{t('export.panel.overlayNoScene')}</p>}
-      <fieldset className="field min-w-0" disabled={busy || overlayOnly}>
+      {!overlayOnly && (
+      <fieldset className="field min-w-0" disabled={busy}>
         <legend className="type-label">{customised ? t('export.panel.renderQualityCustom') : t('export.panel.renderQuality')}</legend>
         <RadioGroup
           aria-label={customised ? t('export.panel.renderQualityCustom') : t('export.panel.renderQuality')}
@@ -620,7 +636,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           ))}
         </RadioGroup>
         <p className="type-hint">
-          {t(video.manualBitrate ? 'export.panel.tierHint' : 'export.panel.tierHintBitrate', {
+          {t(video.manualBitrate || pngSequence ? 'export.panel.tierHint' : 'export.panel.tierHintBitrate', {
             clouds: CLOUD_QUALITY_NAMES[tier.cloudsQuality].toLowerCase(),
             n: tier.maxSubFrames,
           })}
@@ -631,6 +647,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           </Button>
         )}
       </fieldset>
+      )}
       </ModeGate>
 
       {/* a PNG sequence or the overlay alone, once chosen, stays in sight */}
@@ -655,9 +672,9 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           .filter(Boolean)
           .join(' · ')}
       </p>
-      <CopyCreditsButton />
-      <ModeGate min="expert">{codec && streams && <p className="type-hint">{t('export.panel.direct')}</p>}</ModeGate>
-      {codec && warnsInMemory(estimatedBytes, streams) && (
+      {!result && <CopyCreditsButton />}
+      <ModeGate min="expert">{codec && streams && !silent && <p className="type-hint">{t('export.panel.direct')}</p>}</ModeGate>
+      {codec && !pngSequence && warnsInMemory(estimatedBytes, streams) && (
         <p className="type-hint">
           {t(deviceBudget().kind === 'desktop' ? 'export.panel.memoryDesktop' : 'export.panel.memoryOther', { limit: formatLimit(deviceBudget().memoryWarnBytes) })}
         </p>
@@ -671,7 +688,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           })}
         </p>
       )}
-      {codec === null && !overlayOnly && (
+      {codec === null && !overlayOnly && !pngSequence && (
         <p className="type-hint" role="alert">
           {video.codec === 'auto'
             ? t('export.panel.noCodecAuto', {
@@ -1034,7 +1051,7 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
                 {a.id}
               </span>
               <div className="chips">
-                {VIDEO_RESOLUTIONS.map((r) => {
+                {VIDEO_RESOLUTIONS.filter((r) => fitsDevice(r.id) || selection.formats.includes(formatKey(a.id, r.id))).map((r) => {
                   const key = formatKey(a.id, r.id)
                   return (
                     <Chip key={r.id} checked={selection.formats.includes(key)} onChange={(on) => toggle(key, on)}>{r.label}</Chip>
