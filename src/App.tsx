@@ -729,7 +729,8 @@ export default function App() {
           {/* every tab stays mounted: weather, landmarks and export have side effects */}
           {/* no change to the tracks or the settings while a film is being made: the export reads them live */}
           <aside id="side-panel" data-testid="side-panel" className="panel-frame" aria-label={t('shell.panel.aria')} hidden={shell.collapsed || renderWindow} inert={exporting}>
-            <SheetHandle title={compact ? GROUP_LABELS[groupOf(shell.tab)].label : TAB_LABELS[shell.tab].label} onClose={() => dispatch({ type: 'fold' })} />
+            {/* no title: the tab bar stays in sight under the sheet and shows the open tab, the first section names it again */}
+            <SheetHandle onClose={() => dispatch({ type: 'fold' })} />
             {siblings.length > 1 && (
               <div className="sticky top-0 z-1 flex-none bg-surface-panel px-3 pt-2 pb-2" data-sheet-fixed="" data-testid="tab-group-switch">
                 <ToggleButtonGroup<ShellTab>

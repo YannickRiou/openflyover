@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **No title twice in a phone's sheet**: the head of the settings sheet no longer repeats the name of the tab (« Habillage » then « Habillage »); the tab bar, in sight under the sheet, shows which one is open.
+
 - **The interface follows the size of the screen**: one scale, proportional to the shorter side of the screen, instead of sizes per device. Text, margins, bars and buttons are about 14 % smaller on a phone (either way up) than on a tablet or a computer, which do not change; the text never goes under 11 px (13 px for the body) and a touch target under 36 px.
 
 - **Undo and redo in the top bar of a phone**: « Annuler » and « Rétablir » are in the bar (they were in the ⋯ menu) and the project name has more room; the logo and the language flag leave the bar of a phone upright. The language is now also a section of « Réglages », on every device.

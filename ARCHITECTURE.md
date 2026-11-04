@@ -690,7 +690,7 @@ pointer (`appearance.css`).
     the status bar. Panel, export drawer and inspector are half sheets from under the transport row, over the timeline,
     never over the preview; the panel stops above the tab bar (`bottom-14`: another tab is one touch away), the export
     drawer and the inspector go down to the status bar (sliding in, not under `prefers-reduced-motion`). Their
-    head (`SheetHandle.tsx`: grip, tab name, « Terminé » ✓) closes them on ✓ or when dragged down past a third of
+    head (`SheetHandle.tsx`: grip, « Agrandir », « Terminé » ✓; no title on the panel's sheet, the tab bar under it shows the open tab) closes them on ✓ or when dragged down past a third of
     their height, a flick included (`dismissSheet`); the ✕ of the drawer and the inspector is hidden. Sheet content
     scrolls inside (`overscroll-behavior: contain`); a press on the view does not close a sheet (it does on a tablet
     side sheet). A selected block (`inspecting`) replaces the tab bar with its actions (`BlockTools` in `App`:
