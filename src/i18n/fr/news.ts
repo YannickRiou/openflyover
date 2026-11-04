@@ -3,6 +3,8 @@ export default {
   button: 'Voir les nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v55.titlebar.title': 'Plus de barre Windows en haut',
+  'v55.titlebar.text': 'Dans l’application pour ordinateur, la barre du haut d’OpenFlyover sert aussi de barre de titre. Glissez-la pour déplacer la fenêtre, double-cliquez pour l’agrandir, et utilisez les trois boutons à droite d’« Exporter ». Une ligne de moins, et la même couleur partout. Sur Mac, les trois pastilles restent à gauche.',
   'v50.margins.title': 'Des marges au choix',
   'v50.margins.text': 'La case « Marges de sécurité » de l’export garde l’habillage loin des bords et, en 9:16 et 4:5, hors des zones de Reels, TikTok et Shorts. Elle se coche d’elle-même quand vous choisissez une plateforme. Décochée, l’habillage se rapproche des bords et l’image entière sert au film.',
   'v50.modes.title': 'Trois modes d’interface',

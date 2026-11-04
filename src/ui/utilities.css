@@ -102,6 +102,14 @@
   }
 }
 
+/* The close button of the window on the top bar: red under the pointer, as the system's own. After `btn-chrome`, which it overrides. */
+@utility btn-chrome-close {
+  &:hover:not(:disabled, [aria-disabled='true']) {
+    --button-bg-hover: var(--status-error);
+    --button-bg-pressed: var(--status-error);
+  }
+}
+
 /* The rail: a column of tabs on the side; on a portrait phone, the bar under the timeline. */
 @utility rail-frame {
   @apply relative z-9 flex w-(--rail-w) flex-none flex-col border-r border-white/10 bg-chrome py-2 text-glacier;

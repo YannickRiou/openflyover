@@ -529,7 +529,9 @@ pointer (`appearance.css`).
   automatically in « Mes projets », see "Project (phase 4)"), undo / redo, "Ouvrir" (open, icon only; a single picker: `.opnflvr` / `.json` → project, anything else → track import,
   `routeOpenedFiles`; opening a project clears the history), "Enregistrer" (save); in the center the **output format** ("Libre" (free),
   16:9, 9:16, 1:1, 4:5, 21:9); on the right "?" (shortcuts) and "Exporter" (export), the only primary button of the shell, which opens
-  the export drawer and becomes "42 % · Annuler" (cancel) during an export.
+  the export drawer and becomes "42 % · Annuler" (cancel) during an export. In the desktop app it is the title bar of the window
+  (see "Desktop application", « Title bar »): `data-tauri-drag-region` on the bar and on each of its empty containers (the attribute works only on the
+  element that carries it), and `WindowButtons` after "Exporter" when `Platform.windowControls` exists (`btn-chrome-close`, `utilities.css`: red under the pointer).
 - **Output format**: a format writes `settings.video.aspect` (saved, undoable); "Libre" is a preview
   flag (`freeFraming` in the store, neither saved nor undoable). Outside "Libre", `Stage.tsx` frames the 3D view to the format
   (`frameRect`, ink bars): the stage (`stage-frame`, `data-stage`), which holds the 3D canvas, the overlay and the legend, takes the framed
@@ -4136,7 +4138,7 @@ differs goes through `src/platform/`.
   `saveFile(blob, { fileName, filters? })` and `saveUrl(objectUrl, …)` → `{ saved: true, fileName } | { saved: false }`, `saveDocument` (save in place, see "Project (phase 4)"),
   `createWritableFile({ fileName, filters? })` → `WritableFile { fileName, path?, write(data, position), close, discard }` or null
   (dialog closed; `discard` stops and deletes the partial file, no effect after `close`, can be called several times),
-  `droppedFiles(dataTransfer)`. Filters are those of native dialogs (`{ name, extensions }` without a dot); the website
+  `droppedFiles(dataTransfer)`, `windowControls?` (desktop except macOS: the buttons of the window, see « Title bar »). Filters are those of native dialogs (`{ name, extensions }` without a dot); the website
   derives the `accept` attribute from them.
 - **Selection** (`index.ts`): `getPlatform()` (singleton) calls `selectPlatform(globalThis)`: desktop if Tauri has set
   `isTauri` / `__TAURI_INTERNALS__` on the window, website otherwise. `videoEncoder`: `'webcodecs'` if `VideoEncoder` exists, otherwise `'native'` on the desktop (ffmpeg, see
@@ -4179,7 +4181,7 @@ differs goes through `src/platform/`.
   a command missing from this list or from `capabilities/default.json` is refused. `main` window
   1440 × 900 (at least 1024 × 700). `dragDropEnabled: false`: otherwise Tauri intercepts drops and the HTML no longer receives
   `drop`. Permissions (`capabilities/default.json`): `core:window:allow-destroy` and `dialog:allow-message` (closing, see
-  "Mes projets"), `dialog:allow-open`, `dialog:allow-save`, `fs:allow-read-file`,
+  "Mes projets"), `core:window:allow-minimize`, `allow-toggle-maximize` and `allow-start-dragging` (title bar, below), `dialog:allow-open`, `dialog:allow-save`, `fs:allow-read-file`,
   `fs:allow-write-file`, `fs:allow-open`, `fs:allow-seek`, `fs:allow-write`, `fs:allow-remove` (film streamed
   to disk), `fs:allow-mkdir`, `fs:allow-read-dir`, `fs:allow-exists`, `fs:allow-rename` (offline packs, "Mes projets": a project is written to a `.tmp` file, then renamed), `allow-video-available`, `allow-video-sound`, `allow-video-open`,
   `allow-video-frame`, `allow-video-finish`, `allow-video-cancel` (native encoder), `allow-cli-render`, `allow-cli-exit`
@@ -4192,6 +4194,17 @@ differs goes through `src/platform/`.
   plus `https://www.strava.com` (`connect-src` only, Strava import), `ipc:` and `blob:`; `style-src 'unsafe-inline'` with `dangerousDisableAssetCspModification:
   ["style-src"]` (Tauri would otherwise add a nonce that cancels `unsafe-inline`). **Any new source must also be added
   to the CSP in `tauri.conf.json`.**
+- **Title bar** (desktop only): the `main` window has no system title bar (`decorations: false` in `tauri.conf.json`; Tauri's `shadow` is on by
+  default, so the window keeps its shadow on Windows) and the top bar takes its place. `Platform.windowControls` (`WindowControls`: `minimize`,
+  `toggleMaximize`, `close`, `watchMaximized`) is set in `desktop.ts` except on macOS, so the website never shows the buttons. `close` calls the
+  window's `close()`, not `destroy()`: it raises the same close request as Alt+F4, which `guardClose` answers (last write, question about unsaved
+  changes or an export under way), so the button cannot skip it. The maximise icon follows `isMaximized`, read at start and at each `onResized`.
+  The three permissions above are the only additions: `is-maximized`, `internal-toggle-maximize` (the double click on a drag region) and the
+  events are in `core:default`. **macOS** keeps its traffic lights: `src-tauri/tauri.macos.conf.json` replaces the `windows` list (Tauri merges a
+  per-system file into `tauri.conf.json` as a JSON merge patch, so an array is replaced whole, hence the repeated window) with
+  `titleBarStyle: "Overlay"` and `hiddenTitle: true`, and the top bar leaves 5 rem on its left (`pl-20`) for them. The « File de rendus » window
+  (`renderWindow.ts`) is created at run time and keeps its native bar. Not possible without the native bar: the Windows 11 snap layouts shown on
+  the maximise button (Win+Z and dragging to a screen edge still work).
 - **Updates** (« Réglages » › « Mises à jour », desktop only, on demand only: no check at start-up, no polling, no silent install).
   Contract: two optional `Platform` methods, `checkForUpdate()` → `UpdateCheck` (never throws: `current`, `available { update:
   { version, date, notes } }`, `offline`, `unavailable`, `error { message }`) and `installUpdate(onProgress?)` (download, signature check,

@@ -220,6 +220,11 @@ export interface Platform {
    * closed once it resolves true (or fails), kept open on false. Absent on the web (`beforeunload`, see ui/library.ts).
    */
   guardClose?(beforeClose: () => Promise<boolean>): () => void
+  /**
+   * Desktop (Windows, Linux): the window has no title bar of its own, the top bar is it and draws these three buttons.
+   * Absent on the website, and on macOS where the window keeps its traffic lights over the top bar.
+   */
+  windowControls?: WindowControls
   /** Desktop: a native question; the button pressed, 'cancel' also for Escape. */
   ask?(question: Question): Promise<'yes' | 'no' | 'cancel'>
   /**
@@ -232,6 +237,16 @@ export interface Platform {
    * installer closes it and starts it again). `onProgress` gets what is downloaded so far; throws when it fails.
    */
   installUpdate?(onProgress?: (progress: UpdateProgress) => void): Promise<void>
+}
+
+/** Buttons of the desktop window (see `Platform.windowControls`). */
+export interface WindowControls {
+  minimize(): void
+  toggleMaximize(): void
+  /** Asks the window to close, as Alt+F4 does: `guardClose` runs first and can keep it open. */
+  close(): void
+  /** `listener` gets the state now, then at each change; returns the function that stops it. */
+  watchMaximized(listener: (maximized: boolean) => void): () => void
 }
 
 /** A question with two buttons, or three with `no` (between the other two). */

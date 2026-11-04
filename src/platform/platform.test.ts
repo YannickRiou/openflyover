@@ -43,6 +43,15 @@ const fs = vi.hoisted(() => ({
 }))
 vi.mock('@tauri-apps/plugin-dialog', () => dialog)
 vi.mock('@tauri-apps/plugin-fs', () => fs)
+const appWindow = vi.hoisted(() => ({
+  minimize: vi.fn(async () => undefined),
+  toggleMaximize: vi.fn(async () => undefined),
+  close: vi.fn(async () => undefined),
+  destroy: vi.fn(async () => undefined),
+  isMaximized: vi.fn(async () => false),
+  onResized: vi.fn(async (_listener: () => void) => () => undefined),
+}))
+vi.mock('@tauri-apps/api/window', () => ({ getCurrentWindow: () => appWindow }))
 
 describe('detection', () => {
   it('recognises the Tauri webview', () => {
@@ -412,6 +421,44 @@ describe('desktop platform', () => {
     dialog.save.mockResolvedValueOnce(null)
     expect(await desktop().createWritableFile({ fileName: 'Tour.mp4' })).toBeNull()
     expect(fs.open).not.toHaveBeenCalled()
+  })
+})
+
+describe('desktop window controls', () => {
+  it('are on the desktop only, and not on macOS where the system keeps its buttons', () => {
+    expect(selectPlatform({}).windowControls).toBeUndefined()
+    expect(selectPlatform({ isTauri: true }).windowControls).toBeDefined()
+    vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15' })
+    expect(selectPlatform({ isTauri: true }).windowControls).toBeUndefined()
+    vi.unstubAllGlobals()
+  })
+
+  it('close asks the window to close (so the close guard runs) and never destroys it', async () => {
+    const controls = selectPlatform({ isTauri: true }).windowControls!
+    controls.minimize()
+    await vi.waitFor(() => expect(appWindow.minimize).toHaveBeenCalledTimes(1))
+    controls.toggleMaximize()
+    await vi.waitFor(() => expect(appWindow.toggleMaximize).toHaveBeenCalledTimes(1))
+    controls.close()
+    await vi.waitFor(() => expect(appWindow.close).toHaveBeenCalledTimes(1))
+    expect(appWindow.destroy).not.toHaveBeenCalled()
+  })
+
+  it('tells the state now and at each resize, and stops listening', async () => {
+    const off = vi.fn()
+    let resized = () => {}
+    appWindow.onResized.mockImplementationOnce(async (listener: () => void) => {
+      resized = listener
+      return off
+    })
+    const seen: boolean[] = []
+    const stop = selectPlatform({ isTauri: true }).windowControls!.watchMaximized((maximized) => seen.push(maximized))
+    await vi.waitFor(() => expect(seen).toEqual([false]))
+    appWindow.isMaximized.mockResolvedValueOnce(true)
+    resized()
+    await vi.waitFor(() => expect(seen).toEqual([false, true]))
+    stop()
+    expect(off).toHaveBeenCalledTimes(1)
   })
 })
 
