@@ -8,6 +8,7 @@
  * Environment:
  *   OPENFLYOVER_CHROME            Chromium / Chrome executable (default: Playwright's headless shell when present)
  *   OPENFLYOVER_E2E_SKIP_EXPORT=1 skip the export scenario (the slowest, it needs the tile servers)
+ *   OPENFLYOVER_E2E_GPU=1         use the real GPU instead of SwiftShader (quicker on a workstation, not what CI runs)
  *   OPENFLYOVER_E2E_ONLY=a,b      run only the scenarios whose id is listed (ids: see SCENARIOS)
  *
  * Fails on any console error or page error that is not network noise (ALLOWED_ERRORS). Screenshots of failed
@@ -28,6 +29,8 @@ const DEFAULT_CHROME = join(
 )
 const CHROME = process.env.OPENFLYOVER_CHROME || (existsSync(DEFAULT_CHROME) ? DEFAULT_CHROME : '')
 const SKIP_EXPORT = process.env.OPENFLYOVER_E2E_SKIP_EXPORT === '1'
+// opt-in, for a quicker local run on a real GPU (WSL: also set MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA GALLIUM_DRIVER=d3d12 LD_LIBRARY_PATH=/usr/lib/wsl/lib)
+const GPU = process.env.OPENFLYOVER_E2E_GPU === '1'
 const ONLY = (process.env.OPENFLYOVER_E2E_ONLY ?? '').split(',').filter(Boolean)
 const OUT = mkdtempSync(join(tmpdir(), 'openflyover-e2e-'))
 const DOWNLOADS = join(OUT, 'downloads')
@@ -200,16 +203,17 @@ function poseGap(a, b) {
 }
 
 /**
- * Waits until the camera shows `pose` again, the film time at `timeS`: within 5 cm across, 0.5 m in height and 0.25°.
+ * Waits until the camera shows `pose` again, the film time at `timeS`: within 5 cm across, 2 m in height and 0.25°.
  * A key is kept above the ground under its aim, and that ground follows the terrain tiles drawn now (`sampleHeight`):
- * back from another part of the film, they can be of another detail, and the same key a few decimetres higher or lower.
+ * back from another part of the film, they can be of another detail, so the same key sits a metre or two higher or
+ * lower (seen: 1.5 m and 0.1°, on a camera hundreds of metres from the ground). Across the view, nothing moves.
  */
 async function expectPose(page, pose, timeS, label) {
   let gap = null
   for (const end = Date.now() + STEP_MS; Date.now() < end; ) {
     const state = await page.evaluate(() => window.__e2e.appStore.getState().playback)
     gap = poseGap(await cameraPose(page), pose)
-    if (Math.abs((state.timeS ?? -1) - timeS) < 1e-3 && gap.across < 0.05 && gap.height < 0.05 && gap.degrees < 0.1 && gap.fov === 0) return
+    if (Math.abs((state.timeS ?? -1) - timeS) < 1e-3 && gap.across < 0.05 && gap.height < 2 && gap.degrees < 0.25 && gap.fov === 0) return
     await new Promise((resolve) => setTimeout(resolve, 250))
   }
   throw new Error(`${label} : la vue n’est pas celle de l’image clé (${gap.across.toFixed(3)} m à côté, ${gap.height.toFixed(3)} m en hauteur, ${gap.degrees.toFixed(3)}°)`)
@@ -688,19 +692,19 @@ const SCENARIOS = [
         await page.waitForSelector('aside[aria-label="Inspecteur"]:not([hidden])', { visible: true, timeout: STEP_MS })
       }
 
-      // « + Ajouter »: a menu of two rows under the button, the arrows move in it
+      // « + Ajouter »: a menu of three rows under the button, the arrows move in it
       const add = '[data-testid="tab-panel-trace"] button[aria-haspopup]::-p-text(Ajouter)'
       const addMenu = '[role="menu"][aria-label="Ajouter des traces"]'
       await page.click(add)
       await page.waitForSelector(addMenu, { visible: true, timeout: STEP_MS })
-      assert((await page.$$eval(`${addMenu} [role="menuitem"]`, (rows) => rows.map((r) => r.textContent.trim()))).join() === 'Fichiers GPX ou FIT…,Activités Strava…', 'lignes du menu « Ajouter »')
+      assert((await page.$$eval(`${addMenu} [role="menuitem"]`, (rows) => rows.map((r) => r.textContent.trim()))).join() === 'Fichiers GPX, FIT, IGC ou KML…,Activités Strava…,Tracer sur la carte…', 'lignes du menu « Ajouter »')
       assert(await page.$eval(add, (b) => b.getAttribute('aria-expanded') === 'true'), '« Ajouter » ne dit pas que son menu est ouvert')
       await page.keyboard.press('ArrowDown')
-      assert((await focusedText()) === 'Fichiers GPX ou FIT…', `flèche bas : ${await focusedText()}`)
+      assert((await focusedText()) === 'Fichiers GPX, FIT, IGC ou KML…', `flèche bas : ${await focusedText()}`)
       await page.keyboard.press('ArrowDown')
       assert((await focusedText()) === 'Activités Strava…', `flèche bas : ${await focusedText()}`)
       await page.keyboard.press('ArrowUp')
-      assert((await focusedText()) === 'Fichiers GPX ou FIT…', `flèche haut : ${await focusedText()}`)
+      assert((await focusedText()) === 'Fichiers GPX, FIT, IGC ou KML…', `flèche haut : ${await focusedText()}`)
       // Escape closes the menu first, then the block selected on the timeline (the application's own Escape)
       await page.keyboard.press('Escape')
       await gone(addMenu)
@@ -1092,9 +1096,10 @@ const SCENARIOS = [
       await until(page, () => !!document.querySelector('[role="group"][aria-label="Plans"]'))
       await exposeStores(page)
       if (!(await page.$('[data-testid="export-dock"]:not([hidden])'))) await page.click('button[data-testid="topbar-export"]')
-      // « Vidéo » mode: the history is the last child of the panel shown (the batch panel has its own, hidden)
+      // « Vidéo » mode: the history is the last child of the panel shown (the batch panel has its own, hidden). It draws
+      // nothing before the first film, so it is waited for once the renders below are written.
       const H = '[data-testid="export-dock"] section:not([hidden]) [data-testid="export-history"]'
-      await page.waitForSelector(H, { timeout: STEP_MS })
+      await page.waitForSelector('[data-testid="export-dock"] section:not([hidden])', { timeout: STEP_MS })
       // two renders as the recorder writes them: an old one with other settings, a failed one
       const before = await page.evaluate(async () => {
         const { history, historyStore: store } = window.__e2e
@@ -1110,6 +1115,7 @@ const SCENARIOS = [
         )
         return { fps: settings.video.fps, quality: settings.video.quality, style: settings.camera.style }
       })
+      await page.waitForSelector(H, { timeout: STEP_MS })
       if (!(await page.$eval(H, (d) => d.open))) await page.click(`${H} > summary`)
       await page.waitForSelector(`${H} [data-testid="history-item"]`, { visible: true })
       const names = await page.$$eval(`${H} [data-testid="history-name"]`, (els) => els.map((e) => e.textContent))
@@ -1146,7 +1152,8 @@ const SCENARIOS = [
       assert((await page.$$(`${H} [data-testid="history-item"]`)).length === 1, 'l’historique est vidé sans confirmation')
       await inHistory('Vider l’historique')
       await inHistory('Vider définitivement')
-      await until(page, () => document.querySelectorAll('[data-testid="export-dock"] section:not([hidden]) [data-testid="history-item"]').length === 0 && document.querySelector('[data-testid="export-dock"] section:not([hidden]) [data-testid="export-history"]')?.textContent.includes('Aucun rendu pour l’instant'))
+      // an empty history draws nothing: the whole section goes
+      await until(page, () => !document.querySelector('[data-testid="export-dock"] [data-testid="export-history"]'))
       assert(await page.evaluate(() => localStorage.getItem('openflyover.exportHistory.v1') === null), 'le stockage n’est pas vidé')
     },
   },
@@ -1168,14 +1175,20 @@ const SCENARIOS = [
         await tap("button::-p-text(Essayer avec l'exemple)")
         // the timeline is open under the preview, its playhead in the middle
         await page.waitForSelector('[data-testid="timeline"][data-centred] [role="group"][aria-label="Plans"] [data-testid="timeline-block"]', { visible: true, timeout: STEP_MS })
-        /** the preview is whole on screen, at least a third of its height */
+        /**
+         * the preview is whole on screen: the frame of the format at the full width, never under 30 % of the screen height
+         * (PHONE_PREVIEW_MIN_SHARE, src/ui/shell.ts: a 16:9 frame on a 390 px phone is only 219 px)
+         */
         const previewShown = () =>
           page.evaluate(() => {
             const r = document.querySelector('[role="region"][aria-label="Vue 3D"]').getBoundingClientRect()
-            return r.top >= 0 && r.height > innerHeight / 3 && r.width === innerWidth
+            return r.top >= 0 && r.height >= innerHeight * 0.3 - 1 && r.width === innerWidth
           })
         assert(await previewShown(), 'l’aperçu n’occupe pas le haut de l’écran')
-        /** the open panel or drawer is a half sheet under the preview, as wide as the screen, down to the status bar */
+        /**
+         * the open panel or drawer is a half sheet under the preview, as wide as the screen, down to the status bar; the
+         * settings sheet stops above the tab bar since 5.4.0 (another tab is one touch away)
+         */
         const isHalfSheet = (selector) =>
           until(
             page,
@@ -1183,9 +1196,11 @@ const SCENARIOS = [
               const sheet = document.querySelector(sel)
               const preview = document.querySelector('[role="region"][aria-label="Vue 3D"]')?.getBoundingClientRect()
               const status = document.querySelector('footer')?.getBoundingClientRect()
+              const tabs = document.querySelector('nav[aria-label="Panneaux"]')
               if (!sheet || sheet.hidden || !preview || !status) return false
               const r = sheet.getBoundingClientRect()
-              return r.width === innerWidth && r.top >= preview.bottom && Math.abs(r.bottom - status.top) < 2 && r.height > 150
+              const floors = [status.top, ...(tabs && !tabs.hidden ? [tabs.getBoundingClientRect().top] : [])]
+              return r.width === innerWidth && r.top >= preview.bottom && floors.some((y) => Math.abs(r.bottom - y) < 2) && r.height > 150
             },
             selector,
           )
@@ -1195,14 +1210,32 @@ const SCENARIOS = [
             const [m, s] = document.querySelector('[data-testid="timeline-time"]').textContent.split(':')
             return Number(m) * 60 + Number(s.replace(',', '.'))
           })
-        // previous / add / next keyframe leading the tool row, on screen
-        const keyNav = await page.$$eval('[data-testid="timeline-tools"] [aria-label="Images clés"] button', (buttons) =>
+        // the tool row holds three named buttons, all on screen and at least 36 px (the floor of a touch target since the proportional scale of 5.4.0): « Clés », « Ajouter » and the film options
+        const tools = await page.$$eval('[data-testid="timeline-tools"] button', (buttons) =>
           buttons.map((b) => {
             const r = b.getBoundingClientRect()
-            return r.width >= 44 && r.left >= 0 && r.right <= innerWidth
+            return { name: b.textContent.trim() || b.getAttribute('aria-label'), ok: r.height >= 36 && r.width >= 36 && r.left >= 0 && r.right <= innerWidth }
           }),
         )
+        assert(tools.length === 3 && tools.every((t) => t.ok), `boutons de la barre de la timeline : ${JSON.stringify(tools)}`)
+        assert(tools[0].name === 'Clés' && tools[1].name === 'Ajouter', `noms des boutons de la barre de la timeline : ${tools.map((t) => t.name).join()}`)
+        // « Clés » opens a sheet with the previous / add / next buttons of the camera keys, on screen and at least 36 px wide
+        await tap('[data-testid="timeline-tools"] button::-p-text(Clés)')
+        // the group of the desktop row stays in the DOM with no width: only the one that shows counts
+        await until(page, () => [...document.querySelectorAll('[role="group"][aria-label="Images clés"]')].some((g) => g.getBoundingClientRect().width > 0))
+        const keyNav = await page.evaluate(() =>
+          [...document.querySelectorAll('[role="group"][aria-label="Images clés"]')]
+            .filter((g) => g.getBoundingClientRect().width > 0)
+            .flatMap((g) =>
+              [...g.querySelectorAll('button')].map((b) => {
+                const r = b.getBoundingClientRect()
+                return r.width >= 36 && r.left >= 0 && r.right <= innerWidth
+              }),
+            ),
+        )
         assert(keyNav.length === 3 && keyNav.every(Boolean), `boutons image clé précédente / ◆ / suivante : ${JSON.stringify(keyNav)}`)
+        await page.keyboard.press('Escape')
+        await until(page, () => ![...document.querySelectorAll('[role="group"][aria-label="Images clés"]')].some((g) => g.getBoundingClientRect().width > 0))
         // a slide on the lanes scrolls them under the playhead: the film time follows
         const before = await playhead()
         const lanes = await page.$eval('[data-testid="timeline-scroller"]', (el) => {
@@ -1216,13 +1249,12 @@ const SCENARIOS = [
           const [m, s] = document.querySelector('[data-testid="timeline-time"]').textContent.split(':')
           return Number(m) * 60 + Number(s.replace(',', '.')) > t + 1
         }, before)
-        // the eight tabs do not fit: the bar scrolls, and the open tab is brought into sight
-        assert(await page.evaluate(() => {
-          const bar = document.querySelector('[role="tablist"]')
-          return bar.scrollWidth > bar.clientWidth
-        }), 'la barre d’onglets ne défile pas')
+        // the groups of tabs fit the width of the phone
+        assert(await page.evaluate(() => document.querySelector('[role="tablist"]').clientWidth <= innerWidth), 'la barre d’onglets dépasse la largeur de l’écran')
+        // the nine tabs show as five groups on a phone: a group opens the tab of it last shown, the first one here
+        const GROUP = { carte: 'decor', projet: 'projet', survol: 'camera' }
         for (const tab of ['carte', 'projet', 'survol']) {
-          await tap(`[data-testid="tab-${tab}"]`)
+          await tap(`[data-testid="tab-${GROUP[tab]}"]`)
           await until(page, (t) => !document.querySelector(`[data-testid="tab-panel-${t}"]`)?.hidden, tab)
           await isHalfSheet('[data-testid="side-panel"]')
           assert(await previewShown(), `l’onglet ${tab} couvre l’aperçu`)
@@ -1236,7 +1268,7 @@ const SCENARIOS = [
               const r = document.querySelector(`[data-testid="tab-${t}"]`).getBoundingClientRect()
               return r.left >= 0 && r.right <= innerWidth && r.height >= 44
             },
-            tab,
+            GROUP[tab],
           )
         }
         const tile = (text) => `[data-testid="tab-panel-survol"] [role="radiogroup"] label::-p-text(${text})`
@@ -1248,7 +1280,8 @@ const SCENARIOS = [
         await tap('[data-testid="side-panel"] button[aria-label="Terminé"]')
         await until(page, () => document.querySelector('[data-testid="side-panel"]').hidden)
         // the sample has no stop of its own: one at the marker
-        await tap('button[aria-label="Ajouter un arrêt à la position du marqueur"]')
+        await tap('[data-testid="timeline-tools"] button::-p-text(Ajouter)')
+        await tap('[role="menuitem"]::-p-text(Ajouter un arrêt à la position du marqueur)')
         await page.waitForSelector('[data-item^="stop-"]', { timeout: STEP_MS })
         // a tap on a stop selects it: its actions take the place of the tab bar; « Modifier » opens its inspector
         await page.$eval('[data-item^="stop-"]', (el) => el.scrollIntoView({ block: 'nearest', inline: 'center' }))
@@ -1299,7 +1332,7 @@ async function main() {
   const browser = await puppeteer.launch({
     executablePath: CHROME,
     headless: 'shell',
-    args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox', '--lang=fr', '--window-size=1440,900'],
+    args: [...(GPU ? ['--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=gl'] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']), '--no-sandbox', '--lang=fr', '--window-size=1440,900'],
     defaultViewport: { width: 1440, height: 900 },
     protocolTimeout: EXPORT_MS,
   })

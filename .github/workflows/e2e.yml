@@ -1,11 +1,12 @@
-# The end-to-end scenarios (e2e/run.mjs: the real app in a headless Chrome on a software GPU), every night on master
-# and on demand: too slow for each pull request (the export alone takes minutes), and the export needs the tile
-# servers. A failure leaves the screenshots of the failed scenarios as an artifact.
+# The end-to-end scenarios (e2e/run.mjs: the real app in a headless Chrome on a software GPU). They run on the pull
+# request of a release branch (release/*), so each release is checked before it goes out, and on demand
+# (`gh workflow run e2e.yml --ref <branch>`). Too slow for every pull request (the export alone takes minutes), and
+# the export needs the tile servers. A failure leaves the screenshots of the failed scenarios as an artifact.
 name: E2E
 
 on:
-  schedule:
-    - cron: '17 2 * * *'
+  pull_request:
+    branches: [master]
   workflow_dispatch:
 
 permissions:
@@ -13,6 +14,7 @@ permissions:
 
 jobs:
   e2e:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'release/')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:

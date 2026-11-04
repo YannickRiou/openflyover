@@ -169,7 +169,7 @@ Without the secret the installers are built as before and the button says that u
 The suite has **about 2,700 tests** in 164 files (15 October 2026), each file next to its module (`src/**/*.test.ts`,
 `*.test.tsx` for the components); network calls and the video encoder are mocked. `npm run e2e` drives the app in a headless Chromium
 through 21 scenarios (home, tabs, language, timeline, project, export, phone…); its options (`OPENFLYOVER_CHROME`,
-`OPENFLYOVER_E2E_SKIP_EXPORT`, `OPENFLYOVER_E2E_ONLY`) are documented at the top of `e2e/run.mjs`. On Windows or macOS
+`OPENFLYOVER_E2E_SKIP_EXPORT`, `OPENFLYOVER_E2E_GPU`, `OPENFLYOVER_E2E_ONLY`) are documented at the top of `e2e/run.mjs`. On Windows or macOS
 the default Chromium path (a Linux one) does not exist: point `OPENFLYOVER_CHROME` at your Chrome, for example
 `C:\Program Files\Google\Chrome\Application\chrome.exe` (PowerShell: `$env:OPENFLYOVER_CHROME = '…'`), and use a UTF-8 locale
 (the project scenario checks the name of a downloaded file with accents). The rendering
