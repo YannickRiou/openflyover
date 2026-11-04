@@ -5,6 +5,7 @@ import { isRenderWindow, runInRenderWindow } from './export/renderWindow'
 import { isExportBusy, useExportStore } from './export/store'
 import { isCardItem } from './film/cards'
 import { addStop, addText, copyBlocks, duplicateFilmItem, pasteBlocks, removeFilmItem, rippleRemove, splitFilmItem, timedBlockIds } from './film/timeline'
+import type { Film } from './film/model'
 import { useMediaStore } from './film/media'
 import { getBlockClip, setBlockClip } from './ui/blockClipboard'
 import { clampWorkArea, markIn, markOut } from './film/workArea'
@@ -246,26 +247,56 @@ function SeekShortcuts() {
 
 /**
  * Portrait phone: the actions of the selected timeline block in place of the tab bar (« Terminé » deselects it,
- * « Modifier » opens its inspector in the half sheet).
+ * « Modifier » opens its inspector in the half sheet). « Couper » (at the playhead) and « Dupliquer » only for the blocks
+ * that take them, as X and Ctrl+D: a text or a photo is cut, a text or a medium duplicated; never the flight nor a stop.
  */
 function BlockTools({ onEdit, disabled }: { onEdit(): void; disabled: boolean }) {
   const t = useT()
   const item = useAppStore((s) => s.filmSelection)
   const shot = useAppStore((s) => (item === 'opening' || item === 'closing' ? s.settings.film[item] : null))
   const clock = useFilmClock()
+  const playheadS = (s: { playback: { timeS?: number | null; progress: number } }) => Math.min(s.playback.timeS ?? clock.timeAtProgress(s.playback.progress), clock.totalTime())
+  // the selectors give booleans: the bar renders again only when one changes, not at each frame of the playback
+  const splits = useAppStore((s) => item !== null && splitFilmItem(s.settings.film, item, playheadS(s)) !== null)
+  const cuttable = useAppStore((s) => item !== null && (s.settings.film.texts.some((x) => x.id === item) || s.settings.film.media.some((m) => m.id === item && m.kind === 'image' && !m.sync)))
+  const duplicates = useAppStore((s) => item !== null && duplicateFilmItem(s.settings.film, item) !== null)
   if (item === null) return null
   const isStop = clock.stops.some((s) => s.id === item)
+  /** a copy or the second piece, selected (one undo step) */
+  const make = (done: (f: Film) => { film: Film; id: string } | null) =>
+    editFilm((f) => {
+      const result = done(f)
+      return result ? { film: result.film, id: result.id } : { film: f }
+    })
   return (
-    <div className="rail-frame chrome-focus items-center gap-1 px-1" data-rail="" role="toolbar" aria-label={t('shell.blockTools.aria')}>
+    <div className="rail-frame chrome-focus items-center gap-0 px-0.5" data-rail="" role="toolbar" aria-label={t('shell.blockTools.aria')}>
       <button type="button" className="rail-tab" onClick={() => useAppStore.getState().setFilmSelection(null)}>
         <Icon name="check" />
         <span className="rail-label">{t('common.done')}</span>
       </button>
-      <span className="mx-1 h-8 w-px flex-none bg-white/15" aria-hidden="true" />
+      {/* (five buttons at most, a fifth of the width each: the line is thin and close) */}
+      <span className="h-8 w-px flex-none bg-white/15" aria-hidden="true" />
       <button type="button" className="rail-tab" onClick={onEdit} disabled={disabled}>
         <Icon name="sliders-horizontal" />
         <span className="rail-label">{t('shell.blockTools.edit')}</span>
       </button>
+      {cuttable && (
+        <button
+          type="button"
+          className="rail-tab"
+          disabled={disabled || !splits}
+          onClick={() => make((f) => splitFilmItem(f, item, playheadS(useAppStore.getState())))}
+        >
+          <Icon name="scissors" />
+          <span className="rail-label">{t('shell.blockTools.split')}</span>
+        </button>
+      )}
+      {duplicates && (
+        <button type="button" className="rail-tab" disabled={disabled} onClick={() => make((f) => duplicateFilmItem(f, item))}>
+          <Icon name="copy" />
+          <span className="rail-label">{t('shell.blockTools.duplicate')}</span>
+        </button>
+      )}
       <button
         type="button"
         className="rail-tab"

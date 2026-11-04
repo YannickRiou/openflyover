@@ -57,6 +57,8 @@ const messages: Messages['shell'] = {
   'dock.inspector': 'Inspector',
   'blockTools.aria': 'Selected item',
   'blockTools.edit': 'Edit',
+  'blockTools.split': 'Split',
+  'blockTools.duplicate': 'Duplicate',
   exportBusy: 'An export is in progress: the file was not opened.',
   'tour.aria': 'Guided tour',
   'tour.step': '{n} of {total}',

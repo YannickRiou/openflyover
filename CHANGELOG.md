@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Split and duplicate on a phone**: a selected text or photo gets « Couper » (in two at the playhead) and « Dupliquer » in the bar of the block, a video « Dupliquer », as X and Ctrl+D on a computer. The flight and the stops get neither: cutting them would make no sense.
+
 - **The tabs of a phone stay in sight under a sheet**: the settings sheet stops above the tab bar, so another tab is one touch away and opens in the same sheet (it took closing the sheet first).
 
 ## 5.3.0 (November 2026)

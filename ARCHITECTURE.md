@@ -694,7 +694,9 @@ pointer (`appearance.css`).
     scrolls inside (`overscroll-behavior: contain`); a press on the view does not close a sheet (it does on a tablet
     side sheet). A selected block (`inspecting`) replaces the tab bar with its actions (`BlockTools` in `App`:
     « Terminé » deselects, « Modifier » opens `FilmInspector` in the half sheet (`editing`, `edit` event; ✓ closes it
-    and keeps the selection), « Supprimer », « Sans plan » for the opening and the closing, `removeFilmItem`).
+    and keeps the selection), « Couper » at the playhead for a text or a photo (`splitFilmItem`) and « Dupliquer » for a text or a medium
+    (`duplicateFilmItem`), shown only for the blocks that take them, as X and Ctrl+D; « Supprimer », « Sans plan » for the
+    opening and the closing, `removeFilmItem`).
     Landscape phone: the rail stays on the side, without its fold button; the timeline strip as above.
   - *Centred timeline* (`Timeline` `centred`, portrait phone): the lanes carry half their width of blank at both
     ends, the playhead is a line fixed in the middle (drawn on the body of the lanes), so the horizontal scroll is the film
