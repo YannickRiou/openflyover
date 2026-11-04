@@ -128,7 +128,7 @@ const PILL_LIGHT = 'rounded-full [--button-bg-hover:var(--color-glacier)] [--but
 const BAR_PLAY = '[--button-bg-hover:rgb(255_255_255/0.22)] [--button-bg-pressed:rgb(255_255_255/0.3)] [--button-bg:rgb(255_255_255/0.12)] [--button-fg:var(--color-white)]'
 /** The checkbox of the dark options panel: the roles it reads, turned to their on-chrome values. */
 const CHECKBOX_ON_DARK =
-  'whitespace-nowrap [--accent:var(--accent-on-dark)] [--focus-ring:var(--focus-ring-on-dark)] [--line-strong:var(--color-glacier)] [--surface-control:transparent] [--text-1:var(--color-white)]'
+  '[--accent:var(--accent-on-dark)] [--focus-ring:var(--focus-ring-on-dark)] [--line-strong:var(--color-glacier)] [--surface-control:transparent] [--text-1:var(--color-white)]'
 
 const HEAD = 'flex px-2 text-caption font-semibold text-glacier'
 const LANE = 'relative border-b border-white/5'
