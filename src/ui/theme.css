@@ -375,6 +375,41 @@ select {
   box-shadow: 0 0 0 1px var(--color-white);
 }
 
+/*
+ * Thin scrollbars without arrows, the thumb a veil of the text colour: ink on the paper panels, white on the ink ones.
+ * The WebKit pseudo-elements wherever they exist (Chromium, so the desktop app on Windows, Safari, the desktop app on macOS
+ * and Linux); the standard properties only elsewhere (Firefox): with them Chromium ignores the pseudo-elements and keeps
+ * its arrows.
+ */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, currentColor 30%, transparent) transparent;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 30%, transparent) padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, currentColor 50%, transparent);
+}
+
+::-webkit-scrollbar-button,
+::-webkit-scrollbar-corner {
+  display: none;
+  background: transparent;
+}
+
 }
 
 @layer components {
