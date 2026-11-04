@@ -444,7 +444,8 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
   const setSetting = useAppStore((s) => s.setSetting)
   const firstTrack = useAppStore((s) => s.tracks[0])
   const racing = useAppStore((s) => s.tracks.length > 1 && s.settings.race.enabled)
-  const markerKeyCount = useAppStore((s) => s.settings.film.markerKeys.length)
+  const markerKeys = useAppStore((s) => s.settings.film.markerKeys)
+  const markerKeyCount = markerKeys.length
   const filmTrack = useFilmTrack()
   const sequence = useFilmSequence()
   const junctions = useMemo(() => junctionsM(filmTrack, sequence?.cutsM).length, [filmTrack, sequence])
@@ -453,6 +454,8 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
   const activityFigure = figureOfActivity(firstTrack?.activityType)
   const figurine = marker.kind === 'figurine'
   const alone = figurine && marker.shape === 'contour'
+  // a 3D model at every point of the film: it has no badge, no label, no stick and no ring (the sprite is hidden), so those controls are not offered; their values are kept
+  const model3dAlways = figurine && marker.model3d && markerKeys.every((key) => key.kind === 'figurine')
 
   return (
     <PanelSection title={t('marker.section.title')} keys={['marker', 'markerValue']} hidden={hidden}>
@@ -515,16 +518,17 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           onChange={(color) => updateMarker({ color })}
         />
       )}
-      {figurine && (
+      {/* "Naturelles" ignores it: the colour of a model only counts when it takes the colour of the track */}
+      {figurine && !(model3dAlways && marker.modelColors === 'natural') && (
         <MarkerColorRow
-          label={alone ? t('marker.section.figureColor') : t('marker.section.discColor')}
+          label={model3dAlways ? t('marker.section.modelColor') : alone ? t('marker.section.figureColor') : t('marker.section.discColor')}
           path="marker.figureColor"
           value={marker.figureColor}
           trackColor={trackColor}
           onChange={(figureColor) => updateMarker({ figureColor })}
         />
       )}
-      {marker.kind !== 'boule' && (
+      {marker.kind !== 'boule' && !model3dAlways && (
         <MarkerColorRow
           label={alone ? t('marker.section.outlineColor') : t('marker.section.edgeColor')}
           path="marker.color"
@@ -533,7 +537,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           onChange={(color) => updateMarker({ color })}
         />
       )}
-      {racing && marker.kind !== 'image' && <p className="type-hint">{t('marker.section.racing')}</p>}
+      {racing && marker.kind !== 'image' && <p className="type-hint">{t(figurine ? 'marker.section.racingFigurine' : 'marker.section.racing')}</p>}
       <SettingRow label={t('marker.section.size')} value={`×${formatShort(marker.size)}`} paths={['marker.size']}>
         <RangeField
           label={t('marker.section.size')}
@@ -543,10 +547,12 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           onChange={(size) => updateMarker({ size })}
         />
       </SettingRow>
+      {!model3dAlways && (
       <div className="flex items-center gap-1">
         <Switch checked={marker.stick} onChange={(on) => updateMarker({ stick: on })}>{t('marker.section.stick')}</Switch>
         <InfoTip text={t('marker.section.stickTip')} />
       </div>
+      )}
       </ModeGate>
       <ModeGate min="expert" paths={['film.markerKeys']}>
       <div className="field">
@@ -577,7 +583,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
           <Icon name="chevron-down" size={16} />
         </summary>
         <div className="mt-1 flex flex-col gap-3">
-          {figurine && (
+          {figurine && !model3dAlways && (
             <ChipChoice
               label={t('marker.section.badge')}
               options={MARKER_SHAPES}
@@ -586,6 +592,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
               onChange={(shape) => updateMarker({ shape })}
             />
           )}
+          {!model3dAlways && (<>
           <ChipChoice
             label={t('marker.section.label')}
             options={MARKER_LABEL_MODES}
@@ -602,6 +609,7 @@ export function MarkerSection({ hidden }: { hidden: boolean }) {
             />
           )}
           {marker.label !== 'aucune' && racing && <p className="type-hint">{t('marker.section.otherLabels')}</p>}
+          </>)}
           <div className="field">
             <label className="type-label" htmlFor={`${id}-value`}>
               {t('marker.section.value')}
