@@ -1915,7 +1915,7 @@ const [exposureEv, setExposureEv] = useKeyedValue('exposure', exposureSetting, (
   <div class="callout"><b>Verify</b>
     <ul class="checklist">
       <li>Arrow keys and Home / End move between tabs; the open tab folds on a second press.</li>
-      <li>Phone width (390 px): the tab bar scrolls and keeps the open tab in view.</li>
+      <li>Phone width (390 px): the five groups of tabs (<code>TAB_GROUPS</code>) fit across without scrolling; a group opens the tab of it last shown.</li>
       <li>The shell state saved in <code>openflyover.shell.v1</code> still parses (an unknown stored tab falls back to <code>trace</code>).</li>
     </ul>
   </div>

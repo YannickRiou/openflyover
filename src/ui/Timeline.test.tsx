@@ -94,7 +94,7 @@ describe('Timeline', () => {
     act(() => root.unmount())
   })
 
-  it('names each lane on the centred timeline of a phone, over the left end of the lane, with no column of headers', async () => {
+  it('on a phone upright: the lanes with something on them, named over their left end; three named buttons and an add row', async () => {
     ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
     globalThis.ResizeObserver ??= class {
       observe() {}
@@ -107,13 +107,21 @@ describe('Timeline', () => {
     const root = createRoot(host)
     await act(async () => root.render(<Timeline centred />))
     const names = Array.from(host.querySelectorAll('[data-testid="timeline-lane-names"] span')).map((s) => s.textContent)
-    expect(names.length).toBeGreaterThan(2)
-    expect(names).toContain('Plans')
+    // the empty lanes are not drawn: only « Plans » here
+    expect(names).toEqual(['Plans'])
+    const hidden = (lane: string) => host.querySelector(`[data-lane-id="${lane}"]`)!.classList.contains('hidden')
+    expect(['param:speed', 'holds', 'texts', 'media', 'music'].map(hidden)).toEqual([true, true, true, true, true])
+    // the row of the bar: three named buttons, nothing to scroll; a row under the lanes opens « Ajouter » too
+    const tools = Array.from(host.querySelectorAll('[data-testid="timeline-tools"] button')).map((b) => b.textContent || b.getAttribute('aria-label'))
+    expect(tools).toEqual(['Clés', 'Ajouter', 'Options du film'])
+    expect(host.querySelector('[data-testid="timeline-add-row"] button')!.textContent).toBe('Texte, photo, musique')
     // the column of the headers stays hidden, the lanes keep the width
     expect(host.querySelector('[data-testid="timeline-heads"]')!.className).toContain('hidden')
-    // and a timeline that is not centred has the column, not the floating names
+    // and a timeline that is not centred has the column and every lane, not the floating names nor the add row
     await act(async () => root.render(<Timeline />))
     expect(host.querySelector('[data-testid="timeline-lane-names"]')).toBeNull()
+    expect(host.querySelector('[data-testid="timeline-add-row"]')).toBeNull()
+    expect(hidden('texts')).toBe(false)
     act(() => root.unmount())
   })
 

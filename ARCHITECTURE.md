@@ -134,11 +134,11 @@ full customization through a single project document, WebCodecs video export, Ta
 
 The first screen (shell, panels, welcome card) loads the app, React and the HeroUI / React Aria primitives, without three.js:
 1.9 MB, 559 kB gzip over 22 files in 4.5.0, stylesheet included (the app 441 kB, `primitives` 291 kB, React 219 kB,
-French and the i18n code 177 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 584 kB
+French and the i18n code 177 kB, the React Aria code they share in chunks of their own). The CI fails above a budget of 585 kB
 gzip (`scripts/check-bundle-size.mjs`, after the build): raise it on purpose in the pull request that needs it (580 → 582
 for the diagnostic report's phone rows: the terrain workers' status, the GPU timer, the wait for the GPU, which the
 first screen holds because the export's guard builds the report; 582 → 583 for the credits of the 3D models, the
-marker settings and their labels in French; 583 → 584 for the phone layout: the « Agrandir » button of the sheets, the tools button of the view and the preview height).
+marker settings and their labels in French; 583 → 584 for the phone layout: the « Agrandir » button of the sheets, the tools button of the view and the preview height; 584 → 585 for the phone's timeline row: « Clés », « Ajouter » and its menu, the add row under the lanes).
 Nothing in the first screen may import `three` or `@react-three/fiber` statically: the status bar reads the renderer through
 `scene/perfProbe.ts` (a plain module the scene fills when its canvas is created). Only French (the
 reference, the fallback of a missing message) is in the first screen; English, Spanish, Italian and German are one chunk each
@@ -679,9 +679,13 @@ pointer (`appearance.css`).
     menu.
   - *Portrait phone* (`max-width: 699px`, after CapCut; `App` reads it with `usePhone`): from top to bottom the top
     bar, the 3D preview (`--phone-preview-h` 42dvh, `Stage.tsx`, only with a track), the timeline's bar as a
-    slim transport row (play and time, then the « Arrêt », « Vitesse », « Texte », « Média », speed and « Options » icons in a row
-    that scrolls sideways, `data-testid="timeline-tools"`; no ■, readout, zoom nor fold), the timeline (`Timeline` `centred`, below),
-    the bottom tab bar (all nine tabs, 72 px wide at least so the next one peeks past the edge, scrolling sideways),
+    slim transport row (play and time, then three named buttons, `data-testid="timeline-tools"`: « Clés » (a sheet with the ◀ ◇ ▶
+    of « Plans » and « Vitesse »), « Ajouter » (a `Menu`: hold, hold at each free highlight, speed portion, text, media, music) and
+    « ⋯ » (`FilmOptions` with an `extra` part: playback speed, mute when there is sound, snapping, clear the work area); no ■,
+    readout, zoom nor fold), the timeline (`Timeline` `centred`, below; its empty lanes are not drawn, `emptyLanes`, and a dashed
+    « Texte, photo, musique » row under them, sticky to the left, opens the same menu), the bottom tab bar (five groups of tabs,
+    `TAB_GROUPS` in `shell.ts`, a fifth of the width each; a group opens the tab of it last shown, a `ToggleButtonGroup` at the top
+    of the sheet, `data-sheet-fixed`, switches between its tabs; the same groups in the rail of a landscape phone, `COMPACT_QUERY`),
     the status bar. Panel, export drawer and inspector are half sheets from under the transport row to the status bar,
     over the timeline and the tab bar, never over the preview (sliding in, not under `prefers-reduced-motion`). Their
     head (`SheetHandle.tsx`: grip, tab name, « Terminé » ✓) closes them on ✓ or when dragged down past a third of
@@ -745,7 +749,7 @@ pointer (`appearance.css`).
   (keyframes) show from Expert, or once the film has keys. Ctrl+K lists hidden sections too: `searchSections(query, tabs, mode)` gives
   `needs`, `SettingsSearch` writes « Disponible en mode … » unless the section is on the screen anyway (`isSectionShown`: a modified section
   is), and `App` turns that mode on (with a toast) when it is picked. `ModeHint` ends a panel with what its mode leaves out (`shell.mode.hint.*`).
-  Choice: `ModeSwitcher` in the top bar (`TopBar`, hidden when the bar is condensed), a section of « Réglages » (`PreferencesPanel`), and
+  Choice: a section of « Réglages » (`PreferencesPanel`; the top bar has no switch, a choice made once does not take its room), and
   `ModeQuestion` at the first launch (no preferences stored, tour not seen, no `navigator.webdriver`: Débutant preselected, Continuer stores it;
   the app runs in Expert behind the question). « Débutant » only: `BasemapChoice` (« Satellite » / « Carte » tiles: `imagerySourceId` takes
   the first source of the kind that covers the first track, `groupImagerySources`) and `AmbianceSection` (`SettingsPanel.tsx`: « Météo du jour » =
@@ -1789,8 +1793,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   included** (`setProgress(clock.progressAtTime(t), t)`, end of film = progress 1 without a time); it is also a keyboard
   slider (arrows ±1 s, Shift ±5 s, Page ±10 s, Home / End). The keys are set where they live. Camera keys: the ◀ ◇ ▶ group (`KeyGroup`,
   `src/ui/KeyControls.tsx`: previous key / add or remove at the playhead / next key; Alt+← / Alt+→ unchanged) sits under the label
-  of the « Plans » lane header; on a portrait phone (centred timeline, no lane headers) it leads the sideways-scrolling
-  tool row. Lanes: « Plans », « Vitesse », one lane per keyed parameter, « Marqueur » (only with marker keys), « Arrêts »,
+  of the « Plans » lane header; on a portrait phone (centred timeline, no lane headers) it is in the « Clés » sheet of the
+  transport row; with a mouse its ◀ and ▶ show while the pointer is over the lane head or the focus is in it (`lane-keys`). Lanes: « Plans », « Vitesse », one lane per keyed parameter, « Marqueur » (only with marker keys), « Arrêts »,
   « Textes », « Médias », « Musique »; « Textes » also carries the opening title and the closing card (see below); there is no « Réglages » lane and the bar has no « Ajouter un réglage » or
   « Ajouter un changement de marqueur » button. `seekKeyframe` puts the film time exactly on the key
   (`adjacentKey`, one under the playhead skipped) and moves the inspector to it when it showed a keyframe. Lanes "Plans" (shots; opening, flyover with profile, closing;

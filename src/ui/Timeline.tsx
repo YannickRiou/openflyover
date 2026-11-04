@@ -12,7 +12,6 @@
  * functions of `film/timeline.ts`; editing a stop writes the generated stops out first (`materializeStops`).
  */
 import { errorMessage } from '../core/errors'
-import { useScrollEdges } from './useScrollEdges'
 import { isExportBusy, useExportStore } from '../export/store'
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { CSSProperties, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent, ReactNode, UIEvent } from 'react'
@@ -123,6 +122,9 @@ const SIZED_BODY = 'timeline-sized-body:min-h-0 timeline-sized-body:flex-auto ti
 const TIME = 'min-w-[15ch] text-body tabular-nums whitespace-nowrap'
 const READOUT = 'tabular-nums whitespace-nowrap text-glacier'
 /** The play button: white on a veil of its own (the other buttons of the bar are `btn-chrome`, glacier). */
+/** The named buttons of a phone's bar: a white veil, and white for « Ajouter », the one to find first. */
+const PILL = 'rounded-full [--button-bg-hover:rgb(255_255_255/0.2)] [--button-bg:rgb(255_255_255/0.1)] border-transparent! shadow-none! [--button-fg:var(--color-white)]'
+const PILL_LIGHT = 'rounded-full [--button-bg-hover:var(--color-glacier)] [--button-bg:var(--color-white)] border-transparent! shadow-none! [--button-fg:var(--color-ink)]'
 const BAR_PLAY = '[--button-bg-hover:rgb(255_255_255/0.22)] [--button-bg-pressed:rgb(255_255_255/0.3)] [--button-bg:rgb(255_255_255/0.12)] [--button-fg:var(--color-white)]'
 /** The checkbox of the dark options panel: the roles it reads, turned to their on-chrome values. */
 const CHECKBOX_ON_DARK =
@@ -527,6 +529,7 @@ function FilmOptions({
   onAddMusic,
   reading,
   sheet,
+  extra,
 }: {
   autoStops: boolean
   autoStopsPlaces: boolean
@@ -534,6 +537,8 @@ function FilmOptions({
   onAddMusic(): void
   reading: boolean
   sheet: boolean
+  /** a phone upright: the playback speed, the sound and the snapping, which have no button of their own there */
+  extra?: ReactNode
 }) {
   const t = useT()
   const modified = useAppStore((s) => modifiedSettings(s.settings, ['film']).length > 0)
@@ -561,6 +566,7 @@ function FilmOptions({
       {(close) => (
         <div className="flex flex-col items-start gap-2 p-3 text-body">
           <p className="font-heading text-body font-semibold">{t('timeline.options.title')}</p>
+          {extra}
           <Button
             size="sm"
             disabled={reading}
@@ -604,8 +610,6 @@ function switchAutoStops(on: boolean): void {
 }
 
 export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { sheetOpen?: boolean; centred?: boolean; onUnfold?(): void }) {
-  /** the tools row of a centred timeline scrolls sideways: its hidden side fades */
-  const tools = useScrollEdges(centred)
   const t = useT()
   const { track, film, durationS, pacing, landmarks, cutsM, stageIds, bilan } = useFilmSource()
   const sequence = useFilmSequence()
@@ -1536,8 +1540,22 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   // a lane folded to a strip or locked (per device, `laneState.ts`): its blocks are hidden or untouchable (`inert`: no focus, no pointer, so a press falls through to the scrub); not on the phone's centred timeline
   const isFolded = (id: string) => !centred && laneState.folded.includes(id)
   const isLocked = (id: string) => !centred && laneState.locked.includes(id)
+  /** a phone upright: a lane with nothing on it is not drawn, « Ajouter » and the row under the lanes fill it */
+  const emptyLanes = new Set(
+    centred
+      ? [
+          ...(shownClock.speeds.length === 0 && keysOfParam(shownClock.paramKeys, 'speed').length === 0 ? ['param:speed'] : []),
+          ...(shownClock.stops.length === 0 && shownClock.nights.length === 0 ? ['holds'] : []),
+          ...(shownCards(shownOverlay).length + stageCardsOf(shownClock, shownFilm, shownOverlay).length + dayCardsOf(shownClock, shownFilm).length + shownFilm.texts.length === 0
+            ? ['texts']
+            : []),
+          ...(shownFilm.media.length === 0 ? ['media'] : []),
+          ...(shownFilm.audio.length === 0 ? ['music'] : []),
+        ]
+      : [],
+  )
   const laneProps = (id: string, keyed = false) => ({
-    className: `${LANE} ${centred ? 'h-9' : isFolded(id) ? FOLDED_HEIGHT : keyed ? KEYED_HEIGHT : 'h-7 touch:h-10'}${isFolded(id) ? ' [&>*]:invisible' : ''}${isLocked(id) ? ' opacity-60' : ''}`,
+    className: `${LANE} ${centred ? 'h-9' : isFolded(id) ? FOLDED_HEIGHT : keyed ? KEYED_HEIGHT : 'h-7 touch:h-10'}${isFolded(id) ? ' [&>*]:invisible' : ''}${isLocked(id) ? ' opacity-60' : ''}${emptyLanes.has(id) ? ' hidden' : ''}`,
     inert: isFolded(id) || isLocked(id),
     'data-lane-id': id,
   })
@@ -1684,6 +1702,21 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
     )
   }
   const mediaLabel = (m: FilmMedia) => m.caption?.trim() || pictures[m.src]?.name || (m.kind === 'video' ? t('film.snap.video') : t('film.snap.photo'))
+  /** « Ajouter » of a phone upright: what the bar of a wider timeline offers as buttons, named */
+  const pickMedia = () => void pickFiles({ filters: MEDIA_FILTERS, multiple: true }).then((files) => (files.length > 0 ? addMediaFiles(files) : undefined))
+  const addItems: MenuItem[] = [
+    { id: 'hold', label: t('timeline.bar.addHold'), icon: <Icon name="map-pin" size={16} />, onSelect: () => addStopAt(Math.round(shownPlayback().progress * lengthM)) },
+    ...freeCandidates.map((c, i) => ({
+      id: `hold-${i}`,
+      label: `${t('timeline.bar.holdAt', { label: c.label })} · ${formatDistance(c.atM)}`,
+      icon: <Icon name="map-pin" size={16} />,
+      onSelect: () => addStopAt(c.atM, { label: c.label, source: c.source }),
+    })),
+    { id: 'speed', label: t('timeline.bar.addSpeed'), icon: <Icon name="gauge" size={16} />, onSelect: () => addSpeedAt(Math.round(shownPlayback().progress * lengthM)) },
+    { id: 'text', label: t('timeline.bar.addText'), icon: <Icon name="type" size={16} />, onSelect: () => editFilm((f) => addText(f, playheadNow())) },
+    { id: 'media', label: reading ? t('timeline.bar.readingFiles') : t('timeline.bar.addMedia'), icon: <Icon name="image" size={16} />, disabled: reading, onSelect: pickMedia },
+    { id: 'music', label: t('timeline.options.addMusic'), icon: <Icon name="music" size={16} />, disabled: reading, onSelect: pickMusic },
+  ]
 
   return (
     <div
@@ -1749,25 +1782,88 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           collapsed={collapsed}
         />
         <span className={centred ? 'hidden' : 'flex-1 basis-0'} />
-        {/* a row of its own on a phone, which scrolls sideways */}
-        <div
-          className={
-            centred
-              ? 'scroll-fade-x flex min-w-0 flex-auto items-center justify-start gap-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none]'
-              : `contents${collapsed ? ' phone-any:hidden' : ''}`
-          }
-          data-testid="timeline-tools"
-          ref={tools}
-        >
-          {/* no lane headers on a centred timeline: the groups of the camera and speed keys lead the row */}
-          {centred && plans && (
-            <>
-              <span className="flex-none text-caption font-semibold text-glacier">{t('timeline.lane.shots')}</span>
-              <KeyGroup target={{ kind: 'camera' }} clock={clock} timeS={frozenS} disabled={!hasTrack} look="bar" />
-              <span className="flex-none text-caption font-semibold text-glacier">{PARAM_LANE_LABELS.speed}</span>
-              <KeyGroup target={{ kind: 'param', param: 'speed' }} clock={clock} timeS={frozenS} disabled={!hasTrack} look="bar" />
-            </>
-          )}
+        {/* a phone upright: three named buttons, all in sight (a row that scrolled hid what it held) */}
+        {centred && (
+          <div className="flex min-w-0 flex-auto items-center justify-end gap-1.5" data-testid="timeline-tools">
+            {plans && (
+              <Popover
+                label={t('timeline.bar.keys')}
+                placement="top end"
+                sheet
+                trigger={
+                  <Button size="sm" className={PILL}>
+                    <Icon name="diamond" size={15} />
+                    {t('timeline.bar.keys')}
+                  </Button>
+                }
+              >
+                <div className="flex flex-col gap-2 p-3 text-body text-white">
+                  <p className="font-heading text-body font-semibold">{t('timeline.bar.keys')}</p>
+                  {[
+                    { label: t('timeline.lane.shots'), target: { kind: 'camera' } as const },
+                    { label: PARAM_LANE_LABELS.speed, target: { kind: 'param', param: 'speed' } as const },
+                  ].map(({ label, target }) => (
+                    <div key={label} className="flex items-center justify-between gap-3">
+                      <span className="font-semibold text-glacier">{label}</span>
+                      <KeyGroup target={target} clock={clock} timeS={frozenS} disabled={!hasTrack} look="bar" />
+                    </div>
+                  ))}
+                </div>
+              </Popover>
+            )}
+            <Menu
+              label={t('timeline.bar.add')}
+              placement="top end"
+              sheet
+              items={addItems}
+              trigger={
+                <Button size="sm" className={PILL_LIGHT}>
+                  <Icon name="plus" size={15} />
+                  {t('timeline.bar.add')}
+                </Button>
+              }
+            />
+            <FilmOptions
+              autoStops={film.autoStops}
+              autoStopsPlaces={film.autoStopsPlaces === true}
+              onAutoStops={switchAutoStops}
+              onAddMusic={pickMusic}
+              reading={reading}
+              sheet
+              extra={
+                <>
+                  <div className="flex w-full items-center justify-between gap-3">
+                    <span>{t('timeline.bar.speed')}</span>
+                    <Select
+                      look="bar"
+                      aria-label={t('timeline.bar.speed')}
+                      value={speed}
+                      options={SPEEDS.map((value) => ({ value, label: `×${formatNumber(value, value % 1 === 0 ? 0 : 1)}` }))}
+                      onChange={setSpeed}
+                    />
+                  </div>
+                  {(film.audio.length > 0 || film.media.some(clipHasSound)) && (
+                    <Checkbox className={CHECKBOX_ON_DARK} checked={muted} onChange={(on) => useMusicPreview.getState().setMuted(on)}>
+                      {t('timeline.bar.mute')}
+                    </Checkbox>
+                  )}
+                  <Checkbox className={CHECKBOX_ON_DARK} checked={magnet} onChange={(on) => setPreferences({ timelineMagnet: on })}>
+                    {t('timeline.magnet.label')}
+                  </Checkbox>
+                  {workSpan && (
+                    <Button size="sm" onClick={() => setWorkArea(null)}>
+                      <Icon name="rotate-cw" size={16} />
+                      {t('timeline.workArea.clear')}
+                    </Button>
+                  )}
+                  <span className="h-px w-full bg-white/10" aria-hidden="true" />
+                </>
+              }
+            />
+          </div>
+        )}
+        {!centred && (
+        <div className={`contents${collapsed ? ' phone-any:hidden' : ''}`} data-testid="timeline-tools">
           <BarButton
             icon="map-pin"
             name={t('timeline.bar.addHold')}
@@ -1862,8 +1958,9 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
             on={magnet}
             onClick={() => setPreferences({ timelineMagnet: !magnet })}
           />
-          <FilmOptions autoStops={film.autoStops} autoStopsPlaces={film.autoStopsPlaces === true} onAutoStops={switchAutoStops} onAddMusic={pickMusic} reading={reading} sheet={centred} />
+          <FilmOptions autoStops={film.autoStops} autoStopsPlaces={film.autoStopsPlaces === true} onAutoStops={switchAutoStops} onAddMusic={pickMusic} reading={reading} sheet={false} />
         </div>
+        )}
         <Tip text={collapsed ? t('timeline.fold.unfold') : t('timeline.fold.fold')} side="top" align="end">
           <Button
             variant="icon"
@@ -1890,7 +1987,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
           {centred && (
             <div className="pointer-events-none absolute top-0 left-0 z-5" data-testid="timeline-lane-names" aria-hidden="true">
               <div className={rulerHeight} />
-              {lanes.map((lane) => (
+              {lanes.filter((lane) => !emptyLanes.has(lane.id)).map((lane) => (
                 <div key={lane.id} className="flex h-9 items-center">
                   <span className="max-w-24 truncate rounded-r-sm bg-chrome/85 px-1.5 py-0.5 text-caption leading-none font-semibold text-glacier">{lane.name}</span>
                 </div>
@@ -2263,6 +2360,24 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
                   )
                 })}
               </div>
+
+              {/* a phone upright: under the lanes, a row in sight whatever the scroll, which opens « Ajouter » */}
+              {centred && (
+                <div className="sticky left-0 w-screen px-3 pt-2 pb-3" data-testid="timeline-add-row">
+                  <Menu
+                    label={t('timeline.bar.add')}
+                    placement="top start"
+                    sheet
+                    items={addItems}
+                    trigger={
+                      <Button size="sm" block className="rounded-md border-dashed! border-white/25! bg-transparent! text-glacier! shadow-none!">
+                        <Icon name="plus" size={15} />
+                        {t('timeline.bar.addRow')}
+                      </Button>
+                    }
+                  />
+                </div>
+              )}
 
               {/* a lifted stage: a line across the lanes where it would land */}
               {stageDrag && sequence && (() => {
