@@ -42,7 +42,7 @@ const messages: Messages['shell'] = {
   'mode.hint.carte.confirme': 'Fecha y detalle de las imágenes, fuente del relieve, limpieza del MDE: en el modo Experto.',
   'mode.hint.meteo.confirme': 'Lluvia y bruma: en el modo Experto.',
   'mode.hint.lumiere.confirme': 'Atmósfera, sombras de las nubes y claridad de las noches: en el modo Experto.',
-  'mode.hint.survol.debutant': 'Estilo, focal, distancia, inclinación y transiciones: en el modo Intermedio.',
+  'mode.hint.survol.debutant': 'Focal, distancia, inclinación y transiciones: en el modo Intermedio.',
   'mode.hint.survol.confirme': 'Rumbo, avance y suavizados: en el modo Experto.',
   'mode.hint.habillage.debutant': 'Contadores, perfil y minimapa, clima, logo y texto, etiquetas 3D: en el modo Intermedio.',
   'mode.hint.habillage.confirme': 'Colores y fuentes impuestos, claves de las etiquetas, créditos: en el modo Experto.',

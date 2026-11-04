@@ -2,12 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { isValidSetting, sanitizeSettings } from '../project/document'
 import {
   advanceProgress,
+  CAMERA_HEIGHTS,
   CAMERA_PRESETS,
+  cameraHeightStop,
   DEFAULT_CAMERA,
   DEFAULT_FLYOVER_DURATION_S,
   findCameraPreset,
   isValidCamera,
   turnSmoothingM,
+  type CameraSettings,
 } from './cameraSettings'
 
 describe('advanceProgress', () => {
@@ -45,6 +48,24 @@ describe('camera presets', () => {
   it('findCameraPreset returns undefined for a custom camera', () => {
     expect(findCameraPreset({ ...DEFAULT_CAMERA, pitchDeg: 31 })).toBeUndefined()
     expect(findCameraPreset({ ...DEFAULT_CAMERA, focalMm: 85 })).toBeUndefined()
+  })
+})
+
+describe('camera heights (« Hauteur »)', () => {
+  it('are values of existing presets, from close to far, the default among them', () => {
+    for (const h of CAMERA_HEIGHTS) expect(CAMERA_PRESETS.some((p) => p.camera.distance === h.distance && p.camera.pitchDeg === h.pitchDeg), h.id).toBe(true)
+    expect(CAMERA_HEIGHTS.map((h) => h.distance)).toEqual([...CAMERA_HEIGHTS.map((h) => h.distance)].sort((a, b) => a - b))
+    expect(CAMERA_HEIGHTS[1]).toMatchObject({ distance: DEFAULT_CAMERA.distance, pitchDeg: DEFAULT_CAMERA.pitchDeg })
+  })
+
+  it('a camera at a stop is not custom, whatever else it holds; any other is, at the nearest stop', () => {
+    CAMERA_HEIGHTS.forEach((h, index) => {
+      const camera: CameraSettings = { ...DEFAULT_CAMERA, style: 'orbit', bankDeg: 0, distance: h.distance, pitchDeg: h.pitchDeg }
+      expect(cameraHeightStop(camera)).toEqual({ index, custom: false })
+    })
+    expect(cameraHeightStop({ distance: 1.1, pitchDeg: 30 })).toEqual({ index: 1, custom: true })
+    expect(cameraHeightStop({ distance: 3.8, pitchDeg: 80 })).toEqual({ index: 5, custom: true })
+    expect(cameraHeightStop({ distance: 0.3, pitchDeg: 5 })).toEqual({ index: 0, custom: true })
   })
 })
 

@@ -42,7 +42,7 @@ const messages: Messages['shell'] = {
   'mode.hint.carte.confirme': 'Date and detail of the images, terrain source, DEM cleaning: in Expert mode.',
   'mode.hint.meteo.confirme': 'Rain and mist: in Expert mode.',
   'mode.hint.lumiere.confirme': 'Atmosphere, cloud shadows and night brightness: in Expert mode.',
-  'mode.hint.survol.debutant': 'Style, focal length, distance, tilt and transitions: in Intermediate mode.',
+  'mode.hint.survol.debutant': 'Focal length, distance, tilt and transitions: in Intermediate mode.',
   'mode.hint.survol.confirme': 'Heading, lead room and smoothings: in Expert mode.',
   'mode.hint.habillage.debutant': 'Counters, profile and mini-map, weather, logo and text, 3D labels: in Intermediate mode.',
   'mode.hint.habillage.confirme': 'Forced colours and fonts, label keys, credits: in Expert mode.',

@@ -42,7 +42,7 @@ const messages: Messages['shell'] = {
   'mode.hint.carte.confirme': 'Datum und Detail der Bilder, Reliefquelle, DGM-Bereinigung: im Modus Experte.',
   'mode.hint.meteo.confirme': 'Regen und Dunst: im Modus Experte.',
   'mode.hint.lumiere.confirme': 'Atmosphäre, Wolkenschatten und Nachthelligkeit: im Modus Experte.',
-  'mode.hint.survol.debutant': 'Stil, Brennweite, Abstand, Neigung und Übergänge: im Modus Fortgeschritten.',
+  'mode.hint.survol.debutant': 'Brennweite, Abstand, Neigung und Übergänge: im Modus Fortgeschritten.',
   'mode.hint.survol.confirme': 'Richtung, Vorlauf und Glättungen: im Modus Experte.',
   'mode.hint.habillage.debutant': 'Zähler, Profil und Minikarte, Wetter, Logo und Text, 3D-Beschriftungen: im Modus Fortgeschritten.',
   'mode.hint.habillage.confirme': 'Vorgegebene Farben und Schriften, Keyframes der Beschriftungen, Quellenangaben: im Modus Experte.',

@@ -16,6 +16,8 @@ export default {
   'v55.headings.text': 'La section de la trace s’appelle « Style de la trace », pour ne plus la confondre avec la liste « Traces ». Les titres passent en Manrope, plus ronde, en minuscules : celui d’une section en gras, ses parties (Ligne, Halo) plus petites et plus claires.',
   'v55.pictures.title': 'Une image pour chaque choix',
   'v55.pictures.text': 'Dans l’onglet Trace, la forme du marqueur (boule, figurine, image), le style de la boule (disque, halo, pulsation) et le trait de la ligne (plein, tirets, points) forment chacun une rangée de cases, avec un petit dessin au-dessus du mot. On les distingue d’un coup d’œil.',
+  'v55.camera.title': 'La caméra en deux questions',
+  'v55.camera.text': 'Choisissez d’abord le mouvement (Suivre, Balancer, Tourner autour, Cinéma, Du dessus, Libre), puis la hauteur sur un seul curseur, d’Au ras à Satellite. Chaque choix ne change que ses propres réglages. Les réglages fins restent en dessous, à partir du mode Confirmé.',
   'v50.margins.title': 'Des marges au choix',
   'v50.margins.text': 'La case « Marges de sécurité » de l’export garde l’habillage loin des bords et, en 9:16 et 4:5, hors des zones de Reels, TikTok et Shorts. Elle se coche d’elle-même quand vous choisissez une plateforme. Décochée, l’habillage se rapproche des bords et l’image entière sert au film.',
   'v50.modes.title': 'Trois modes d’interface',

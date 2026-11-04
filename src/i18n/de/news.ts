@@ -18,6 +18,8 @@ const messages: Messages['news'] = {
   'v55.headings.text': 'Der Abschnitt des Tracks heißt jetzt „Track-Stil“, damit er nicht mehr mit der Liste „Tracks“ verwechselt wird. Die Überschriften stehen jetzt in Manrope, einer runderen Schrift, in normaler Schreibweise: fett für einen Abschnitt, kleiner und heller für seine Teile (Linie, Leuchten).',
   'v55.pictures.title': 'Ein Bild für jede Auswahl',
   'v55.pictures.text': 'Im Reiter Track zeigen die Form des Markers (Kugel, Figur, Bild), der Stil der Kugel (Scheibe, Halo, Puls) und die Linienart (durchgezogen, gestrichelt, gepunktet) bilden je eine Reihe von Feldern mit einer kleinen Zeichnung über dem Wort. So unterscheidet man sie auf einen Blick.',
+  'v55.camera.title': 'Die Kamera in zwei Fragen',
+  'v55.camera.text': 'Wählen Sie zuerst die Bewegung (Folgen, Schwanken, Umkreisen, Kino, Von oben, Frei), dann die Höhe auf einem einzigen Regler, von Bodennah bis Satellit. Jede Wahl ändert nur ihre eigenen Einstellungen. Die Feineinstellungen bleiben darunter, ab dem Modus Fortgeschritten.',
   'v50.margins.title': 'Ränder nach Wahl',
   'v50.margins.text': 'Das Kästchen „Sicherheitsränder“ des Exports hält das Overlay von den Rändern fern und in 9:16 und 4:5 außerhalb der Bereiche von Reels, TikTok und Shorts. Es hakt sich selbst an, wenn Sie eine Plattform wählen. Ohne Haken rückt das Overlay an die Ränder und das ganze Bild gehört dem Film.',
   'v50.modes.title': 'Drei Modi der Oberfläche',

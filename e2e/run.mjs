@@ -1106,7 +1106,7 @@ const SCENARIOS = [
       // detail of the old render, then its settings put back as one step
       await page.click(`${H} [data-testid="history-item"]:last-child [data-testid="history-head"]`)
       await page.waitForSelector(`${H} [data-testid="history-item"]:last-child [data-testid="history-rows"]`, { visible: true })
-      assert((await page.$eval(`${H} [data-testid="history-item"]:last-child [data-testid="history-body"]`, (e) => e.textContent)).includes('Vue du dessus'), 'détail : style de caméra absent')
+      assert((await page.$eval(`${H} [data-testid="history-item"]:last-child [data-testid="history-body"]`, (e) => e.textContent)).includes('Du dessus'), 'détail : style de caméra absent')
       await page.click(`${H} [data-testid="history-item"]:last-child [data-testid="history-body"] button::-p-text(Réutiliser ces réglages)`)
       const reused = await page.evaluate(() => {
         const { settings } = window.__e2e.appStore.getState()
@@ -1223,12 +1223,12 @@ const SCENARIOS = [
             tab,
           )
         }
-        const tile = (text) => `[data-testid="tab-panel-survol"] [role="radiogroup"] label::-p-text(${text})`
-        const tileChecked = (text) =>
-          page.evaluate((t) => [...document.querySelectorAll('[data-testid="tab-panel-survol"] input[type="radio"]')].find((i) => i.labels?.[0]?.textContent.startsWith(t))?.checked === true, text)
-        await tap(tile('Oiseau'))
-        await until(page, () => [...document.querySelectorAll('[data-testid="tab-panel-survol"] input[type="radio"]')].some((i) => i.labels?.[0]?.textContent.startsWith('Oiseau') && i.checked))
-        assert(await tileChecked('Oiseau'), 'le préréglage « Oiseau » n’est pas choisi')
+        const motion = (text) => `[data-testid="tab-panel-survol"] [role="radiogroup"][aria-label="Mouvement"] button::-p-text(${text})`
+        const motionChecked = (text) =>
+          page.evaluate((t) => [...document.querySelectorAll('[data-testid="tab-panel-survol"] [aria-label="Mouvement"] [role="radio"]')].find((b) => b.textContent === t)?.getAttribute('aria-checked') === 'true', text)
+        await tap(motion('Balancer'))
+        await until(page, () => [...document.querySelectorAll('[aria-label="Mouvement"] [role="radio"]')].some((b) => b.textContent === 'Balancer' && b.getAttribute('aria-checked') === 'true'))
+        assert(await motionChecked('Balancer'), 'le mouvement « Balancer » n’est pas choisi')
         await tap('[data-testid="side-panel"] button[aria-label="Terminé"]')
         await until(page, () => document.querySelector('[data-testid="side-panel"]').hidden)
         // the sample has no stop of its own: one at the marker

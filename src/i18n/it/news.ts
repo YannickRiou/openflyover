@@ -18,6 +18,8 @@ const messages: Messages['news'] = {
   'v55.headings.text': 'La sezione della traccia si chiama ora «Stile della traccia», per non confonderla con l’elenco «Tracce». I titoli passano a Manrope, un carattere più rotondo, in minuscolo: in grassetto per una sezione, più piccoli e chiari per le sue parti (Linea, Alone).',
   'v55.pictures.title': 'Un’immagine per ogni scelta',
   'v55.pictures.text': 'Nella scheda Traccia, la forma del marcatore (sfera, figurina, immagine), lo stile della sfera (disco, alone, pulsazione) e il tratto della linea (pieno, tratteggiato, puntinato) formano ciascuno una fila di caselle, con un piccolo disegno sopra la parola. Si distinguono a colpo d’occhio.',
+  'v55.camera.title': 'La camera in due domande',
+  'v55.camera.text': 'Scegli prima il movimento (Seguire, Oscillare, Girare intorno, Cinema, Dall’alto, Libera), poi l’altezza su un solo cursore, da A filo a Satellite. Ogni scelta cambia solo le proprie impostazioni. Le impostazioni fini restano sotto, dalla modalità Intermedio.',
   'v50.margins.title': 'Margini a scelta',
   'v50.margins.text': 'La casella “Margini di sicurezza” dell’esportazione tiene la grafica lontana dai bordi e, in 9:16 e 4:5, fuori dalle zone di Reels, TikTok e Shorts. Si spunta da sola quando si sceglie una piattaforma. Senza spunta la grafica si avvicina ai bordi e tutta l’immagine serve al film.',
   'v50.modes.title': 'Tre modalità dell’interfaccia',

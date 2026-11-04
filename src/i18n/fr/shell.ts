@@ -40,7 +40,7 @@ export default {
   'mode.hint.carte.confirme': 'Date et détail des images, source du relief, nettoyage du MNT : en mode Expert.',
   'mode.hint.meteo.confirme': 'Pluie et brume : en mode Expert.',
   'mode.hint.lumiere.confirme': 'Atmosphère, ombres des nuages et clarté des nuits : en mode Expert.',
-  'mode.hint.survol.debutant': 'Style, focale, distance, inclinaison et transitions : en mode Confirmé.',
+  'mode.hint.survol.debutant': 'Focale, distance, inclinaison et transitions : en mode Confirmé.',
   'mode.hint.survol.confirme': 'Cap, avance et lissages : en mode Expert.',
   'mode.hint.habillage.debutant': 'Compteurs, profil et mini-carte, météo, logo et texte, étiquettes 3D : en mode Confirmé.',
   'mode.hint.habillage.confirme': 'Couleurs et polices imposées, clés des étiquettes, crédits : en mode Expert.',
