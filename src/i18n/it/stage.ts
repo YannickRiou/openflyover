@@ -4,6 +4,8 @@ const messages: Messages['stage'] = {
   view: 'Vista 3D',
   fit: 'Reinquadra la vista',
   tools: 'Strumenti della vista',
+  full: 'Schermo intero',
+  fullExit: 'Esci dallo schermo intero',
   safeZones: 'Aree di sicurezza',
   safeZonesTip: 'Aree di sicurezza (solo anteprima)',
   filmView: 'Torna alla vista del film',

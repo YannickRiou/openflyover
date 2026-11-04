@@ -679,7 +679,9 @@ pointer (`appearance.css`).
     overscroll. A touch tablet in portrait (`max-width: 1023px` and `pointer: coarse`) also takes the « Plus d'actions »
     menu.
   - *Portrait phone* (`max-width: 699px`, after CapCut; `App` reads it with `usePhone`): from top to bottom the top
-    bar, the 3D preview (`--phone-preview-h` 42dvh, `Stage.tsx`, only with a track), the timeline's bar as a
+    bar, the 3D preview (`--phone-preview-h` 42dvh, `Stage.tsx`, only with a track; « Plein écran » at its bottom left,
+    `useViewFull`: the stage `fixed` over the screen with its own play and ✕, as Safari on an iPhone has no full screen for
+    a page; a turn to landscape while playing takes it, the turn back leaves it, Escape too), the timeline's bar as a
     slim transport row (play and time, then three named buttons, `data-testid="timeline-tools"`: « Clés » (a sheet with the ◀ ◇ ▶
     of « Plans » and « Vitesse »), « Ajouter » (a `Menu`: hold, hold at each free highlight, speed portion, text, media, music) and
     « ⋯ » (`FilmOptions` with an `extra` part: playback speed, mute when there is sound, snapping, clear the work area); no ■,
