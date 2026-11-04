@@ -34,9 +34,11 @@ describe('searchSections', () => {
   })
 
   it('finds « Caméra » by « mouvement » and « hauteur », and by the older words', () => {
-    for (const word of ['mouvement', 'hauteur', 'préréglage', 'style', 'distance', 'inclinaison']) {
+    for (const word of ['mouvement', 'hauteur', 'préréglage', 'distance', 'inclinaison']) {
       expect(searchSections(word, SHELL_TABS)[0], word).toMatchObject({ tab: 'survol', title: 'Caméra' })
     }
+    // « style » also names « Style de la trace », found first by its title: « Caméra » is among the answers
+    expect(searchSections('style', SHELL_TABS)).toContainEqual(expect.objectContaining({ tab: 'survol', title: 'Caméra' }))
   })
 
   it('skips the tabs that are not shown', () => {
