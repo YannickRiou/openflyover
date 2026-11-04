@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 5.1.3 (November 2026)
 
 - **A taller view and sheets on a phone**: in portrait, the preview is as tall as the frame of the film at the width of the screen, instead of 42 % of the screen with a black band above and below (a 16:9 film goes from 219 px with 62 px of black to 219 px of view and 62 px more for the sheets); a 9:16 or 4:5 frame takes up to 55 % of the screen. The panels and the export sheet gain a « Agrandir » button in their head: the sheet takes the whole height under the top bar (« Réduire » or « Terminé » brings it back).
 
