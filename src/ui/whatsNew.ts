@@ -24,6 +24,7 @@ export const WHATS_NEW: readonly NewsVersion[] = [
     version: '5.5',
     items: [
       { icon: 'square', get title() { return t('news.v55.titlebar.title') }, get text() { return t('news.v55.titlebar.text') } },
+      { icon: 'info', get title() { return t('news.v55.status.title') }, get text() { return t('news.v55.status.text') } },
     ],
   },
   {

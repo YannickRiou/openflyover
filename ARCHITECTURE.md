@@ -624,18 +624,22 @@ pointer (`appearance.css`).
   While a film plays the timeline does not render at each frame either: it selects only `playing` and `speed`; what
   follows the playhead (readouts, playhead, flown part of the profile, ruler slider, ◀ ◇ ▶ of `KeyGroup`) selects the
   playback itself, and the scrolling that follows the playhead runs from a store subscription.
-- **Status bar** (24 px, below the timeline): map state of the current view (`ui/mapStatus.ts`, pure): a ring and
-  "Carte · 72 %" (drawn tiles over drawn + awaited ones, `pendingVisibleTiles`; never back during one load, at most
-  99 % until complete; a load under 0.5 s does not show), then "Carte prête" (map ready) with a check, "N tuiles en
-  erreur" (N tiles in error) in yellow with a tip; nothing before the first tile; not a live region, the ring is a
-  `progressbar`. Import in progress; chips for the other fetches (Météo / Repères / Région / Eau / Forêts / Glaciers from `useWeatherStore`,
-  `useLandmarkStore`, `useRegionStore`, `useWaterStatusStore` in `scene/waterStatus.ts`, `useForestStatusStore` in `scene/forestStatus.ts`, `useGlacierStatusStore` in `scene/glacierStatus.ts`; `STATUS_CHIPS`
-  in `shell.ts` lists them, the « Réglages » preferences hide any of them and a preference saved before a chip existed shows it; `fetchChip` in `mapStatus.ts`;
-  spinner / check / attention with the store message / muted; « Forêts » has a fifth state, `queued` « en attente », spinner like loading:
-  the request waits for the Overpass queue, `onStart` of `cachedOverpassQuery`); a performance readout when the bar is at least 900 px
-  wide (`perfParts`: frames per second counted with R3F `addAfterEffect`, textures and geometries of the renderer
-  through R3F `_roots`, loaded tiles, JS heap where `performance.memory` exists, desktop RAM and CPU through the Tauri
-  command `system_stats`), each part chosen in « Réglages »; then the short credits of the active sources, always
+- **Status bar** (24 px, below the timeline), calm: it says what loads and what failed, nothing else. Map state of the
+  current view (`ui/mapStatus.ts`, pure): a ring and "Chargement de la carte… 72 %" (drawn tiles over drawn + awaited
+  ones, `pendingVisibleTiles`; never back during one load, at most 99 % until complete; a load under 0.5 s does not
+  show); nothing once the map is complete; "N tuiles en erreur" (N tiles in error) in yellow with a tip, loaded or not;
+  nothing before the first tile; not a live region, the ring is a `progressbar`. Import in progress. The other fetches
+  (Météo / Repères / Région / Eau / Forêts / Glaciers from `useWeatherStore`, `useLandmarkStore`, `useRegionStore`,
+  `useWaterStatusStore` in `scene/waterStatus.ts`, `useForestStatusStore` in `scene/forestStatus.ts`,
+  `useGlacierStatusStore` in `scene/glacierStatus.ts`) are summed up by `layerNotices` (`mapStatus.ts`, from `fetchChip`):
+  one indicator "Chargement : Météo, Eau" for those loading (`queued` « en attente » counts as loading: the request
+  waits for the Overpass queue, `onStart` of `cachedOverpassQuery`), one yellow "Échec du chargement : Forêts" for those
+  in error (tip: their store messages); loaded and « nothing here » (`unavailable`, `none`) say nothing. `STATUS_CHIPS`
+  in `shell.ts` lists them, the « Réglages » preferences hide any of them and a preference saved before a chip existed
+  shows it. The performance readout is not on the bar: it is read every second only while « Sources et licences » is
+  open (`usePerformance`, `perfParts`: frames per second counted with R3F `addAfterEffect`, textures and geometries of
+  the renderer through R3F `_roots`, loaded tiles, JS heap where `performance.memory` exists, desktop RAM and CPU through
+  the Tauri command `system_stats`), each part chosen in « Réglages »; the bar itself keeps the short credits of the active sources, always
   visible (`compactCredits`, `SOURCE_CREDITS`; OpenStreetMap first and linked to its copyright page; OpenTopoMap and
   Esri never collapsed, Esri's providers behind « … » below 560 px: OSMF, OpenTopoMap and Esri ask for a credit visible
   without interaction), and ⓘ, which opens "Sources et licences" (sources and licenses) (`Modal`) with the full lines
@@ -4311,7 +4315,7 @@ JavaScript.
   (`nativeEncoder.test.ts`); GPU probe without a GPU (both fail, `libx264` kept). To be checked on a Linux desktop
   (`cargo test`, real export, NVENC / VAAPI): the manual checks of `docs/handbook/index.html`.
 - **Machine load** (`src-tauri/src/system.rs`): read-only command `system_stats` → used / total RAM and CPU %, for the
-  status bar's performance readout (`sysinfo` 0.36, the last release for `rust-version` 1.77, `system` feature only;
+  performance readout behind the status bar's ⓘ button (`sysinfo` 0.36, the last release for `rust-version` 1.77, `system` feature only;
   permission `allow-system-stats` in `capabilities/default.json`).
 
 ## Offline packs (phase 6)
