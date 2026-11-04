@@ -161,6 +161,7 @@ const messages: Messages['inspector'] = {
   'markerKey.size': 'Size',
   'markerKey.resetLook': 'Back to the look of the Track panel',
   'markerKey.hint': 'At {distance}, {time} in the film: the marker takes this look, fading in over a short stretch around this point (less than a second of film). Before the first keyframe, it has the look of the Track panel. These stay as in the panel: label ({label}), stick ({stick}).',
+  'markerKey.hint3d': 'At {distance}, {time} in the film: the marker takes this look, fading in over a short stretch around this point (less than a second of film). Before the first keyframe, it has the look of the Track panel.',
   'text.text': 'Text',
   'text.subtitle': 'Subtitle',
   'text.position': 'Position',

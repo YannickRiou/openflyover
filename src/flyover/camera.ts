@@ -12,7 +12,7 @@ import { Vector3 } from 'three'
 import { clamp, lastIndexAtOrBelow, smootherstep } from '../core/math'
 import type { LocalFrame } from '../core/types'
 import type { HeightSampler } from '../scene/trackLineSet'
-import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, focalDolly, fovDegOf, turnSmoothingM, type CameraSettings, type CameraStyle } from './cameraSettings'
+import { DEFAULT_CAMERA, DEFAULT_FLYOVER_DURATION_S, TOP_MIN_PITCH_DEG, focalDolly, fovDegOf, turnSmoothingM, type CameraSettings, type CameraStyle } from './cameraSettings'
 import { pathHeightM } from './flights'
 import { samplePath, type TrackPath } from './path'
 
@@ -125,7 +125,7 @@ export const SWAY_GAIN = 0.8
 export const SWAY_MAX_RAD = (50 * Math.PI) / 180
 /** 'top': farther and nearly vertical. */
 export const TOP_DISTANCE_FACTOR = 2.5
-export const TOP_MIN_PITCH_DEG = 70
+export { TOP_MIN_PITCH_DEG }
 /** 'cinematic': farther, half the pitch, calmer heading, slow lateral swing of the viewing direction. */
 export const CINEMATIC_DISTANCE_FACTOR = 1.6
 export const CINEMATIC_PITCH_FACTOR = 0.5

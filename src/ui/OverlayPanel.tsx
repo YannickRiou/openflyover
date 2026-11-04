@@ -558,25 +558,21 @@ export function OverlayPanel() {
         <Switch checked={overlay.enabled} onChange={(on) => set({ enabled: on })}>{t('overlay.panel.show')}</Switch>
         <p className="type-hint">{t('overlay.panel.showHint')}</p>
 
-        {/* the style also draws the titles, shown with the overlay off */}
-        {(overlay.enabled || overlay.title.enabled || overlay.end.enabled) && (
-          <fieldset className="field min-w-0">
-            <legend className="type-label mb-1">{t('overlay.panel.style')}</legend>
-            <RadioGroup wrap aria-label={t('overlay.panel.style')} value={overlay.style} onChange={(style) => changeStyle(overlay, style)}>
-              {OVERLAY_STYLES.map((style) => (
-                <Radio key={style} value={style}>
-                  {OVERLAY_STYLE_LABELS[style]}
-                </Radio>
-              ))}
-            </RadioGroup>
-            <p className="type-hint">{t('overlay.panel.styleHint')}</p>
-          </fieldset>
-        )}
-        {(overlay.enabled || overlay.title.enabled || overlay.end.enabled) && (
-          <ModeGate min="expert" paths={['overlay.overrides']}>
-            <StyleOverrides overlay={overlay} onChange={(patch) => setSetting('overlay', withOverrides(overlay, patch))} />
-          </ModeGate>
-        )}
+        {/* the style also draws the 3D labels, the texts and the credits of the film, with the overlay off */}
+        <fieldset className="field min-w-0">
+          <legend className="type-label mb-1">{t('overlay.panel.style')}</legend>
+          <RadioGroup wrap aria-label={t('overlay.panel.style')} value={overlay.style} onChange={(style) => changeStyle(overlay, style)}>
+            {OVERLAY_STYLES.map((style) => (
+              <Radio key={style} value={style}>
+                {OVERLAY_STYLE_LABELS[style]}
+              </Radio>
+            ))}
+          </RadioGroup>
+          <p className="type-hint">{t('overlay.panel.styleHint')}</p>
+        </fieldset>
+        <ModeGate min="expert" paths={['overlay.overrides']}>
+          <StyleOverrides overlay={overlay} onChange={(patch) => setSetting('overlay', withOverrides(overlay, patch))} />
+        </ModeGate>
       </PanelSection>
 
       {/* the titles have their own switches: shown whether the rest of the overlay is or not */}
@@ -624,7 +620,8 @@ export function OverlayPanel() {
               </fieldset>
             </WidgetGroup>
 
-            {severalTracks && (
+            {/* drawn only for a race in parallel */}
+            {severalTracks && raceOn && (
               <WidgetGroup
                 label={t('overlay.panel.leaderboard')}
                 enabled={overlay.leaderboard.enabled}
@@ -643,6 +640,8 @@ export function OverlayPanel() {
           </PanelSection>
 
           <PanelSection title={t('overlay.panel.profileMinimap')} min="confirme" paths={['overlay.profile', 'overlay.minimap']}>
+            {/* a track without elevations has no profile to draw */}
+            {(hasEle || !track) && (
             <WidgetGroup
               label={t('overlay.panel.profile')}
               enabled={overlay.profile.enabled}
@@ -676,8 +675,8 @@ export function OverlayPanel() {
                 </>
               }
             >
-              {!hasEle && track && <p className="type-hint">{t('overlay.panel.noElevation')}</p>}
             </WidgetGroup>
+            )}
 
             <WidgetGroup
               label={t('overlay.panel.minimap')}
@@ -707,9 +706,10 @@ export function OverlayPanel() {
               label={t('overlay.panel.weather')}
               enabled={overlay.weather.enabled}
               onToggle={(enabled) => setWidget('weather', { enabled })}
-              position="weather"
-              styled="weather"
-              style={<SizeField value={overlay.weather.size} onChange={(size) => setWidget('weather', { size })} />}
+              // nothing to place or size until the weather of the day is loaded
+              position={hasWeather ? 'weather' : undefined}
+              styled={hasWeather ? 'weather' : undefined}
+              style={hasWeather ? <SizeField value={overlay.weather.size} onChange={(size) => setWidget('weather', { size })} /> : undefined}
             >
               <p className="type-hint">
                 {hasWeather
@@ -724,9 +724,10 @@ export function OverlayPanel() {
                 label={i === 0 ? t('overlay.panel.logo') : t('overlay.panel.logoN', { n: i + 1 })}
                 enabled={logo.enabled}
                 onToggle={(enabled) => setLogo(i, { enabled })}
-                position="logo"
+                position={logo.image ? 'logo' : undefined}
                 positionIndex={i}
                 style={
+                  !logo.image ? undefined : (
                   <>
                     <SizeField value={logo.size} onChange={(size) => setLogo(i, { size })} />
                     <RangeField
@@ -739,6 +740,7 @@ export function OverlayPanel() {
                       onChange={(opacity) => setLogo(i, { opacity })}
                     />
                   </>
+                  )
                 }
               >
                 <div className="flex gap-2 *:min-w-0 *:flex-1">
@@ -775,9 +777,9 @@ export function OverlayPanel() {
               label={t('overlay.panel.freeText')}
               enabled={overlay.text.enabled}
               onToggle={(enabled) => setWidget('text', { enabled })}
-              position="text"
-              styled="text"
-              style={<SizeField value={overlay.text.size} onChange={(size) => setWidget('text', { size })} />}
+              position={overlay.text.text.trim() !== '' ? 'text' : undefined}
+              styled={overlay.text.text.trim() !== '' ? 'text' : undefined}
+              style={overlay.text.text.trim() !== '' ? <SizeField value={overlay.text.size} onChange={(size) => setWidget('text', { size })} /> : undefined}
             >
               <TextField label={t('overlay.panel.text')} value={overlay.text.text} placeholder={t('overlay.panel.textPlaceholder')} onChange={(text) => setWidget('text', { text })} />
               <p className="type-hint">{t('overlay.panel.freeTextHint')}</p>

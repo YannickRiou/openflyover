@@ -9,6 +9,7 @@ import {
   findCameraPreset,
   turnSmoothingM,
 } from '../flyover/cameraSettings'
+import { TOP_MIN_PITCH_DEG } from '../flyover/cameraSettings'
 import type { CameraPreset, CameraSettings, CameraStyle } from '../flyover/cameraSettings'
 import { PACING_RANGES } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
@@ -210,6 +211,8 @@ export function CameraPanel() {
   const film = useFilmClock()
   const cameraKeyCount = film.cameraKeys.length
   const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
+  // without a stop, a speed portion, a night or a stage junction the speed is constant: the pace settings change nothing
+  const paced = film.stops.length > 0 || film.speeds.length > 0 || film.nights.length > 0 || film.junctions.length > 0
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
   const preset = findCameraPreset(camera)
@@ -244,6 +247,8 @@ export function CameraPanel() {
       <AutoFilmSection />
       <PanelSection title={t('camera.panel.camera')} keys={['camera']}>
         {bilan && <p className="type-hint">{t('track.bilan.fixed')}</p>}
+        {/* a Bilan shows the whole outing from above: only the lens counts */}
+        {!bilan && (
         <fieldset className="field min-w-0">
           <legend id={`${id}-preset`} className="type-label mb-1">
             {t('camera.panel.preset')}
@@ -262,9 +267,10 @@ export function CameraPanel() {
             {STYLE_HINTS[camera.style]}
           </p>
         </fieldset>
+        )}
 
         <ModeGate min="confirme" paths={['camera.orbitTurns', 'camera.northUp']}>
-        {camera.style === 'orbit' && (
+        {!bilan && camera.style === 'orbit' && (
           <RangeField
             label={t('camera.panel.orbitTurns')}
             tip={t('camera.panel.orbitTurnsTip')}
@@ -275,11 +281,12 @@ export function CameraPanel() {
           />
         )}
 
-        {camera.style === 'top' && (
+        {!bilan && camera.style === 'top' && (
           <Checkbox id={`${id}-north-up`} checked={camera.northUp} onChange={(on) => update({ northUp: on })}>{t('camera.panel.northUp')}</Checkbox>
         )}
         </ModeGate>
 
+        {!bilan && (
         <SettingRow label={t('camera.panel.style')} value={CAMERA_STYLE_LABELS[camera.style]} paths={['camera.style']} min="confirme">
           <div className="field">
             <label className="type-label" htmlFor={`${id}-style`}>
@@ -294,6 +301,7 @@ export function CameraPanel() {
             />
           </div>
         </SettingRow>
+        )}
         {/* the lens of the whole film, whatever the style (« Libre » too) */}
         <SettingRow label={t('camera.slider.focal')} value={focalLabel} paths={['camera.focalMm']} min="confirme">
           <RangeField
@@ -306,10 +314,11 @@ export function CameraPanel() {
           />
         </SettingRow>
         {/* the camera keys take the view from the first to the last: these settings are those of the rest of the film */}
-        {camera.style !== 'free' && cameraKeyCount > 0 && <p className="type-hint">{t('camera.panel.keyed', { count: cameraKeyCount })}</p>}
+        {!bilan && camera.style !== 'free' && cameraKeyCount > 0 && <p className="type-hint">{t('camera.panel.keyed', { count: cameraKeyCount })}</p>}
         {/* 'free' follows the keyframes alone: the framing sliders do nothing there */}
-        {camera.style !== 'free' && SLIDERS.filter(({ unusedIn }) => !unusedIn?.includes(camera.style)).map(({ key, label, tip, format, min }) => {
-          const range = CAMERA_RANGES[key]
+        {!bilan && camera.style !== 'free' && SLIDERS.filter(({ unusedIn }) => !unusedIn?.includes(camera.style)).map(({ key, label, tip, format, min }) => {
+          // the view from above is at 70° at least: the lower half of the slider changes nothing there
+          const range = key === 'pitchDeg' && camera.style === 'top' ? { ...CAMERA_RANGES[key], min: Math.max(CAMERA_RANGES[key].min, TOP_MIN_PITCH_DEG) } : CAMERA_RANGES[key]
           const value = format(camera[key], autoTurnM)
           return (
             <SettingRow key={key} label={label} value={value} paths={[`camera.${key}`]} min={min}>
@@ -318,6 +327,7 @@ export function CameraPanel() {
           )
         })}
         {/* next to « Fin en douceur »; it eases the speed in every style, « Libre » too */}
+        {paced && (
         <SettingRow label={t('camera.pacing.transitions')} value={formatSecondsShort(pacing.transitionS)} paths={['pacing.transitionS']} min="confirme">
           <RangeField
             label={t('camera.pacing.transitions')}
@@ -328,6 +338,7 @@ export function CameraPanel() {
             onChange={(transitionS) => updatePacing({ transitionS })}
           />
         </SettingRow>
+        )}
       </PanelSection>
 
       <PanelSection title={t('camera.panel.durationSection')} keys={['flyoverDurationS', 'pacing']}>

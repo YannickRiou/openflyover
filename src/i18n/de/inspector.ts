@@ -161,6 +161,7 @@ const messages: Messages['inspector'] = {
   'markerKey.size': 'Größe',
   'markerKey.resetLook': 'Aussehen aus dem Track-Panel übernehmen',
   'markerKey.hint': 'Bei {distance}, {time} im Film: Der Marker nimmt dieses Aussehen an, per Überblendung auf einem kurzen Abschnitt um diesen Punkt (weniger als eine Filmsekunde). Vor dem ersten Keyframe hat er das Aussehen aus dem Bereich Track. Aus dem Bereich bleiben: Beschriftung ({label}), Stiel ({stick}).',
+  'markerKey.hint3d': 'Bei {distance}, {time} im Film: Der Marker nimmt dieses Aussehen an, per Überblendung auf einem kurzen Abschnitt um diesen Punkt (weniger als eine Filmsekunde). Vor dem ersten Keyframe hat er das Aussehen aus dem Bereich Track.',
   'text.text': 'Text',
   'text.subtitle': 'Untertitel',
   'text.position': 'Position',

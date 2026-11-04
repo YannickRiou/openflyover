@@ -94,6 +94,9 @@ export const DEFAULT_CAMERA: CameraSettings = {
 export const withCameraDefaults = withDefaults(DEFAULT_CAMERA)
 
 /** Slider ranges (also the validity ranges of a loaded project). */
+/** The view from above ('top') is never below this pitch: the slider has nothing to set under it (`camera.ts`). */
+export const TOP_MIN_PITCH_DEG = 70
+
 export const CAMERA_RANGES = {
   distance: { min: 0.3, max: 4, step: 0.1 },
   pitchDeg: { min: 5, max: 85, step: 1 },
