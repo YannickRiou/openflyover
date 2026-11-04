@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **The overlay, the camera and the film inspectors only offer what acts**: the style of the overlay stays offered with the overlay off (it also sets the 3D labels, the texts and the credits); the leaderboard only with a race in parallel; the profile only for a track with elevations; the position and size of the weather only once it is loaded, of a logo once it has a picture, of the free text once it says something, of a photo's caption once it has one. A « Bilan » shows only the lens of the camera; « Libre » camera: a stop has no camera of its own; the tilt slider of the view from above starts at 70° (below it changed nothing); « Transitions » only with a stop, a speed portion, a night or a junction. The 3D labels of photos only with a photo on the timeline, of named points only for a file that has some, and the end points and kilometres not in a Bilan. A junction that passes a night no longer lets the passage and its duration be set (they are not read), and the key of a marker no longer offers the badge nor the edge colour for a 3D model.
+
 ## 5.1.1 (November 2026)
 
 - **The 3D markers keep their own colours**: a new « Couleurs du modèle 3D » choice in the marker settings (« Naturelles » by default, or « De la trace »). The horse is brown, the car blue, the skis red and the jacket green instead of everything being in the colour of the track, so the marker no longer merges with the track line. « De la trace » puts the colour of the track on the main part (jacket, hull, skis, body) as before. With several tracks in parallel, each racer keeps the colour of its track; a colour chosen by hand for the figure still wins.

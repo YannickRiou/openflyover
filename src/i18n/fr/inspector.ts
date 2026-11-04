@@ -159,6 +159,7 @@ export default {
   'markerKey.size': 'Taille',
   'markerKey.resetLook': 'Reprendre l’aspect du panneau Trace',
   'markerKey.hint': 'À {distance}, {time} dans le film : le marqueur prend cet aspect, en fondu sur une courte portion autour de ce point (moins d’une seconde de film). Avant la première clé, il a l’aspect du panneau Trace. Restent ceux du panneau : étiquette ({label}), tige ({stick}).',
+  'markerKey.hint3d': 'À {distance}, {time} dans le film : le marqueur prend cet aspect, en fondu sur une courte portion autour de ce point (moins d’une seconde de film). Avant la première clé, il a l’aspect du panneau Trace.',
   'text.text': 'Texte',
   'text.subtitle': 'Sous-titre',
   'text.position': 'Position',

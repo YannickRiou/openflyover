@@ -55,6 +55,8 @@ export function JunctionTransitionFields({
           value={passage}
           aria-describedby={`${id}-hint`}
           options={PASSAGE_KINDS.map((k) => ({ value: k, label: JUNCTION_KIND_LABELS[k] }))}
+          // a night between two stages is passed by the « Nuit » pause (its own lengths, Lumière): the passage and its duration are not read
+          disabled={kind === 'nuit'}
           onChange={(next) => onChange({ kind: next })}
         />
         <p id={`${id}-hint`} className="type-hint">
@@ -62,7 +64,7 @@ export function JunctionTransitionFields({
         </p>
       </div>
       {passage !== 'coupe' && (
-        <RangeField label={t('inspector.junction.duration')} {...JUNCTION_HOLD_RANGE} value={holdS} format={seconds} onChange={(v) => onChange({ holdS: v })} wide={false} />
+        <RangeField label={t('inspector.junction.duration')} {...JUNCTION_HOLD_RANGE} value={holdS} format={seconds} onChange={(v) => onChange({ holdS: v })} wide={false} disabled={kind === 'nuit'} />
       )}
       <Checkbox checked={night} onChange={(on) => onChange({ night: on })}>{t('inspector.junction.night')}</Checkbox>
       <p className="type-hint">{night && hasNight === false ? t('inspector.junction.noNight') : t('inspector.junction.nightHint')}</p>

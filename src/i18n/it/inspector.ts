@@ -161,6 +161,7 @@ const messages: Messages['inspector'] = {
   'markerKey.size': 'Dimensione',
   'markerKey.resetLook': 'Riprendi l’aspetto del pannello Traccia',
   'markerKey.hint': 'A {distance}, {time} nel film: il marcatore assume questo aspetto, con una dissolvenza su un breve tratto attorno a questo punto (meno di un secondo di film). Prima del primo keyframe, ha l’aspetto del pannello Traccia. Restano quelli del pannello: etichetta ({label}), asta ({stick}).',
+  'markerKey.hint3d': 'A {distance}, {time} nel film: il marcatore assume questo aspetto, con una dissolvenza su un breve tratto attorno a questo punto (meno di un secondo di film). Prima del primo keyframe, ha l’aspetto del pannello Traccia.',
   'text.text': 'Testo',
   'text.subtitle': 'Sottotitolo',
   'text.position': 'Posizione',

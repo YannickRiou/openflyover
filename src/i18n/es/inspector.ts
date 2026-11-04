@@ -161,6 +161,7 @@ const messages: Messages['inspector'] = {
   'markerKey.size': 'Tamaño',
   'markerKey.resetLook': 'Volver al aspecto del panel Track',
   'markerKey.hint': 'En {distance}, {time} en la película: el marcador adopta este aspecto, con un fundido en un tramo corto alrededor de este punto (menos de un segundo de película). Antes de la primera clave tiene el aspecto del panel Track. Se mantienen los del panel: etiqueta ({label}), varilla ({stick}).',
+  'markerKey.hint3d': 'En {distance}, {time} en la película: el marcador adopta este aspecto, con un fundido en un tramo corto alrededor de este punto (menos de un segundo de película). Antes de la primera clave tiene el aspecto del panel Track.',
   'text.text': 'Texto',
   'text.subtitle': 'Subtítulo',
   'text.position': 'Posición',

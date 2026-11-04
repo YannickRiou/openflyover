@@ -424,6 +424,7 @@ export function FilmInspector() {
   const path = useMemo(() => (track ? buildTrackPath(track) : null), [track])
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
   const marker = useAppStore((s) => s.settings.marker)
+  const cameraStyle = useAppStore((s) => s.settings.camera.style)
   const overlay = useAppStore((s) => s.settings.overlay)
   const tracks = useAppStore((s) => s.tracks)
   if (!item || !track || !path) return null
@@ -718,6 +719,8 @@ export function FilmInspector() {
         <>
           {text('label', t('inspector.hold.label'), stop.label ?? '', (label) => set({ label }))}
           {range('duration', t('inspector.hold.duration'), stop.durationS, STOP_DURATION_RANGE, seconds, (durationS) => set({ durationS }))}
+          {/* the free camera follows its keyframes alone: a stop does not move it */}
+          {cameraStyle !== 'free' && (<>
           <div className={FIELD}>
             <label className="type-label" htmlFor={`${id}-camera`}>
               {t('inspector.hold.camera')}
@@ -736,6 +739,7 @@ export function FilmInspector() {
           </div>
           {range('tilt', t('inspector.hold.tilt'), stop.tiltDeg ?? 0, STOP_TILT_RANGE, formatDegrees, (tiltDeg) => set({ tiltDeg }))}
           <p className={HINT}>{t('inspector.hold.tiltTip')}</p>
+          </>)}
           <p className={HINT}>
             {t('inspector.hold.info', { at: formatDistance(stop.atM), length: formatDistance(lengthM), start: formatFilmTime(stop.startS), end: formatFilmTime(stop.endS) })}
             {film.autoStops && t('inspector.hold.auto')}
@@ -937,6 +941,8 @@ export function FilmInspector() {
           )}
           {markerKey.kind === 'figurine' && (
             <>
+              {/* a 3D model has no badge */}
+              {!marker.model3d && (
               <div className={FIELD}>
                 <label className="type-label" htmlFor={`${id}-marker-badge`}>
                   {t('marker.section.badge')}
@@ -948,6 +954,7 @@ export function FilmInspector() {
                   onChange={(shape) => set({ shape })}
                 />
               </div>
+              )}
               <Checkbox checked={markerKey.animated ?? marker.animated} onChange={(animated) => set({ animated })}>
                 {t('marker.section.animate')}
               </Checkbox>
@@ -955,7 +962,7 @@ export function FilmInspector() {
           )}
           {/* the same names as the Trace panel: a figure alone (« Silhouette ») has a figure colour and an outline */}
           {markerKey.kind === 'figurine' && colorField('figureColor', keyShape === 'contour' ? t('marker.section.figureColor') : t('marker.section.discColor'))}
-          {colorField('color', markerKey.kind === 'boule' ? t('inspector.markerKey.color') : keyShape === 'contour' && markerKey.kind === 'figurine' ? t('marker.section.outlineColor') : t('marker.section.edgeColor'))}
+          {!(markerKey.kind === 'figurine' && marker.model3d) && colorField('color', markerKey.kind === 'boule' ? t('inspector.markerKey.color') : keyShape === 'contour' && markerKey.kind === 'figurine' ? t('marker.section.outlineColor') : t('marker.section.edgeColor'))}
           {range('size', t('inspector.markerKey.size'), markerKey.size ?? marker.size, MARKER_SIZE_RANGE, (v) => `×${formatShort(v)}`, (size) => set({ size }))}
           <div className={FIELD}>
             <Button
@@ -967,12 +974,14 @@ export function FilmInspector() {
           </div>
           {number('at', t('inspector.field.kmAt'), km(markerKey.atM), 0, km(lengthM), (v) => set({ atM: Math.min(v * 1000, lengthM) }))}
           <p className={HINT}>
-            {t('inspector.markerKey.hint', {
-              distance: formatDistance(markerKey.atM),
-              time: formatFilmTime(markerKey.timeS),
-              label: MARKER_LABEL_MODE_LABELS[marker.label].toLowerCase(),
-              stick: (marker.stick ? t('common.yes') : t('common.no')).toLowerCase(),
-            })}
+            {markerKey.kind === 'figurine' && marker.model3d
+              ? t('inspector.markerKey.hint3d', { distance: formatDistance(markerKey.atM), time: formatFilmTime(markerKey.timeS) })
+              : t('inspector.markerKey.hint', {
+                  distance: formatDistance(markerKey.atM),
+                  time: formatFilmTime(markerKey.timeS),
+                  label: MARKER_LABEL_MODE_LABELS[marker.label].toLowerCase(),
+                  stick: (marker.stick ? t('common.yes') : t('common.no')).toLowerCase(),
+                })}
           </p>
         </>
       )
@@ -1079,8 +1088,8 @@ export function FilmInspector() {
             <Checkbox checked={media.kenBurns} onChange={(on) => set({ kenBurns: on })}>{t('inspector.media.kenBurns')}</Checkbox>
           )}
           {text('caption', t('inspector.media.caption'), media.caption ?? '', (caption) => set({ caption: caption || undefined }))}
-          {anchorSelect(card ? t('inspector.text.position') : t('inspector.media.captionPosition'), media.anchor, (anchor) => set({ anchor }))}
-          {range('size', card ? t('inspector.text.size') : t('inspector.media.captionSize'), media.size, SIZE_RANGE, (v) => `×${formatNumber(v, 1)}`, (size) => set({ size }))}
+          {(card || media.caption) && anchorSelect(card ? t('inspector.text.position') : t('inspector.media.captionPosition'), media.anchor, (anchor) => set({ anchor }))}
+          {(card || media.caption) && range('size', card ? t('inspector.text.size') : t('inspector.media.captionSize'), media.size, SIZE_RANGE, (v) => `×${formatNumber(v, 1)}`, (size) => set({ size }))}
           {timing(media.startS, media.durationS, set)}
           {attachSelect(media.stopId)}
           {itemCamera(media.startS, media.durationS)}
