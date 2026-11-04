@@ -65,15 +65,22 @@ const TABS = ['trace', 'carte', 'meteo', 'lumiere', 'survol', 'objectif', 'habil
 const GROUP_IDS = ['trace', 'decor', 'camera', 'habillage', 'projet']
 const GROUPS = { trace: 'trace', carte: 'decor', meteo: 'decor', lumiere: 'decor', survol: 'camera', objectif: 'camera', habillage: 'habillage', projet: 'projet', reglages: 'projet' }
 const TAB_NAMES = { carte: 'Carte', meteo: 'Météo', lumiere: 'Lumière', survol: 'Survol', objectif: 'Objectif', projet: 'Projet', reglages: 'Réglages' }
-/** Shows the tab `tab` with its panel unfolded: its group in the rail (a click on the open group would fold the panel), then the button of its switch. */
+/**
+ * Shows the tab `tab` with its panel unfolded: its group in the rail (a click on the open group would fold the panel), then
+ * the button of its switch. A computer opens the first section of a tab and folds the others (their rows are then hidden):
+ * the scenarios work on rows, so every section of the tab is opened.
+ */
 async function showTab(page, tab) {
   const shown = () => page.evaluate((t) => document.querySelector(`[data-testid="tab-panel-${t}"]`)?.getAttribute('role') === 'tabpanel' && !document.querySelector('[data-testid="side-panel"]')?.hidden, tab)
-  if (await shown()) return
+  const openSections = () =>
+    page.evaluate((t) => document.querySelectorAll(`[data-testid="tab-panel-${t}"] details[data-panel-section]`).forEach((d) => (d.open = true)), tab)
+  if (await shown()) return openSections()
   const group = GROUPS[tab]
   const folded = await page.evaluate((g) => document.querySelector(`[data-testid="tab-${g}"]`)?.getAttribute('aria-selected') === 'true', group)
   if (!folded || (await page.$eval('[data-testid="side-panel"]', (el) => el.hidden))) await page.click(`[data-testid="tab-${group}"]`)
   if (!(await shown())) await page.click(`[data-testid="tab-group-switch"] button::-p-text(${TAB_NAMES[tab]})`)
   await until(page, (t) => document.querySelector(`[data-testid="tab-panel-${t}"]`)?.getAttribute('role') === 'tabpanel', tab)
+  await openSections()
 }
 
 /** Waits until `fn` (run in the page) returns a truthy value. */
@@ -369,7 +376,7 @@ const SCENARIOS = [
       await pick('English')
       await until(page, () => document.documentElement.lang === 'en' && document.querySelector('[role="group"][aria-label="Shots"]'))
       const tabs = await page.$$eval('[role="tablist"] [role="tab"]', (all) => all.map((t) => t.textContent.trim()))
-      assert(tabs.join() === 'Track,Map,Weather,Light,Flyover,Lens,Overlay,Project,Settings', `onglets en anglais : ${tabs.join(', ')}`)
+      assert(tabs.join() === 'Track,Scene,Camera,Overlay,Project', `onglets en anglais : ${tabs.join(', ')}`)
       assert(await page.$('button[data-testid="topbar-export"]::-p-text(Export)'), '« Export » manque dans la barre du haut')
       // remembered on the device: another page of the same browser starts in English
       const second = await newPage()
@@ -1183,7 +1190,20 @@ const SCENARIOS = [
         })
         await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true })
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: STEP_MS })
-        const tap = async (selector) => (await page.waitForSelector(selector, { visible: true, timeout: STEP_MS })).tap()
+        // a button that React draws again between the lookup and the touch gives « Node is detached from document »: the touch
+        // may have landed on the old one, so a second look is short and, if the button is gone, the step after it tells
+        const tap = async (selector) => {
+          for (let attempt = 1; ; attempt++) {
+            try {
+              const button = await page.waitForSelector(selector, { visible: true, timeout: attempt === 1 ? STEP_MS : 3000 })
+              return await button.tap()
+            } catch (error) {
+              if (attempt === 1 && /detached/.test(error.message)) continue
+              if (attempt > 1 && error.name === 'TimeoutError') return
+              throw error
+            }
+          }
+        }
         await tap("button::-p-text(Essayer avec l'exemple)")
         // the timeline is open under the preview, its playhead in the middle
         await page.waitForSelector('[data-testid="timeline"][data-centred] [role="group"][aria-label="Plans"] [data-testid="timeline-block"]', { visible: true, timeout: STEP_MS })
@@ -1293,7 +1313,7 @@ const SCENARIOS = [
         await until(page, () => document.querySelector('[data-testid="side-panel"]').hidden)
         // the sample has no stop of its own: one at the marker
         await tap('[data-testid="timeline-tools"] button::-p-text(Ajouter)')
-        await tap('[role="menuitem"]::-p-text(Ajouter un arrêt à la position du marqueur)')
+        await tap('[role^="menuitem"]::-p-text(Ajouter un arrêt à la position du marqueur)')
         await page.waitForSelector('[data-item^="stop-"]', { timeout: STEP_MS })
         // a tap on a stop selects it: its actions take the place of the tab bar; « Modifier » opens its inspector
         await page.$eval('[data-item^="stop-"]', (el) => el.scrollIntoView({ block: 'nearest', inline: 'center' }))
