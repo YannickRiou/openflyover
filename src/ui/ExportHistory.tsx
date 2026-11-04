@@ -120,6 +120,8 @@ export function ExportHistory() {
   // read once: the element then keeps its own state
   const [open] = useState(() => entries.length > 0)
   const [confirming, setConfirming] = useState(false)
+  // nothing to show before the first film (the section would only say so)
+  if (entries.length === 0) return null
   return (
     <details className="group" data-testid="export-history" open={open}>
       <summary className="panel-bar cursor-pointer list-none [&::-webkit-details-marker]:hidden">
