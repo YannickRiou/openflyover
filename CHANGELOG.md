@@ -3,6 +3,18 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 5.5.0 (unreleased)
+
+- **A « + » on each track of the timeline**: the icons that added a stop, a speed change, a text or photos at the playhead are gone from the bar, which keeps the playback, the time and the view tools (speed, zoom, fit, magnet, options). Each track has its own « + » in its header: « Plans » opens a menu with « Ajouter un arrêt à la position du marqueur » and the highlights, « Vitesse » adds a speed section, « Textes » a text, « Médias » the photo and video picker, « Musique » the music picker. The shortcuts S and T still work.
+
+- **Every highlight in the stops menu**: the list used to hide the highlights that already had a stop, so it could show one entry while the timeline had several. It now lists them all. The ones that already have a stop are ticked, and picking one selects that stop and moves the playhead to it. The others get a stop named after them, as before. The phone's « Ajouter » menu lists the same entries.
+
+- **A stop shown once**: a stop was drawn twice, as a band on the flight bar and as a block on the « Arrêts » track. It is now one block on the flight bar of « Plans », with its name (cut short when narrow), and keeps everything the block had: selecting it, dragging it, stretching its duration, the arrows and Delete, the right-click menu, copy and paste, picking several, the magnet and the texts attached to it. The nights of a multi-day track are there too, with their moon. The « Arrêts » track goes away. In « Débutant », which has no « Plans » track, it stays.
+
+- **Empty tracks folded**: a track with nothing on it (« Vitesse », « Textes », « Médias », « Musique ») is a thin row with its name and its « + », and takes its height again with its first item. Its fold and lock buttons, and the key buttons of « Vitesse », come back with it. A speed key can still be added on an empty « Vitesse » track with a right-click.
+
+- **Blocks shaped like clips**: the blocks of every track fill the height of their track with 4 px corners and a flat fill, like in a video editor. A 3 px edge on the left gives the type: orange for a stop, green for a text or a title, pale blue for a photo, amber for a speed section. The name reads from the left and fades out where it does not fit. A selected block has a ring in the accent colour and a handle at each end. On a phone the blocks are as tall as the track, so they are easier to touch.
+
 ## 5.4.0 (November 2026)
 
 - **A charter drawn from the logo, « Ligne de crête »**: the ink of the logo's ground (`#1C2A33`), the cream of its ridge (`#F5F2EA`), the glacier of its route and, for the accent, the orange of the point at its summit, the « balise » (`#FF5A36` on the ink: playhead, stops, focus; `#B8361A` on the cream: the main button). The headings move from Fraunces to IBM Plex Sans Condensed, the section titles in spaced capitals like the names on a map. Barlow Semi Condensed, semibold and bold, joins the fonts of the overlay and the posters for the labels, titles and figures over the view. The default accent is named « Balise »; an accent chosen before is kept. The charter is in `docs/charter.md`; the user guide (five languages), the « How it works » page, the handbook and the images of the desktop installers follow it too.

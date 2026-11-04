@@ -84,7 +84,7 @@ export function trackNights(path: TrackPath): TrackNight[] {
  */
 export const nightKey = (night: Pick<TrackNight, 'sunsetMs'>) => new Date(night.sunsetMs).toISOString().slice(0, 10)
 
-/** Timeline id of a night: its block on the « Arrêts » lane (see `dayCardId`). */
+/** Timeline id of a night: its block over the flight bar of « Plans » (see `dayCardId`). */
 const NIGHT_PREFIX = 'night-'
 export const nightItemId = (night: Pick<TrackNight, 'sunsetMs'>) => `${NIGHT_PREFIX}${nightKey(night)}`
 export const isNightItem = (item: string | null | undefined): item is string => typeof item === 'string' && item.startsWith(NIGHT_PREFIX)

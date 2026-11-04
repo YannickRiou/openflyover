@@ -91,8 +91,6 @@ const messages: Messages['timeline'] = {
   'bar.holdAt': 'Parada: {label}',
   'bar.addRow': 'Texto, foto, música',
   'magnet.label': 'Imán',
-  'bar.addHoldAtHighlight': 'Añadir una parada en un momento destacado',
-  'bar.holdAtHighlight': 'Parada en un momento destacado…',
   'bar.addSpeed': 'Acelerar o ralentizar un tramo a partir del marcador',
   'bar.addSpeedTip': 'Acelerar o ralentizar un tramo (1 km a ×2) a partir del marcador',
   'bar.addText': 'Añadir un texto en el cabezal de reproducción',

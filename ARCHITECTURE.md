@@ -1788,11 +1788,9 @@ The interface and the texts drawn into the films and posters exist in **French**
   strip below the 3D view (the stage above, the view shrinks accordingly; ~150 px, collapsible lanes). Bar, a single
   control style (Lucide icon buttons, `Tip` tooltip with the shortcut from the registry, short label hidden at
   1280 px): play, ■ (pause and back to the first frame), time `m:ss,d / m:ss`, distance / elevation / time at the
-  marker, "Arrêt" (stop; S: at the marker position, to the meter, source `manual`, 4 s, orbit), "Arrêt à un temps fort…" (stop at a highlight)
-  (passes and summits without a stop), "Texte" (text; T: at the playhead, 4 s, bottom center), "Média" (media; see "Photos" and
-  "Videos"), speaker (mutes or unmutes the preview sound, music and videos, `useMusicPreview`, shown when the film has
-  music or a video with sound; neither saved nor undoable, the export keeps the sound), speed,
-  zoom (− / logarithmic slider / + / "Ajuster" (fit) = the whole film), "Options" menu ("Ajouter une musique…" (add music), see
+  marker, speaker (mutes or unmutes the preview sound, music and videos, `useMusicPreview`, shown when the film has
+  music or a video with sound; neither saved nor undoable, the export keeps the sound), playback speed,
+  zoom (− / logarithmic slider / + / "Ajuster" (fit) = the whole film), magnet, "Options" menu ("Ajouter une musique…" (add music), see
   "Music"; "Arrêts automatiques" (automatic stops) checkbox, `setAutoStops`:
   checked, `autoStops` + `'temps-forts'`, own stops cleared; unchecked, generated stops written; "modifié" /
   ↺ "modifié" button for the film, `ModifiedMarker keys={['film']}`; a dot on the button when the film departs from the default; it
@@ -1803,22 +1801,28 @@ The interface and the texts drawn into the films and posters exist in **French**
   `src/ui/KeyControls.tsx`: previous key / add or remove at the playhead / next key; Alt+← / Alt+→ unchanged) sits under the label
   of the « Plans » lane header; on a portrait phone (centred timeline, no lane headers) it is in the « Clés » sheet of the
   transport row; with a mouse its ◀ and ▶ show while the pointer is over the lane head or the focus is in it (`lane-keys`). Look
-  (phone and computer alike): the lanes share one ground with a hairline between them, blocks are rounded (`rounded-md`), a tick of
+  (phone and computer alike): the lanes share one ground with a hairline between them, blocks are clips (`BLOCK`: they fill the lane, 4 px corners, a flat fill `--clip-bg` and a 3 px edge on the left set by their kind, a fade at the end of a name that does not fit, a 2 px accent ring and a handle at each end when selected), a tick of
   the ruler is its time and a short mark at the bottom, the playhead a white line with a round cap in the accent (the colours are
-  the app's tokens, the accent the one chosen in « Réglages »). Lanes: « Plans », « Vitesse », one lane per keyed parameter, « Marqueur » (only with marker keys), « Arrêts »,
-  « Textes », « Médias », « Musique »; « Textes » also carries the opening title and the closing card (see below); there is no « Réglages » lane and the bar has no « Ajouter un réglage » or
+  the app's tokens, the accent the one chosen in « Réglages »). Lanes: « Plans », « Vitesse », one lane per keyed parameter, « Marqueur » (only with marker keys),
+  « Textes », « Médias », « Musique » (« Arrêts » only in « Débutant », which has no « Plans »: the stops and nights are blocks of « Plans » otherwise); « Textes » also carries the opening title and the closing card (see below); there is no « Réglages » lane and the bar has no « Ajouter un réglage » or
   « Ajouter un changement de marqueur » button. `seekKeyframe` puts the film time exactly on the key
   (`adjacentKey`, one under the playhead skipped) and moves the inspector to it when it showed a keyframe. Lanes "Plans" (shots; opening, flyover with profile, closing;
-  "aucune" (none) = selectable dotted stub; stops are also marked on the flyover bar, tinted window
-  and top edge in the accent color, white for the selected stop; keyframes are small diamonds (◆) where the marker passes,
-  selectable, focusable and draggable; a click without dragging (a tap on a phone) also seeks to it), "Arrêts" (stops; window of each stop, entry and exit
-  included; dotted while they are generated), "Textes" (texts), "Médias" (media; photos and videos, with their thumbnail; a
+  "aucune" (none) = selectable dotted stub; the stops (window of each stop, entry and exit included; dotted while they are
+  generated) and the nights are blocks over the flyover bar (`holdBlocks`), each shown once; keyframes are small diamonds (◆) where the marker passes,
+  selectable, focusable and draggable; a click without dragging (a tap on a phone) also seeks to it), "Textes" (texts), "Médias" (media; photos and videos, with their thumbnail; a
   video also carries a small camera icon). "Vitesse" (speed) lane under "Plans": one block per section, from its entry to
-  its exit in film time, label "×2" (solid frame if sped up, dotted if slowed down); "Vitesse" in the bar
+  its exit in film time, label "×2" (solid frame if sped up, dotted if slowed down); the « + » of its header
   (`addSpeed`: ×2 over 1 km from the marker, shortened or moved forward to stay on the track and outside the other
   sections; message if the marker is already in a section or if there are not 50 m free). "Musique" (music) lane under
   "Médias": one block per music track, file name, note icon and waveform (`waveformPath`, the part of the file
-  played, as a symmetric band, scaled to the loudest passage); when empty, it says where to drop a file.
+  played, as a symmetric band, scaled to the loudest passage).
+  **Adding**: the header of each lane that takes an item has a « + » (`LaneAdd`) that adds it at the playhead: « Plans » opens
+  the stops menu (`holdItems`: a stop at the marker, S, then **every** highlight of `stopCandidates`; the ones that already have a
+  stop are ticked and picking one selects that stop and moves the playhead to it, the others get a stop named after them),
+  « Vitesse » a speed section, « Textes » a text (T), « Médias » the file picker, « Musique » the music picker. The phone's
+  « Ajouter » menu lists the same items. **Empty lanes** (`emptyLanes`: no speed section nor speed key, no text nor card, no media,
+  no music): a strip of `EMPTY_HEIGHT` with the name and the « + » on the computer (no fold nor lock button, no keys group
+  under « Vitesse » until it holds something), not drawn on a portrait phone.
 - **Gestures** (`dragFilm`, pure): dragging a stop moves it along the track — the start of its hold follows the pointer,
   position found by bisection on the clock (`stopPositionAt`, 32 steps); its right edge lengthens it (proportionally to the
   `keepDuration` cap); a text or a photo moves or stretches by either edge; the inner edge of the opening changes its duration; the inner edge of the
