@@ -16,6 +16,8 @@ const messages: Messages['common'] = {
   messages: 'Messaggi',
   closeMessage: 'Chiudi il messaggio',
   done: 'Fatto',
+  sheetExpand: 'Espandi',
+  sheetCollapse: 'Riduci',
   save: 'Salva',
   quoted: '«{text}»',
   yes: 'Sì',

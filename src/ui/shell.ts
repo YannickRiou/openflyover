@@ -33,6 +33,23 @@ export function frameRect(width: number, height: number, aspect: number | null):
   return { left: Math.floor((width - w) / 2), top: Math.floor((height - h) / 2), width: w, height: h }
 }
 
+/** The preview of a portrait phone is at least this share of the screen height, at most `PHONE_PREVIEW_MAX_SHARE`, and `PHONE_PREVIEW_DEFAULT_SHARE` when the view fills it. */
+export const PHONE_PREVIEW_MIN_SHARE = 0.3
+export const PHONE_PREVIEW_MAX_SHARE = 0.55
+export const PHONE_PREVIEW_DEFAULT_SHARE = 0.42
+
+/**
+ * Height (px) of the preview of a portrait phone: the frame of the output format at the full width of the screen, so that
+ * a 16:9 film no longer sits between two black bands, within a share of the screen (a 9:16 frame would take all of it);
+ * the default share when the view has no format (free framing, no track yet).
+ */
+export function phonePreviewHeight(width: number, height: number, aspect: number | null): number {
+  if (!(width > 0) || !(height > 0)) return 0
+  if (aspect === null || !(aspect > 0)) return Math.round(height * PHONE_PREVIEW_DEFAULT_SHARE)
+  const frame = width / aspect
+  return Math.round(Math.min(height * PHONE_PREVIEW_MAX_SHARE, Math.max(height * PHONE_PREVIEW_MIN_SHARE, frame)))
+}
+
 /** Files picked with « Ouvrir » or dropped on the window: a project (.opnflvr, or an older .json) is opened, everything else goes to the track importer. */
 export interface OpenedFiles<F> {
   project: F | null
