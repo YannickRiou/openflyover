@@ -130,10 +130,10 @@ export function PresetBadge({ knob, stacked = false }: { knob: PresetKnob; stack
   )
 }
 
-/** Dot on a tab of the rail or the phone bar while one of its settings is at the heaviest weight. */
-export function TabWeightDot({ tab }: { tab: ShellTab }) {
+/** Dot on a tab of the rail or the phone bar (a group of tabs there) while one of its settings is at the heaviest weight. */
+export function TabWeightDot({ tabs }: { tabs: readonly ShellTab[] }) {
   const t = useT()
-  const heavy = useAppStore((s) => tabHasHeavySetting(s.settings, tab))
+  const heavy = useAppStore((s) => tabs.some((tab) => tabHasHeavySetting(s.settings, tab)))
   if (!heavy) return null
   return (
     <>

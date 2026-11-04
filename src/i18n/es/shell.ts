@@ -13,6 +13,8 @@ const messages: Messages['shell'] = {
   'tab.habillage': 'Gráficos',
   'tab.projet': 'Proyecto',
   'tab.reglages': 'Ajustes',
+  'group.decor': 'Escenario',
+  'group.camera': 'Cámara',
   'section.labels': 'Etiquetas',
   'section.weather': 'Meteorología de la salida',
   'section.offline': 'Sin conexión',

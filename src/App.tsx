@@ -42,13 +42,16 @@ import {
   COMPACT_QUERY,
   ONE_SIDE_MAX_WIDTH,
   SHELL_TABS,
+  TAB_GROUPS,
+  TAB_GROUP_IDS,
+  groupOf,
   isFileDrag,
   matchesQuery,
   parseShellPrefs,
   shellReducer,
   shownTabs,
 } from './ui/shell'
-import type { ShellTab } from './ui/shell'
+import type { ShellTab, TabGroup } from './ui/shell'
 import { SheetHandle } from './ui/SheetHandle'
 import { keyFocus, matchShortcut, seekTime, withShortcut } from './ui/shortcuts'
 import { Stage } from './ui/Stage'
@@ -63,7 +66,7 @@ import { TopBar } from './ui/TopBar'
 import { TrackList } from './ui/TrackList'
 import { MarkerSection, TrackStyleSection } from './ui/TrackMarkerSection'
 import { WeatherPanel } from './ui/WeatherPanel'
-import { Tab, TabList, TabPanel, Tabs, Tip, isModalOpen } from './ui/primitives'
+import { Tab, TabList, TabPanel, Tabs, Tip, ToggleButton, ToggleButtonGroup, isModalOpen } from './ui/primitives'
 
 // Loaded in their own chunks: the offline packs right after the first paint, the export drawer (video, batch,
 // poster) when it is first opened, as its codec check pulls mediabunny (~700 kB). They stay mounted once loaded
@@ -86,7 +89,16 @@ const TAB_LABELS: Record<ShellTab, { label: string; icon: IconName }> = {
   reglages: { get label() { return translate('shell.tab.reglages') }, icon: 'sliders-horizontal' },
 }
 
-/** The tabs of the rail: a column on the side, a row that scrolls sideways in the phone bar (eight tabs do not fit; App keeps the open one in sight). */
+/** The tabs of a phone, in groups (`TAB_GROUPS`): Trace, Habillage and Projet keep the name of their first tab. */
+const GROUP_LABELS: Record<TabGroup, { label: string; icon: IconName }> = {
+  trace: TAB_LABELS.trace,
+  decor: { get label() { return translate('shell.group.decor') }, icon: 'mountain' },
+  camera: { get label() { return translate('shell.group.camera') }, icon: 'video' },
+  habillage: TAB_LABELS.habillage,
+  projet: TAB_LABELS.projet,
+}
+
+/** The tabs of the rail: a column on the side, a row in the phone bar (five groups of tabs there, `TAB_GROUPS`; the row still scrolls if a language makes them wider). */
 const TAB_LIST =
   'flex min-h-0 flex-col items-center gap-1 overflow-y-auto [scrollbar-width:none] ' +
   'phone:scroll-fade-x phone:flex-1 phone:flex-row phone:gap-0 phone:overflow-x-auto phone:overflow-y-hidden phone:overscroll-x-contain phone:px-1'
@@ -113,13 +125,17 @@ let renderWindowStarted = false
 
 const isExporting = () => isExportBusy(useExportStore.getState().phase) || useBatchStore.getState().phase === 'running'
 
-/** The portrait phone layout (`BOTTOM_SHEET_QUERY`): preview on top, timeline, tab bar, half sheets. */
-const subscribePhone = (onChange: () => void) => {
-  const query = window.matchMedia?.(BOTTOM_SHEET_QUERY)
+const subscribeTo = (media: string) => (onChange: () => void) => {
+  const query = window.matchMedia?.(media)
   query?.addEventListener('change', onChange)
   return () => query?.removeEventListener('change', onChange)
 }
+/** The portrait phone layout (`BOTTOM_SHEET_QUERY`): preview on top, timeline, tab bar, half sheets. */
+const subscribePhone = subscribeTo(BOTTOM_SHEET_QUERY)
 const usePhone = () => useSyncExternalStore(subscribePhone, () => matchesQuery(BOTTOM_SHEET_QUERY))
+/** A phone either way up (`COMPACT_QUERY`): the tabs in groups. */
+const subscribeCompact = subscribeTo(COMPACT_QUERY)
+const useCompact = () => useSyncExternalStore(subscribeCompact, () => matchesQuery(COMPACT_QUERY))
 
 /** Escape is left to an open menu inside this element (it closes itself first). */
 const handlesOwnEscape = (target: EventTarget | null) => target instanceof Element && target.closest('[data-local-escape]') !== null
@@ -282,6 +298,21 @@ export default function App() {
   const tabs = shownTabs(shell)
   // the rail leaves out the tabs the mode hides (the search still finds their sections)
   const railTabs = useModeTabs(tabs)
+  const compact = useCompact()
+  // a phone: the tab of a group opens the one of its tabs last shown
+  const [lastShown, setLastShown] = useState<Partial<Record<TabGroup, ShellTab>>>({})
+  if (lastShown[groupOf(shell.tab)] !== shell.tab) setLastShown({ ...lastShown, [groupOf(shell.tab)]: shell.tab })
+  const groupTabs = (group: TabGroup) => (TAB_GROUPS[group] as readonly ShellTab[]).filter((tab) => railTabs.includes(tab))
+  const railItems = compact
+    ? TAB_GROUP_IDS.filter((group) => groupTabs(group).length > 0).map((group) => {
+        const members = groupTabs(group)
+        const last = lastShown[group]
+        const id = members.includes(shell.tab) ? shell.tab : last && members.includes(last) ? last : members[0]!
+        return { key: group, id, members, ...GROUP_LABELS[group] }
+      })
+    : railTabs.map((tab) => ({ key: tab, id: tab, members: [tab], ...TAB_LABELS[tab] }))
+  /** the tabs of the open group, switched at the top of the sheet */
+  const siblings = compact ? groupTabs(groupOf(shell.tab)) : []
   const [dragging, setDragging] = useState(false)
   // the export drawer is mounted on its first opening, or on the first export (« Capturer cette image »), and kept (export
   // progress, result, batch): it is what saves the file
@@ -641,11 +672,11 @@ export default function App() {
           {/* portrait phone: a selected block's actions take the place of the tab bar */}
           <nav className="rail-frame chrome-focus justify-between" data-rail="" aria-label={t('shell.rail.aria')} hidden={(phone && shell.inspecting) || renderWindow}>
             <TabList label={t('shell.rail.tablist')} className={TAB_LIST} ref={railRef}>
-              {railTabs.map((tab) => (
-                <Tab key={tab} id={tab} data-testid={`tab-${tab}`} className="rail-tab" disabled={exporting} tip={TAB_LABELS[tab].label} tipDisabled={phone}>
-                  <Icon name={TAB_LABELS[tab].icon} />
-                  <span className="rail-label">{TAB_LABELS[tab].label}</span>
-                  <TabWeightDot tab={tab} />
+              {railItems.map((item) => (
+                <Tab key={item.id} id={item.id} data-testid={`tab-${item.key}`} className="rail-tab" disabled={exporting} tip={item.label} tipDisabled={phone}>
+                  <Icon name={item.icon} />
+                  <span className="rail-label">{item.label}</span>
+                  <TabWeightDot tabs={item.members} />
                 </Tab>
               ))}
             </TabList>
@@ -667,7 +698,22 @@ export default function App() {
           {/* every tab stays mounted: weather, landmarks and export have side effects */}
           {/* no change to the tracks or the settings while a film is being made: the export reads them live */}
           <aside id="side-panel" data-testid="side-panel" className="panel-frame" aria-label={t('shell.panel.aria')} hidden={shell.collapsed || renderWindow} inert={exporting}>
-            <SheetHandle title={TAB_LABELS[shell.tab].label} onClose={() => dispatch({ type: 'fold' })} />
+            <SheetHandle title={compact ? GROUP_LABELS[groupOf(shell.tab)].label : TAB_LABELS[shell.tab].label} onClose={() => dispatch({ type: 'fold' })} />
+            {siblings.length > 1 && (
+              <div className="sticky top-0 z-1 flex-none bg-surface-panel px-3 pt-2 pb-2" data-sheet-fixed="" data-testid="tab-group-switch">
+                <ToggleButtonGroup<ShellTab>
+                  value={shell.tab}
+                  onChange={(tab) => dispatch({ type: 'select-tab', tab, narrow: isNarrow() })}
+                  aria-label={GROUP_LABELS[groupOf(shell.tab)].label}
+                >
+                  {siblings.map((tab) => (
+                    <ToggleButton key={tab} value={tab}>
+                      {TAB_LABELS[tab].label}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+              </div>
+            )}
             {SHELL_TABS.map((tab) => panel(tab, contents[tab]))}
           </aside>
         </Tabs>

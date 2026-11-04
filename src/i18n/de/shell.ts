@@ -13,6 +13,8 @@ const messages: Messages['shell'] = {
   'tab.habillage': 'Overlay',
   'tab.projet': 'Projekt',
   'tab.reglages': 'Einstellungen',
+  'group.decor': 'Szenerie',
+  'group.camera': 'Kamera',
   'section.labels': 'Beschriftungen',
   'section.weather': 'Wetter der Tour',
   'section.offline': 'Offline',
