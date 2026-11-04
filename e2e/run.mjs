@@ -186,23 +186,33 @@ const cameraPose = (page) =>
     return { position: camera.position.toArray(), quaternion: camera.quaternion.toArray(), fov: camera.fov }
   })
 
-/** Distance (m) and angle (°) between two poses. */
+/** Distance (m), height (m, along y) and angle (°) between two poses. */
 function poseGap(a, b) {
   const metres = Math.hypot(...a.position.map((v, i) => v - b.position[i]))
   const dot = Math.min(1, Math.abs(a.quaternion.reduce((sum, v, i) => sum + v * b.quaternion[i], 0)))
-  return { metres, degrees: (2 * Math.acos(dot) * 180) / Math.PI, fov: Math.abs(a.fov - b.fov) }
+  return {
+    metres,
+    across: Math.hypot(a.position[0] - b.position[0], a.position[2] - b.position[2]),
+    height: Math.abs(a.position[1] - b.position[1]),
+    degrees: (2 * Math.acos(dot) * 180) / Math.PI,
+    fov: Math.abs(a.fov - b.fov),
+  }
 }
 
-/** Waits until the camera shows `pose` again (within 5 cm and 0.1°), the film time at `timeS`. */
+/**
+ * Waits until the camera shows `pose` again, the film time at `timeS`: within 5 cm across, 0.5 m in height and 0.25°.
+ * A key is kept above the ground under its aim, and that ground follows the terrain tiles drawn now (`sampleHeight`):
+ * back from another part of the film, they can be of another detail, and the same key a few decimetres higher or lower.
+ */
 async function expectPose(page, pose, timeS, label) {
   let gap = null
   for (const end = Date.now() + STEP_MS; Date.now() < end; ) {
     const state = await page.evaluate(() => window.__e2e.appStore.getState().playback)
     gap = poseGap(await cameraPose(page), pose)
-    if (Math.abs((state.timeS ?? -1) - timeS) < 1e-3 && gap.metres < 0.05 && gap.degrees < 0.1 && gap.fov === 0) return
+    if (Math.abs((state.timeS ?? -1) - timeS) < 1e-3 && gap.across < 0.05 && gap.height < 0.05 && gap.degrees < 0.1 && gap.fov === 0) return
     await new Promise((resolve) => setTimeout(resolve, 250))
   }
-  throw new Error(`${label} : la vue n’est pas celle de l’image clé (${gap.metres.toFixed(3)} m, ${gap.degrees.toFixed(3)}°)`)
+  throw new Error(`${label} : la vue n’est pas celle de l’image clé (${gap.across.toFixed(3)} m à côté, ${gap.height.toFixed(3)} m en hauteur, ${gap.degrees.toFixed(3)}°)`)
 }
 
 async function waitForExport(page, label) {
@@ -432,7 +442,7 @@ const SCENARIOS = [
       await page.keyboard.press('Home')
       await until(page, () => document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]')?.textContent.startsWith('−2,0'))
       // the section's ↺ button puts it back
-      await page.click('[data-testid="tab-panel-lumiere"] button[aria-label="Rétablir les réglages par défaut : Atmosphère"]')
+      await page.click('[data-testid="tab-panel-lumiere"] button[aria-label="Rétablir les réglages par défaut : Couleurs"]')
       await until(page, () => !document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]'))
       // Enter on the row folds it again
       await page.evaluate(() =>
@@ -515,7 +525,7 @@ const SCENARIOS = [
         await until(page, () => document.querySelector('[data-testid="tab-panel-meteo"] [data-testid="preset-badge-clouds"]')?.textContent === 'Personnalisé')
         // the way back: the row's button
         await page.click('[data-testid="tab-panel-meteo"] [data-testid="setting-row-head"]:has([data-testid="preset-badge-clouds"])')
-        await clickButton(page, 'Revenir au préréglage')
+        await clickButton(page, 'Revenir à « Selon la qualité de l’export »')
         await until(page, () => window.__e2e.appStore.getState().settings.clouds.quality === 'auto')
         assert((await badge('meteo', 'clouds')) === 'Imposé par Maximale', `pastille après le retour : ${await badge('meteo', 'clouds')}`)
         // motion blur: only a quality that lowers the 8 sub-frames is badged
@@ -562,6 +572,8 @@ const SCENARIOS = [
       for (let i = 1; i <= 15; i++) await page.mouse.move(x + i * 16, y - i * 3)
       await page.mouse.up()
       await new Promise((resolve) => setTimeout(resolve, 500))
+      // the key is kept above the ground under its aim, read on the tiles drawn: those of this view, all loaded
+      await until(page, () => window.__e2e.appStore.getState().terrainStats.pendingVisibleTiles === 0)
       const orbited = await cameraPose(page)
       assert(poseGap(orbited, film).metres > 100, 'la vue n’a pas tourné sous la souris')
 
@@ -721,8 +733,10 @@ const SCENARIOS = [
       await page.waitForSelector(panel, { visible: true, timeout: STEP_MS })
       assert(await page.$eval(options, (b) => b.getAttribute('aria-expanded') === 'true'), '« Options du film » ne dit pas que son panneau est ouvert')
       assert(await page.$(`${panel} button::-p-text(Ajouter une musique)`), 'bouton « Ajouter une musique… » du panneau')
-      assert(await page.$(`${panel} input[type="checkbox"]`), 'case « Arrêts automatiques » du panneau')
-      assert(await page.$eval(`${panel} input[type="checkbox"]`, (i) => i.labels?.[0]?.textContent.trim() === 'Arrêts automatiques'), 'la case du panneau ne s’appelle pas « Arrêts automatiques »')
+      assert(
+        await page.$$eval(`${panel} input[type="checkbox"]`, (all) => all.some((i) => i.labels?.[0]?.textContent.trim() === 'Arrêts automatiques')),
+        'case « Arrêts automatiques » du panneau',
+      )
       await page.keyboard.press('Escape')
       await gone(panel)
       assert(await inspectorShown(), 'Échap sur les options du film a aussi désélectionné le bloc')
@@ -817,20 +831,25 @@ const SCENARIOS = [
     title: 'Titre d’ouverture et carte de clôture : blocs de la piste Textes, inspecteur, Suppr les désactive',
     async run({ page }) {
       if (await page.evaluate(() => document.querySelector('[data-testid="tab-habillage"]')?.getAttribute('aria-selected') !== 'true')) await page.click('[data-testid="tab-habillage"]')
-      const overlay = await switchOf(page, 'habillage', "Afficher l'habillage")
+      // each card has its own switch (Habillage › Titres), the overlay switch leaves them alone
+      const title = await switchOf(page, 'habillage', "Titre d'ouverture")
+      const end = await switchOf(page, 'habillage', 'Carte de clôture')
       const cards = () => page.$$eval('[role="group"][aria-label="Textes"] [data-item^="card-"]', (blocks) => blocks.map((b) => b.getAttribute('title')))
-      assert((await cards()).length === 0, 'des cartes sont affichées sans habillage')
-      await overlay.evaluate((el) => el.click())
+      assert((await cards()).length === 0, 'des cartes sont affichées avec leurs interrupteurs éteints')
+      await title.evaluate((el) => el.click())
+      await end.evaluate((el) => el.click())
       await until(page, () => document.querySelectorAll('[role="group"][aria-label="Textes"] [data-item^="card-"]').length === 2)
       assert((await cards()).join() === "Titre d'ouverture,Carte de clôture", `blocs de cartes : ${(await cards()).join()}`)
-      await page.click('[role="group"][aria-label="Textes"] [data-item^="card-"]')
+      // the title block opens the panel of the start of the film, the title in its first group
+      await page.click('[role="group"][aria-label="Textes"] [data-item="card-title"]')
       await page.waitForSelector('[data-testid="film-inspector"]', { visible: true, timeout: STEP_MS })
-      assert((await page.$eval('[data-testid="film-inspector"] h2', (h) => h.textContent)).includes("Titre d'ouverture"), 'l’inspecteur n’est pas celui du titre')
+      assert((await page.$eval('[data-testid="film-inspector"]', (s) => s.textContent)).includes("Titre d'ouverture"), 'l’inspecteur n’est pas celui du titre')
       await page.keyboard.press('Delete')
       await until(page, () => document.querySelectorAll('[role="group"][aria-label="Textes"] [data-item^="card-"]').length === 1)
-      // back as it was: the title on again, the overlay off
+      assert(!(await title.evaluate((el) => el.checked)), 'Suppr n’a pas éteint l’interrupteur du titre')
+      // back as it was: the closing card off
       await page.keyboard.press('Escape')
-      await overlay.evaluate((el) => el.click())
+      await end.evaluate((el) => el.click())
       await until(page, () => document.querySelectorAll('[role="group"][aria-label="Textes"] [data-item^="card-"]').length === 0)
       await blur(page)
     },
@@ -1115,8 +1134,10 @@ const SCENARIOS = [
       })
       assert(JSON.stringify(undone) === JSON.stringify(before), `annulation d’un coup : ${JSON.stringify(undone)} au lieu de ${JSON.stringify(before)}`)
       // delete one, then clear (confirmed)
+      // centred first: scrolled to the top edge, the row would sit under the dock's sticky title and the click hit it
+      await page.$eval(`${H} [data-testid="history-item"]:first-child [data-testid="history-head"]`, (el) => el.scrollIntoView({ block: 'center' }))
       await page.click(`${H} [data-testid="history-item"]:first-child [data-testid="history-head"]`)
-      await page.click(`${H} [data-testid="history-item"]:first-child [data-testid="history-body"] button::-p-text(Supprimer)`)
+      await (await page.waitForSelector(`${H} [data-testid="history-item"]:first-child [data-testid="history-body"] button::-p-text(Supprimer)`, { visible: true })).click()
       await until(page, () => document.querySelectorAll('[data-testid="export-dock"] section:not([hidden]) [data-testid="history-item"]').length === 1)
       // inside the section: a toast has its own « Annuler »
       const inHistory = async (text) => (await page.waitForSelector(`${H} button::-p-text(${text})`, { visible: true })).click()
