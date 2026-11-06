@@ -24,15 +24,14 @@ export interface DeviceBudget {
   /** resolution of the preview cloud pass (fraction of the canvas) */
   cloudResolutionScale: number
   /**
-   * resolution of the cloud pass in an export (fraction of the film's size) of a device whose preview had to be lightened
-   * (`exportCloudScale`, scene/previewQuality.ts); a device that keeps up exports it at 1. The export's pass is marched pixel
-   * by pixel, which was 56 to 66 % of the time of an image on an iPhone 12 (#434); clouds are soft, so it draws them a little
-   * coarser than the rest
+   * resolution of the cloud pass in an export (fraction of the film's size), whether the preview keeps up or not: an iPhone
+   * whose preview kept up still spent 1.5 s on a 1080 × 1920 frame, 96 % of it in the clouds (#490). The export's pass is
+   * marched pixel by pixel; clouds are soft, so it draws them a little coarser than the rest
    */
   exportCloudResolutionScale: number
   /**
-   * in the export of a device whose preview had to be lightened, the shadow map of the clouds is drawn on one noise slice
-   * in this many (`exportCloudShadowEvery`, scene/previewQuality.ts), the others reuse it. Its size is fixed (256² × 3
+   * in an export, the shadow map of the clouds is drawn on one noise slice in this many (scene/CloudsLayer.tsx), the others
+   * reuse it; the first slice of a frame or motion blur sub-frame always draws it. Its size is fixed (256² × 3
    * cascades marched through the whole layer), so it was the share of the clouds' time that did not shrink with the film's
    * size on a phone; averaged over a quarter of the slices, its jitter is still smoothed out
    */

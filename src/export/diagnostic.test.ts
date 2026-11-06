@@ -107,9 +107,10 @@ describe('diagnostic report', () => {
     expect(high['Débit vidéo (H.264)']).toBe('8,0 Mbit/s, plafonné à 8,0 Mbit/s')
     // no request: what the current settings would export
     expect(rowsOf(privateInput({ request: undefined }), 'Export')).toMatchObject({ Demande: 'aucune (réglages actuels)', Destination: 'mémoire' })
-    // a lightened preview lowers the clouds of an export on a phone: said, so two « Coût des couches » compare
-    expect(rowsOf(privateInput({ previewRung: 0 }), 'Export')['Nuages de l’export']).toBe('100 % de la résolution (aperçu complet)')
-    expect(rowsOf(privateInput({ previewRung: 1 }), 'Export')['Nuages de l’export']).toMatch(/^\d+ % de la résolution(, ombre une tranche sur \d+)? \(aperçu allégé, palier 1\)$/)
+    // a phone lowers the clouds of its export, whether its preview keeps up or not: said, so two « Coût des couches » compare
+    expect(rowsOf(privateInput({ previewRung: 0 }), 'Export')['Nuages de l’export']).toBe('75 % de la résolution, ombre une tranche sur 4 (aperçu complet)')
+    expect(rowsOf(privateInput({ previewRung: 1 }), 'Export')['Nuages de l’export']).toBe('75 % de la résolution, ombre une tranche sur 4 (aperçu allégé, palier 1)')
+    expect(rowsOf(privateInput({ budget: DESKTOP_BUDGET, previewRung: 0 }), 'Export')['Nuages de l’export']).toBe('100 % de la résolution (aperçu complet)')
   })
 
   it('says when « Export de test sans encodage » is on, a switch of the tab only', () => {

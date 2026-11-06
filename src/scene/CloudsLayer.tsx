@@ -52,7 +52,7 @@ import {
 import type { MarkerTrack } from './AtmosphereLayer'
 import { patchRegionalCoverage } from './cloudShaders'
 import { shutterSubFrame, subFrameSlices } from './lens'
-import { exportCloudScale, exportCloudShadowEvery, usePreviewBudget, usePreviewRung } from './previewQuality'
+import { usePreviewBudget } from './previewQuality'
 import { previewCloudPass } from './renderOnDemand'
 import { useFilmClock } from './usePacing'
 import { useTerrainContext } from './terrainContext'
@@ -186,10 +186,8 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
    * moves, temporal upscaling still marches one pixel in 16 only.
    */
   const { cloudResolutionScale, cloudSettleFrames } = usePreviewBudget()
-  // the export's: full, unless the device was too slow for its preview (decided before the film starts: the preview stops while it runs)
-  const rung = usePreviewRung()
-  const exportScale = exportCloudScale(deviceBudget(), rung)
-  const shadowEvery = exportCloudShadowEvery(deviceBudget(), rung)
+  // the export's: full on a computer or a tablet, lighter on a phone (deviceBudget.ts), whether its preview keeps up or not
+  const { exportCloudResolutionScale: exportScale, exportCloudShadowEvery: shadowEvery } = deviceBudget()
   const ref = useRef<CloudsEffect>(null)
   /** preview: inputs of the last frame and number of frames since they last changed */
   const last = useRef<number[]>([])
@@ -237,7 +235,7 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
         // the frame counter picks the noise slice: fixed per sample, never carried over from the previous frame
         Reflect.set(this, 'frame', slices.first + k)
         alpha.value = 1 / (k + 1)
-        // a slow phone: the shadow map of the slice before is kept (same camera and sun, no reprojection: temporalPass off)
+        // a phone: the shadow map of the slice before is kept (same camera and sun, no reprojection: temporalPass off)
         const keepShadow = k % shadowEvery !== 0
         if (keepShadow) shadow.update = skipShadow
         try {

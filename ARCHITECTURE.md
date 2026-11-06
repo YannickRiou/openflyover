@@ -3109,7 +3109,7 @@ exports) gets it from the terrain source of the settings.
   ones compile the shaders and fill the caches of the new settings. The reference is run twice (the first only warms the tiles and
   the shaders up) and once more at the end (`REFERENCE_END_LABEL`): a gap between the two means the device slowed down during the
   run (heat, on a phone), so its rows do not compare. The « Export » section tells « Nuages de l'export » (the resolution of the
-  cloud pass, lowered when the preview had to be lightened, `exportCloudScale`): two reports compare only when it is the same.
+  cloud pass and how often its shadow map is drawn, lowered on a phone: `exportCloudResolutionScale`, `exportCloudShadowEvery`): two reports compare only when it is the same.
   A layer that is off already is not measured. The run holds the batch store `running` (no autosave, no edit),
   suspends the undo history, and puts the same `settings` object, the flag and the export store back whatever happens (a
   cancel keeps what was measured, a failure throws after that). Nothing runs at start-up and nothing changes on a computer
@@ -4501,7 +4501,7 @@ comfortable rate says nothing of the heavier rung, and each change re-places the
 film plays, and only by the shadow refresh.
 Light = `LIGHT_PREVIEW`, the lower of it and the device's: pixel ratio 1.5, 1 while playing or touching, preview clouds
 0.5, 16 still frames, shadow map 2048² (~32 MB, not ~128 MB), at most 125,000 trees (far chunks thin first,
-`forestPoints.ts`). The export sets its own pixel ratio (1) and cloud pass (full resolution; a phone whose preview had to be lightened, rung above 0, draws it at `exportCloudResolutionScale` 0.75, `exportCloudScale`: a phone that keeps up exports its clouds as sharp as a computer, #434; that phone also draws the shadow map of the clouds on one noise slice in `exportCloudShadowEvery` 4, `exportCloudShadowEvery()`, the others reuse it: the map has a fixed size, 256² × 3 cascades marched through the whole layer on each of the 24 slices of « medium », the part of the clouds' time that half resolution did not lower, #490; a computer still draws it on every slice), and `sceneBudget(preview, exporting)` gives
+`forestPoints.ts`). The export sets its own pixel ratio (1) and cloud pass (full resolution on a computer or a tablet; a phone draws it at `exportCloudResolutionScale` 0.75 and its shadow map on one noise slice in `exportCloudShadowEvery` 4, the others reuse it, whether its preview keeps up or not. The preview was first the test, #434, but an iPhone whose preview kept up still spent 1.5 s on a 1080 × 1920 frame, 96 % of it in the clouds, #490; the shadow map has a fixed size, 256² × 3 cascades marched through the whole layer on each of the 24 slices of « medium », the part that a smaller film does not lower), and `sceneBudget(preview, exporting)` gives
 `AtmosphereLayer` and `ForestLayer` the device's own shadow map and trees whenever `isExportBusy` (video, poster and
 « Capturer cette image » all run through `runExport`): films do not change. The shadow map and the trees are made again
 when the preview changes and at the start and end of an export (~0.3 s for 250,000 trees). Not lightened: imagery
