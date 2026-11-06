@@ -504,6 +504,7 @@ function LabelColors({ overlay, onChange }: { overlay: OverlaySettings; onChange
 export function OverlayPanel() {
   const t = useT()
   const overlay = useAppStore((s) => s.settings.overlay)
+  const labels = useAppStore((s) => s.settings.labels)
   const setSetting = useAppStore((s) => s.setSetting)
   const track = useAppStore((s) => s.tracks[0])
   const severalTracks = useAppStore((s) => s.tracks.length >= 2)
@@ -576,13 +577,21 @@ export function OverlayPanel() {
       </PanelSection>
 
       {/* the titles have their own switches: shown whether the rest of the overlay is or not */}
-      <PanelSection title={t('overlay.panel.titles')}>
+      <PanelSection
+        title={t('overlay.panel.titles')}
+        summary={[overlay.title.enabled && CARD_LABELS[TITLE_CARD_ID], overlay.end.enabled && CARD_LABELS[END_CARD_ID]].filter(Boolean).join(' · ') || t('common.off')}
+      >
         <CardSwitch card={TITLE_CARD_ID} enabled={overlay.title.enabled} onToggle={(enabled) => setWidget('title', { enabled })} />
         <CardSwitch card={END_CARD_ID} enabled={overlay.end.enabled} onToggle={(enabled) => setWidget('end', { enabled })} />
       </PanelSection>
 
       {/* every setting of the 3D labels in one place: what shows, size and range, colours, keys along the way */}
-      <PanelSection title={t('overlay.panel.labels3d')} keys={['labels']} min="confirme">
+      <PanelSection
+        title={t('overlay.panel.labels3d')}
+        summary={`${t('track.labels.sizeShort')} ×${formatNumber(labels.size, 1)} · ${t('track.labels.rangeShort')} ${formatNumber(labels.rangeKm)} km`}
+        keys={['labels']}
+        min="confirme"
+      >
         <LabelSettings />
         <LabelColors overlay={overlay} onChange={(next) => setSetting('overlay', next)} />
         <p className="type-hint">{t('overlay.panel.labels3dHint')}</p>
@@ -592,7 +601,12 @@ export function OverlayPanel() {
 
       {overlay.enabled && (
         <>
-          <PanelSection title={t('overlay.panel.counters')} min="confirme" paths={['overlay.counters', 'overlay.leaderboard']}>
+          <PanelSection
+            title={t('overlay.panel.counters')}
+            summary={overlay.counters.enabled ? t('common.on') : t('common.off')}
+            min="confirme"
+            paths={['overlay.counters', 'overlay.leaderboard']}
+          >
             <WidgetGroup
               label={t('overlay.panel.showCounters')}
               enabled={overlay.counters.enabled}
@@ -639,7 +653,12 @@ export function OverlayPanel() {
             )}
           </PanelSection>
 
-          <PanelSection title={t('overlay.panel.profileMinimap')} min="confirme" paths={['overlay.profile', 'overlay.minimap']}>
+          <PanelSection
+            title={t('overlay.panel.profileMinimap')}
+            summary={[overlay.profile.enabled && t('overlay.panel.profile'), overlay.minimap.enabled && t('overlay.panel.minimap')].filter(Boolean).join(' · ') || t('common.off')}
+            min="confirme"
+            paths={['overlay.profile', 'overlay.minimap']}
+          >
             {/* a track without elevations has no profile to draw */}
             {(hasEle || !track) && (
             <WidgetGroup
@@ -701,7 +720,15 @@ export function OverlayPanel() {
             </WidgetGroup>
           </PanelSection>
 
-          <PanelSection title={t('overlay.panel.weatherLogoText')} min="confirme" paths={['overlay.weather', 'overlay.logos', 'overlay.text']}>
+          <PanelSection
+            title={t('overlay.panel.weatherLogoText')}
+            summary={
+              [overlay.weather.enabled && t('overlay.panel.weather'), overlay.logos.some((logo) => logo.enabled && logo.image !== '') && t('overlay.panel.logo'), overlay.text.enabled && t('overlay.panel.text')]
+                .filter(Boolean)
+                .join(' · ') || t('common.off')
+            }
+            min="confirme"
+            paths={['overlay.weather', 'overlay.logos', 'overlay.text']}>
             <WidgetGroup
               label={t('overlay.panel.weather')}
               enabled={overlay.weather.enabled}
@@ -788,7 +815,7 @@ export function OverlayPanel() {
         </>
       )}
 
-      <PanelSection title={t('overlay.panel.credits')} min="expert" paths={['overlay.credits']}>
+      <PanelSection title={t('overlay.panel.credits')} summary={t(`overlay.panel.creditsMode.${overlay.credits.mode}`)} min="expert" paths={['overlay.credits']}>
         <fieldset className="field min-w-0">
           <legend className="type-label mb-1 flex items-center gap-1">
             {t('overlay.panel.creditsMode')}

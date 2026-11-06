@@ -20,4 +20,6 @@ export default {
   quoted: '« {text} »',
   yes: 'Oui',
   no: 'Non',
+  on: 'Activé',
+  off: 'Désactivé',
 }

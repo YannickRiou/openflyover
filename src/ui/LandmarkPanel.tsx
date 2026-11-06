@@ -424,7 +424,7 @@ export function LandmarkPanel() {
     })
 
   return (
-    <PanelSection title={t('landmarks.title')} keys={['landmarks']} min="confirme">
+    <PanelSection title={t('landmarks.title')} summary={settings.enabled ? t('common.on') : t('common.off')} keys={['landmarks']} min="confirme">
       <Switch
         id={`${id}-enabled`}
         checked={settings.enabled}

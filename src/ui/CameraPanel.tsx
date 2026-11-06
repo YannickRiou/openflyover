@@ -15,6 +15,7 @@ import type { PacingSettings } from '../flyover/pacing'
 import { playsBilan } from '../flyover/sequence'
 import { setFlightTiming, useFilmClock, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
+import { formatFilmTime } from '../film/timeline'
 import { formatDegrees, formatDistance, formatNumber, formatPercent, formatSecondsShort } from './format'
 import { Icon } from './icons'
 import type { IconName } from './icons'
@@ -189,6 +190,7 @@ export function CameraPanel() {
   const t = useT()
   const camera = useAppStore((s) => s.settings.camera)
   const pacing = useAppStore((s) => s.settings.pacing)
+  const flyoverDurationS = useAppStore((s) => s.settings.flyoverDurationS)
   const film = useFilmClock()
   const cameraKeyCount = film.cameraKeys.length
   const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
@@ -312,7 +314,7 @@ export function CameraPanel() {
         )}
       </PanelSection>
 
-      <PanelSection title={t('camera.panel.durationSection')} keys={['flyoverDurationS', 'pacing']}>
+      <PanelSection title={t('camera.panel.durationSection')} summary={formatFilmTime(flyoverDurationS)} keys={['flyoverDurationS', 'pacing']}>
         <FlightDurationField />
 
         <SettingRow label={t('camera.pacing.keep')} value={pacing.keepDuration ? t('common.yes') : t('common.no')} paths={['pacing.keepDuration']} min="confirme">
