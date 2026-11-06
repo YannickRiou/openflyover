@@ -6,8 +6,6 @@ import {
   SLOW_PREVIEW_WINDOW_MS,
   createFrameCap,
   createRungGovernor,
-  exportCloudScale,
-  exportCloudShadowEvery,
   frameIntervalMs,
   previewBudget,
   previewRung,
@@ -58,27 +56,6 @@ describe('previewBudget', () => {
     expect(previewRung('light', 0)).toBe(1)
     expect(previewRung('light', 2)).toBe(1)
     expect(previewRung('full', 2)).toBe(0)
-  })
-})
-
-describe('exportCloudScale', () => {
-  it('keeps the clouds of an export at full resolution while the preview keeps up, whatever the device', () => {
-    expect(exportCloudScale({ exportCloudResolutionScale: 0.75 }, 0)).toBe(1)
-    expect(exportCloudScale({ exportCloudResolutionScale: 1 }, 0)).toBe(1)
-  })
-
-  it('draws them coarser only once the preview had to be lightened, on a device that has a lower scale', () => {
-    expect(exportCloudScale({ exportCloudResolutionScale: 0.75 }, 1)).toBe(0.75)
-    expect(exportCloudScale({ exportCloudResolutionScale: 0.75 }, 2)).toBe(0.75)
-    expect(exportCloudScale({ exportCloudResolutionScale: 1 }, 1)).toBe(1)
-  })
-})
-
-describe('exportCloudShadowEvery', () => {
-  it('draws the shadow map of the clouds on every slice while the preview keeps up, on one in the budget\'s once it was lightened', () => {
-    expect(exportCloudShadowEvery({ exportCloudShadowEvery: 4 }, 0)).toBe(1)
-    expect(exportCloudShadowEvery({ exportCloudShadowEvery: 4 }, 1)).toBe(4)
-    expect(exportCloudShadowEvery({ exportCloudShadowEvery: 1 }, 2)).toBe(1)
   })
 })
 

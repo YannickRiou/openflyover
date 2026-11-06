@@ -8,7 +8,7 @@
 import { create } from 'zustand'
 import { deviceBudget } from '../core/deviceBudget'
 import type { DeviceBudget, DeviceKind } from '../core/deviceBudget'
-import { currentPreviewBudget, currentPreviewRung, exportCloudScale, exportCloudShadowEvery } from '../scene/previewQuality'
+import { currentPreviewBudget, currentPreviewRung } from '../scene/previewQuality'
 import type { PreviewRung } from '../scene/previewQuality'
 import type { Track } from '../core/types'
 import { isAudioAsset, isVideoAsset, useMediaStore, usedMedia } from '../film/media'
@@ -228,8 +228,8 @@ function exportRows({ request, settings, budget, canStreamToDisk, noEncoding, gp
   rows.push(['Rendu effectif', `nuages ${used.cloudsQuality}${used.cloudsByHand ? ' (choisie)' : ''}, ${used.maxSubFrames} rendus par image au plus`])
   if (previewRung !== undefined) {
     // the measures of « Coût des couches » only compare when this is the same from one report to the next
-    const scale = exportCloudScale(budget, previewRung)
-    const every = exportCloudShadowEvery(budget, previewRung)
+    const scale = budget.exportCloudResolutionScale
+    const every = budget.exportCloudShadowEvery
     const shadow = every > 1 ? `, ombre une tranche sur ${every}` : ''
     rows.push(['Nuages de l’export', `${Math.round(scale * 100)} % de la résolution${shadow} (aperçu ${previewRung === 0 ? 'complet' : `allégé, palier ${previewRung}`})`])
   }

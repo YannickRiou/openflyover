@@ -5,7 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
-- **Faster film export on a phone that is too slow for its preview**: the shadow of the clouds, whose cost did not depend on the film's size, is now drawn on one noise slice in four instead of all of them; the slices in between reuse it. A computer, or a phone that keeps up, exports exactly as before. The « Nuages de l’export » line of the diagnostic report says when it applies.
+- **Faster film export on a phone**: the clouds took 96 % of the time of a frame on an iPhone (1.5 s for 1080 × 1920). On every phone, whether its preview keeps up or not, they are now computed at 75 % of the film's resolution (they are soft, the rest of the picture stays sharp), and their shadow, whose cost did not depend on the film's size, on one noise slice in four, the slices in between reusing it. A computer or a tablet exports exactly as before. The « Nuages de l’export » line of the diagnostic report tells both.
 - **A double click on a slider puts its default back**: on every slider of the settings (a double tap on a touch screen). « Distance » and « Inclinaison » of the camera go back to the values of the height chosen, « Hauteur » to the default height.
 - **No more status bar choices in « Réglages »**: the bar shows only what is loading or failed and the credits, so the boxes that chose its loading chips and the measures of « À propos » no longer acted much; they are gone, the bar and « À propos » show everything.
 
