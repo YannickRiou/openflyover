@@ -20,7 +20,7 @@ import {
 } from '../flyover/flightSpeed'
 import { nightPauseS } from '../flyover/nights'
 import { setFlightTiming, useFilmClock, useFilmSequence, useFilmSource, useFilmTrack } from '../scene/usePacing'
-import { useAppStore } from '../state/store'
+import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { formatDuration, formatNumber, formatSpeedUp } from './format'
 import { InfoTip } from './PanelSection'
 import { NumberField, Slider, ToggleButton, ToggleButtonGroup } from './primitives'
@@ -127,6 +127,7 @@ export function FlightDurationField() {
           max={FLYOVER_DURATION_RANGE.max}
           step={FLYOVER_DURATION_RANGE.step}
           value={durationS}
+          resetTo={DEFAULT_SETTINGS.flyoverDurationS}
           onChange={(v) => setFlightTiming({ durationS: v })}
           spoken={formatSeconds}
         />

@@ -43,7 +43,7 @@ import { showToast } from './toast'
 import { panelColorOf, resolveLabelStyle, resolveOverlayTheme, toHex } from '../overlay/themes'
 import { getPlatform } from '../platform'
 import { getSettingsHistory } from '../project/history'
-import { useAppStore } from '../state/store'
+import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { useWeatherStore } from '../weather/store'
 import { AnchorPicker } from './AnchorPicker'
 import { formatNumber, formatPercent } from './format'
@@ -155,7 +155,7 @@ export function WidgetPosition({ widget, index = 0 }: { widget: PlacedWidget; in
 }
 
 export const SizeField = ({ value, onChange }: { value: number; onChange(v: number): void }) => (
-  <RangeField label={t('overlay.size')} min={WIDGET_SIZE_MIN} max={WIDGET_SIZE_MAX} step={0.1} value={value} format={(v) => `×${formatNumber(v, 1)}`} onChange={onChange} />
+  <RangeField label={t('overlay.size')} min={WIDGET_SIZE_MIN} max={WIDGET_SIZE_MAX} step={0.1} value={value} defaultValue={1} format={(v) => `×${formatNumber(v, 1)}`} onChange={onChange} />
 )
 
 /** A widget of the overlay: its switch under a hairline (none above the first of a section), its options nested under a rule. */
@@ -693,6 +693,7 @@ export function OverlayPanel() {
                     max={PROFILE_WIDTH_MAX}
                     step={0.01}
                     value={overlay.profile.width}
+                    defaultValue={DEFAULT_SETTINGS.overlay.profile.width}
                     format={percent}
                     disabled={inStyleSlot(overlay, 'profile')}
                     onChange={(width) => setWidget('profile', { width })}
@@ -704,6 +705,7 @@ export function OverlayPanel() {
                     max={PROFILE_HEIGHT_MAX}
                     step={0.01}
                     value={overlay.profile.height}
+                    defaultValue={DEFAULT_SETTINGS.overlay.profile.height}
                     format={percent}
                     onChange={(height) => setWidget('profile', { height })}
                   />
@@ -780,6 +782,7 @@ export function OverlayPanel() {
                       max={1}
                       step={0.05}
                       value={logo.opacity}
+                      defaultValue={1}
                       format={percent}
                       onChange={(opacity) => setLogo(i, { opacity })}
                     />

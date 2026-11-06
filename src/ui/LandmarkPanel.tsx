@@ -30,7 +30,7 @@ import { refreshRecords, syncLandmarks, useLandmarkStore } from '../osm/store'
 import { playsBilan, sequenceLandmarks } from '../flyover/sequence'
 import { getSettingsHistory } from '../project/history'
 import { editFilm, followLandmarks, getFilmSource, useFilmSequence, useFilmSource } from '../scene/usePacing'
-import { useAppStore } from '../state/store'
+import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { Icon } from './icons'
 import { LandmarkMap } from './LandmarkMap'
 import type { MapTool } from './LandmarkMap'
@@ -484,6 +484,7 @@ export function LandmarkPanel() {
               max={LANDMARK_DISTANCE_RANGE.max}
               step={LANDMARK_DISTANCE_RANGE.step}
               value={settings.maxDistanceM}
+              resetTo={DEFAULT_SETTINGS.landmarks.maxDistanceM}
               onChange={(v) => setSetting('landmarks', { ...settings, maxDistanceM: v })}
               format={formatDistance}
             />

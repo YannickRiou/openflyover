@@ -2,7 +2,7 @@ import type { PresetKnob } from '../export/qualityTier'
 import { t, useT } from '../i18n'
 import { LENS_RANGES } from '../scene/lens'
 import type { LensSettings } from '../scene/lens'
-import { useAppStore } from '../state/store'
+import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { PanelSection, RangeField, SettingRow } from './PanelSection'
 import type { WeightKey } from './renderCost'
 import { formatPercent } from './format'
@@ -40,7 +40,7 @@ export function LensPanel() {
       min="expert"
     >
       {SLIDERS.map(({ key, label, tip, weight, preset }) => (
-        <RangeField key={key} label={label} tip={tip} weight={weight} preset={preset} {...LENS_RANGES[key]} value={lens[key]} format={formatAmount} onChange={(value) => set(key, value)} />
+        <RangeField key={key} label={label} tip={tip} weight={weight} preset={preset} {...LENS_RANGES[key]} value={lens[key]} defaultValue={DEFAULT_SETTINGS.lens[key]} format={formatAmount} onChange={(value) => set(key, value)} />
       ))}
       {(atmosphere || lens.flare > 0) && (
       <SettingRow label={t('lens.flare.label')} value={formatAmount(lens.flare)} paths={['lens.flare']}>

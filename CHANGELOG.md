@@ -5,6 +5,9 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **A double click on a slider puts its default back**: on every slider of the settings (a double tap on a touch screen). « Distance » and « Inclinaison » of the camera go back to the values of the height chosen, « Hauteur » to the default height.
+- **No more status bar choices in « Réglages »**: the bar shows only what is loading or failed and the credits, so the boxes that chose its loading chips and the measures of « À propos » no longer acted much; they are gone, the bar and « À propos » show everything.
+
 - **3D characters with feet of a normal size, cyclists on a bike their size**: the feet of every character (hiker, runners, riders) were drawn as large as clogs; they are 30 % smaller. The bikes were too small for their rider, whose knees came up to the hips and whose back curled over the frame; they are 14 % larger, and the mountain bike rider leans a little more to hold the handlebar.
 
 - **Lighter icons**: the icons of the web app weighed 505 KB, which the website downloads in the background on a first visit; with a palette of 256 colours and a fine dither they weigh 197 KB, the frosted glass looking the same. `npm run icons` regenerates every icon from the two drawings of `src-tauri/icons/source/`.

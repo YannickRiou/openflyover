@@ -23,6 +23,8 @@ export interface SliderProps {
   'aria-describedby'?: string
   /** Under the track, lined up with it (a day / night bar, say). */
   below?: ReactNode
+  /** A double click (or double tap) on the track puts this value back (the default of the setting); none without it. */
+  resetTo?: number
 }
 
 /**
@@ -40,7 +42,7 @@ function keepScroll(e: SyntheticEvent) {
  * so the keyboard and screen readers behave as before); on a touch screen the thumb is dragged and a vertical swipe
  * from the rail still scrolls the panel.
  */
-export function Slider({ value, onChange, min, max, step, format, spoken = format, wide = true, disabled, className, below, ...rest }: SliderProps) {
+export function Slider({ value, onChange, min, max, step, format, spoken = format, wide = true, disabled, className, below, resetTo, ...rest }: SliderProps) {
   const input = useRef<HTMLInputElement>(null)
   // the library may report the same value again (a pointer move inside one step): a native range input does not, and an
   // update with no change would cut the undo step of a drag in two
@@ -66,7 +68,21 @@ export function Slider({ value, onChange, min, max, step, format, spoken = forma
         onChange(v as number)
       }}
     >
-      <HeroSlider.Track style={{ touchAction: 'pan-y' }} onPointerDownCapture={keepScroll} onTouchStartCapture={keepScroll}>
+      <HeroSlider.Track
+        style={{ touchAction: 'pan-y' }}
+        onPointerDownCapture={keepScroll}
+        onTouchStartCapture={keepScroll}
+        onDoubleClick={
+          resetTo === undefined || disabled
+            ? undefined
+            : () => {
+                const next = Math.min(max, Math.max(min, resetTo))
+                if (next === last.current) return
+                last.current = next
+                onChange(next)
+              }
+        }
+      >
         <HeroSlider.Fill />
         <HeroSlider.Thumb inputRef={input} />
       </HeroSlider.Track>

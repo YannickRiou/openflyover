@@ -6,8 +6,8 @@ import { useAppStore } from '../state/store'
 import { updateDateNote, useSourceDates } from '../terrain/sourceDates'
 import { getImagerySource } from '../terrain/sources'
 import { compactCredits, perfParts, type PerfSample, type SystemStats } from './mapStatus'
-import { usePreferences } from './preferences'
-import { PERF_ITEMS } from './shell'
+
+import { DEFAULT_PREFERENCES, PERF_ITEMS } from './shell'
 import type { PerfItem } from './shell'
 import { getPerfProbe } from '../scene/perfProbe'
 import { Modal } from './primitives'
@@ -100,7 +100,8 @@ function AboutBody() {
   const { osm, ...credited } = sources
   const credits = overlayCredits({ ...credited, landmarks: osm })
   const short = compactCredits({ terrainSourceId: sources.terrainSourceId, imagerySourceId: sources.imagerySourceId, weather: sources.weather, osm })
-  const perfShown = usePreferences((s) => s.performance)
+  // the measures of « À propos » (no longer chosen in « Réglages »)
+  const perfShown = DEFAULT_PREFERENCES.performance
   const perf = usePerformance(perfShown, true)
   const perfLines = perf ? perfParts(perf, perfShown) : []
 

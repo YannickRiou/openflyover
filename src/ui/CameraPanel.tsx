@@ -14,7 +14,7 @@ import { PACING_RANGES } from '../flyover/pacing'
 import type { PacingSettings } from '../flyover/pacing'
 import { playsBilan } from '../flyover/sequence'
 import { setFlightTiming, useFilmClock, useFilmTrack } from '../scene/usePacing'
-import { useAppStore } from '../state/store'
+import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { formatFilmTime } from '../film/timeline'
 import { formatDegrees, formatDistance, formatNumber, formatPercent, formatSecondsShort } from './format'
 import { Icon } from './icons'
@@ -252,6 +252,7 @@ export function CameraPanel() {
               max={CAMERA_HEIGHTS.length - 1}
               step={1}
               value={height.index}
+              resetTo={cameraHeightStop(DEFAULT_SETTINGS.camera).index}
               spoken={() => heightName}
               onChange={pickHeight}
             />
@@ -268,6 +269,7 @@ export function CameraPanel() {
             tip={t('camera.panel.orbitTurnsTip')}
             {...CAMERA_RANGES.orbitTurns}
             value={camera.orbitTurns}
+                defaultValue={DEFAULT_SETTINGS.camera.orbitTurns}
             format={(v) => formatNumber(v, 1)}
             onChange={(orbitTurns) => update({ orbitTurns })}
           />
@@ -298,7 +300,8 @@ export function CameraPanel() {
           const value = format(camera[key], autoTurnM)
           return (
             <SettingRow key={key} label={label} value={value} paths={[`camera.${key}`]} min={min}>
-              <RangeField label={label} tip={tip} {...range} value={camera[key]} format={() => value} onChange={(v) => update({ [key]: v })} />
+              {/* a double click goes back to the value of the height chosen above, not to that of the default camera */}
+              <RangeField label={label} tip={tip} {...range} value={camera[key]} defaultValue={key === 'distance' || key === 'pitchDeg' ? CAMERA_HEIGHTS[height.index][key] : undefined} format={() => value} onChange={(v) => update({ [key]: v })} />
             </SettingRow>
           )
         })}

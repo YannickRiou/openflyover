@@ -11,7 +11,7 @@ import type { SolarDay } from '../flyover/sun'
 import { FOREST_DENSITY_RANGE } from '../osm/forest'
 import { getSettingsHistory } from '../project/history'
 import { useFilmSequence, useFilmTrack, useKeyedValue } from '../scene/usePacing'
-import { useAppStore } from '../state/store'
+import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { findImageryDates, imageryDateKind, imageryDateValue, type ImageryDate, type ImageryDates } from '../terrain/imageryDates'
 import { TERRAIN_SOURCES, getImagerySource, groupImagerySources } from '../terrain/sources'
@@ -182,6 +182,7 @@ function SunTimeControl() {
             max={SUN_HOUR_RANGE.max}
             step={SUN_HOUR_RANGE.step}
             value={sunHour}
+            resetTo={DEFAULT_SETTINGS.sunHour}
             onChange={setSunHour}
             format={formatHour}
             below={
@@ -408,6 +409,7 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
           max={1}
           step={0.05}
           value={clouds.coverage}
+            defaultValue={DEFAULT_SETTINGS.clouds.coverage}
           format={formatPercent}
           onChange={(coverage) => set({ coverage })}
         />
@@ -419,6 +421,7 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
           tip={t('light.clouds.seaTopTip')}
           {...SEA_TOP_RANGE}
           value={clouds.seaTopM}
+            defaultValue={DEFAULT_SETTINGS.clouds.seaTopM}
           format={(v) => `${formatNumber(v)} m`}
           onChange={(seaTopM) => set({ seaTopM })}
         />
@@ -437,6 +440,7 @@ function CloudsControl({ weatherReady }: { weatherReady: boolean }) {
             tip={t('light.clouds.windTip')}
             {...CLOUD_WIND_RANGE}
             value={clouds.windKmh}
+            defaultValue={DEFAULT_SETTINGS.clouds.windKmh}
             format={(v) => `${formatNumber(v)} km/h`}
             onChange={(windKmh) => set({ windKmh })}
           />
@@ -823,6 +827,7 @@ export function MapSettings() {
           max={EXAGGERATION_MAX}
           step={EXAGGERATION_STEP}
           value={settings.exaggeration}
+            defaultValue={DEFAULT_SETTINGS.exaggeration}
           format={(v) => `×${formatNumber(v, 1)}`}
           onChange={(exaggeration) => setSetting('exaggeration', exaggeration)}
           wide={false}
@@ -863,6 +868,7 @@ function ContoursSection() {
             label={t('light.map.contoursInterval')}
             {...CONTOUR_INTERVAL_RANGE}
             value={contours.intervalM}
+            defaultValue={DEFAULT_SETTINGS.contours.intervalM}
             format={(v) => `${formatNumber(v)} m`}
             onChange={(intervalM) => update({ intervalM })}
           />
@@ -870,6 +876,7 @@ function ContoursSection() {
             label={t('light.map.contoursOpacity')}
             {...CONTOUR_OPACITY_RANGE}
             value={contours.opacity}
+            defaultValue={DEFAULT_SETTINGS.contours.opacity}
             format={formatPercent}
             onChange={(opacity) => update({ opacity })}
           />
@@ -962,6 +969,7 @@ function SnowControl() {
           label={t('light.snow.line')}
           {...SNOW_LINE_RANGE}
           value={snow.lineM}
+            defaultValue={DEFAULT_SETTINGS.snow.lineM}
           format={(v) => `${formatNumber(v)} m`}
           onChange={(lineM) => setSetting('snow', { ...snow, lineM })}
         />

@@ -645,11 +645,11 @@ pointer (`appearance.css`).
   one indicator "Chargement : Météo, Eau" for those loading (`queued` « en attente » counts as loading: the request
   waits for the Overpass queue, `onStart` of `cachedOverpassQuery`), one yellow "Échec du chargement : Forêts" for those
   in error (tip: their store messages); loaded and « nothing here » (`unavailable`, `none`) say nothing. `STATUS_CHIPS`
-  in `shell.ts` lists them, the « Réglages » preferences hide any of them and a preference saved before a chip existed
-  shows it. The performance readout is not on the bar: it is read every second only while « Sources et licences » is
+  in `shell.ts` lists them; all are shown (`DEFAULT_PREFERENCES.status`: the choice left « Réglages », a stored
+  `status` or `performance` preference is still parsed and no longer read). The performance readout is not on the bar: it is read every second only while « Sources et licences » is
   open (`usePerformance`, `perfParts`: frames per second counted with R3F `addAfterEffect`, textures and geometries of
   the renderer through R3F `_roots`, loaded tiles, JS heap where `performance.memory` exists, desktop RAM and CPU through
-  the Tauri command `system_stats`), each part chosen in « Réglages »; the bar itself keeps the short credits of the active sources, always
+  the Tauri command `system_stats`), the parts of `DEFAULT_PREFERENCES.performance`; the bar itself keeps the short credits of the active sources, always
   visible (`compactCredits`, `SOURCE_CREDITS`; OpenStreetMap first and linked to its copyright page; OpenTopoMap and
   Esri never collapsed, Esri's providers behind « … » below 560 px: OSMF, OpenTopoMap and Esri ask for a credit visible
   without interaction), (the full lines are in « À propos et mises à jour » of the OpenFlyover menu: `AboutDialog.tsx`, `overlayCredits`, same
@@ -3364,6 +3364,10 @@ exports) gets it from the terrain source of the settings.
   `adaptiveShutterSamples(…, max)` (and `subFrameCount(spanPx, max)`: window = max / (max − 1) of the span, still ≤ `SHUTTER_STEP_PX`
   between renders) and to `shutterSamples`. The count stays a function of the film time and the quality alone: same project + same
   quality → same frames. `subFrameSlices` still splits the clouds' slices exactly among the sub-frames.
+- **Reset by a double click** (`resetTo` of `Slider`, `defaultValue` of `RangeField`): a double click or double tap on the track of a
+  slider puts the default value back, in the range. A `RangeField` in a `SettingRow` of one number setting takes its default by
+  itself (`RowPaths` context, `defaultAt(path)` of `project/apply.ts`); the open sliders pass it (`DEFAULT_SETTINGS`), the camera's
+  « Distance » and « Inclinaison » the values of the height chosen above, « Hauteur » the default height.
 - **Badges** (`presetBadge`, `PresetBadge` in `PanelSection.tsx`, `preset` prop of `SettingRow` / `RangeField`): « Imposé par Haute » (glacier
   pill after the weight pictogram) on the clouds quality row (Météo) while it is `'auto'`, and on the motion blur slider (Objectif) only
   when the tier lowers its 8 (Standard); « Personnalisé » (light amber pill) on the clouds row once chosen by hand, with the row's
@@ -3836,7 +3840,7 @@ photo. The glaciers mapped by OpenStreetMap are therefore drawn with the snow lo
 - **Setting**: none of its own. Glaciers follow « Météo › Neige »: drawn in « Selon la météo du jour » and « Manuelle », not in « Aucune »; the panel says so in one sentence
   (`light.snow.glaciers`). No project format change: an old project opens with the glaciers when its snow is not « Aucune ».
 - **Credit and chip**: « © contributeurs OpenStreetMap » (status bar, film and poster) counts the glaciers like the water and the forests (`useGlacierStore.polygons > 0`).
-  A status chip « Glaciers » (loading / ready / error, `useGlacierStatusStore` in `scene/glacierStatus.ts`, `STATUS_CHIPS` of `ui/shell.ts`, shown by default, hidden in « Réglages ») is added like the water's.
+  A status chip « Glaciers » (loading / ready / error, `useGlacierStatusStore` in `scene/glacierStatus.ts`, `STATUS_CHIPS` of `ui/shell.ts`) is added like the water's.
 - **Limits**: only what OpenStreetMap maps as `natural=glacier` is drawn (a snowfield, a firn basin or a glacier it does not map shows the photo); a glacier is white on the whole polygon, with
   no snout colour, no moraine, no ice-fall shape; the polygons are OpenStreetMap's, not the year's (a glacier that retreated is drawn where it was mapped); the ice is 4 m above the relief, which shows at a few metres from the ground; crevasses
   are a texture, not relief; very small glaciers (under 2 ha) and any beyond the 200 largest or the 20,000 vertices are left out; one Overpass request of several seconds (up to ~40 s on a busy server) on the first load of a track.
