@@ -9,7 +9,7 @@ import { OVERLAY_ANCHOR_LABELS } from '../overlay/settings'
 import { getPlatform } from '../platform'
 import { fileToAvatarDataUrl } from '../scene/markerBadge'
 import { MARKER_VALUE_IDS } from '../scene/markerValue'
-import { FIGURE_GRID, MARKER_FIGURE_PATHS } from '../scene/markerFigures'
+import { FigureIcon } from './FigureIcon'
 import {
   DEFAULT_MARKER,
   DEFAULT_TRACK_STYLE,
@@ -56,27 +56,6 @@ import { Button, Checkbox, ColorField, Radio, RadioGroup, Select, Switch, TextFi
 /** 0 -> "Aucun", else the distance */
 const formatSmoothing = (metres: number) => (metres === 0 ? translate('camera.slider.noneMasc') : formatDistance(metres))
 const formatCurtain = (metres: number) => (metres >= TRACK_CURTAIN_RANGE.max ? translate('marker.track.flightCurtainGround') : formatDistance(metres))
-
-/** Pictogram of a figure, drawn from the same paths as the marker badge. */
-function FigureIcon({ figure }: { figure: MarkerFigure }) {
-  return (
-    <svg
-      width={16}
-      height={16}
-      viewBox={`0 0 ${FIGURE_GRID} ${FIGURE_GRID}`}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {MARKER_FIGURE_PATHS[figure].map((d) => (
-        <path key={d} d={d} />
-      ))}
-    </svg>
-  )
-}
 
 /** A choice drawn as a small picture, 28 × 16: lines in the text colour, the marker in the accent, so both themes read it. */
 function ChoicePicture({ children }: { children: ReactNode }) {

@@ -18,6 +18,8 @@ import { parseProject, projectFileName, serializeProject } from '../project/docu
 import { PROJECT_EXTENSION, decodeProjectFile, encodeProjectFile } from '../project/file'
 import { getSettingsHistory } from '../project/history'
 import { useAppStore } from '../state/store'
+import { figureOfActivity } from '../scene/markerSettings'
+import { proposeActivity } from './activityProposal'
 import { setAutoFilmOpen } from './autoFilmOpen'
 import { importFiles } from './importFlow'
 import type { ImportJob } from './importFlow'
@@ -371,6 +373,8 @@ export async function runImport(jobs: ImportJob[]): Promise<void> {
     },
   })
   const imported = outcome.tracks
+  // the first track of a new project: the activity read from the file is proposed (once, never when tracks are added later)
+  if (first && imported.length > 0) proposeActivity(figureOfActivity(imported[0].activityType))
   if (followEachOther(imported)) {
     showUntilTracksChange({
       kind: 'info',
