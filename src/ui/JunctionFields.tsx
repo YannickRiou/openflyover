@@ -44,6 +44,10 @@ export function JunctionTransitionFields({
   const t = useT()
   const id = useId()
   const passage: PassageKind = kind === 'nuit' ? 'fondu-noir' : kind
+  // a night between these two stages, passed: the « Nuit » pause takes the place of the passage, whose kind and duration are
+  // not read. (`kind` is never 'nuit' here: the stored junction keeps the passage, the night is the clock's.) In the settings
+  // (`hasNight` unknown) the passage still serves the junctions of a same day: kept, the hint under « Passer la nuit » says so.
+  const passedByNight = night && hasNight === true
   return (
     <>
       <div className="flex flex-col gap-1">
@@ -55,16 +59,15 @@ export function JunctionTransitionFields({
           value={passage}
           aria-describedby={`${id}-hint`}
           options={PASSAGE_KINDS.map((k) => ({ value: k, label: JUNCTION_KIND_LABELS[k] }))}
-          // a night between two stages is passed by the « Nuit » pause (its own lengths, Lumière): the passage and its duration are not read
-          disabled={kind === 'nuit'}
+          disabled={passedByNight}
           onChange={(next) => onChange({ kind: next })}
         />
         <p id={`${id}-hint`} className="type-hint">
-          {PASSAGE_HINTS[passage]}
+          {passedByNight ? t('inspector.junction.passedByNight') : PASSAGE_HINTS[passage]}
         </p>
       </div>
       {passage !== 'coupe' && (
-        <RangeField label={t('inspector.junction.duration')} {...JUNCTION_HOLD_RANGE} value={holdS} format={seconds} onChange={(v) => onChange({ holdS: v })} wide={false} disabled={kind === 'nuit'} />
+        <RangeField label={t('inspector.junction.duration')} {...JUNCTION_HOLD_RANGE} value={holdS} format={seconds} onChange={(v) => onChange({ holdS: v })} wide={false} disabled={passedByNight} />
       )}
       <Checkbox checked={night} onChange={(on) => onChange({ night: on })}>{t('inspector.junction.night')}</Checkbox>
       <p className="type-hint">{night && hasNight === false ? t('inspector.junction.noNight') : t('inspector.junction.nightHint')}</p>

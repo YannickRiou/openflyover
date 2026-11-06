@@ -84,8 +84,6 @@ const messages: Messages['camera'] = {
   'slider.noneFem': 'Nessuna',
   'duration.label': 'Durata del sorvolo',
   'duration.tip': 'Durata del percorso a velocità ×1. Con «Mantieni la durata del sorvolo», le soste e i rallentamenti sono compresi (le soste al massimo la metà); altrimenti si aggiungono. Le notti e i passaggi tra tappe si aggiungono sempre.',
-  'duration.shorten': 'Riduci la durata del sorvolo',
-  'duration.lengthen': 'Allunga la durata del sorvolo',
   'duration.noStops': 'nessuna sosta',
   'duration.stops': { one: '{count} sosta', other: '{count} soste' },
   'duration.film': 'Film: {duration} · {stops}',

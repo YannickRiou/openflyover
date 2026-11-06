@@ -242,6 +242,7 @@ export default {
   'junction.nightHint': 'Quand les deux étapes sont sur deux jours : le soleil se couche, la nuit passe, il se lève (durées dans Lumière › Jours et nuits). Sinon, le passage seul.',
   'junction.night': 'Passer la nuit',
   'junction.noNight': 'Pas de nuit entre ces deux étapes (même jour) : le passage seul.',
+  'junction.passedByNight': 'La nuit remplace le passage entre ces deux étapes : son type et sa durée ne servent pas ici.',
   'junction.content': 'Contenu',
   'junction.auto': 'Automatique',
   'junction.custom': 'Mon texte',

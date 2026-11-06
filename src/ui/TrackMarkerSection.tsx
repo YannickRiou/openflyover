@@ -220,6 +220,8 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   const trackColorBy = useAppStore((s) => s.settings.trackColorBy)
   const legendAnchor = useAppStore((s) => s.settings.trackLegendAnchor)
   const firstTrack = useAppStore((s) => s.tracks[0])
+  // the colouring and the ribbon apply to every track: a measure is offered when one of them has it
+  const tracks = useAppStore((s) => s.tracks)
   // the flight settings only matter when a loaded track has a flight
   const hasFlights = useAppStore((s) => s.tracks.some((track) => !!track.flights?.length))
   // a « Bilan » draws its outings one after the other whatever this says, without a tail
@@ -229,10 +231,14 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
       TRACK_COLOR_MODES.map((mode) =>
         mode === 'none'
           ? { mode, label: t('marker.track.solid'), available: true }
-          : { mode, label: TRACK_METRICS[mode].label, available: !!firstTrack && hasMetric(firstTrack, mode) },
+          : { mode, label: TRACK_METRICS[mode].label, available: tracks.some((track) => hasMetric(track, mode)) },
       ),
-    [firstTrack, t],
+    [tracks, t],
   )
+  /** the measure chosen, which no track has: the line is drawn grey (`MISSING_COLOR`) */
+  const colorMissing = trackColorBy !== 'none' && colorModes.find((m) => m.mode === trackColorBy)?.available === false
+  /** no measure at all: the ribbon would show nothing */
+  const ribbonPossible = colorModes.some((m) => m.mode !== 'none' && m.available)
 
   return (
     <PanelSection
@@ -302,7 +308,8 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
             options={colorModes.map(({ mode, label, available }) => ({ value: mode, label, disabled: !available }))}
             onChange={(mode) => setSetting('trackColorBy', mode)}
           />
-          {trackColorBy !== 'none' && <p className="type-hint">{t('marker.track.colorByHint')}</p>}
+          {colorMissing && <p className="type-hint">{t('marker.track.colorByMissing')}</p>}
+          {trackColorBy !== 'none' && !colorMissing && <p className="type-hint">{t('marker.track.colorByHint')}</p>}
           {trackColorBy === 'verticalSpeed' && <p className="type-hint">{t('marker.track.verticalSpeedHint')}</p>}
         </div>
       </SettingRow>
@@ -316,9 +323,11 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
         </SettingRow>
       )}
       <div className="flex items-center gap-1">
-        <Switch checked={ribbon.enabled} onChange={(enabled) => updateRibbon({ enabled })}>{t('marker.track.ribbon')}</Switch>
+        {/* (switched on, it stays free to switch off) */}
+        <Switch checked={ribbon.enabled} disabled={!ribbonPossible && !ribbon.enabled} onChange={(enabled) => updateRibbon({ enabled })}>{t('marker.track.ribbon')}</Switch>
         <InfoTip text={t('marker.track.ribbonTip')} />
       </div>
+      {!ribbonPossible && <p className="type-hint">{t('marker.track.ribbonNone')}</p>}
       {ribbon.enabled && (
         <>
           <SettingRow label={t('marker.track.ribbonMetric')} value={colorModes.find((m) => m.mode === ribbon.metric)?.label} paths={['trackRibbon.metric']}>
@@ -397,10 +406,12 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
               format={(v) => `${formatShort(v)} px`}
               onChange={(glowWidth) => updateStyle({ glowWidth })}
             />
+            {/* the glow fades out from the edge of the line (trackLineStyle.ts): no wider than the line, it is not drawn at all */}
+            {style.glowWidth <= style.width && <p className="type-hint">{t('marker.track.glowTooNarrow', { width: `${formatShort(style.width)} px` })}</p>}
           </SettingRow>
           <SettingRow
             label={t('marker.track.glowColor')}
-            value={style.glowColor ? t('marker.track.custom') : t('marker.track.sameAsTrack')}
+            value={style.glowColor ? t('marker.track.custom') : trackColorBy !== 'none' ? t('marker.track.sameAsMeasure') : t('marker.track.sameAsTrack')}
             paths={['trackStyle.glowColor']}
           >
             <div className="field">

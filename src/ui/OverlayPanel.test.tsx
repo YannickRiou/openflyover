@@ -6,7 +6,7 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { LOGOS_MAX, OFFSET_MAX, withWidgetOffset } from '../overlay/settings'
 import { getSettingsHistory } from '../project/history'
 import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
-import { OverlayPanel, WidgetPosition } from './OverlayPanel'
+import { OverlayPanel, WidgetPosition, WidgetStyleOverrides } from './OverlayPanel'
 import { usePreferences } from './preferences'
 
 beforeAll(() => {
@@ -214,5 +214,23 @@ describe('OverlayPanel: the modes of the interface', () => {
     await act(async () => usePreferences.setState({ uiMode: 'debutant' }))
     expect(host.textContent).toContain('Couleurs et polices')
     expect(host.textContent).not.toContain('Crédits des sources')
+  })
+})
+
+describe('WidgetStyleOverrides: the fonts a widget reads', () => {
+  it('offers the title and number fonts for a card, the number font for the counters, none for the free text', async () => {
+    useAppStore.setState({ settings: DEFAULT_SETTINGS })
+    const labels = async (widget: 'title' | 'counters' | 'text') => {
+      const host = document.body.appendChild(document.createElement('div'))
+      const root = createRoot(host)
+      await act(async () => root.render(<WidgetStyleOverrides widget={widget} />))
+      const text = host.textContent ?? ''
+      act(() => root.unmount())
+      host.remove()
+      return { title: text.includes('Police des titres'), number: text.includes('Police des chiffres') }
+    }
+    expect(await labels('title')).toEqual({ title: true, number: true })
+    expect(await labels('counters')).toEqual({ title: false, number: true })
+    expect(await labels('text')).toEqual({ title: false, number: false })
   })
 })

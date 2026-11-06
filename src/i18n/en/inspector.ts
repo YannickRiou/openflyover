@@ -244,6 +244,7 @@ const messages: Messages['inspector'] = {
   'junction.nightHint': 'When the two stages are on two days: the sun sets, the night passes, it rises (lengths in Light › Days and nights). Otherwise, the passage alone.',
   'junction.night': 'Pass the night',
   'junction.noNight': 'No night between these two stages (same day): the passage alone.',
+  'junction.passedByNight': 'The night takes the place of the passage between these two stages: its kind and length are not used here.',
   'junction.content': 'Content',
   'junction.auto': 'Automatic',
   'junction.custom': 'My text',

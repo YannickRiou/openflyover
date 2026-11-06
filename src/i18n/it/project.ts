@@ -75,7 +75,6 @@ const messages: Messages['project'] = {
   'panel.saveAs': 'Salva con nome…',
   'panel.saveAsTip': 'Salva il progetto con un altro nome o in un altro percorso',
   'panel.library': 'I miei progetti',
-  'panel.noLibrary': 'Questo browser non può conservare progetti (pagina non sicura, senza HTTPS).',
   'panel.keptDesktop': 'Conservati su questo computer, salvati automaticamente a ogni modifica.',
   'panel.keptBrowser': 'Conservati in questo browser, salvati automaticamente a ogni modifica.',
   'panel.keep': 'Conserva in I miei progetti',

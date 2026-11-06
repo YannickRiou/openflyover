@@ -208,10 +208,7 @@ function LibrarySection() {
         </h2>
       </div>
       <div className={BODY}>
-        {!platform.projectLibrary ? (
-          <p className={EMPTY}>{t('project.panel.noLibrary')}</p>
-        ) : (
-          <>
+        <>
             <p className="type-hint">{t(platform.capabilities.isDesktop ? 'project.panel.keptDesktop' : 'project.panel.keptBrowser')}</p>
             {currentId === null ? (
               <Button onClick={() => void keepOpenProject()} disabled={!hasTracks}>
@@ -300,8 +297,7 @@ function LibrarySection() {
                 })}
               </ul>
             )}
-          </>
-        )}
+        </>
       </div>
     </section>
   )

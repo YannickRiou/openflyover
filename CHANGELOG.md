@@ -5,6 +5,17 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **« Passer la nuit » really disables the passage**: in the inspector of a junction between two days, the passage and its duration were meant to be greyed when the night is passed, as they are not read then; the test never matched (the stored junction keeps its passage), so they stayed active. They are now disabled, with a sentence that says the night takes their place.
+- **Fewer settings that do nothing**, each with its reason when it is kept but greyed:
+  - track: a sentence when no track has the measure chosen in « Colorer selon » (the line is grey), when the ribbon has no measure to show (its switch waits), and when the glow is not wider than the line (it does not show); a measure is offered when any track has it, not only the first; the glow colour reads « Celle de la mesure » while the line is coloured by a measure, and the hint says the glow follows it;
+  - marker key with a 3D model: « Couleur du modèle » only with « De la trace » colours;
+  - landmarks in a « Bilan »: the switch waits with the reason, the search is not offered (a Bilan loads none);
+  - overlay: each element offers only the fonts it draws with (the counters, the leaderboard and the weather their figures; the profile, the mini-map and the free text none); no north arrow in the « Tableau » disc;
+  - camera of a stop: « Fixe » only with « Tourner autour » and « Cinéma », the two that move with time; « Garder la durée du survol » only with a stop, a speed portion or a speed key; « Baisser toutes les musiques sous les vidéos » only with a music and a video with sound;
+  - export: « Habillage seul » hides the codec (always VP9) but keeps the bitrate and the quality that sets it, which were greyed although they act; « Vidéo », « Séquence d'images PNG » and « Habillage seul » are one « Sortie » choice instead of two checkboxes that excluded each other; without any video encoder the « Encodage » group is hidden, the alert says why; « Un film par trace » says in words why it is unavailable;
+  - offline: no corridor width when the relief cannot be stored; poster: no « Vue 3D » options with « Carte à plat ».
+- **Simpler and more direct**: the flight duration is one slider with its typed value (the « − » and « + » around it are gone); « Durée des changements de vitesse » moves from « Caméra » to « Durée et rythme », where the stops and speeds are; the date of the opening card shows once (a « Date » figure is not drawn when the line under the title already says it, and not offered then).
+
 - **The last pills become rails**: the moments of the sun, the « Ambiance », the snow, the colour presets, the speed of a speed section, the cut and shift tools of a track and the tools of the landmark map are a row of segments, like the other choices of the panels, instead of separate pills.
 
 - **A summary under every folded section**: the sections that had none say in one line what is set: the weather of the outing, « Ambiance », contour lines (interval and opacity), rain and mist, snow, atmosphere, days and nights, colours (the preset), duration and pacing (the flight time), landmarks, lens (the effects on), titles, 3D labels (size and range), counters, profile and mini-map, weather, logo and text, credits.

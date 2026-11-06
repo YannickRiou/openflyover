@@ -78,6 +78,7 @@ import {
   syncClipPlacement,
   updateText,
 } from '../film/timeline'
+import { movesWithTime } from '../flyover/camera'
 import { cameraKeyEaseM, keyedCamera } from '../flyover/cameraKeys'
 import { CAMERA_RANGES } from '../flyover/cameraSettings'
 import { buildTrackPath } from '../flyover/path'
@@ -729,7 +730,9 @@ export function FilmInspector() {
               id={`${id}-camera`}
               value={stop.camera}
               aria-describedby={`${id}-camera-hint`}
-              options={STOP_CAMERAS.map((camera) => ({ value: camera, label: STOP_CAMERA_LABELS[camera] }))}
+              // « Fixe » only stops a camera that moves with time (Orbite, Cinéma); elsewhere it is « Survol » again: not offered
+              // (still listed while it is the stop's choice, which is kept)
+              options={STOP_CAMERAS.filter((camera) => camera !== 'fixe' || movesWithTime(cameraStyle) || stop.camera === 'fixe').map((camera) => ({ value: camera, label: STOP_CAMERA_LABELS[camera] }))}
               // a full turn needs time: a shorter stop is lengthened to `PANORAMA_STOP_S`
               onChange={(camera) => set(camera === 'panorama' && stop.durationS < PANORAMA_STOP_S ? { camera, durationS: PANORAMA_STOP_S } : { camera })}
             />
@@ -960,8 +963,11 @@ export function FilmInspector() {
               </Checkbox>
             </>
           )}
-          {/* the same names as the Trace panel: a figure alone (« Silhouette ») has a figure colour and an outline */}
-          {markerKey.kind === 'figurine' && colorField('figureColor', keyShape === 'contour' ? t('marker.section.figureColor') : t('marker.section.discColor'))}
+          {/* the same names as the Trace panel: a figure alone (« Silhouette ») has a figure colour and an outline; a 3D model has
+              « Couleur du modèle », read only with « De la trace » (« Naturelles » keeps the colours of the model) */}
+          {markerKey.kind === 'figurine' &&
+            !(marker.model3d && marker.modelColors === 'natural') &&
+            colorField('figureColor', marker.model3d ? t('marker.section.modelColor') : keyShape === 'contour' ? t('marker.section.figureColor') : t('marker.section.discColor'))}
           {!(markerKey.kind === 'figurine' && marker.model3d) && colorField('color', markerKey.kind === 'boule' ? t('inspector.markerKey.color') : keyShape === 'contour' && markerKey.kind === 'figurine' ? t('marker.section.outlineColor') : t('marker.section.edgeColor'))}
           {range('size', t('inspector.markerKey.size'), markerKey.size ?? marker.size, MARKER_SIZE_RANGE, (v) => `×${formatShort(v)}`, (size) => set({ size }))}
           <div className={FIELD}>

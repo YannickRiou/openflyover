@@ -238,6 +238,9 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const hasSound = useAppStore((s) => s.settings.film.audio.length > 0 || s.settings.film.media.some(clipHasSound))
   const downloadedRef = useRef<ExportResult | null>(null)
   const streams = getPlatform().capabilities.canStreamToDisk
+  // no video encoder here (neither WebCodecs nor the desktop's ffmpeg): « Encodage » sets nothing, the alert below says why
+  const videoEncoder = getPlatform().capabilities.videoEncoder
+  const encodes = videoEncoder === 'webcodecs' || videoEncoder === 'native'
 
   const busy = isExportBusy(phase)
   const { width, height } = videoSize(video.aspect, video.resolution)
@@ -333,6 +336,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   }
   // what the quality makes the export use (the clouds chosen by hand win over it)
   const tier = effectiveRender(video.quality, clouds)
+  // the clouds chosen by hand: nothing to the overlay alone, which has no sky
+  const custom = customised && !overlayOnly
 
   const start = () => {
     const asSequence = sequence && !overlayOnly
@@ -481,11 +486,12 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       </ModeGate>
 
+      {(encodes || pngSequence) && (
       <ModeGate min="expert" paths={ENCODING_PATHS} also={pngSequence}>
       <h3 className={GROUP}>{t('export.panel.encodingGroup')}</h3>
       {pngSequence && <p className="type-hint">{t('export.panel.sequenceNoEncoding')}</p>}
       {!pngSequence && (
-      <fieldset className="field min-w-0" disabled={busy || overlayOnly}>
+      <fieldset className="field min-w-0" disabled={busy}>
         <legend className="type-label">{t('export.panel.bitrate')}</legend>
         <RadioGroup
           aria-label={t('export.panel.bitrate')}
@@ -498,7 +504,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </RadioGroup>
       </fieldset>
       )}
-      {video.manualBitrate && !overlayOnly && !pngSequence && (
+      {video.manualBitrate && !pngSequence && (
         <RangeField
           label={t('export.panel.manualBitrate')}
           min={BITRATE_RANGE_MBPS.min}
@@ -511,7 +517,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           onChange={(bitrateMbps) => update({ bitrateMbps })}
         />
       )}
-      {!overlayOnly && !pngSequence && (
+      {!pngSequence && (
         <p className="type-hint">
           {[
             video.manualBitrate
@@ -524,8 +530,9 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         </p>
       )}
 
-      {!pngSequence && (
-      <SettingRow label={t('export.panel.codec')} value={overlayOnly ? 'VP9 (WebM)' : CODEC_CHOICE_LABELS[video.codec]} paths={['video.codec']}>
+      {/* the overlay alone is always VP9 (WebM), whatever the codec chosen */}
+      {!pngSequence && !overlayOnly && (
+      <SettingRow label={t('export.panel.codec')} value={CODEC_CHOICE_LABELS[video.codec]} paths={['video.codec']}>
         <div className="field">
           <label className="type-label" htmlFor={`${id}-codec`}>
             {t('export.panel.codecContainer')}
@@ -533,15 +540,11 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           <Select
             id={`${id}-codec`}
             value={video.codec}
-            disabled={busy || overlayOnly}
+            disabled={busy}
             options={VIDEO_CODEC_CHOICES.filter((c) => offered.includes(c) || c === video.codec).map((c) => ({ value: c, label: CODEC_CHOICE_LABELS[c] }))}
             onChange={(codec) => update({ codec })}
           />
-          <p className="type-hint">
-            {overlayOnly
-              ? t('export.panel.codecOverlay')
-              : t('export.panel.codecHint')}
-          </p>
+          <p className="type-hint">{t('export.panel.codecHint')}</p>
         </div>
       </SettingRow>
       )}
@@ -619,15 +622,17 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       </>)}
 
       </ModeGate>
+      )}
 
       <ModeGate min="confirme" paths={['video.quality', 'clouds.quality']} also={overlayOnly}>
       <h3 className={GROUP}>{t('export.panel.renderGroup')}</h3>
-      {overlayOnly && <p className="type-hint">{t('export.panel.overlayNoScene')}</p>}
-      {!overlayOnly && (
+      {/* the overlay alone renders no 3D view: the quality only sets its bitrate, and nothing once that is set by hand */}
+      {overlayOnly && video.manualBitrate && <p className="type-hint">{t('export.panel.overlayNoScene')}</p>}
+      {!(overlayOnly && video.manualBitrate) && (
       <fieldset className="field min-w-0" disabled={busy}>
-        <legend className="type-label">{customised ? t('export.panel.renderQualityCustom') : t('export.panel.renderQuality')}</legend>
+        <legend className="type-label">{custom ? t('export.panel.renderQualityCustom') : t('export.panel.renderQuality')}</legend>
         <RadioGroup
-          aria-label={customised ? t('export.panel.renderQualityCustom') : t('export.panel.renderQuality')}
+          aria-label={custom ? t('export.panel.renderQualityCustom') : t('export.panel.renderQuality')}
           value={video.quality}
           onChange={(quality) => update({ quality })}
         >
@@ -638,12 +643,14 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           ))}
         </RadioGroup>
         <p className="type-hint">
-          {t(video.manualBitrate || pngSequence ? 'export.panel.tierHint' : 'export.panel.tierHintBitrate', {
-            clouds: CLOUD_QUALITY_NAMES[tier.cloudsQuality].toLowerCase(),
-            n: tier.maxSubFrames,
-          })}
+          {overlayOnly
+            ? t('export.panel.overlayQualityBitrate')
+            : t(video.manualBitrate || pngSequence ? 'export.panel.tierHint' : 'export.panel.tierHintBitrate', {
+                clouds: CLOUD_QUALITY_NAMES[tier.cloudsQuality].toLowerCase(),
+                n: tier.maxSubFrames,
+              })}
         </p>
-        {customised && (
+        {custom && (
           <Button onClick={() => setSetting('clouds', { ...clouds, quality: 'auto' })}>
             {t('light.clouds.backToPreset')}
           </Button>
@@ -654,14 +661,25 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       {/* a PNG sequence or the overlay alone, once chosen, stays in sight */}
       <ModeGate min="expert" also={sequence || overlayOnly}>
-      <div className="field">
-        <Checkbox checked={sequence && !overlayOnly} disabled={busy || overlayOnly || !canPickFolder(getPlatform().capabilities)} onChange={(on) => setSequence(on)}>
-          {t('export.panel.sequence')}
-        </Checkbox>
-        <p className="type-hint">{canPickFolder(getPlatform().capabilities) ? t('export.panel.sequenceHint') : t('export.panel.sequenceNeedsFolder')}</p>
-        <Checkbox checked={overlayOnly} disabled={busy} onChange={(on) => setOverlayOnly(on)}>{t('export.panel.overlayOnly')}</Checkbox>
+      <fieldset className="field min-w-0" disabled={busy}>
+        <legend className="type-label">{t('export.history.row.output')}</legend>
+        <RadioGroup
+          wrap
+          aria-label={t('export.history.row.output')}
+          value={overlayOnly ? 'overlay' : pngSequence ? 'sequence' : 'video'}
+          onChange={(output) => {
+            setSequence(output === 'sequence')
+            setOverlayOnly(output === 'overlay')
+          }}
+        >
+          <Radio value="video">{t('export.panel.modeVideo')}</Radio>
+          <Radio value="sequence" disabled={!canPickFolder(getPlatform().capabilities)}>{t('export.panel.sequence')}</Radio>
+          <Radio value="overlay">{t('export.panel.overlayOnly')}</Radio>
+        </RadioGroup>
+        {!canPickFolder(getPlatform().capabilities) && <p className="type-hint">{t('export.panel.sequenceNeedsFolder')}</p>}
+        {pngSequence && <p className="type-hint">{t('export.panel.sequenceHint')}</p>}
         {overlayOnly && <p className="type-hint">{t('export.panel.overlayOnlyHint')}</p>}
-      </div>
+      </fieldset>
       </ModeGate>
 
       <p className={SUMMARY} title={renderS === null ? t('export.panel.summaryTip') : `${t('export.panel.summaryTip')} ${t('export.panel.renderTimeTip')}`}>
@@ -1028,10 +1046,11 @@ function BatchExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         <legend className="type-label">{t('export.panel.source')}</legend>
         <RadioGroup aria-label={t('export.panel.source')} value={perTrack ? 'tracks' : 'film'} onChange={(source) => setPerTrack(source === 'tracks')}>
           <Radio value="film">{t('export.panel.thisFilm')}</Radio>
-          <Radio value="tracks" disabled={!toFolder} title={toFolder ? undefined : t('export.panel.browsersTip')}>
+          <Radio value="tracks" disabled={!toFolder}>
             {t('export.panel.perTrack')}
           </Radio>
         </RadioGroup>
+        {!toFolder && <p className="type-hint">{t('export.panel.perTrackNeedsFolder')}</p>}
       </fieldset>
       {perTrack && (
         <div className="field">
