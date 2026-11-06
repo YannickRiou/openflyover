@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **A written vision and a roadmap for 7.0**: `VISION.md` says who OpenFlyover is for, what it promises and how a change is judged; `ROADMAP.md` gives the three works of 7.0 (a beautiful film by default, an export that finishes, projects that keep opening), their targets and how they are checked.
+
 ## 6.1.0 (November 2026)
 
 - **Faster film export on a phone**: the clouds took 96 % of the time of a frame on an iPhone (1.5 s for 1080 × 1920). On every phone, whether its preview keeps up or not, they are now computed at 75 % of the film's resolution (they are soft, the rest of the picture stays sharp), and their shadow, whose cost did not depend on the film's size, on one noise slice in four, the slices in between reusing it. A computer or a tablet exports exactly as before. The « Nuages de l’export » line of the diagnostic report tells both.
