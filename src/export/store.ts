@@ -64,6 +64,8 @@ export interface ExportRequest {
   overlayOnly?: boolean
   /** an image sequence (one PNG per frame, no sound) written in this folder instead of a video (`sequenceEncoder.ts`) */
   sequence?: { folder: WritableFolder }
+  /** continue the export stored on this device (`export/resume`) when it is this project's, else start over */
+  resumeStored?: boolean
   /** only the frames of this part of the film (film seconds, `ScheduleOptions.window`) */
   window?: { fromS: number; toS: number }
   /**
@@ -180,6 +182,8 @@ export interface ExportState {
   timings: ExportTimings
   /** seconds per frame and per megapixel of the last film exported (time hint of a batch), kept by `start` and `reset` */
   secondsPerMegapixel: number | null
+  /** « Reprendre l'export » was chosen (ResumeOffer): the export panel starts the film again from where it stopped */
+  resumeRequested?: boolean
   /** tiles of a still's view loaded / to load (flat map: requests; 3D: the most pending seen so far), null otherwise */
   tiles: { done: number; total: number } | null
 

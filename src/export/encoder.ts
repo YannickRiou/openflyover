@@ -14,6 +14,7 @@ import type { MixedAudio } from '../film/audio'
 import { getPlatform, type WritableFile } from '../platform'
 import type { AudioCodec, StreamTargetChunk, VideoCodec, canEncodeAudio, canEncodeVideo } from 'mediabunny'
 import type { VideoCodecChoice, VideoEncoding, VideoQuality } from './schedule'
+import type { ResumeHooks } from './resume/resume'
 import { t } from '../i18n'
 
 /** The muxer (mediabunny, ~700 KB) is loaded on the first export or codec check, not at startup. */
@@ -118,6 +119,8 @@ export interface VideoEncodeOptions {
   audio?: MixedAudio | null
   /** keep the transparency of the canvas (WebM / VP9, `ALPHA_CANDIDATES`) */
   transparent?: boolean
+  /** keep the packets as they come out, and continue a stored export (`export/resume`); WebCodecs only */
+  resume?: ResumeHooks
 }
 
 export type CanEncode = typeof canEncodeVideo
@@ -337,6 +340,7 @@ export async function createVideoEncoder(
   const sound = audioCodec ? new AudioSampleSource({ codec: audioCodec, quality: new Quality({ bitrate: audioBitrate }) }) : null
   if (sound) output.addAudioTrack(sound)
   await output.start()
+  await options.resume?.attach(source)
 
   const frameDuration = 1 / options.fps
   const mimeType = VIDEO_MIME_TYPES[codec.container]

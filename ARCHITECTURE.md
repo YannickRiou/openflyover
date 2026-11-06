@@ -4280,6 +4280,44 @@ differs goes through `src/platform/`.
   `bundle.licenseFile`, `bundle.windows.nsis` / `wix`, `bundle.macOS.dmg` and `bundle.linux.deb.files`.
   `.github/workflows/ci.yml`, on pull requests and on master: `lint`, `test` (with coverage on master) and `build` jobs, in parallel (`build` runs `tsc -b`, which type checks both projects, then Vite); `cargo test` only when `src-tauri/` or the workflow changed (`rust` job, against a placeholder `dist/`); on master, a `badge` job publishes the line coverage on the `badges` branch for the README badge. `.github/workflows/pages.yml` rebuilds the website for GitHub Pages on every push to master (`BASE_PATH=/<repository>/`, see `docs/deploying.md`). Release: the same number in `package.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml`, `npm run notices`, then a `v*` tag (`docs/installers.md`).
 
+### Resumable export (`export/resume/`)
+
+A phone film takes 10 to 40 minutes: a locked screen, a closed tab or a crash must not lose it. The web video export (WebCodecs,
+no sequence, no probe, no native encoder) keeps what it has encoded on the device and can take it up again.
+
+- **What is kept.** The encoded packets (bytes, timestamp, duration, key or delta), one chunk file per GOP, in the origin private
+  file system (`storage.ts`, `navigator.storage.getDirectory()`, directory `openflyover-export-resume`), and `manifest.json`: version,
+  fingerprint of the project, width, height, fps, frame count, container and codec, the decoder configuration of the first packet,
+  `frames` (the next frame to render, always the start of a GOP), `chunks`, `bytes`, dates. A chunk is written when the next key
+  frame arrives, then the manifest: what the manifest announces is on disk. The loss at an interruption is at most one GOP
+  (`KEY_FRAME_INTERVAL_S`, 2 s) plus the frames still in the encoder. The soundtrack is not kept: it is mixed from the timeline
+  and handed to the muxer from its start, as in any export.
+- **Pure part** (`resume.ts`): `fingerprint`, `parseManifest`, `resumePoint` (same key, size, rate and length, something stored
+  and not everything, not older than `RESUME_MAX_AGE_MS` = 3 days), `cleanupDecision`, chunk and configuration encoding. The OPFS
+  layer is behind `ResumeStorage`; tests use `memoryStorage.ts`. `recorder.ts` writes the chunks one after the other and gives up
+  (deleting everything) at the first write error (quota), packets out of order (frame reordering) or a missing configuration: the
+  export goes on without persistence. `openStorage` gives null where OPFS is missing or has no `createWritable` (Safari before 26).
+- **The project key** (`session.ts` `projectKey`): hash of the stable JSON of the settings and of a digest of each track (name,
+  point counts, rounded coordinate sums: they survive saving and reopening). Another project, or any setting changed, means no offer.
+- **Recording.** `runExport` opens the storage, `beginRun` reads the manifest, and either continues it or deletes it and starts
+  over. The encoder gets `VideoEncodeOptions.resume` (`ResumeHooks.attach`, built by `hooks.ts`, loaded with the export and not with
+  the encoder, which is in the first screen): `attach` wraps `onEncodedPacket` of mediabunny's encoder wrapper to feed the recorder
+  (internal API, like `counters`: a change of it means no persistence) and, when continuing, hands the stored packets to the muxer
+  through the same track with `EncodedVideoPacketSource.prototype.add` before any new packet (`mux.test.ts` runs this on mediabunny).
+- **Resuming.** The loop starts at `manifest.frames` (`startFrame`), with the codec the stored export was begun with (`encoding.codec`);
+  the first frame is rendered afresh (`previous` empty) and the encoder, new, starts on a key frame. The frames from there are
+  rendered exactly as in one go: nothing of the loop depends on the previous frames but the repeat of a held image. The store
+  counts the frames of this run (`frameCount` is the frames left), so that progress, time left, history and the pace per image of the
+  next estimate are those of what was rendered.
+- **End of the stored export.** Deleted when the film is whole, when the person cancels, when they abandon, when a new export starts
+  (it replaces it), when it is older than three days (read at start), or when it cannot be continued. A failure (tiles) keeps it.
+- **The offer.** `ExportController` mounts `ui/resumeBoot.tsx`, which renders `ui/ResumeOffer.tsx` in a root of its own (loaded with
+  the scene: the first screen is exactly at its budget and carries none of it, texts included: `i18n/resume/<lang>.ts`). Once a
+  project is open and its key is the stored one, the dialog proposes « Reprendre » (the export store's `resumeRequested`, the top bar
+  button opens the export drawer, `ExportPanel` starts the film with `resumeStored`) or « Abandonner ».
+- **Out of scope.** The desktop ffmpeg encoder, the image sequence, the overlay alone, the batch and the render queue (which has its
+  own « interrompu / Reprendre » by project), two tabs exporting at once (they share the directory).
+
 ### Video export without WebCodecs (Linux)
 
 WebKitGTK does not have `VideoEncoder`; Edge (WebView2) does, and so does WebKit on macOS since Safari 16.4. On the desktop without
