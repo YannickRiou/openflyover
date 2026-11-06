@@ -196,7 +196,7 @@ function SunTimeControl() {
             {dayHint}
           </p>
           <RadioGroup
-            look="chips"
+            wrap
             className="mt-2"
             aria-label={t('light.sun.moments')}
             value={SUN_CHIPS.find((chip) => sunChipHour(chip, shown) === sunHour) ?? ''}
@@ -708,7 +708,7 @@ function AmbianceSection() {
   if (!atmosphere) return null
   return (
     <PanelSection title={t('light.ambiance.title')} summary={chosen ? t(`light.ambiance.${chosen}`) : undefined}>
-      <RadioGroup look="chips" aria-label={t('light.ambiance.title')} value={chosen ?? ''} onChange={pick}>
+      <RadioGroup wrap aria-label={t('light.ambiance.title')} value={chosen ?? ''} onChange={pick}>
         {AMBIANCES.map((a) => (
           <Radio key={a} value={a} disabled={hours[a] === null} title={hours[a] === null ? t('light.sun.notThatDay') : undefined}>
             {t(`light.ambiance.${a}`)}
@@ -925,7 +925,7 @@ function SnowControl() {
     <>
       <fieldset className="field min-w-0">
         <legend className="sr-only">{t('light.weather.snow')}</legend>
-        <RadioGroup look="chips" aria-label={t('light.weather.snow')} value={snow.mode} onChange={(mode) => setSetting('snow', { ...snow, mode })}>
+        <RadioGroup wrap aria-label={t('light.weather.snow')} value={snow.mode} onChange={(mode) => setSetting('snow', { ...snow, mode })}>
           {SNOW_MODE_OPTIONS.map((option) => (
             <Radio key={option.value} value={option.value}>
               {option.label}

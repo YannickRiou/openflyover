@@ -5,7 +5,9 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
-- **A summary under every folded section**: the sections that had none say in one line what is set: « Ambiance », contour lines (interval and opacity), rain and mist, snow, atmosphere, days and nights, colours (the preset), duration and pacing (the flight time), landmarks, lens (the effects on), titles, 3D labels (size and range), counters, profile and mini-map, weather, logo and text, credits.
+- **The last pills become rails**: the moments of the sun, the « Ambiance », the snow, the colour presets, the speed of a speed section, the cut and shift tools of a track and the tools of the landmark map are a row of segments, like the other choices of the panels, instead of separate pills.
+
+- **A summary under every folded section**: the sections that had none say in one line what is set: the weather of the outing, « Ambiance », contour lines (interval and opacity), rain and mist, snow, atmosphere, days and nights, colours (the preset), duration and pacing (the flight time), landmarks, lens (the effects on), titles, 3D labels (size and range), counters, profile and mini-map, weather, logo and text, credits.
 
 - **A section's fold is remembered only when you change it**: a section open on its own (a `<details>` fires a toggle event as it appears) was stored as if you had opened it, so a section a phone shows open came back open on a computer instead of folded. Only a fold or an unfold you make is now kept.
 - **The layer measurement warms up after each change**: « Mesurer le coût des couches » draws three frames before it times each layer, so the shaders and caches of the new settings no longer weigh on the first measured frames (a third pass on an iPhone came out slower than the first for that reason).

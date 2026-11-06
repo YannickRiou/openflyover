@@ -58,7 +58,7 @@ export function GradingPanel() {
           {t('light.grading.preset')}
         </span>
         <RadioGroup
-          look="chips"
+          wrap
           className="mt-2"
           aria-labelledby={`${id}-presets`}
           value={grading.preset}

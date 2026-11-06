@@ -760,7 +760,7 @@ export function FilmInspector() {
               {PARAM_SPECS.speed.label}
             </span>
             <RadioGroup
-              look="chips"
+              wrap
               className="mt-2"
               aria-labelledby={`${id}-factor-label`}
               value={speed.factor}
