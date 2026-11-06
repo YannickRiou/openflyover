@@ -8,7 +8,7 @@ import type { CSSProperties, ReactNode, Ref } from 'react'
 import { ColorPicker, parseColor } from 'react-aria-components/ColorPicker'
 import type { Color } from 'react-aria-components/ColorPicker'
 import { I18nProvider } from 'react-aria-components/I18nProvider'
-import { Pressable } from 'react-aria-components/Pressable'
+import { Button as AriaButton } from 'react-aria-components/Button'
 import { currentLocale, useT } from '../../i18n'
 import { Popover } from './Popover'
 
@@ -100,16 +100,15 @@ export function ColorField({ label, id, value, onChange, presets, dot, className
       width={240}
       sheet
       trigger={
-        <Pressable>
-          <button
-            ref={ref}
-            id={id}
-            type="button"
-            className={['color-field__button', dot && 'color-field__button--dot', dot && className].filter(Boolean).join(' ')}
-            style={{ '--color-field-current': current } as CSSProperties}
-            aria-label={label}
-          />
-        </Pressable>
+        // react-aria's own button: it takes the press of the popover's trigger without the dev check of `Pressable`, which warned
+        // « child must be focusable » for every colour field of a tab not shown (inert)
+        <AriaButton
+          ref={ref}
+          id={id}
+          className={['color-field__button', dot && 'color-field__button--dot', dot && className].filter(Boolean).join(' ')}
+          style={{ '--color-field-current': current } as CSSProperties}
+          aria-label={label}
+        />
       }
     >
       <ColorPanel value={value} onChange={onChange} />

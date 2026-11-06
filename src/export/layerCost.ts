@@ -53,7 +53,7 @@ export interface LayerCostResult {
 export interface LayerCostDeps {
   settings(): Settings
   setSettings(settings: Settings): void
-  /** export the window without encoding at `scale` of the size, resolve with the ms per image after the first one */
+  /** export the window without encoding at `scale` of the size, resolve with the ms per image after the warm-up ones */
   measure(scale: number): Promise<number>
   /** a pause after a change of the settings, for the layers to follow it */
   settle(): Promise<void>

@@ -3,6 +3,12 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **A section's fold is remembered only when you change it**: a section open on its own (a `<details>` fires a toggle event as it appears) was stored as if you had opened it, so a section a phone shows open came back open on a computer instead of folded. Only a fold or an unfold you make is now kept.
+- **The layer measurement warms up after each change**: « Mesurer le coût des couches » draws three frames before it times each layer, so the shaders and caches of the new settings no longer weigh on the first measured frames (a third pass on an iPhone came out slower than the first for that reason).
+- **The installers name every track format**: GPX, FIT, IGC and KML (they said GPX and FIT), in the images of the Windows and macOS installers and in the description of the app.
+
 ## 6.0.0 (November 2026)
 
 - **3D markers 30 % smaller in flight**: a figure or a vehicle is about 12 % of the height of a phone view and 5 % of a computer one, clearly visible without taking up the picture. The ball keeps its size.

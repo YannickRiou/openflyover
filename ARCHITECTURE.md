@@ -3104,7 +3104,8 @@ exports) gets it from the terrain source of the settings.
   `WINDOW_FRAMES` (12) frames in the middle of the flight (`ExportRequest.window`, `ScheduleOptions.window`: the schedule keeps
   the frames whose film time is inside, never fewer than two), exported without encoding (the tab flag « Export de test
   sans encodage » set for the run) with `ExportRequest.probe`: no tile fetched ahead, no soundtrack, nothing in the render
-  history. The ms per image count the frames after the first. The reference is run twice (the first only warms the tiles and
+  history. The ms per image count the frames after `WARM_FRAMES` (3) of warm-up, drawn after each change of the layers: the first
+  ones compile the shaders and fill the caches of the new settings. The reference is run twice (the first only warms the tiles and
   the shaders up) and once more at the end (`REFERENCE_END_LABEL`): a gap between the two means the device slowed down during the
   run (heat, on a phone), so its rows do not compare. The « Export » section tells « Nuages de l'export » (the resolution of the
   cloud pass, lowered when the preview had to be lightened, `exportCloudScale`): two reports compare only when it is the same.
