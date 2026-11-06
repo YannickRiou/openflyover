@@ -97,6 +97,7 @@ export function CardFields({ card }: { card: CardId }) {
 function CardExtrasFields({ card }: { card: 'title' | 'end' }) {
   const t = useT()
   const extras = useAppStore((s) => s.settings.overlay[card])
+  const titleDated = useAppStore((s) => s.settings.overlay.title.showDate)
   const [imageError, setImageError] = useState<string | null>(null)
   // the settings as they are now (another change or an undo may have happened during a decoding)
   const set = (patch: CardExtras) => {
@@ -130,7 +131,8 @@ function CardExtrasFields({ card }: { card: 'title' | 'end' }) {
       <fieldset className="field min-w-0">
         <legend className="type-label mb-1">{t('inspector.card.figures')}</legend>
         <div className="chips">
-          {CARD_FIGURES.filter((figure) => bilan || figure !== 'outings').map((figure) => (
+          {/* the opening card that writes the date under its title does not offer it again as a figure */}
+          {CARD_FIGURES.filter((figure) => (bilan || figure !== 'outings') && !(figure === 'date' && card === 'title' && titleDated)).map((figure) => (
             <Chip
               key={figure}
               checked={figures.includes(figure)}

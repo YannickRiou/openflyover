@@ -244,6 +244,7 @@ const messages: Messages['inspector'] = {
   'junction.nightHint': 'Cuando las dos etapas son de dos días: el sol se pone, pasa la noche, sale (duraciones en Luz › Días y noches). Si no, solo el paso.',
   'junction.night': 'Pasar la noche',
   'junction.noNight': 'No hay noche entre estas dos etapas (mismo día): solo el paso.',
+  'junction.passedByNight': 'La noche sustituye al paso entre estas dos etapas: su tipo y su duración no se usan aquí.',
   'junction.content': 'Contenido',
   'junction.auto': 'Automático',
   'junction.custom': 'Mi texto',

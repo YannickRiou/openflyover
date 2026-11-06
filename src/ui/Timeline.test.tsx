@@ -1120,6 +1120,66 @@ describe('Timeline turned from landscape to portrait', () => {
   })
 })
 
+describe('Inspector of a marker key with a 3D model', () => {
+  it('offers « Couleur du modèle » only with « De la trace »; « Naturelles » keeps the colours of the model', async () => {
+    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    const segments = [{ points: [6.8, 6.81, 6.82].map((lon, i) => ({ lon, lat: 45.9, ele: 1000 + i * 10 })) }]
+    useAppStore.setState({ tracks: [buildTrack({ name: 'Sortie', source: 'gpx', segments })] })
+    const { settings, setSetting, setFilmSelection } = useAppStore.getState()
+    const added = addMarkerKey(DEFAULT_FILM, 100, { kind: 'figurine' } as never)
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => {
+      setSetting('film', added.film)
+      setSetting('marker', { ...settings.marker, kind: 'figurine', model3d: true, modelColors: 'natural' })
+      setFilmSelection(added.id)
+    })
+    await act(async () => root.render(<FilmInspector />))
+    const modelColour = () => host.querySelector('button[aria-label="Couleur du modèle"]')
+    expect(modelColour()).toBeNull()
+    await act(async () => setSetting('marker', { ...useAppStore.getState().settings.marker, modelColors: 'track' }))
+    expect(modelColour()).not.toBeNull()
+    act(() => root.unmount())
+    await act(async () => {
+      setFilmSelection(null)
+      setSetting('marker', settings.marker)
+      setSetting('film', settings.film)
+    })
+  })
+})
+
+describe('Film options of the timeline', () => {
+  it('offers « Baisser toutes les musiques sous les vidéos » only with a music and a video with its sound', async () => {
+    ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    globalThis.ResizeObserver ??= class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    } as unknown as typeof ResizeObserver
+    const segments = [{ points: [6.8, 6.81, 6.82].map((lon, i) => ({ lon, lat: 45.9, ele: 1000 + i * 10 })) }]
+    useAppStore.setState({ tracks: [buildTrack({ name: 'Sortie', source: 'gpx', segments })] })
+    const { settings, setSetting } = useAppStore.getState()
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<Timeline />))
+    await act(async () => setSetting('film', DEFAULT_FILM))
+    const duck = async () => {
+      await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Options du film"]')!.click())
+      const shown = (document.body.textContent ?? '').includes('Baisser toutes les musiques sous les vidéos')
+      await act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+      await act(async () => void document.querySelector('[role="dialog"]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+      return shown
+    }
+    expect(await duck()).toBe(false)
+    const music = { id: 'audio-1', src: 'music-1', startS: 0, durationS: 10, inS: 0, volume: 1, fadeInS: 0, fadeOutS: 0 }
+    const video = { id: 'media-1', src: 'video-1', kind: 'video', startS: 2, durationS: 4, muted: false, volume: 1 }
+    await act(async () => setSetting('film', { ...DEFAULT_FILM, audio: [music], media: [video] } as never))
+    expect(await duck()).toBe(true)
+    act(() => root.unmount())
+    await act(async () => setSetting('film', settings.film))
+  })
+})
+
 describe('Timeline: the modes of the interface', () => {
   it('keeps Arrêts, Textes, Médias and Musique in Débutant, Plans and Vitesse from Confirmé, and a lane that holds keys stays', async () => {
     ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true

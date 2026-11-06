@@ -255,4 +255,23 @@ describe('Folded sections', () => {
     expect(states(again)).toMatchObject({ 'Fond de carte': false, Relief: true })
     act(() => root2.unmount())
   })
+
+  it('the default fold of a computer is not remembered as a choice; a fold by the person is', async () => {
+    const stored = () => JSON.parse(getPlatform().storage.get(FOLDS_KEY) ?? '{}') as Record<string, boolean>
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<div className="tabpanel-frame"><MapSettings /></div>))
+    expect(states(host)).toMatchObject({ Relief: false })
+    // the toggle event of the default fold comes after it, as a task: let it pass
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 20)))
+    expect(stored()).toEqual({})
+    // the person opens « Relief »: that one is kept
+    const relief = host.querySelector<HTMLDetailsElement>('details[data-panel-section="Relief"]')!
+    await act(async () => {
+      relief.open = true
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+    expect(stored()).toEqual({ Relief: true })
+    act(() => root.unmount())
+  })
 })

@@ -82,8 +82,6 @@ export default {
   'slider.noneFem': 'Aucune',
   'duration.label': 'Durée du survol',
   'duration.tip': 'Durée du trajet à la vitesse ×1. Avec « Garder la durée du survol », les arrêts et les ralentis sont pris dedans (les arrêts en prennent la moitié au plus) ; sinon ils s’y ajoutent. Les nuits et les passages entre étapes s’y ajoutent toujours.',
-  'duration.shorten': 'Réduire la durée du survol',
-  'duration.lengthen': 'Allonger la durée du survol',
   'duration.noStops': 'aucun arrêt',
   'duration.stops': { one: '{count} arrêt', other: '{count} arrêts' },
   'duration.film': 'Film : {duration} · {stops}',

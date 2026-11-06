@@ -66,8 +66,11 @@ export function PanelSection({
   const [open] = useState(() => loadFolds()[title] ?? true)
   const section = useRef<HTMLDetailsElement>(null)
   const mounted = useRef(false)
-  /** the default fold below is not a choice: its toggle event is not remembered (a phone would then open the section folded) */
-  const defaultFold = useRef(false)
+  /**
+   * The state on the screen. A `toggle` event that matches it is not a choice and is not remembered: the one a `<details open>`
+   * fires as it is inserted, and the one of the default fold below (a phone would then open the section folded).
+   */
+  const shown = useRef(open)
   // a computer, nothing remembered: the tab opens on its first section, the others wait folded (the DOM keeps the state, as below)
   useLayoutEffect(() => {
     const el = section.current
@@ -77,13 +80,18 @@ export function PanelSection({
     if (loadFolds()[title] !== undefined || matchesQuery(COMPACT_QUERY)) return
     const tab = el.closest('.tabpanel-frame')
     if (tab && tab.querySelector('details[data-panel-section]') !== el) {
-      defaultFold.current = true
+      shown.current = false
       el.open = false
     }
   }, [title])
   if (!useModeShows(min, paths)) return null
   return (
-    <details ref={section} className="group" data-panel-section={title} open={open} hidden={hidden} onToggle={(e) => (defaultFold.current ? (defaultFold.current = false) : saveFold(title, e.currentTarget.open))}>
+    <details ref={section} className="group" data-panel-section={title} open={open} hidden={hidden} onToggle={(e) => {
+        const now = e.currentTarget.open
+        if (now === shown.current) return
+        shown.current = now
+        saveFold(title, now)
+      }}>
       <summary className="panel-head cursor-pointer list-none [&::-webkit-details-marker]:hidden">
         <div className="min-w-0 flex-1">
           <h2 className="panel-title">{title}</h2>

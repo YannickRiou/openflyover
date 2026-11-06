@@ -844,11 +844,16 @@ describe('opening card contents', () => {
     drawOverlay(ctx, overlayFrameAt(track, 0.02), settings, SIZE, { cardImage: () => picture })
     const joined = texts.map((t) => t.text).join(' | ').toLowerCase()
     expect(joined).toContain('dénivelé +')
-    expect(joined).toContain('12/07/2025')
+    // the date is written once: on the line under the title, so not again as a figure
+    expect(joined).not.toContain('12/07/2025')
     const date = texts.find((t) => t.text.toLowerCase().startsWith('12 juillet'))!
     const line = texts.find((t) => t.text.toLowerCase() === 'avec marie')!
     expect(line.y).toBeGreaterThan(date.y)
     expect(images).toHaveLength(1)
+  })
+
+  it('without the date line, the date is a figure', () => {
+    expect(draw(0.02, title({ figures: ['date'], showDate: false })).joined).toContain('12/07/2025')
   })
 
   it('a style that lays the opening out itself gives way to a card with figures', () => {

@@ -75,7 +75,6 @@ const messages: Messages['project'] = {
   'panel.saveAs': 'Speichern unter…',
   'panel.saveAsTip': 'Projekt unter anderem Namen oder an anderem Ort speichern',
   'panel.library': 'Meine Projekte',
-  'panel.noLibrary': 'Dieser Browser kann keine Projekte ablegen (ungesicherte Seite, ohne HTTPS).',
   'panel.keptDesktop': 'Auf diesem Computer abgelegt, bei jeder Änderung automatisch gespeichert.',
   'panel.keptBrowser': 'In diesem Browser abgelegt, bei jeder Änderung automatisch gespeichert.',
   'panel.keep': 'In „Meine Projekte“ ablegen',

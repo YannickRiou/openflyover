@@ -173,7 +173,7 @@ function CutDialog({ track, onApplied }: DialogProps) {
       <PointSlider label={t('track.tools.cut.from')} track={track} value={range.from} min={0} max={range.to} onChange={(from) => setRange({ ...range, from })} />
       <PointSlider label={t('track.tools.cut.to')} track={track} value={range.to} min={range.from} max={last} onChange={(to) => setRange({ ...range, to })} />
       <div className="field">
-        <RadioGroup<CutMode> look="chips" aria-label={t('track.tools.cut.mode')} aria-describedby={`${id}-mode`} value={mode} onChange={setMode}>
+        <RadioGroup<CutMode> wrap aria-label={t('track.tools.cut.mode')} aria-describedby={`${id}-mode`} value={mode} onChange={setMode}>
           <Radio value="join">{t('track.tools.cut.join')}</Radio>
           <Radio value="split">{t('track.tools.cut.split')}</Radio>
         </RadioGroup>
@@ -291,7 +291,7 @@ function ShiftDialog({ track, onApplied }: DialogProps) {
   }
   return (
     <ToolFrame track={track} tool="shift" next={next} onApplied={onApplied}>
-      <RadioGroup<ShiftMode> look="chips" aria-label={t('track.tools.shift.mode')} value={mode} onChange={setMode}>
+      <RadioGroup<ShiftMode> wrap aria-label={t('track.tools.shift.mode')} value={mode} onChange={setMode}>
         <Radio value="offset">{t('track.tools.shift.byOffset')}</Radio>
         <Radio value="start">{t('track.tools.shift.byStart')}</Radio>
       </RadioGroup>

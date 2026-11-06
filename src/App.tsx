@@ -66,7 +66,7 @@ import { showToast } from './ui/toast'
 import { TopBar } from './ui/TopBar'
 import { TrackList } from './ui/TrackList'
 import { MarkerSection, TrackStyleSection } from './ui/TrackMarkerSection'
-import { WeatherPanel } from './ui/WeatherPanel'
+import { WeatherSection } from './ui/WeatherPanel'
 import { Tab, TabList, TabPanel, Tabs, Tip, ToggleButton, ToggleButtonGroup, isModalOpen } from './ui/primitives'
 
 // Loaded in their own chunks: the offline packs right after the first paint, the export drawer (video, batch,
@@ -609,9 +609,7 @@ export default function App() {
       ),
       meteo: (
         <>
-          <PanelSection title={t('shell.section.weather')} keys={['weather']} hidden={!hasTracks} min="confirme">
-            <WeatherPanel />
-          </PanelSection>
+          <WeatherSection hidden={!hasTracks} />
           <WeatherSettings />
           <ModeHint panel="meteo" />
         </>

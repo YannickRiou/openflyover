@@ -1110,7 +1110,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   presets (`CAMERA_PRESETS`, 13: Poursuite (chase), Drone rapide, Oiseau, Hélicoptère, Orbite, Cinéma, Drone haut, Planeur, Montgolfière, Avion, Vue du dessus, Satellite, then Libre (style `free`, left out of `markerVisible.test.ts`: it does not follow the marker); `findCameraPreset`; kept as data for the gabarits of « Film automatique » (« Cinéma ») and as the corpus of the camera tests, but no longer shown) and the six « Hauteur » stops (`CAMERA_HEIGHTS`: Au ras 0.5 / 20°, Proche 1 / 30° (the default), Hélicoptère 1.3 / 25°, Drone haut 1.8 / 55°, Avion 3 / 35°, Satellite 4 / 85°, the values of the presets of the same vehicle; one slider sets the distance and the tilt, nothing else, and `cameraHeightStop` gives the stop a camera is at or, with `custom`, the nearest one for « Personnalisé »; a project stores camera values, never a preset id) in
   `src/flyover/cameraSettings.ts`; `settings.flyoverDurationS` (15–600 s in 1 s steps, 60 by default) = duration at ×1, the timeline
   speed applies on top. **Duration or speed** (`src/flyover/flightSpeed.ts`, pure; `src/ui/FlightDurationField.tsx`): the one setting
-  has two faces, chosen by « Régler par » (panel state only, it opens on « Durée »; nothing new is stored, no format change). The
+  has two faces, chosen by « Régler par » (panel state only, it opens on « Durée »; nothing new is stored, no format change);
+  « Durée » is one slider and its value typed under it (no « − » / « + »). The
   marker's *average* speed is derived: km/h = length ÷ duration (`speedKmh`, the length of the film track: all the stages of
   « À la suite »), « × l'allure réelle » = **moving time** ÷ duration (`speedUpFactor`). The moving time (`movingTimeS`) is the
   track's time minus its stops (`findPauses`, the rule of « Retirer les pauses »: within 15 m for 2 min), every gap of over 10 min between two points (recorder off) and the gaps between
@@ -3104,7 +3105,8 @@ exports) gets it from the terrain source of the settings.
   `WINDOW_FRAMES` (12) frames in the middle of the flight (`ExportRequest.window`, `ScheduleOptions.window`: the schedule keeps
   the frames whose film time is inside, never fewer than two), exported without encoding (the tab flag « Export de test
   sans encodage » set for the run) with `ExportRequest.probe`: no tile fetched ahead, no soundtrack, nothing in the render
-  history. The ms per image count the frames after the first. The reference is run twice (the first only warms the tiles and
+  history. The ms per image count the frames after `WARM_FRAMES` (3) of warm-up, drawn after each change of the layers: the first
+  ones compile the shaders and fill the caches of the new settings. The reference is run twice (the first only warms the tiles and
   the shaders up) and once more at the end (`REFERENCE_END_LABEL`): a gap between the two means the device slowed down during the
   run (heat, on a phone), so its rows do not compare. The « Export » section tells « Nuages de l'export » (the resolution of the
   cloud pass, lowered when the preview had to be lightened, `exportCloudScale`): two reports compare only when it is the same.
@@ -3945,7 +3947,9 @@ photo. The glaciers mapped by OpenStreetMap are therefore drawn with the snow lo
   junction's when it asks for it (`night`, « Passer la nuit », its own or the default's, « Jours et nuits » on or off: kind
   `nuit` on the clock, the night pause, no extra hold); without it, or without a night to pass, its « Passage » (`kind`:
   `coupe`, `fondu-noir`, `fondu-blanc`, `PASSAGE_KINDS`) replaces it. There is no automatic switch: what the panel or the
-  inspector shows is what plays. « Montrer les nuits » only decides the nights inside a stage. **« Revoir l'étape finie »**
+  inspector shows is what plays. In the inspector of a junction that passes a night (`hasNight` and `night`), the passage and
+  its duration are disabled with a sentence (`inspector.junction.passedByNight`): the stored junction always keeps a passage
+  kind (`junctionOf` turns 'nuit' into 'fondu-noir'), so the test is on the clock's night, not on `kind`. « Montrer les nuits » only decides the nights inside a stage. **« Revoir l'étape finie »**
   (`recap`): over a night, the high view during it (`ClockJunction.view`); else a pause of its own, `RECAP_S` (4 s) at
   `atM − RECAP_LEAD_M` (1 m: the marker, figures and drawn line stay on the stage that ends), `extra` like the junction,
   placed on the clock as `ClockJunction.recap`; `recapViewAt` lifts the camera over the stage (`RECAP_RISE_S` 2.5 s) and holds
@@ -4402,8 +4406,11 @@ iOS publishes no per-tab WebGL memory budget; Safari kills and reloads a page th
 bug 300782, October 2025): the device budget below is conservative, to be measured on real phones.
 
 - **Manifest** (`public/manifest.webmanifest`): « OpenFlyover », `display: standalone`, theme `#1c2a33` (top bar ink),
-  background `#f5f2ea` (cream), icons rendered from `public/favicon.svg` (`icons/`: 192 and 512 px, a 512 px maskable
-  one with a full-bleed background and the drawing at 72 %, a 180 px `apple-touch-icon`). Every URL is relative
+  background `#f5f2ea` (cream), icons rendered from `src-tauri/icons/source/` (`icon.svg`, `icon-maskable.svg`) by
+  `npm run icons` (`scripts/icons.mjs`: headless Chromium, then PNG with a palette of 256 colours and a Floyd–Steinberg
+  dither, a third of the truecolor size since the service worker precaches them; the desktop PNG in truecolor RGBA, the only
+  form `tauri::generate_context!` accepts; the .icns and .ico by `tauri icon` unless `--no-desktop-bundle`) (`icons/`: 192 and 512 px, a 512 px maskable one with a full-bleed
+  background, a 180 px `apple-touch-icon`). Every URL is relative
   (`start_url`, `scope`, `id`: `./`), so the same file works under `/openflyover/` and at a root (tested,
   `webApp.test.ts`). `index.html` links it with `theme-color` and `apple-touch-icon` (Vite adds the base).
 - **Service worker** (`src/platform/serviceWorker.js`, plain JS, emitted as `sw.js` by the `serviceWorker()` plugin of

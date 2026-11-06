@@ -7,7 +7,8 @@ import type { MarkerSettings } from '../scene/markerSettings'
 import { resetAppStore, useAppStore } from '../state/store'
 import { t } from '../i18n'
 import { usePreferences } from './preferences'
-import { MarkerSection } from './TrackMarkerSection'
+import { buildTrack } from '../import/stats'
+import { MarkerSection, TrackStyleSection } from './TrackMarkerSection'
 
 beforeAll(() => {
   ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -79,6 +80,51 @@ describe('MarkerSection', () => {
       // the picture changes nothing to the choice: one radio, the current one, is checked
       expect(group?.querySelectorAll('input[type="radio"]:checked')).toHaveLength(1)
     }
+    await view.stop()
+  })
+})
+
+describe('TrackStyleSection', () => {
+  afterEach(() => {
+    resetAppStore()
+    document.body.innerHTML = ''
+  })
+
+  async function showTrack(withHeartRate: boolean) {
+    usePreferences.setState({ uiMode: 'expert' })
+    // without elevation nor time, a track has no measure at all (slope and altitude need the elevation)
+    const points = [6.8, 6.81, 6.82].map((lon, i) => (withHeartRate ? { lon, lat: 45.9, ele: 1000 + i * 10, hr: 120 + i } : { lon, lat: 45.9 }))
+    useAppStore.setState({ tracks: [buildTrack({ name: 'Sortie', source: 'gpx', segments: [{ points }] })] })
+    const host = document.body.appendChild(document.createElement('div'))
+    const root = createRoot(host)
+    await act(async () => root.render(<TrackStyleSection hidden={false} />))
+    return { host, text: () => host.textContent ?? '', stop: () => act(() => root.unmount()) }
+  }
+
+  it('says the line is grey when no track has the measure chosen, and the ribbon has nothing to show without a measure', async () => {
+    const view = await showTrack(false)
+    expect(view.text()).toContain(t('marker.track.ribbonNone'))
+    await act(async () => useAppStore.getState().setSetting('trackColorBy', 'heartRate'))
+    expect(view.text()).toContain(t('marker.track.colorByMissing'))
+    expect(view.text()).not.toContain(t('marker.track.colorByHint'))
+    await view.stop()
+  })
+
+  it('a track with the measure: no warning', async () => {
+    const view = await showTrack(true)
+    await act(async () => useAppStore.getState().setSetting('trackColorBy', 'heartRate'))
+    expect(view.text()).not.toContain(t('marker.track.colorByMissing'))
+    expect(view.text()).not.toContain(t('marker.track.ribbonNone'))
+    await view.stop()
+  })
+
+  it('says a glow no wider than the line does not show', async () => {
+    const view = await showTrack(false)
+    const style = useAppStore.getState().settings.trackStyle
+    await act(async () => useAppStore.getState().setSetting('trackStyle', { ...style, glow: true, width: 6, glowWidth: 6 }))
+    expect(view.text()).toContain(t('marker.track.glowTooNarrow', { width: '6 px' }))
+    await act(async () => useAppStore.getState().setSetting('trackStyle', { ...style, glow: true, width: 4, glowWidth: 10 }))
+    expect(view.text()).not.toContain(t('marker.track.glowTooNarrow', { width: '4 px' }))
     await view.stop()
   })
 })

@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_FILM } from '../film/model'
 import type { Film } from '../film/model'
+import { t } from '../i18n'
 import { buildTrack } from '../import/stats'
 import { splitHidden, withRank } from '../osm/landmarks'
 import type { Landmark, LandmarkSettings } from '../osm/landmarks'
@@ -27,6 +28,8 @@ vi.mock('../osm/store', async (importOriginal) => {
     },
     syncLandmarks: (tracks: readonly { id: string }[], settings: LandmarkSettings, options?: { refresh?: boolean }) => {
       if (options?.refresh) found.refreshed++
+      // a « Bilan » asks for none
+      if (tracks.length === 0) return void actual.useLandmarkStore.setState({ status: 'idle', landmarks: {}, hidden: {} })
       const near = found.list.filter((l) => l.distanceM <= settings.maxDistanceM && !settings.dismissedIds.includes(l.id))
       const { shown, hidden } = splitHidden(withRank(near, settings.rank), settings.hiddenIds)
       const id = tracks[0].id
@@ -403,5 +406,24 @@ describe('LandmarkPanel: the points of interest, and the landmarks in the window
       expect(toast.action).toBeUndefined()
       act(() => root.unmount())
     })
+  })
+})
+
+describe('LandmarkPanel in a « Bilan »', () => {
+  it('the landmarks switch waits, with the reason, and nothing about the search is offered', async () => {
+    const { host, root } = await mount(DEFAULT_SETTINGS.film)
+    const other = buildTrack({ name: 'Autre', source: 'gpx', segments: [{ points }] })
+    await act(async () =>
+      useAppStore.setState((s) => ({ tracks: [track, { ...other, id: 'other' }], settings: { ...s.settings, race: { ...s.settings.race, enabled: false, sequence: true, bilan: true } } })),
+    )
+    const toggle = host.querySelector<HTMLInputElement>('input[role="switch"]')!
+    expect(toggle.disabled).toBe(true)
+    expect(toggle.checked).toBe(false)
+    expect(host.textContent).toContain(t('track.bilan.fixed'))
+    expect(host.textContent).not.toContain(t('landmarks.searchAgain'))
+    // the value is kept for when the Bilan ends
+    expect(useAppStore.getState().settings.landmarks.enabled).toBe(DEFAULT_SETTINGS.landmarks.enabled)
+    act(() => root.unmount())
+    document.body.innerHTML = ''
   })
 })

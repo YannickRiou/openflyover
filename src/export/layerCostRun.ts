@@ -19,6 +19,11 @@ import { loadTrackData, shownFilm } from './trackFilms'
 
 /** frames of a measure: enough to average out the noise of one, few enough for a phone (about a second each) */
 export const WINDOW_FRAMES = 12
+/**
+ * frames drawn before the clock starts, after each change of the layers: the first ones compile the shaders and fill the
+ * caches of the new settings (a third pass on an iPhone came out slower than the first for that reason)
+ */
+export const WARM_FRAMES = 3
 /** the film time between two frames of the window (seconds at ×1): the flight moves a little, the tiles stay */
 const FPS = 10
 /** wait after a change of the settings, for the layers to follow it (ms) */
@@ -52,7 +57,7 @@ export async function runLayerCost(canceled: () => boolean, progress: (label: st
     const clock = filmClockFor(getFilmSource())
     const flight = Math.max(0, film.durationS - clock.openingS - clock.closingS)
     const fromS = clock.openingS + flight / 2
-    const toS = fromS + (WINDOW_FRAMES - 0.5) / FPS
+    const toS = fromS + (WARM_FRAMES + WINDOW_FRAMES - 0.5) / FPS
     const full = videoSize(base.video.aspect, base.video.resolution, deviceBudget().maxExportShortSide)
 
     const measure = async (scale: number): Promise<number> => {
@@ -74,10 +79,10 @@ export async function runLayerCost(canceled: () => boolean, progress: (label: st
       try {
         return await new Promise<number>((resolve, reject) => {
           const done = store.subscribe((state) => {
-            if (first === null && state.frame >= 1) first = performance.now()
+            if (first === null && state.frame >= WARM_FRAMES) first = performance.now()
             if (isExportBusy(state.phase)) return
             done()
-            if (state.phase === 'done' && first !== null && state.frameCount > 1) resolve((performance.now() - first) / (state.frameCount - 1))
+            if (state.phase === 'done' && first !== null && state.frameCount > WARM_FRAMES) resolve((performance.now() - first) / (state.frameCount - WARM_FRAMES))
             else reject(new Error(state.error ?? 'mesure interrompue'))
           })
         })
@@ -96,7 +101,7 @@ export async function runLayerCost(canceled: () => boolean, progress: (label: st
       progress,
     })
     const completed = !canceled()
-    const detail = `${even(full.width)} × ${even(full.height)}, ${WINDOW_FRAMES} images au milieu du vol, sans encodage`
+    const detail = `${even(full.width)} × ${even(full.height)}, ${WINDOW_FRAMES} images au milieu du vol après ${WARM_FRAMES} de chauffe, sans encodage`
     const report = collectDiagnostic()
     return { text: formatReport({ ...report, sections: [...report.sections, layerCostSection(results, detail, !completed)] }), completed }
   } finally {

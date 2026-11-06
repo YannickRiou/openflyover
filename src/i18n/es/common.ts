@@ -22,6 +22,8 @@ const messages: Messages['common'] = {
   quoted: '«{text}»',
   yes: 'Sí',
   no: 'No',
+  on: 'Activado',
+  off: 'Desactivado',
 }
 
 export default messages

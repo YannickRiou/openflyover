@@ -570,6 +570,8 @@ function FilmOptions({
   const t = useT()
   const modified = useAppStore((s) => modifiedSettings(s.settings, ['film']).length > 0)
   const duckMusic = useAppStore((s) => s.settings.film.duckMusic)
+  // the music goes down under a video with sound (film/audio.ts): both are needed for the setting to act
+  const duckActs = useAppStore((s) => s.settings.film.audio.length > 0 && s.settings.film.media.some(clipHasSound))
   return (
     <Popover
       label={t('timeline.options.title')}
@@ -606,9 +608,11 @@ function FilmOptions({
             {t('timeline.options.addMusic')}
           </Button>
           <p className="text-hint text-glacier">{t('timeline.options.musicHint')}</p>
-          <Checkbox className={CHECKBOX_ON_DARK} checked={duckMusic} onChange={(on) => editFilm((f) => ({ film: { ...f, duckMusic: on } }))}>
-            {t('inspector.music.duck')}
-          </Checkbox>
+          {duckActs && (
+            <Checkbox className={CHECKBOX_ON_DARK} checked={duckMusic} onChange={(on) => editFilm((f) => ({ film: { ...f, duckMusic: on } }))}>
+              {t('inspector.music.duck')}
+            </Checkbox>
+          )}
           <Checkbox className={CHECKBOX_ON_DARK} checked={autoStops} onChange={onAutoStops}>
             {t('timeline.options.autoStops')}
           </Checkbox>

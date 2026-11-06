@@ -84,6 +84,8 @@ export function OfflinePanel() {
         <p className="rounded-md bg-surface-card p-3 text-center type-hint">{t('offline.panel.noStorage')}</p>
       ) : (
         <>
+          {/* a terrain whose tiles may not be stored: no pack to plan, the sentence below says why */}
+          {terrainPolicy.allowed && (
           <fieldset className="field min-w-0" disabled={job !== null}>
             <legend className="type-label mb-1">{t('offline.panel.corridor')}</legend>
             <RadioGroup aria-label={t('offline.panel.corridor')} value={corridorM} onChange={(width) => setCorridorM(width)}>
@@ -94,6 +96,7 @@ export function OfflinePanel() {
               ))}
             </RadioGroup>
           </fieldset>
+          )}
 
           <p className="type-hint">
             {terrainPolicy.allowed

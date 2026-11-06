@@ -52,13 +52,13 @@ export function GradingPanel() {
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
 
   return (
-    <PanelSection title={t('light.grading.title')} keys={['exposureEv', 'grading']} min="confirme">
+    <PanelSection title={t('light.grading.title')} summary={GRADING_PRESETS.find((preset) => preset.id === grading.preset)?.label} keys={['exposureEv', 'grading']} min="confirme">
       <div className="field">
         <span id={`${id}-presets`} className="type-label">
           {t('light.grading.preset')}
         </span>
         <RadioGroup
-          look="chips"
+          wrap
           className="mt-2"
           aria-labelledby={`${id}-presets`}
           value={grading.preset}

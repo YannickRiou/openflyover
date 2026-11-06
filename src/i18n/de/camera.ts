@@ -84,8 +84,6 @@ const messages: Messages['camera'] = {
   'slider.noneFem': 'Keine',
   'duration.label': 'Überflugdauer',
   'duration.tip': 'Dauer des Flugs bei Geschwindigkeit ×1. Mit „Überflugdauer beibehalten“ sind die Stopps und Verlangsamungen darin enthalten (die Stopps höchstens die Hälfte); sonst kommen sie hinzu. Nächte und Übergänge zwischen Etappen kommen immer hinzu.',
-  'duration.shorten': 'Überflugdauer verkürzen',
-  'duration.lengthen': 'Überflugdauer verlängern',
   'duration.noStops': 'keine Stopps',
   'duration.stops': { one: '{count} Stopp', other: '{count} Stopps' },
   'duration.film': 'Film: {duration} · {stops}',

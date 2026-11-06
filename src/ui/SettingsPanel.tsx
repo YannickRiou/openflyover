@@ -196,7 +196,7 @@ function SunTimeControl() {
             {dayHint}
           </p>
           <RadioGroup
-            look="chips"
+            wrap
             className="mt-2"
             aria-label={t('light.sun.moments')}
             value={SUN_CHIPS.find((chip) => sunChipHour(chip, shown) === sunHour) ?? ''}
@@ -707,8 +707,8 @@ function AmbianceSection() {
   // the chips set the sky and the sun: without the atmosphere there is neither
   if (!atmosphere) return null
   return (
-    <PanelSection title={t('light.ambiance.title')}>
-      <RadioGroup look="chips" aria-label={t('light.ambiance.title')} value={chosen ?? ''} onChange={pick}>
+    <PanelSection title={t('light.ambiance.title')} summary={chosen ? t(`light.ambiance.${chosen}`) : undefined}>
+      <RadioGroup wrap aria-label={t('light.ambiance.title')} value={chosen ?? ''} onChange={pick}>
         {AMBIANCES.map((a) => (
           <Radio key={a} value={a} disabled={hours[a] === null} title={hours[a] === null ? t('light.sun.notThatDay') : undefined}>
             {t(`light.ambiance.${a}`)}
@@ -847,7 +847,12 @@ function ContoursSection() {
   const id = useId()
   const update = (patch: Partial<typeof contours>) => setSetting('contours', { ...contours, ...patch })
   return (
-    <PanelSection title={t('light.map.contours')} keys={['contours']} min="confirme">
+    <PanelSection
+      title={t('light.map.contours')}
+      summary={contours.enabled ? `${formatNumber(contours.intervalM)} m · ${formatPercent(contours.opacity)}` : t('common.off')}
+      keys={['contours']}
+      min="confirme"
+    >
       <div className="flex items-center gap-1">
         <Switch checked={contours.enabled} onChange={(enabled) => update({ enabled })}>{t('light.map.contours')}</Switch>
         <InfoTip text={t('light.map.contoursTip')} />
@@ -920,7 +925,7 @@ function SnowControl() {
     <>
       <fieldset className="field min-w-0">
         <legend className="sr-only">{t('light.weather.snow')}</legend>
-        <RadioGroup look="chips" aria-label={t('light.weather.snow')} value={snow.mode} onChange={(mode) => setSetting('snow', { ...snow, mode })}>
+        <RadioGroup wrap aria-label={t('light.weather.snow')} value={snow.mode} onChange={(mode) => setSetting('snow', { ...snow, mode })}>
           {SNOW_MODE_OPTIONS.map((option) => (
             <Radio key={option.value} value={option.value}>
               {option.label}
@@ -971,6 +976,7 @@ export function WeatherSettings() {
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
   const weatherScene = useAppStore((s) => s.settings.weatherScene)
   const clouds = useAppStore((s) => s.settings.clouds)
+  const snowMode = useAppStore((s) => s.settings.snow.mode)
   const setSetting = useAppStore((s) => s.setSetting)
   const weatherReady = useWeatherReady()
   const id = useId()
@@ -981,7 +987,12 @@ export function WeatherSettings() {
         {atmosphere ? <CloudsControl weatherReady={weatherReady} /> : <AtmosphereOffHint what="clouds" />}
       </PanelSection>
 
-      <PanelSection title={t('light.weather.rainMist')} keys={['weatherScene']} min="expert">
+      <PanelSection
+        title={t('light.weather.rainMist')}
+        summary={atmosphere && weatherReady ? (weatherScene.enabled ? `${t('common.on')} · ${formatPercent(weatherScene.strength)}` : t('common.off')) : undefined}
+        keys={['weatherScene']}
+        min="expert"
+      >
         {!atmosphere ? (
           <AtmosphereOffHint what="scene" />
         ) : !weatherReady ? (
@@ -1012,7 +1023,7 @@ export function WeatherSettings() {
         )}
       </PanelSection>
 
-      <PanelSection title={t('light.weather.snow')} keys={['snow']} min="confirme">
+      <PanelSection title={t('light.weather.snow')} summary={SNOW_MODE_OPTIONS.find((option) => option.value === snowMode)?.label} keys={['snow']} min="confirme">
         <SnowControl />
       </PanelSection>
     </>
@@ -1039,7 +1050,12 @@ export function LightSettings() {
 
   return (
     <>
-      <PanelSection title={t('light.atmosphere.title')} keys={['atmosphere', 'shadows', 'cloudShadows', 'nightLightEv']} min="expert">
+      <PanelSection
+        title={t('light.atmosphere.title')}
+        summary={atmosphere ? [t('common.on'), shadows && t('light.atmosphere.shadows')].filter(Boolean).join(' · ') : t('common.off')}
+        keys={['atmosphere', 'shadows', 'cloudShadows', 'nightLightEv']}
+        min="expert"
+      >
         <Switch id={`${id}-atmosphere`} checked={atmosphere} onChange={(on) => setSetting('atmosphere', on)}>{t('light.atmosphere.enable')}</Switch>
 
         {atmosphere && (

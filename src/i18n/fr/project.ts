@@ -73,7 +73,6 @@ export default {
   'panel.saveAs': 'Enregistrer sous…',
   'panel.saveAsTip': 'Enregistrer le projet sous un autre nom ou à un autre endroit',
   'panel.library': 'Mes projets',
-  'panel.noLibrary': 'Ce navigateur ne peut pas garder de projets (page non sécurisée, sans HTTPS).',
   'panel.keptDesktop': 'Gardés sur cet ordinateur, enregistrés automatiquement à chaque changement.',
   'panel.keptBrowser': 'Gardés dans ce navigateur, enregistrés automatiquement à chaque changement.',
   'panel.keep': 'Garder dans Mes projets',

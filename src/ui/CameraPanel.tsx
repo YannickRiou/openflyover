@@ -15,6 +15,7 @@ import type { PacingSettings } from '../flyover/pacing'
 import { playsBilan } from '../flyover/sequence'
 import { setFlightTiming, useFilmClock, useFilmTrack } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
+import { formatFilmTime } from '../film/timeline'
 import { formatDegrees, formatDistance, formatNumber, formatPercent, formatSecondsShort } from './format'
 import { Icon } from './icons'
 import type { IconName } from './icons'
@@ -189,11 +190,15 @@ export function CameraPanel() {
   const t = useT()
   const camera = useAppStore((s) => s.settings.camera)
   const pacing = useAppStore((s) => s.settings.pacing)
+  const flyoverDurationS = useAppStore((s) => s.settings.flyoverDurationS)
   const film = useFilmClock()
   const cameraKeyCount = film.cameraKeys.length
   const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
   // without a stop, a speed portion, a night or a stage junction the speed is constant: the pace settings change nothing
   const paced = film.stops.length > 0 || film.speeds.length > 0 || film.nights.length > 0 || film.junctions.length > 0
+  // « Garder la durée du survol » squeezes the stops and rescales a changed speed (flyover/pacing.ts): it acts with a stop, a
+  // speed portion or a speed key, and may with the timed stages of a sequence; nights and passages lengthen the film either way
+  const keepActs = film.stops.length > 0 || film.speeds.length > 0 || film.paramKeys.some((key) => key.param === 'speed') || film.junctions.length > 0
   const setSetting = useAppStore((s) => s.setSetting)
   const id = useId()
   const height = cameraHeightStop(camera)
@@ -297,7 +302,12 @@ export function CameraPanel() {
             </SettingRow>
           )
         })}
-        {/* next to « Fin en douceur »; it eases the speed in every style, « Libre » too */}
+      </PanelSection>
+
+      <PanelSection title={t('camera.panel.durationSection')} summary={formatFilmTime(flyoverDurationS)} keys={['flyoverDurationS', 'pacing']}>
+        <FlightDurationField />
+
+        {/* the length of the speed changes (stops, portions): pacing, not camera; it eases the speed in every style, « Libre » too */}
         {paced && (
         <SettingRow label={t('camera.pacing.transitions')} value={formatSecondsShort(pacing.transitionS)} paths={['pacing.transitionS']} min="confirme">
           <RangeField
@@ -310,15 +320,13 @@ export function CameraPanel() {
           />
         </SettingRow>
         )}
-      </PanelSection>
 
-      <PanelSection title={t('camera.panel.durationSection')} keys={['flyoverDurationS', 'pacing']}>
-        <FlightDurationField />
-
+        {keepActs && (
         <SettingRow label={t('camera.pacing.keep')} value={pacing.keepDuration ? t('common.yes') : t('common.no')} paths={['pacing.keepDuration']} min="confirme">
           <Checkbox checked={pacing.keepDuration} onChange={(on) => updatePacing({ keepDuration: on })}>{t('camera.pacing.keep')}</Checkbox>
           <p className="type-hint">{t('camera.pacing.keepHint')}</p>
         </SettingRow>
+        )}
 
         <ShotSummary />
       </PanelSection>

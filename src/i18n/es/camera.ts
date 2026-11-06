@@ -84,8 +84,6 @@ const messages: Messages['camera'] = {
   'slider.noneFem': 'Ninguna',
   'duration.label': 'Duración del sobrevuelo',
   'duration.tip': 'Duración del recorrido a velocidad ×1. Con «Mantener la duración del sobrevuelo», las paradas y las ralentizaciones van dentro (las paradas, la mitad como máximo); si no, se suman. Las noches y los pasos entre etapas siempre se suman.',
-  'duration.shorten': 'Reducir la duración del sobrevuelo',
-  'duration.lengthen': 'Alargar la duración del sobrevuelo',
   'duration.noStops': 'ninguna parada',
   'duration.stops': { one: '{count} parada', other: '{count} paradas' },
   'duration.film': 'Película: {duration} · {stops}',

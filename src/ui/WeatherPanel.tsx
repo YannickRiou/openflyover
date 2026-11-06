@@ -3,6 +3,7 @@ import { buildTrackPath } from '../flyover/path'
 import { useT } from '../i18n'
 import { playsBilan, playsInSequence } from '../flyover/sequence'
 import { useAppStore } from '../state/store'
+import { PanelSection } from './PanelSection'
 import { openMeteoAttribution } from '../weather/openMeteo'
 import { summarizeOuting, weatherWidgetData } from '../weather/series'
 import { syncStageWeather, syncWeather, useWeatherStore } from '../weather/store'
@@ -182,5 +183,16 @@ export function WeatherPanel() {
         </p>
       )}
     </section>
+  )
+}
+
+/** « Météo de la sortie », its summary (on or off) following the setting; the panel renders inside it. */
+export function WeatherSection({ hidden }: { hidden: boolean }) {
+  const t = useT()
+  const enabled = useAppStore((s) => s.settings.weather.enabled)
+  return (
+    <PanelSection title={t('shell.section.weather')} summary={enabled ? t('common.on') : t('common.off')} keys={['weather']} hidden={hidden} min="confirme">
+      <WeatherPanel />
+    </PanelSection>
   )
 }

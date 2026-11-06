@@ -46,7 +46,7 @@ remembered on the device. The documentation is in English; the [user guide](docs
 
 | Area | Features |
 |---|---|
-| Import | GPX and FIT, several tracks at once, Strava activities, or a route drawn on the map along the paths (IGN in France, OpenStreetMap elsewhere); heart rate, cadence, power and temperature when present; distance, elevation gain / loss (D+ / D−), duration, elevations |
+| Import | GPX, FIT, IGC and KML, several tracks at once, Strava activities, or a route drawn on the map along the paths (IGN in France, OpenStreetMap elsewhere); heart rate, cadence, power and temperature when present; distance, elevation gain / loss (D+ / D−), duration, elevations |
 | Terrain and imagery | Mapterhorn or AWS Terrain Tiles terrain; IGN orthophotos in France and swisstopo in Switzerland, chosen automatically; Esri World Imagery elsewhere, with national aerial photos to pick by hand (Austria, Japan, United States); topographic maps; terrain exaggeration; OpenStreetMap lakes and rivers rendered as water that reflects the sky and the sun, with ripples |
 | Flyover | six camera styles (chase, sway, orbit, top-down view, cinematic shot, free: keyframes only), a « Hauteur » slider with six named stops, duration from 15 s to 10 min, camera smoothing, opening and closing shots (including one that dives from the highlighted region onto the track), clickable elevation profile |
 | Pacing | stops (automatic ones at passes and nearby summits, or your own) and speed sections you set on the timeline |
@@ -165,6 +165,7 @@ Without the secret the installers are built as before and the button says that u
 | `npm run tauri:dev` / `npm run tauri:build` | desktop application in development / installers of your own system (Rust and the Tauri prerequisites needed, see [`docs/deploying.md`](docs/deploying.md)) |
 | `npm run notices` | regenerates `THIRD_PARTY_NOTICES.md` and the installer licence pages; run it when a dependency changes |
 | `npm run installer-assets` | regenerates the installer images (needs Chrome, see `OPENFLYOVER_CHROME` below) |
+| `npm run icons` | regenerates the icons of the web app and the desktop app from `src-tauri/icons/source/` (needs Chrome; `-- --no-desktop-bundle` keeps the .icns and .ico) |
 
 The suite has **about 2,700 tests** in 164 files (15 October 2026), each file next to its module (`src/**/*.test.ts`,
 `*.test.tsx` for the components); network calls and the video encoder are mocked. `npm run e2e` drives the app in a headless Chromium

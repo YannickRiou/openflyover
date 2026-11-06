@@ -171,7 +171,6 @@ function WidgetGroup({
   positionIndex,
   styled,
   style,
-  visibility,
   children,
 }: {
   label: string
@@ -185,14 +184,12 @@ function WidgetGroup({
   styled?: StyledWidget
   /** « Style » tab: size… */
   style?: ReactNode
-  /** « Visibilité » tab: when it shows */
-  visibility?: ReactNode
   /** « Contenu » tab: what it says */
   children?: ReactNode
 }) {
   const tr = useT()
   const id = useId()
-  const tabs = WIDGET_TABS.filter((tab) => (tab === 'contenu' ? children : tab === 'style' ? style || styled : visibility))
+  const tabs = WIDGET_TABS.filter((tab) => (tab === 'contenu' ? children : style || styled))
   const [tab, setTab] = useState<WidgetTab>(tabs[0] ?? 'contenu')
   const shown = tabs.includes(tab) ? tab : tabs[0]
   return (
@@ -217,7 +214,6 @@ function WidgetGroup({
               {styled && <WidgetStyleOverrides widget={styled} />}
             </>
           )}
-          {shown === 'visibilite' && visibility}
         </div>
       )}
     </div>
@@ -264,12 +260,11 @@ function CardSwitch({ card, enabled, onToggle }: { card: CardId; enabled: boolea
 }
 
 /** Tabs of the settings of an overlay element (only those it has). */
-const WIDGET_TABS = ['contenu', 'style', 'visibilite'] as const
+const WIDGET_TABS = ['contenu', 'style'] as const
 type WidgetTab = (typeof WIDGET_TABS)[number]
 const WIDGET_TAB_LABELS: Record<WidgetTab, string> = {
   get contenu() { return t('overlay.tab.contenu') },
   get style() { return t('overlay.tab.style') },
-  get visibilite() { return t('overlay.tab.visibilite') },
 }
 
 /** A few colours of the film palette offered beside the colour picker. */
@@ -378,10 +373,33 @@ export function FilmTextStyleFields({
   )
 }
 
+/**
+ * The fonts each widget draws with (overlay/draw.ts, overlay/structures.ts): the cards their title in the title font and
+ * their figures in the number font; the counters, the leaderboard and the weather their figures only; the profile, the
+ * mini-map and the free text the body font of the style, which neither changes. A font a widget does not read is not offered.
+ */
+const WIDGET_FONTS: Record<StyledWidget, { title: boolean; number: boolean }> = {
+  title: { title: true, number: true },
+  end: { title: true, number: true },
+  counters: { title: false, number: true },
+  leaderboard: { title: false, number: true },
+  weather: { title: false, number: true },
+  profile: { title: false, number: false },
+  minimap: { title: false, number: false },
+  text: { title: false, number: false },
+}
+
 /** « Couleurs et polices » of one widget (`StyleOverrides` on its own changes), in its panel group or in the inspector of a card. */
 export function WidgetStyleOverrides({ widget }: { widget: StyledWidget }) {
   const overlay = useAppStore((s) => s.settings.overlay)
-  return <StyleOverrides overlay={overlay} own={overlay[widget].overrides ?? {}} onChange={(patch) => useAppStore.getState().setSetting('overlay', withWidgetOverrides(overlay, widget, patch))} />
+  return (
+    <StyleOverrides
+      overlay={overlay}
+      own={overlay[widget].overrides ?? {}}
+      fonts={WIDGET_FONTS[widget]}
+      onChange={(patch) => useAppStore.getState().setSetting('overlay', withWidgetOverrides(overlay, widget, patch))}
+    />
+  )
 }
 
 /**
@@ -393,10 +411,13 @@ export function WidgetStyleOverrides({ widget }: { widget: StyledWidget }) {
 export function StyleOverrides({
   overlay,
   own: widgetOwn,
+  fonts = { title: true, number: true },
   onChange,
 }: {
   overlay: OverlaySettings
   own?: OverlayOverrides
+  /** the fonts the widget reads (`WIDGET_FONTS`); the whole overlay reads both */
+  fonts?: { title: boolean; number: boolean }
   onChange(patch: OverlayOverrides | null): void
 }) {
   const t = useT()
@@ -442,8 +463,8 @@ export function StyleOverrides({
           <p className="type-hint">{t('overlay.overrides.backingHint')}</p>
         </div>
       )}
-      <FontField label={t('overlay.overrides.titleFont')} value={own.titleFont} inherit={inherit} onChange={(titleFont) => onChange({ titleFont })} />
-      <FontField label={t('overlay.overrides.numberFont')} value={own.numberFont} inherit={inherit} onChange={(numberFont) => onChange({ numberFont })} />
+      {fonts.title && <FontField label={t('overlay.overrides.titleFont')} value={own.titleFont} inherit={inherit} onChange={(titleFont) => onChange({ titleFont })} />}
+      {fonts.number && <FontField label={t('overlay.overrides.numberFont')} value={own.numberFont} inherit={inherit} onChange={(numberFont) => onChange({ numberFont })} />}
       <Button disabled={Object.keys(own).length === 0} onClick={() => onChange(null)}>
         {widget ? t('overlay.overrides.restOfOverlay') : t('overlay.overrides.backToStyle')}
       </Button>
@@ -504,6 +525,7 @@ function LabelColors({ overlay, onChange }: { overlay: OverlaySettings; onChange
 export function OverlayPanel() {
   const t = useT()
   const overlay = useAppStore((s) => s.settings.overlay)
+  const labels = useAppStore((s) => s.settings.labels)
   const setSetting = useAppStore((s) => s.setSetting)
   const track = useAppStore((s) => s.tracks[0])
   const severalTracks = useAppStore((s) => s.tracks.length >= 2)
@@ -576,13 +598,21 @@ export function OverlayPanel() {
       </PanelSection>
 
       {/* the titles have their own switches: shown whether the rest of the overlay is or not */}
-      <PanelSection title={t('overlay.panel.titles')}>
+      <PanelSection
+        title={t('overlay.panel.titles')}
+        summary={[overlay.title.enabled && CARD_LABELS[TITLE_CARD_ID], overlay.end.enabled && CARD_LABELS[END_CARD_ID]].filter(Boolean).join(' · ') || t('common.off')}
+      >
         <CardSwitch card={TITLE_CARD_ID} enabled={overlay.title.enabled} onToggle={(enabled) => setWidget('title', { enabled })} />
         <CardSwitch card={END_CARD_ID} enabled={overlay.end.enabled} onToggle={(enabled) => setWidget('end', { enabled })} />
       </PanelSection>
 
       {/* every setting of the 3D labels in one place: what shows, size and range, colours, keys along the way */}
-      <PanelSection title={t('overlay.panel.labels3d')} keys={['labels']} min="confirme">
+      <PanelSection
+        title={t('overlay.panel.labels3d')}
+        summary={`${t('track.labels.sizeShort')} ×${formatNumber(labels.size, 1)} · ${t('track.labels.rangeShort')} ${formatNumber(labels.rangeKm)} km`}
+        keys={['labels']}
+        min="confirme"
+      >
         <LabelSettings />
         <LabelColors overlay={overlay} onChange={(next) => setSetting('overlay', next)} />
         <p className="type-hint">{t('overlay.panel.labels3dHint')}</p>
@@ -592,7 +622,12 @@ export function OverlayPanel() {
 
       {overlay.enabled && (
         <>
-          <PanelSection title={t('overlay.panel.counters')} min="confirme" paths={['overlay.counters', 'overlay.leaderboard']}>
+          <PanelSection
+            title={t('overlay.panel.counters')}
+            summary={overlay.counters.enabled ? t('common.on') : t('common.off')}
+            min="confirme"
+            paths={['overlay.counters', 'overlay.leaderboard']}
+          >
             <WidgetGroup
               label={t('overlay.panel.showCounters')}
               enabled={overlay.counters.enabled}
@@ -630,16 +665,17 @@ export function OverlayPanel() {
                 styled="leaderboard"
                 style={<SizeField value={overlay.leaderboard.size} onChange={(size) => setWidget('leaderboard', { size })} />}
               >
-                <p className="type-hint">
-                  {raceOn
-                    ? t('overlay.panel.leaderboardRace')
-                    : t('overlay.panel.leaderboardOff')}
-                </p>
+                <p className="type-hint">{t('overlay.panel.leaderboardRace')}</p>
               </WidgetGroup>
             )}
           </PanelSection>
 
-          <PanelSection title={t('overlay.panel.profileMinimap')} min="confirme" paths={['overlay.profile', 'overlay.minimap']}>
+          <PanelSection
+            title={t('overlay.panel.profileMinimap')}
+            summary={[overlay.profile.enabled && t('overlay.panel.profile'), overlay.minimap.enabled && t('overlay.panel.minimap')].filter(Boolean).join(' · ') || t('common.off')}
+            min="confirme"
+            paths={['overlay.profile', 'overlay.minimap']}
+          >
             {/* a track without elevations has no profile to draw */}
             {(hasEle || !track) && (
             <WidgetGroup
@@ -692,16 +728,24 @@ export function OverlayPanel() {
               }
             >
               <p className="type-hint">{t('overlay.panel.minimapHint')}</p>
-              <Checkbox
-                checked={overlay.minimap.northArrow}
-                onChange={(on) => setWidget('minimap', { northArrow: on })}
-              >
-                {t('overlay.panel.northArrow')}
-              </Checkbox>
+              {/* « Tableau » draws its mini-map in a disc of its own, never with the arrow (overlay/structures.ts) */}
+              {!(overlay.style === 'tableau' && inStyleSlot(overlay, 'minimap')) && (
+                <Checkbox checked={overlay.minimap.northArrow} onChange={(on) => setWidget('minimap', { northArrow: on })}>
+                  {t('overlay.panel.northArrow')}
+                </Checkbox>
+              )}
             </WidgetGroup>
           </PanelSection>
 
-          <PanelSection title={t('overlay.panel.weatherLogoText')} min="confirme" paths={['overlay.weather', 'overlay.logos', 'overlay.text']}>
+          <PanelSection
+            title={t('overlay.panel.weatherLogoText')}
+            summary={
+              [overlay.weather.enabled && t('overlay.panel.weather'), overlay.logos.some((logo) => logo.enabled && logo.image !== '') && t('overlay.panel.logo'), overlay.text.enabled && t('overlay.panel.text')]
+                .filter(Boolean)
+                .join(' · ') || t('common.off')
+            }
+            min="confirme"
+            paths={['overlay.weather', 'overlay.logos', 'overlay.text']}>
             <WidgetGroup
               label={t('overlay.panel.weather')}
               enabled={overlay.weather.enabled}
@@ -788,7 +832,7 @@ export function OverlayPanel() {
         </>
       )}
 
-      <PanelSection title={t('overlay.panel.credits')} min="expert" paths={['overlay.credits']}>
+      <PanelSection title={t('overlay.panel.credits')} summary={t(`overlay.panel.creditsMode.${overlay.credits.mode}`)} min="expert" paths={['overlay.credits']}>
         <fieldset className="field min-w-0">
           <legend className="type-label mb-1 flex items-center gap-1">
             {t('overlay.panel.creditsMode')}

@@ -353,6 +353,8 @@ export function LandmarkPanel() {
 
   // a « Bilan » asks OpenStreetMap for none: a request per outing would be too many, and a high view shows no landmark
   const bilan = useAppStore((s) => playsBilan(s.settings.race, s.tracks.length))
+  /** the landmarks load: switched on, and not a « Bilan » (which draws none) */
+  const on = settings.enabled && !bilan
   useEffect(() => {
     syncLandmarks(bilan ? [] : tracks, settings)
   }, [tracks, settings, bilan])
@@ -424,17 +426,20 @@ export function LandmarkPanel() {
     })
 
   return (
-    <PanelSection title={t('landmarks.title')} keys={['landmarks']} min="confirme">
+    <PanelSection title={t('landmarks.title')} summary={on ? t('common.on') : t('common.off')} keys={['landmarks']} min="confirme">
       <Switch
         id={`${id}-enabled`}
-        checked={settings.enabled}
-        onChange={(on) => setSetting('landmarks', { ...settings, enabled: on })}
+        checked={on}
+        disabled={bilan}
+        onChange={(next) => setSetting('landmarks', { ...settings, enabled: next })}
       >
         {t('landmarks.enable')}
       </Switch>
+      {/* a « Bilan » loads no landmark (`syncLandmarks([])`): the switch waits, its value kept */}
+      {bilan && <p className="type-hint">{t('track.bilan.fixed')}</p>}
       <p className="type-hint">{t('landmarks.labelsWhere')}</p>
 
-      {settings.enabled && (
+      {on && (
         <SettingRow label={t('landmarks.types')} value={kindsLabel(settings)} paths={['landmarks.kinds', 'landmarks.places']}>
           <fieldset className="field min-w-0">
             <legend className="type-label mb-1">{t('landmarks.types')}</legend>
@@ -467,7 +472,7 @@ export function LandmarkPanel() {
         </SettingRow>
       )}
 
-      {settings.enabled && (
+      {on && (
         <SettingRow label={t('landmarks.distance')} value={formatDistance(settings.maxDistanceM)} paths={['landmarks.maxDistanceM']}>
           <div className="field">
             <span className="type-label">
@@ -486,7 +491,7 @@ export function LandmarkPanel() {
         </SettingRow>
       )}
 
-      {settings.enabled && (
+      {on && (
         <SettingRow label={t('landmarks.density')} value={DENSITY_LABELS[settings.density]} paths={['landmarks.density']}>
           <div className="field">
             <span id={`${id}-density`} className="type-label">
@@ -504,7 +509,7 @@ export function LandmarkPanel() {
         </SettingRow>
       )}
 
-      {settings.enabled && (
+      {on && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <div className="flex items-center gap-1">
             <Switch checked={settings.records} onChange={(on) => setSetting('landmarks', { ...settings, records: on })}>
@@ -522,10 +527,10 @@ export function LandmarkPanel() {
       )}
 
       <p className="type-hint" role="status" aria-live="polite">
-        {!settings.enabled && t('landmarks.status.off')}
-        {settings.enabled && status === 'loading' && t('landmarks.status.loading')}
-        {settings.enabled && status === 'error' && message}
-        {settings.enabled &&
+        {!settings.enabled && !bilan && t('landmarks.status.off')}
+        {on && status === 'loading' && t('landmarks.status.loading')}
+        {on && status === 'error' && message}
+        {on &&
           status === 'ready' &&
           (list.length + hiddenList.length === 0
             ? t('landmarks.status.none')
@@ -541,13 +546,13 @@ export function LandmarkPanel() {
               }))}
       </p>
 
-      {settings.enabled && status === 'error' && (
+      {on && status === 'error' && (
         <Button block onClick={() => syncLandmarks(tracks, settings, { refresh: true })}>
           {t('common.retry')}
         </Button>
       )}
 
-      {settings.enabled && status !== 'error' && (
+      {on && status !== 'error' && (
         <Tip text={t('landmarks.searchAgainTip')}>
           <Button
             block

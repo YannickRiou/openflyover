@@ -107,7 +107,7 @@ function sidebar(w, h) {
     <div class="abs" style="left:54px;top:18px;width:56px;height:56px;border-radius:13px;background:${C.ink};box-shadow:0 0 0 2px ${C.accent}">${logo}</div>
     <div class="abs name" style="left:0;right:0;top:84px;text-align:center;font-size:23px;color:#fff">OpenFlyover</div>
     <div class="abs" style="left:0;right:0;top:116px;text-align:center;font-size:12.5px;color:${C.glacier}">Films de survol 3D</div>
-    <div class="abs" style="left:0;right:0;top:${h - 52}px;text-align:center;font-size:12px;color:#fff;line-height:1.45">GPX et FIT<br>100&nbsp;% en local</div>
+    <div class="abs" style="left:0;right:0;top:${h - 52}px;text-align:center;font-size:12px;color:#fff;line-height:1.45">GPX, FIT, IGC, KML<br>100&nbsp;% en local</div>
     <div class="abs" style="left:0;right:0;bottom:0;height:6px;background:${C.accent}"></div>
   </div>`
 }
@@ -155,7 +155,7 @@ const DESIGNS = [
       <div class="abs" style="left:0;top:164px;width:660px;height:6px;background:${C.accent}"></div>
       <div class="abs" style="left:40px;top:42px;width:56px;height:56px;border-radius:13px;background:${C.ink};box-shadow:0 0 0 2px ${C.accent}">${logo}</div>
       <div class="abs name" style="left:112px;top:40px;font-size:34px;line-height:40px;color:#fff">OpenFlyover</div>
-      <div class="abs" style="left:112px;top:82px;font-size:14px;line-height:20px;color:${C.glacier}">Films de survol 3D à partir de traces GPX et FIT</div>
+      <div class="abs" style="left:112px;top:82px;font-size:14px;line-height:20px;color:${C.glacier}">Films de survol 3D à partir de traces GPX, FIT, IGC ou KML</div>
       <svg class="abs" style="left:250px;top:240px" width="160" height="60" viewBox="0 0 160 60" fill="none" stroke="${C.accent}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 30h128"/><path d="M114 8l26 22-26 22"/></svg>
       <div class="abs" style="left:0;right:0;top:374px;text-align:center;font-size:13px;color:${C.inkSoft}">Glissez l’application dans le dossier Applications.</div>
     </div>`,

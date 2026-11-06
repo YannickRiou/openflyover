@@ -526,7 +526,7 @@ export function LandmarkMap({ open, onClose, track, items, maxDistanceM, progres
         }}
       >
         <div className="field">
-          <RadioGroup look="chips" aria-label={t('landmarks.map.tool.label')} value={tool} onChange={onTool}>
+          <RadioGroup wrap aria-label={t('landmarks.map.tool.label')} value={tool} onChange={onTool}>
             {TOOLS.map((one) => (
               <Radio key={one} value={one}>
                 {TOOL_LABELS[one]}

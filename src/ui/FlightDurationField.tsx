@@ -23,10 +23,9 @@ import { setFlightTiming, useFilmClock, useFilmSequence, useFilmSource, useFilmT
 import { useAppStore } from '../state/store'
 import { formatDuration, formatNumber, formatSpeedUp } from './format'
 import { InfoTip } from './PanelSection'
-import { Button, NumberField, Slider, ToggleButton, ToggleButtonGroup } from './primitives'
+import { NumberField, Slider, ToggleButton, ToggleButtonGroup } from './primitives'
 
 /** « − » and « + » around the duration slider: the fine adjustment the slider only roughly reaches (a square the height of a control). */
-const STEP_BUTTON = 'w-control flex-none px-0'
 
 type Face = 'duration' | 'speed'
 
@@ -65,9 +64,6 @@ export function FlightDurationField() {
   // « À la suite »: the stages whose flight time is set on the timeline take theirs out of the duration
   const timedStages = stageIds?.filter((id) => filmSettings.stageDurations?.[id] !== undefined).length ?? 0
   const set = (next: number | undefined) => next !== undefined && next !== durationS && setFlightTiming({ durationS: next })
-  /** one notch of the slider, one way or the other, kept inside the range */
-  const stepDuration = (direction: 1 | -1) =>
-    setFlightTiming({ durationS: clamp(durationS + direction * FLYOVER_DURATION_RANGE.step, FLYOVER_DURATION_RANGE.min, FLYOVER_DURATION_RANGE.max) })
 
   const kmh = speedKmh(lengthM, durationS)
   const timed = hasSpeedUp(movingS)
@@ -123,36 +119,17 @@ export function FlightDurationField() {
         </ToggleButtonGroup>
       )}
       {shown === 'duration' ? (
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            className={STEP_BUTTON}
-            aria-label={t('camera.duration.shorten')}
-            disabled={durationS <= FLYOVER_DURATION_RANGE.min}
-            onClick={() => stepDuration(-1)}
-          >
-            −
-          </Button>
-          <Slider
-            className="w-auto flex-auto"
-            aria-label={t('camera.duration.label')}
-            min={FLYOVER_DURATION_RANGE.min}
-            max={FLYOVER_DURATION_RANGE.max}
-            step={FLYOVER_DURATION_RANGE.step}
-            value={durationS}
-            onChange={(v) => setFlightTiming({ durationS: v })}
-            spoken={formatSeconds}
-          />
-          <Button
-            size="sm"
-            className={STEP_BUTTON}
-            aria-label={t('camera.duration.lengthen')}
-            disabled={durationS >= FLYOVER_DURATION_RANGE.max}
-            onClick={() => stepDuration(1)}
-          >
-            +
-          </Button>
-        </div>
+        // one way to set it: the slider, and its value typed under it (no « − » / « + » besides)
+        <Slider
+          className="w-auto flex-auto"
+          aria-label={t('camera.duration.label')}
+          min={FLYOVER_DURATION_RANGE.min}
+          max={FLYOVER_DURATION_RANGE.max}
+          step={FLYOVER_DURATION_RANGE.step}
+          value={durationS}
+          onChange={(v) => setFlightTiming({ durationS: v })}
+          spoken={formatSeconds}
+        />
       ) : (
         <Slider
           className="w-auto flex-auto"

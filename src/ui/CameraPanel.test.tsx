@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { act } from 'react'
+import { addStop } from '../film/timeline'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { FLYOVER_DURATION_RANGE } from '../flyover/cameraSettings'
 import { maintainerOuting } from '../flyover/__fixtures__/maintainerOuting'
 import { buildTrack } from '../import/stats'
 import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
@@ -53,27 +53,6 @@ async function mount(track: typeof timed, durationS: number) {
 describe('CameraPanel: duration of the flyover', () => {
   afterEach(() => {
     document.body.innerHTML = ''
-  })
-
-  it('« + » and « − » move the duration by one notch of the slider, kept inside its range', async () => {
-    const { root, button } = await mount(timed, 60)
-    await act(async () => button('Allonger la durée du survol').click())
-    expect(useAppStore.getState().settings.flyoverDurationS).toBe(60 + FLYOVER_DURATION_RANGE.step)
-    await act(async () => button('Réduire la durée du survol').click())
-    await act(async () => button('Réduire la durée du survol').click())
-    expect(useAppStore.getState().settings.flyoverDurationS).toBe(60 - FLYOVER_DURATION_RANGE.step)
-    act(() => root.unmount())
-  })
-
-  it('disables the button at each end of the range', async () => {
-    const low = await mount(timed, FLYOVER_DURATION_RANGE.min)
-    expect(low.button('Réduire la durée du survol').disabled).toBe(true)
-    expect(low.button('Allonger la durée du survol').disabled).toBe(false)
-    act(() => low.root.unmount())
-    document.body.innerHTML = ''
-    const high = await mount(timed, FLYOVER_DURATION_RANGE.max)
-    expect(high.button('Allonger la durée du survol').disabled).toBe(true)
-    act(() => high.root.unmount())
   })
 
   it('writes the other face beneath: × the pace really walked and km/h, or km/h alone for an untimed track', async () => {
@@ -276,9 +255,13 @@ describe('CameraPanel: « Durée et rythme »', () => {
     document.body.innerHTML = ''
   })
 
-  it('no « Ralentir aux temps forts » (the stops and speeds of the timeline do that); « Garder la durée du survol » stays', async () => {
+  it('no « Ralentir aux temps forts » (the stops and speeds of the timeline do that); « Garder la durée du survol » once there is a stop to squeeze', async () => {
     const { host, root } = await mount(timed, 60)
     expect(host.textContent).not.toContain('Ralentir aux temps forts')
+    // no stop, no speed portion: the film lasts its duration either way
+    await act(async () => useAppStore.getState().setSetting('film', { ...useAppStore.getState().settings.film, autoStops: false }))
+    expect(host.textContent).not.toContain('Garder la durée du survol')
+    await act(async () => useAppStore.getState().setSetting('film', addStop(useAppStore.getState().settings.film, 200).film))
     expect(host.textContent).toContain('Garder la durée du survol')
     act(() => root.unmount())
   })

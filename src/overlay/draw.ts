@@ -1542,7 +1542,9 @@ function titleWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings,
   const c = settings.title
   const text = openingText(frame, settings)
   const subtitle = [text.subtitle, c.line?.trim() ?? ''].filter(Boolean).join('\n')
-  const figures = c.figures ?? []
+  // the date shows once: on the line under the title when « Afficher la date » puts it there, else as a figure
+  const dated = c.showDate && frame.track.stats.startTime !== undefined
+  const figures = (c.figures ?? []).filter((figure) => !(dated && figure === 'date'))
   // without figures the card is laid out as it always was (no grid)
   const m = figures.length > 0 ? cellMetrics(p, c.size) : undefined
   const cells = m ? cardStats(frame.track.stats, figures).map(({ label, text }) => makeCell(p, m, label, text, text)) : []

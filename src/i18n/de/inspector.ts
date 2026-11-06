@@ -244,6 +244,7 @@ const messages: Messages['inspector'] = {
   'junction.nightHint': 'Wenn die beiden Etappen an zwei Tagen liegen: die Sonne geht unter, die Nacht vergeht, sie geht auf (Dauern unter Licht › Tage und Nächte). Sonst nur der Wechsel.',
   'junction.night': 'Die Nacht vergehen lassen',
   'junction.noNight': 'Keine Nacht zwischen diesen beiden Etappen (gleicher Tag): nur der Wechsel.',
+  'junction.passedByNight': 'Die Nacht ersetzt den Wechsel zwischen diesen beiden Etappen: seine Art und Dauer werden hier nicht verwendet.',
   'junction.content': 'Inhalt',
   'junction.auto': 'Automatisch',
   'junction.custom': 'Eigener Text',

@@ -84,8 +84,6 @@ const messages: Messages['camera'] = {
   'slider.noneFem': 'None',
   'duration.label': 'Flyover duration',
   'duration.tip': 'Length of the flight at speed ×1. With “Keep the flyover duration”, the holds and slow-downs are taken from it (the holds take half of it at most); otherwise they are added. The nights and the pauses between stages are always added.',
-  'duration.shorten': 'Shorten the flyover duration',
-  'duration.lengthen': 'Lengthen the flyover duration',
   'duration.noStops': 'no holds',
   'duration.stops': { one: '{count} hold', other: '{count} holds' },
   'duration.film': 'Film: {duration} · {stops}',

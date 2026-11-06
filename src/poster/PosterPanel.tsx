@@ -293,16 +293,19 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
         {t('poster.panel.weather')}
       </Checkbox>
       <Checkbox checked={poster.flat} disabled={busy} onChange={(on) => set({ flat: on })}>{t('poster.panel.flat')}</Checkbox>
-      <fieldset className="field min-w-0" disabled={busy || poster.flat}>
-        <legend className="type-label mb-1">{t('poster.panel.view3d')}</legend>
-        <RadioGroup aria-label={t('poster.panel.view3d')} value={poster.view} onChange={(view) => set({ view })}>
-          {POSTER_VIEWS.map((view) => (
-            <Radio key={view} value={view}>
-              {POSTER_VIEW_LABELS[view]}
-            </Radio>
-          ))}
-        </RadioGroup>
-      </fieldset>
+      {/* a flat map ignores the 3D view (src/poster/export.ts) */}
+      {!poster.flat && (
+        <fieldset className="field min-w-0" disabled={busy}>
+          <legend className="type-label mb-1">{t('poster.panel.view3d')}</legend>
+          <RadioGroup aria-label={t('poster.panel.view3d')} value={poster.view} onChange={(view) => set({ view })}>
+            {POSTER_VIEWS.map((view) => (
+              <Radio key={view} value={view}>
+                {POSTER_VIEW_LABELS[view]}
+              </Radio>
+            ))}
+          </RadioGroup>
+        </fieldset>
+      )}
       <p className="type-hint">
         {poster.flat
           ? t('poster.panel.flatHint', { scope: tracks.length > 1 ? t('poster.panel.scopeAll') : t('poster.panel.scopeOne') })
