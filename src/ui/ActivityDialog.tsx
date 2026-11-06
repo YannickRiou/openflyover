@@ -10,7 +10,7 @@ import { useAppStore } from '../state/store'
 import { proposeActivity, useActivityProposal } from './activityProposal'
 import { Button, Modal, Radio, RadioGroup } from './primitives'
 import { showToast } from './toast'
-import { FigureIcon } from './TrackMarkerSection'
+import { FigureIcon } from './FigureIcon'
 
 const CHOICE =
   'flex w-full cursor-pointer flex-col items-center gap-1 rounded-md border border-edge p-2 text-center transition-ui hover:bg-surface-card ' +
