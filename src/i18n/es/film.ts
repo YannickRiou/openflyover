@@ -102,6 +102,11 @@ const messages: Messages['film'] = {
   'auto.souvenir.name': 'Recuerdo 3 min',
   'auto.souvenir.hint': 'Horizontal 16:9, 3 min, exportación YouTube HD: cámara tranquila, paradas en los puertos, las cumbres y los lugares atravesados, tarjetas de día o de etapa, contadores, título de apertura y tarjeta de cierre.',
   'auto.afterImport': 'Película automática…',
+  'activity.title': '¿Qué actividad?',
+  'activity.hint': 'Se ha elegido la actividad leída del archivo. La cámara, el marcador, la decoración y la duración de la película se adaptan a ella. Después todo se puede modificar.',
+  'activity.apply': 'Aplicar',
+  'activity.skip': 'Omitir',
+  'activity.applied': 'Película «{name}» aplicada. Todo se puede modificar.',
   // ---- Film automatique 4.1: the gabarit cards (src/ui/AutoFilmDialog.tsx)
   'auto.card.formatVertical': '9:16 Reels',
   'auto.card.formatWide': '16:9 YouTube',

@@ -58,7 +58,7 @@ const formatSmoothing = (metres: number) => (metres === 0 ? translate('camera.sl
 const formatCurtain = (metres: number) => (metres >= TRACK_CURTAIN_RANGE.max ? translate('marker.track.flightCurtainGround') : formatDistance(metres))
 
 /** Pictogram of a figure, drawn from the same paths as the marker badge. */
-function FigureIcon({ figure }: { figure: MarkerFigure }) {
+export function FigureIcon({ figure }: { figure: MarkerFigure }) {
   return (
     <svg
       width={16}

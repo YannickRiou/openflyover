@@ -2186,6 +2186,12 @@ The interface and the texts drawn into the films and posters exist in **French**
   `pinAim.test.ts` (the turn in `computeFilmView`; a frame is the same alone or after others), `pinLayout.test.ts`,
   `labelModel.test.ts` (the setting and its migration).
 
+## Activity at import
+
+- **What**: after the first import into an empty project (`runImport`, `src/ui/projectActions.ts`: `first`), `proposeActivity(figureOfActivity(first track))` fills `useActivityProposal` (`src/ui/activityProposal.ts`). `App.tsx` then loads `ActivityDialog` (`React.lazy`, the first screen is at its bundle budget): a grid of the 17 `MARKER_FIGURES` with their `FigureIcon`, the guess chosen; « Appliquer » or « Passer » (or closing) empties the proposal. Opening a saved project, or importing into a project that has tracks, never proposes.
+- **The films** (`src/film/activityFilms.ts`, pure): `ACTIVITY_FILMS` maps each figure to a `CAMERA_PRESETS` id, an overlay style and a flight duration; `activityFilmSettings(settings, figure)` returns the settings with that camera, the marker as a figurine of the figure, the style (`withStyleLayout`, the texts untouched) and the duration. The video format is not touched. Applying (`applyActivityFilm`) is the path of « Film automatique »: `applySettings` in one history transaction, `followFlightTiming`, a message with « Annuler ».
+- **Tests**: `film/activityFilms.test.ts` (every figure has a film made of existing values), `ui/ActivityDialog.test.tsx` (choose, skip, once only).
+
 ## Automatic film (« Film automatique »)
 
 - **What**: the first section of the « Survol » tab (`AutoFilmSection`, `src/ui/AutoFilmDialog.tsx`; the button is off without a

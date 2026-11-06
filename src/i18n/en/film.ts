@@ -102,6 +102,11 @@ const messages: Messages['film'] = {
   'auto.souvenir.name': 'Keepsake 3 min',
   'auto.souvenir.hint': 'Landscape 16:9, 3 min, YouTube HD export: a calm camera, holds at the passes, summits and places passed, day or stage cards, counters, opening title and closing card.',
   'auto.afterImport': 'Automatic film…',
+  'activity.title': 'Which activity?',
+  'activity.hint': 'The activity read from the file is selected. The camera, the marker, the overlay and the length of the film follow it. Everything stays editable afterwards.',
+  'activity.apply': 'Apply',
+  'activity.skip': 'Skip',
+  'activity.applied': 'Film "{name}" applied. Everything stays editable.',
   // ---- Film automatique 4.1: the gabarit cards (src/ui/AutoFilmDialog.tsx)
   'auto.card.formatVertical': '9:16 Reels',
   'auto.card.formatWide': '16:9 YouTube',
