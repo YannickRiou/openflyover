@@ -111,6 +111,7 @@ To test the production build: `npm run build`, then `npm run preview` (<http://l
 | [Deploying and building](docs/deploying.md) | web server setup (HTTPS, nginx, Apache), desktop application build |
 | [Desktop installers](docs/installers.md) | installers built on GitHub, signing, automatic updates (maintainer setup) |
 | [Data sources](docs/sources.md) | attributions, licenses, offline rules and how each source was checked |
+| [Export benchmark](docs/benchmark.md) | the two reference projects (`bench/`), how to measure the export speed on a phone and a computer, and the results per version |
 | [Changelog](CHANGELOG.md) | what each version brings |
 
 The HTML pages are standalone: open them in a browser from a clone, or through any static host.
