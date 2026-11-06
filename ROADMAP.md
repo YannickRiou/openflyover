@@ -10,11 +10,11 @@ every device, and fixes the promise of the project file.
 
 ### 1. A beautiful film by default
 
-Promise 1. Today a first visit opens in Expert, with every setting in view, and the activity of a track only chooses
-the marker's figure (`figureOfActivity`, from the FIT sport or the GPX type, hiker when unknown).
+Promise 1. The activity of a track only chooses the marker's figure today (`figureOfActivity`, from the FIT sport or
+the GPX type, hiker when unknown).
 
-- **Débutant on a first visit.** `DEFAULT_PREFERENCES.uiMode` becomes `debutant`. A person who already chose a mode
-  keeps it: the stored preference wins, as today.
+- **Débutant on a first visit: done.** The first launch asks « Combien de réglages voulez-vous voir ? » with Débutant
+  preselected (`ui/ModeChoice.tsx`); the answer is kept on the device and can be changed in « Réglages ».
 - **The activity, proposed at import.** After the first import, a short choice shows the 17 activities of the
   markers (hiker, mountaineer, runner, trail runner, cyclist, e-bike, bikepacking, mountain bike, skier, ski touring,
   swimmer, kayak, rider, paraglider, motorbike, car, light aircraft). The activity read from the file is selected; the
