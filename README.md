@@ -165,6 +165,7 @@ Without the secret the installers are built as before and the button says that u
 | `npm run tauri:dev` / `npm run tauri:build` | desktop application in development / installers of your own system (Rust and the Tauri prerequisites needed, see [`docs/deploying.md`](docs/deploying.md)) |
 | `npm run notices` | regenerates `THIRD_PARTY_NOTICES.md` and the installer licence pages; run it when a dependency changes |
 | `npm run installer-assets` | regenerates the installer images (needs Chrome, see `OPENFLYOVER_CHROME` below) |
+| `npm run icons` | regenerates the icons of the web app and the desktop app from `src-tauri/icons/source/` (needs Chrome; `-- --no-desktop-bundle` keeps the .icns and .ico) |
 
 The suite has **about 2,700 tests** in 164 files (15 October 2026), each file next to its module (`src/**/*.test.ts`,
 `*.test.tsx` for the components); network calls and the video encoder are mocked. `npm run e2e` drives the app in a headless Chromium

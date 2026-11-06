@@ -1454,6 +1454,7 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
       <tr><td data-label="Command"><code>npm run e2e</code></td><td data-label="What it does">End-to-end tests in a real headless Chromium (below).</td></tr>
       <tr><td data-label="Command"><code>npm run tauri:dev</code>, <code>tauri:build</code></td><td data-label="What it does">Desktop app in development, or built with installers (<a href="#rust-build">Rust part</a>).</td></tr>
       <tr><td data-label="Command"><code>npm run notices</code></td><td data-label="What it does"><code>scripts/third-party-notices.mjs</code> then <code>scripts/installer-license.mjs</code>: regenerates <code>THIRD_PARTY_NOTICES.md</code> and the installer licence pages. First run about 8 minutes (crates.io rate limit); results cached in <code>scripts/notices-cache.local</code>.</td></tr>
+      <tr><td data-label="Command"><code>npm run icons</code></td><td data-label="What it does">Regenerates every icon (web app and desktop app) from <code>src-tauri/icons/source/</code>: PNG with a palette of 256 colours, .icns and .ico by <code>tauri icon</code> (skipped with <code>--no-desktop-bundle</code>).</td></tr>
       <tr><td data-label="Command"><code>npm run installer-assets</code></td><td data-label="What it does">Regenerates the installer images in <code>src-tauri/installer/</code> with a headless Chromium (<code>OPENFLYOVER_CHROME</code> if not found).</td></tr>
     </tbody>
   </table></div>

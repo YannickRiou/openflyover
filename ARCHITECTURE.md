@@ -4406,8 +4406,11 @@ iOS publishes no per-tab WebGL memory budget; Safari kills and reloads a page th
 bug 300782, October 2025): the device budget below is conservative, to be measured on real phones.
 
 - **Manifest** (`public/manifest.webmanifest`): « OpenFlyover », `display: standalone`, theme `#1c2a33` (top bar ink),
-  background `#f5f2ea` (cream), icons rendered from `public/favicon.svg` (`icons/`: 192 and 512 px, a 512 px maskable
-  one with a full-bleed background and the drawing at 72 %, a 180 px `apple-touch-icon`). Every URL is relative
+  background `#f5f2ea` (cream), icons rendered from `src-tauri/icons/source/` (`icon.svg`, `icon-maskable.svg`) by
+  `npm run icons` (`scripts/icons.mjs`: headless Chromium, then PNG with a palette of 256 colours and a Floyd–Steinberg
+  dither, a third of the truecolor size since the service worker precaches them; the desktop PNG too, and the .icns and
+  .ico by `tauri icon` unless `--no-desktop-bundle`) (`icons/`: 192 and 512 px, a 512 px maskable one with a full-bleed
+  background, a 180 px `apple-touch-icon`). Every URL is relative
   (`start_url`, `scope`, `id`: `./`), so the same file works under `/openflyover/` and at a root (tested,
   `webApp.test.ts`). `index.html` links it with `theme-color` and `apple-touch-icon` (Vite adds the base).
 - **Service worker** (`src/platform/serviceWorker.js`, plain JS, emitted as `sw.js` by the `serviceWorker()` plugin of

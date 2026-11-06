@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **Lighter icons**: the icons of the web app weighed 505 KB, which the website downloads in the background on a first visit; with a palette of 256 colours and a fine dither they weigh 197 KB, the frosted glass looking the same. `npm run icons` regenerates every icon from the two drawings of `src-tauri/icons/source/`.
+
 - **« Passer la nuit » really disables the passage**: in the inspector of a junction between two days, the passage and its duration were meant to be greyed when the night is passed, as they are not read then; the test never matched (the stored junction keeps its passage), so they stayed active. They are now disabled, with a sentence that says the night takes their place.
 - **Fewer settings that do nothing**, each with its reason when it is kept but greyed:
   - track: a sentence when no track has the measure chosen in « Colorer selon » (the line is grey), when the ribbon has no measure to show (its switch waits), and when the glow is not wider than the line (it does not show); a measure is offered when any track has it, not only the first; the glow colour reads « Celle de la mesure » while the line is coloured by a measure, and the hint says the glow follows it;
