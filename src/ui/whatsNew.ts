@@ -21,6 +21,15 @@ export interface NewsVersion {
 
 export const WHATS_NEW: readonly NewsVersion[] = [
   {
+    version: '7.0',
+    items: [
+      { icon: 'route', get title() { return t('news.v70.activity.title') }, get text() { return t('news.v70.activity.text') } },
+      { icon: 'gauge', get title() { return t('news.v70.target.title') }, get text() { return t('news.v70.target.text') } },
+      { icon: 'rotate-ccw', get title() { return t('news.v70.resume.title') }, get text() { return t('news.v70.resume.text') } },
+      { icon: 'folder-open', get title() { return t('news.v70.projects.title') }, get text() { return t('news.v70.projects.text') } },
+    ],
+  },
+  {
     version: '6.0',
     items: [
       { icon: 'square', get title() { return t('news.v60.titlebar.title') }, get text() { return t('news.v60.titlebar.text') } },
