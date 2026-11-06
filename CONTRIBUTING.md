@@ -4,6 +4,8 @@ Thank you for helping. Bug reports, ideas, translations and pull requests are al
 
 ## Before you start
 
+- Read [`VISION.md`](VISION.md): a change says which of its promises it serves; the [roadmap](ROADMAP.md) says what
+  comes next and what waits.
 - Read the conventions in the [README](README.md#contributing), then [`ARCHITECTURE.md`](ARCHITECTURE.md) for the
   code you touch.
 - The [developer handbook](docs/handbook/index.html) explains the setup, the commands, the recipes (add a setting, a

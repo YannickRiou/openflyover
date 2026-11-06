@@ -547,6 +547,7 @@ details.callout[open] > summary { margin-bottom: 6px; }
   <div class="table-wrap"><table class="wide">
     <thead><tr><th>Document</th><th>Use it for</th></tr></thead>
     <tbody>
+      <tr><td data-label="Document"><a href="../../VISION.md"><code>VISION.md</code></a>, <a href="../../ROADMAP.md"><code>ROADMAP.md</code></a></td><td data-label="Use it for">Who the project is for, its five promises and how a change is judged; then what comes next, in order, and what waits. Read them before proposing a feature: a pull request says which promise it serves.</td></tr>
       <tr><td data-label="Document"><a href="../../ARCHITECTURE.md"><code>ARCHITECTURE.md</code></a></td><td data-label="Use it for">The map and the reference: coordinate conventions, every module with its exports, every design decision and formula. About 3,400 lines: search it, do not read it linearly. This handbook links into it by section.</td></tr>
       <tr><td data-label="Document"><a href="../how-it-works.html"><code>docs/how-it-works.html</code></a></td><td data-label="Use it for">A shorter, picture-led introduction for newcomers: what the app does, the layers, one track from start to finish, the main parts. Read it first if this handbook feels dense.</td></tr>
       <tr><td data-label="Document"><a href="../user-guide.html"><code>docs/user-guide.html</code></a></td><td data-label="Use it for">What the screens do, for the person who uses the app (the text is in English; the labels of the interface are quoted in French). Useful to know what a label means before you search for it.</td></tr>
@@ -1575,6 +1576,9 @@ npm run dev     # http://127.0.0.1:5173, click « Essayer avec l'exemple »</cod
   <h3 class="sub" id="issue-to-pr">From an issue to a pull request</h3>
   <p><strong>The words.</strong> An <em>issue</em> is a numbered note on GitHub that describes a bug or a wish (« #188 »). A <em>branch</em> is your own line of commits, separate from <code>master</code> until it is merged. A <a href="#gl-pr"><em>pull request</em></a> (PR) is the request to merge that branch into <code>master</code>: GitHub shows the changes, runs the automatic checks (<a href="#ci">CI</a>) on them, and merges when you press the button. The open issues of the repository carry « Leads to investigate » and « More help — step by step » comments built on the method below. It works for any bug or small feature.</p>
   <ol class="recipe-steps">
+    <li><div class="stack">
+      <p><strong>Check that the change belongs.</strong> It serves one of the promises of <a href="../../VISION.md"><code>VISION.md</code></a> or an item of <a href="../../ROADMAP.md"><code>ROADMAP.md</code></a>; otherwise it goes to the « Not now » list with its reason.</p>
+    </div></li>
     <li><div class="stack">
       <p><strong>Start from an up-to-date master, on a new branch.</strong> <code>git switch master</code>, <code>git pull</code>, then <code>git switch -c fix/188-short-name</code> (<code>feat/…</code> for a feature, <code>docs/…</code> for documentation).</p>
       <p><strong>You should see</strong> <code>Switched to a new branch 'fix/188-short-name'</code>.</p>

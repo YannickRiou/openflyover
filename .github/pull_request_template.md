@@ -1,6 +1,7 @@
 ## Why
 
-<!-- The problem or the need, with the issue it closes (Closes #…). -->
+<!-- The problem or the need, with the issue it closes (Closes #…). Which promise of VISION.md it serves, and how it
+will be checked (test, measurement on a reference project, a person trying it). -->
 
 ## What
 
