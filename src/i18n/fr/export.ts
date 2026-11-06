@@ -270,7 +270,7 @@ export default {
   'panel.folderAsked': 'Un dossier vous est demandé : chaque fichier y est écrit au fur et à mesure.',
   'panel.downloadEach': "Chaque fichier se télécharge dès qu'il est prêt.",
   'panel.estimateLater': 'Durée estimée après un premier film exporté.',
-  'panel.overTarget': "Plus long que prévu sur {device} : {time} pour {film}, objectif {target}.",
+  'panel.overTarget': "Plus long que prévu sur {device} : environ {time} pour {film}, l’objectif est {target}.",
   'panel.overTargetPhone': 'ce téléphone',
   'panel.overTargetTablet': 'cet appareil',
   'panel.overTargetComputer': 'cet ordinateur',
@@ -352,7 +352,7 @@ export default {
   // --- 4.1.0: history knows the layers, estimate ---
   'history.detail.snow': 'Neige',
   'history.detail.forest': 'Forêts',
-  'panel.renderTimeTip': 'Estimation d’après le dernier film rendu.',
+  'panel.renderTimeTip': 'Le temps de rendu est une estimation d’après le dernier film rendu ; les forêts (environ + 15 % à 60 arbres par hectare) et la neige (+ 3 %) sont comptées d’après ce film. Le chargement des tuiles peut l’allonger.',
   'queue.moveUp': 'Monter « {name} » dans la file',
   'queue.moveDown': 'Descendre « {name} » dans la file',
   'queue.stillLabel': 'image fixe',
