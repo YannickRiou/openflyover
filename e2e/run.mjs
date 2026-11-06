@@ -1361,12 +1361,20 @@ async function main() {
   const url = server.resolvedUrls.local[0]
   log(`Serveur ${url} · navigateur ${CHROME}`)
 
-  const browser = await puppeteer.launch({
-    executablePath: CHROME,
-    headless: 'shell',
-    args: [...(GPU ? ['--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=gl'] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']), '--no-sandbox', '--lang=fr', '--window-size=1440,900'],
-    defaultViewport: { width: 1440, height: 900 },
-    protocolTimeout: EXPORT_MS,
+  const launch = () =>
+    puppeteer.launch({
+      executablePath: CHROME,
+      headless: 'shell',
+      args: [...(GPU ? ['--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=gl'] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']), '--no-sandbox', '--lang=fr', '--window-size=1440,900'],
+      defaultViewport: { width: 1440, height: 900 },
+      protocolTimeout: EXPORT_MS,
+      // a busy CI runner once took more than the default 30 s to start Chrome
+      timeout: 120_000,
+    })
+  // one more try when Chrome does not start: a slow runner, not a failure of the app
+  const browser = await launch().catch((error) => {
+    log(`Chrome n’a pas démarré (${error.message}) : nouvel essai`)
+    return launch()
   })
   const results = []
   try {
