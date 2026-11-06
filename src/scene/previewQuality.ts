@@ -76,6 +76,14 @@ export function exportCloudScale(budget: Pick<DeviceBudget, 'exportCloudResoluti
   return rung === 0 ? 1 : budget.exportCloudResolutionScale
 }
 
+/**
+ * In an export, the shadow map of the clouds is drawn on one noise slice in this many: every slice while the preview keeps
+ * up, else the budget's `exportCloudShadowEvery` (a computer's is 1). The first slice of a frame or sub-frame always draws it.
+ */
+export function exportCloudShadowEvery(budget: Pick<DeviceBudget, 'exportCloudShadowEvery'>, rung: PreviewRung): number {
+  return rung === 0 ? 1 : Math.max(1, budget.exportCloudShadowEvery)
+}
+
 /** Shadow map and trees to draw: the preview's, but always the device's own while exporting (video, poster, capture). */
 export function sceneBudget(preview: PreviewBudget, exporting: boolean, device: PreviewBudget = deviceBudget()): Pick<PreviewBudget, 'shadowMapSize' | 'maxTrees'> {
   const { shadowMapSize, maxTrees } = exporting ? device : preview

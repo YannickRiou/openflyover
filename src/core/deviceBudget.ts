@@ -30,6 +30,13 @@ export interface DeviceBudget {
    * coarser than the rest
    */
   exportCloudResolutionScale: number
+  /**
+   * in the export of a device whose preview had to be lightened, the shadow map of the clouds is drawn on one noise slice
+   * in this many (`exportCloudShadowEvery`, scene/previewQuality.ts), the others reuse it. Its size is fixed (256² × 3
+   * cascades marched through the whole layer), so it was the share of the clouds' time that did not shrink with the film's
+   * size on a phone; averaged over a quarter of the slices, its jitter is still smoothed out
+   */
+  exportCloudShadowEvery: number
   /** default rendering of the sea of clouds: « Nappe » ('surface', one draw call) is far cheaper than the ray march */
   seaRender: 'volume' | 'surface'
   /** largest short side of an exported film or still, px */
@@ -67,6 +74,7 @@ export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
   cloudSettleFrames: 32,
   cloudResolutionScale: 1,
   exportCloudResolutionScale: 1,
+  exportCloudShadowEvery: 1,
   seaRender: 'volume',
   maxExportShortSide: 2160,
   maxLodHeightPx: Infinity,
@@ -80,7 +88,7 @@ export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
   maxTrees: 250_000,
 }
 
-const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'exportCloudResolutionScale' | 'maxExportShortSide' | 'maxLodHeightPx' | 'maxVideoBitrate' | 'memoryWarnBytes' | 'maxResidentTiles' | 'maxTileLoads'> = {
+const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'exportCloudResolutionScale' | 'exportCloudShadowEvery' | 'maxExportShortSide' | 'maxLodHeightPx' | 'maxVideoBitrate' | 'memoryWarnBytes' | 'maxResidentTiles' | 'maxTileLoads'> = {
   maxPixelRatio: 2,
   movingPixelRatio: 1.5,
   tileBitmaps: 200,
@@ -118,6 +126,7 @@ export function budgetFor({ coarsePointer, shortSidePx, memoryGb }: DeviceTraits
     ...MOBILE_BUDGET,
     kind: phone ? 'phone' : 'tablet',
     exportCloudResolutionScale: phone ? 0.75 : 1,
+    exportCloudShadowEvery: phone ? 4 : 1,
     maxExportShortSide: phone ? 1080 : 1440,
     // about the height of the phone's preview: a 1080p or portrait export keeps the tiles the preview already holds
     maxLodHeightPx: phone ? 720 : Infinity,

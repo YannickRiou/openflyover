@@ -7,6 +7,7 @@ import {
   createFrameCap,
   createRungGovernor,
   exportCloudScale,
+  exportCloudShadowEvery,
   frameIntervalMs,
   previewBudget,
   previewRung,
@@ -70,6 +71,14 @@ describe('exportCloudScale', () => {
     expect(exportCloudScale({ exportCloudResolutionScale: 0.75 }, 1)).toBe(0.75)
     expect(exportCloudScale({ exportCloudResolutionScale: 0.75 }, 2)).toBe(0.75)
     expect(exportCloudScale({ exportCloudResolutionScale: 1 }, 1)).toBe(1)
+  })
+})
+
+describe('exportCloudShadowEvery', () => {
+  it('draws the shadow map of the clouds on every slice while the preview keeps up, on one in the budget\'s once it was lightened', () => {
+    expect(exportCloudShadowEvery({ exportCloudShadowEvery: 4 }, 0)).toBe(1)
+    expect(exportCloudShadowEvery({ exportCloudShadowEvery: 4 }, 1)).toBe(4)
+    expect(exportCloudShadowEvery({ exportCloudShadowEvery: 1 }, 2)).toBe(1)
   })
 })
 
