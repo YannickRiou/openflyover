@@ -102,7 +102,7 @@ export function targetBitrate(
   maxBitrate = deviceBitrateCap(),
 ): number {
   const manual = options.encoding?.bitrateMbps
-  if (manual == null) return videoBitrate(options.width, options.height, options.fps, options.quality, codec, maxBitrate)
+  if (manual === null || manual === undefined) return videoBitrate(options.width, options.height, options.fps, options.quality, codec, maxBitrate)
   return Math.round(Math.min(maxBitrate, MAX_BITRATE, Math.max(MIN_BITRATE, manual * 1e6)))
 }
 
@@ -182,7 +182,7 @@ export function candidatesFor(fileName: string | undefined, choice: VideoCodecCh
   if (choice !== 'auto') return [...CODEC_CANDIDATES, AV1_CANDIDATE].filter((c) => c.codec === choice)
   const ext = fileName?.match(/\.([^.]+)$/)?.[1].toLowerCase()
   const matching = CODEC_CANDIDATES.filter((c) => c.container === ext)
-  return matching.length ? matching : CODEC_CANDIDATES
+  return matching.length > 0 ? matching : CODEC_CANDIDATES
 }
 
 /** Names of the codecs of « Encodage » (export panel, messages). */
@@ -276,7 +276,7 @@ function memoryStream() {
     size: () => size,
     /** The film as a Blob, null when nothing was written; the parts are dropped (the Blob holds the bytes). */
     take(type: string): Blob | null {
-      const blob = size ? new Blob(parts.sort((a, b) => a.start - b.start).map((part) => part.blob), { type }) : null
+      const blob = size > 0 ? new Blob(parts.sort((a, b) => a.start - b.start).map((part) => part.blob), { type }) : null
       parts = []
       return blob
     },
@@ -329,11 +329,14 @@ export async function createVideoEncoder(
     onEncodedPacket: () => void received++,
   })
   // mediabunny's encoder wrapper is not public API: no queue figure when it changes
-  const wrapper = (source as unknown as { _encoder?: { getQueueSize?: () => number } })._encoder
-  const queue = () => wrapper?.getQueueSize?.()
+  const wrapper = (source as unknown as { _encoder?: { getQueueSize?: () => unknown } })._encoder
+  const queue = () => {
+    const size = typeof wrapper?.getQueueSize === 'function' ? wrapper.getQueueSize() : undefined
+    return typeof size === 'number' ? size : undefined
+  }
   output.addVideoTrack(source, { frameRate: options.fps, canBeTransparent: transparent })
   const { audio } = options
-  const audioCodec = audio?.channels.length ? await pickAudioCodec(codec.container, audio, canEncodeSound, audioBitrate) : null
+  const audioCodec = audio && audio.channels.length > 0 ? await pickAudioCodec(codec.container, audio, canEncodeSound, audioBitrate) : null
   const sound = audioCodec ? new AudioSampleSource({ codec: audioCodec, quality: new Quality({ bitrate: audioBitrate }) }) : null
   if (sound) output.addAudioTrack(sound)
   await output.start()
