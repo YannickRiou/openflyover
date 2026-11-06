@@ -24,6 +24,7 @@ import { deviceBitrateCap, targetBitrate, type CodecCandidate } from '../export/
 import { containerFor, encodableCodecs, exportCodec } from '../export/nativeEncoder'
 import { estimateRenderSeconds, lastFilm, layersRatio, rateFromHistory } from '../export/history'
 import { useExportHistory } from '../export/historyStore'
+import { exceedsTarget, speedUps, targetMinutesPerFilmMinute } from '../export/renderTarget'
 import { getSettingsHistory } from '../project/history'
 import { CLOUD_QUALITY_NAMES, QUALITY_NAMES, effectiveRender, isCustomised } from '../export/qualityTier'
 import { t, t as translate, useT } from '../i18n'
@@ -111,6 +112,11 @@ function formatClock(seconds: number): string {
   const s = Math.max(0, Math.round(seconds))
   if (s < 60) return `${s} s`
   return `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, '0')} s`
+}
+
+/** 1510 -> "25 min" (at least 1) */
+function formatMinutes(seconds: number): string {
+  return `${Math.max(1, Math.round(seconds / 60))} min`
 }
 
 /** bytes -> "12,3 Mo" ("12.3 MB") */
@@ -212,6 +218,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const t = useT()
   const video = useAppStore((s) => s.settings.video)
   const clouds = useAppStore((s) => s.settings.clouds)
+  const atmosphere = useAppStore((s) => s.settings.atmosphere)
+  const lens = useAppStore((s) => s.settings.lens)
   const snow = useAppStore((s) => s.settings.snow.mode)
   const forest = useAppStore((s) => s.settings.forest)
   const customised = useAppStore((s) => isCustomised(s.settings))
@@ -262,6 +270,11 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   // that film's forests and snow against the ones to render (every film of a session is in the history; a film from before 4.0 has no record of them: no correction)
   const layers = layersRatio(lastFilm(history)?.settings ?? {}, { snow, forest: { enabled: forest.enabled, density: forest.density } })
   const renderS = rate === null || overlayOnly ? null : estimateRenderSeconds(rate, totalFrames, width, height, layers)
+  // above the target for this device (10 min of rendering per minute of film on a phone, 30 on a computer): say so and offer what is faster
+  const filmS = totalFrames / video.fps
+  const deviceKind = deviceBudget().kind
+  const overTarget = exceedsTarget(renderS, deviceKind, filmS)
+  const faster = overTarget ? speedUps({ atmosphere, clouds, lens, video }, deviceBudget().maxExportShortSide) : []
 
   // Ask the browser which codec it can use at this size (H.264 may refuse large or tall frames).
   const probeKey = `${width}x${height}@${video.fps}/${video.quality}/${encoding.codec}/${encoding.bitrateMbps ?? ''}${overlayOnly ? '/alpha' : ''}`
@@ -703,6 +716,35 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
           .filter(Boolean)
           .join(' · ')}
       </p>
+      {overTarget && renderS !== null && (
+        <div className="field" role="status">
+          <p className="type-hint">
+            {t('export.panel.overTarget', {
+              device: t(deviceKind === 'desktop' ? 'export.panel.overTargetComputer' : deviceKind === 'tablet' ? 'export.panel.overTargetTablet' : 'export.panel.overTargetPhone'),
+              time: formatMinutes(renderS),
+              film: formatClock(filmS),
+              target: formatMinutes(targetMinutesPerFilmMinute(deviceKind) * filmS),
+            })}
+          </p>
+          {faster.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {faster.map((a) => (
+                <Button
+                  key={a.kind}
+                  disabled={busy}
+                  onClick={() => (a.kind === 'quality' ? update({ quality: a.quality }) : a.kind === 'size' ? update({ resolution: a.resolution }) : setSetting('clouds', { ...clouds, quality: a.quality }))}
+                >
+                  {a.kind === 'quality'
+                    ? `${t('export.panel.renderQuality')} (${QUALITY_NAMES[a.quality]})`
+                    : a.kind === 'size'
+                      ? `${t('export.panel.resolution')} (${VIDEO_RESOLUTIONS.find((r) => r.id === a.resolution)?.label ?? a.resolution})`
+                      : `${t('export.history.detail.clouds')} (${CLOUD_QUALITY_NAMES[a.quality]})`}
+                </Button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {!result && <CopyCreditsButton />}
       <ModeGate min="expert">{codec && streams && !silent && <p className="type-hint">{t('export.panel.direct')}</p>}</ModeGate>
       {codec && !pngSequence && warnsInMemory(estimatedBytes, streams) && (

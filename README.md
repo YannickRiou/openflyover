@@ -103,6 +103,7 @@ To test the production build: `npm run build`, then `npm run preview` (<http://l
 | Document | For |
 |---|---|
 | [Vision](VISION.md) and [roadmap](ROADMAP.md) | what the project is for, how a change is judged, what comes next |
+| [Project file format](docs/project-format.md) | the container, the fields, which version added what, the promise that old projects open, and how to change the format |
 | [User guide](docs/user-guide.html) | using the app: import, planning, editing, export, offline, shortcuts |
 | [Knowledge base](docs/how-it-works.html) | how the app is built, explained for newcomers to web development |
 | [Developer handbook](docs/handbook/index.html) | how the project was built and how to change it (history, web and Rust notions explained, repository tour, recipes, release), to maintain it without help |

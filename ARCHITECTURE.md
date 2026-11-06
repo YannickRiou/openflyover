@@ -2237,6 +2237,8 @@ The interface and the texts drawn into the films and posters exist in **French**
 
 ## Project (phase 4)
 
+The format of the file (document fields, units, what each version introduced, the compatibility promise and the procedure to change it) is described in [`docs/project-format.md`](docs/project-format.md); one frozen file per format version is opened in CI (`src/project/__fixtures__/`).
+
 - The project file is `<name>.opnflvr` (MIME `application/x-opnflvr`, `src/project/file.ts`): the ASCII signature `OPNFLVR`, a
   version byte (1 = gzip of the JSON text, 2 = uncompressed JSON where `CompressionStream` is missing), then the exact text
   produced by `serializeProject`. The reader detects the signature; otherwise it parses plain JSON (older `.openflyover.json`
@@ -3004,7 +3006,7 @@ exports) gets it from the terrain source of the settings.
   4.0 measurement (« Forests »: +16 % triangles at 60 trees per hectare, assumed proportional to the density), the 3 % is the
   extra term of the terrain's fragment shader; both are rough, and tile waiting and encoding do not change with them. A film
   recorded before 4.1 does not say its layers (`RenderSettings.snow` / `forest` absent): no correction, the rate as it is.
-  The batch estimate (`estimateBatch`) does not use it. **Where it goes**: the website's save dialog has an `id`, so Chrome / Edge reopen on the
+  The batch estimate (`estimateBatch`) does not use it. **The length, said before the start** (`export/renderTarget.ts`, pure, tested): the target is `targetMinutesPerFilmMinute(kind)` = 10 minutes of rendering per minute of film on a phone or a tablet, 30 on a computer; when the estimate is known and above it (`exceedsTarget`; no history, no estimate, no warning) the panel says so in one sentence and `speedUps` lists the buttons, each a normal setting change (`video.quality` one step down, `video.resolution` one step down, `clouds.quality` one step below the effective one), only those that change what is rendered in the current state (not at the floor, not above the device's size limit, clouds shown, a sub-frame cap lowered with motion blur on). **Where it goes**: the website's save dialog has an `id`, so Chrome / Edge reopen on the
   last folder; the desktop one is opened on the folder of the last film (`openflyover.lastFilmFolder`) and, after the export,
   « Ouvrir le dossier » shows the file in the system's file manager (`Platform.revealFile`, the opener plugin's
   `reveal_item_in_dir`, permission `opener:allow-reveal-item-in-dir`; `ExportResult.path`). The website cannot reveal a file.
