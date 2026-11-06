@@ -118,6 +118,16 @@ export function createPainter({ main, shade, light: lighter, colors = {} }: { ma
 
 
 /**
+ * The feet of the « Adventurer » characters, drawn large in their cartoon style, read as clogs at the size of a marker:
+ * each foot bone (its own, not a child of the shin) is scaled down around the ankle. Set again after an animation clip,
+ * which may key the scale of the bones.
+ */
+export const FOOT_SCALE = 0.7
+export function shrinkFeet(model: Object3D): void {
+  for (const name of ['FootL', 'FootR']) model.getObjectByName(name)?.scale.setScalar(FOOT_SCALE)
+}
+
+/**
  * Poses a rigged character by turning each bone towards a direction, whatever clips the file has: the rest axis of a bone is
  * the direction of its first child at rest (an end bone, the shin, goes the way its parent does). Directions are world ones.
  */

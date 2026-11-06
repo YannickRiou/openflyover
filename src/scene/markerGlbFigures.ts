@@ -11,7 +11,7 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
 import { createParagliderFlat, FIGURE_MODELS } from './markerFigureModels'
 import { MODEL_HEIGHT, OUTLINE } from './markerModelKit'
 import type { MarkerModel } from './markerModelKit'
-import { createPainter, loadFile, outlineRigid, outlineSkinned, pending } from './markerGlbKit'
+import { createPainter, loadFile, outlineRigid, outlineSkinned, pending, shrinkFeet } from './markerGlbKit'
 import { wakeScene } from './renderOnDemand'
 
 /** Dark of the outline of the wing, a neutral black (a blue ink looked cold on the coloured models). */
@@ -127,16 +127,21 @@ function createCharacter({ file, clip: clipName, hide, stand: standIn, ...colors
   let mixer: AnimationMixer | null = null
   let action: AnimationAction | null = null
   let phase = 0
+  /** the character whose feet are made smaller after each frame of its clip */
+  let feetOf: Object3D | null = null
 
   const pose = () => {
     if (!action || !mixer) return
     const turn = ((phase / (2 * Math.PI)) % 1 + 1) % 1
     action.time = turn * action.getClip().duration
     mixer.update(0)
+    if (feetOf) shrinkFeet(feetOf)
   }
 
   const loaded = Promise.all([loadFile(file), import('three/addons/utils/SkeletonUtils.js')]).then(([{ scene, animations }, { clone }]) => {
     const model = clone(scene) as Group
+    feetOf = model
+    shrinkFeet(model)
     const pivot = new Group()
     pivot.add(model)
     // standing on the track point, MODEL_HEIGHT tall, centred, facing +Z

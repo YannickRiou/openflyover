@@ -8,7 +8,7 @@ import type { Material, Object3D, SkinnedMesh } from 'three'
 import type { Color, Texture } from 'three'
 import { createVehicle } from './markerGlbFigures'
 import type { Vehicle, VehicleSpec } from './markerGlbFigures'
-import { createBoneAimer, createPainter, loadFile, outlineRigid, outlineSkinned, pending } from './markerGlbKit'
+import { createBoneAimer, createPainter, loadFile, outlineRigid, outlineSkinned, pending, shrinkFeet } from './markerGlbKit'
 import { joint, MODEL_HEIGHT } from './markerModelKit'
 import type { MarkerModel } from './markerModelKit'
 import { wakeScene } from './renderOnDemand'
@@ -138,6 +138,7 @@ export function createFigure({ stand: standIn, main, vehicle: vehicleSpec, hide 
       }
     }
     const man = clone(scene) as Group
+    shrinkFeet(man)
     const holder = new Group()
     holder.add(man)
     man.updateMatrixWorld(true)
@@ -350,7 +351,7 @@ export function addRoll(model: Group, name: string, color: string, radius: numbe
 const ROAD_BIKE: Omit<VehicleSpec, 'stand'> = {
   file: 'models/bicycle.glb',
   main: 'Material.001',
-  length: 1.8,
+  length: 2.05,
   yaw: Math.PI,
   spin: [{ match: /Wheel/, axis: 'y', turns: 2.5 }],
   colors: { 'Material.001': '#c8372d', 'Material.002': '#2b2d30', 'Material.003': '#1f2022' },
@@ -365,7 +366,8 @@ export const mountainBike = (stand: () => MarkerModel): MarkerModel =>
   createBikeRider({
     bike: { ...ROAD_BIKE, file: 'models/bicycle-round.glb', main: 'Bike', spin: [{ match: /Wheel/, axis: 'y', turns: 2.5, thick: 2.4 }], colors: { Bike: '#2f7d4a', Wheel: '#2b2d30', 'Material.003': '#1f2022' } },
     anchors: ANCHORS,
-    lean: 28,
+    // more upright than the road bike, as far as the arms still reach the handlebar
+    lean: 34,
     stand,
   })
 

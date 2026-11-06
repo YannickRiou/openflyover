@@ -5,6 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
+- **3D characters with feet of a normal size, cyclists on a bike their size**: the feet of every character (hiker, runners, riders) were drawn as large as clogs; they are 30 % smaller. The bikes were too small for their rider, whose knees came up to the hips and whose back curled over the frame; they are 14 % larger, and the mountain bike rider leans a little more to hold the handlebar.
+
 - **Lighter icons**: the icons of the web app weighed 505 KB, which the website downloads in the background on a first visit; with a palette of 256 colours and a fine dither they weigh 197 KB, the frosted glass looking the same. `npm run icons` regenerates every icon from the two drawings of `src-tauri/icons/source/`.
 
 - **« Passer la nuit » really disables the passage**: in the inspector of a junction between two days, the passage and its duration were meant to be greyed when the night is passed, as they are not read then; the test never matched (the stored junction keeps its passage), so they stayed active. They are now disabled, with a sentence that says the night takes their place.
