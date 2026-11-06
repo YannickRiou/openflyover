@@ -1,0 +1,43 @@
+{
+  "format": "openflyover-project",
+  "version": 1,
+  "name": "Tour du Mont Blanc",
+  "settings": {
+    "terrainSourceId": "mapterhorn",
+    "imagerySourceId": "swisstopo",
+    "imageryZoomOffset": 2,
+    "exaggeration": 1.5,
+    "wireframe": false,
+    "atmosphere": true,
+    "shadows": false,
+    "sunHour": 8.5,
+    "sunFromTrack": false,
+    "exposureEv": 0.5,
+    "trackColorBy": "elevation",
+    "camera": { "style": "orbit", "distance": 1.2, "pitchDeg": 30, "headingOffsetDeg": 0, "smoothing": 1, "northUp": false },
+    "flyoverDurationS": 90,
+    "pacing": { "enabled": true, "climbs": true, "landmarks": false, "slowFactor": 0.5, "windowM": 800, "pauseS": 3, "keepDuration": false },
+    "labels": { "climbs": true, "waypoints": false },
+    "weather": { "enabled": false },
+    "weatherScene": { "enabled": true, "strength": 0.5 },
+    "overlay": {
+      "enabled": true,
+      "style": "broadcast",
+      "title": { "enabled": true, "anchor": "center", "size": 1, "title": "TMB", "subtitle": "Étape 1", "showDate": true, "end": 0.1 },
+      "end": { "enabled": true, "anchor": "center", "size": 1, "title": "", "start": 0.9, "showWeather": true },
+      "counters": { "enabled": true, "anchor": "top-left", "size": 1, "fields": { "distance": true, "altitude": true, "ascent": true, "time": true, "speed": false, "heartRate": true } },
+      "profile": { "enabled": true, "anchor": "top-right", "width": 0.3, "height": 0.12 },
+      "logo": { "enabled": false, "anchor": "bottom-right", "size": 1, "image": "" },
+      "text": { "enabled": false, "anchor": "bottom-left", "size": 1, "text": "" },
+      "weather": { "enabled": true, "anchor": "top-left", "size": 1 },
+      "minimap": { "enabled": true, "anchor": "bottom-right", "size": 1.5, "northArrow": false }
+    },
+    "video": { "aspect": "9:16", "resolution": "1080p", "fps": 60, "quality": "max" },
+    "landmarks": { "enabled": true, "kinds": { "peak": true, "pass": true, "hut": false, "lake": true, "waterfall": false, "place": false, "viewpoint": false, "glacier": false }, "maxDistanceM": 800 },
+    "race": { "enabled": false, "sync": "elapsed" }
+  },
+  "playback": { "speed": 2 },
+  "tracks": [
+    {"id":"track-1","name":"Chamonix – Les Houches","source":"gpx","color":"#3f6b4a","segments":[{"lon":[6.8694,6.8701,6.8712],"lat":[45.9237,45.9229,45.9218],"ele":[1035,1041.5,null],"time":[1720760400000,1720760460000,1720760520000]}],"waypoints":[{"lon":6.8701,"lat":45.9229,"name":"Pont","ele":1041.5}]}
+  ]
+}

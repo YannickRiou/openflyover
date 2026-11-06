@@ -59,6 +59,9 @@ Promise 4. The project file already has a version (`PROJECT_VERSION`, 8 in 6.1) 
   exist, so that a change of format is a visible decision.
 - **Check.** The frozen files of every version open in CI; a change that breaks one fails.
 
+Done: a frozen file per version 1 to 8, a test that fails when `PROJECT_VERSION` is raised without one, and the format
+described in [`docs/project-format.md`](docs/project-format.md).
+
 ## To decide
 
 - **Release rhythm.** A minor version every two to four weeks, with a test channel for checks on devices, instead of
