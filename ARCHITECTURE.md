@@ -2231,6 +2231,8 @@ The interface and the texts drawn into the films and posters exist in **French**
 
 ## Project (phase 4)
 
+The format of the file (document fields, units, what each version introduced, the compatibility promise and the procedure to change it) is described in [`docs/project-format.md`](docs/project-format.md); one frozen file per format version is opened in CI (`src/project/__fixtures__/`).
+
 - The project file is `<name>.opnflvr` (MIME `application/x-opnflvr`, `src/project/file.ts`): the ASCII signature `OPNFLVR`, a
   version byte (1 = gzip of the JSON text, 2 = uncompressed JSON where `CompressionStream` is missing), then the exact text
   produced by `serializeProject`. The reader detects the signature; otherwise it parses plain JSON (older `.openflyover.json`

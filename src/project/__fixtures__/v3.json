@@ -1,0 +1,311 @@
+{
+  "format": "openflyover-project",
+  "version": 3,
+  "name": "Lac Blanc",
+  "settings": {
+    "terrainSourceId": "mapterhorn",
+    "demClean": {
+      "enabled": false,
+      "seaToZero": false
+    },
+    "imagerySourceId": "ign-ortho",
+    "imageryDate": "",
+    "imageryZoomOffset": 1,
+    "exaggeration": 1.7,
+    "atmosphere": false,
+    "shadows": true,
+    "cloudShadows": true,
+    "sunHour": 10,
+    "sunDate": "",
+    "sunFromTrack": true,
+    "exposureEv": 0,
+    "grading": {
+      "preset": "naturel",
+      "contrast": 0,
+      "saturation": 0,
+      "warmth": 0,
+      "vignette": 0
+    },
+    "lens": {
+      "shutter": 0,
+      "bloom": 0,
+      "bloomRadius": 0.6,
+      "flare": 0,
+      "depthOfField": 0
+    },
+    "trackColorBy": "none",
+    "trackLegendAnchor": "bottom-left",
+    "trackStyle": {
+      "width": 4,
+      "dash": "plein",
+      "glow": false,
+      "glowIntensity": 0.75,
+      "glowWidth": 24,
+      "glowColor": "",
+      "drawOn": false,
+      "smoothingM": 0
+    },
+    "trackTail": {
+      "enabled": false,
+      "lengthM": 1000
+    },
+    "marker": {
+      "kind": "boule",
+      "figure": "auto",
+      "image": "",
+      "size": 1,
+      "animated": false,
+      "color": "#FFFFFF",
+      "ballStyle": "plat",
+      "figureColor": "#1C2A33",
+      "shape": "rond",
+      "label": "aucune",
+      "labelText": "",
+      "stick": false
+    },
+    "camera": {
+      "style": "chase",
+      "distance": 1,
+      "pitchDeg": 30,
+      "headingOffsetDeg": 0,
+      "smoothing": 1,
+      "northUp": false,
+      "turnSmoothingM": 0,
+      "aimSmoothingS": 0,
+      "cameraSmoothingS": 3,
+      "endingS": 0,
+      "orbitTurns": 1
+    },
+    "flyoverDurationS": 60,
+    "pacing": {
+      "enabled": false,
+      "climbs": true,
+      "landmarks": true,
+      "slowFactor": 0.35,
+      "windowM": 1000,
+      "pauseS": 2,
+      "keepDuration": true,
+      "transitionS": 1.5
+    },
+    "film": {
+      "opening": {
+        "style": "descente",
+        "durationS": 6
+      },
+      "closing": {
+        "style": "descente",
+        "durationS": 5
+      },
+      "autoStops": true,
+      "autoMode": "temps-forts",
+      "stops": [
+        {
+          "id": "stop-1",
+          "atM": 120,
+          "durationS": 6,
+          "camera": "orbite",
+          "label": "Lac"
+        }
+      ],
+      "speeds": [],
+      "cameraKeys": [],
+      "paramKeys": [],
+      "markerKeys": [],
+      "texts": [
+        {
+          "id": "text-1",
+          "startS": 3,
+          "durationS": 4,
+          "text": "Départ",
+          "anchor": "bottom-left",
+          "size": 1
+        }
+      ],
+      "media": [],
+      "audio": [],
+      "duckMusic": false,
+      "pois": [],
+      "nights": {
+        "enabled": true,
+        "duskS": 3,
+        "nightS": 2,
+        "dawnS": 3
+      }
+    },
+    "labels": {
+      "waypoints": true,
+      "kmStep": 0,
+      "endpoints": false,
+      "photos": false,
+      "size": 1,
+      "rangeKm": 70
+    },
+    "weather": {
+      "enabled": true
+    },
+    "weatherScene": {
+      "enabled": true,
+      "strength": 1
+    },
+    "clouds": {
+      "mode": "meteo",
+      "coverage": 0.4,
+      "altitudeM": 1200,
+      "seaTopM": 2000,
+      "seaRender": "volume",
+      "quality": "auto",
+      "windKmh": 15,
+      "windDirection": "meteo",
+      "windByHand": false
+    },
+    "water": {
+      "enabled": true,
+      "strength": 1
+    },
+    "overlay": {
+      "enabled": false,
+      "style": "editorial",
+      "title": {
+        "enabled": true,
+        "anchor": "center",
+        "size": 1,
+        "title": "",
+        "subtitle": "",
+        "showDate": true,
+        "end": 0.1
+      },
+      "end": {
+        "enabled": true,
+        "anchor": "center",
+        "size": 1,
+        "title": "",
+        "start": 0.9,
+        "showWeather": true
+      },
+      "counters": {
+        "enabled": true,
+        "anchor": "top-left",
+        "size": 1,
+        "fields": {
+          "distance": true,
+          "altitude": true,
+          "ascent": true,
+          "slope": false,
+          "time": true,
+          "clock": false,
+          "speed": false,
+          "pace": false,
+          "heartRate": false,
+          "power": false,
+          "temperature": false
+        }
+      },
+      "profile": {
+        "enabled": true,
+        "anchor": "top-right",
+        "width": 0.3,
+        "height": 0.12
+      },
+      "logo": {
+        "enabled": false,
+        "anchor": "bottom-right",
+        "size": 1,
+        "image": "",
+        "opacity": 1
+      },
+      "text": {
+        "enabled": false,
+        "anchor": "bottom-left",
+        "size": 1,
+        "text": ""
+      },
+      "weather": {
+        "enabled": false,
+        "anchor": "top-left",
+        "size": 1
+      },
+      "minimap": {
+        "enabled": false,
+        "anchor": "bottom-right",
+        "size": 1,
+        "northArrow": true
+      },
+      "leaderboard": {
+        "enabled": false,
+        "anchor": "middle-right",
+        "size": 1
+      },
+      "credits": {
+        "enabled": true,
+        "position": "bottom-right"
+      }
+    },
+    "video": {
+      "aspect": "16:9",
+      "resolution": "1080p",
+      "fps": 30,
+      "quality": "high",
+      "manualBitrate": false,
+      "bitrateMbps": 14,
+      "codec": "auto",
+      "keyframeIntervalS": 2,
+      "audioKbps": 192,
+      "nameTemplate": "",
+      "normalizeLoudness": false,
+      "loudnessLufs": -14
+    },
+    "poster": {
+      "format": "a4-portrait",
+      "style": "editorial",
+      "title": "",
+      "subtitle": "",
+      "figures": {
+        "distance": true,
+        "ascent": true,
+        "time": true,
+        "maxAltitude": true,
+        "climbs": true
+      },
+      "weather": true,
+      "flat": false,
+      "view": "overview",
+      "type": "image/png"
+    },
+    "landmarks": {
+      "enabled": true,
+      "kinds": {
+        "peak": true,
+        "pass": true,
+        "hut": true,
+        "lake": true,
+        "waterfall": false,
+        "place": true,
+        "viewpoint": false,
+        "glacier": false,
+        "waterPoint": false
+      },
+      "places": {
+        "city": true,
+        "village": true,
+        "hamlet": true
+      },
+      "maxDistanceM": 1500,
+      "hiddenIds": [],
+      "seenIds": [],
+      "rank": [],
+      "dismissedIds": [],
+      "density": "normal",
+      "pinnedIds": []
+    },
+    "race": {
+      "enabled": false,
+      "sync": "elapsed"
+    }
+  },
+  "playback": {
+    "speed": 2
+  },
+  "tracks": [
+    {"id":"a","name":"Montée","source":"gpx","color":"#a9ccd9","segments":[{"lon":[6.8879,6.8885,6.8891],"lat":[45.9794,45.9801,45.9812],"ele":[2000,2080,2350],"time":[1720760400000,1720760460000,1720760520000],"hr":[120,null,150]}],"activityType":"hiking","waypoints":[{"lon":6.8885,"lat":45.9801,"name":"Lac","ele":2080}]}
+  ]
+}

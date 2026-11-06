@@ -3,111 +3,15 @@ import { filmClockFor } from '../film/clock'
 import { DEFAULT_SETTINGS } from '../state/store'
 import type { Settings } from '../state/store'
 import { parseProject } from './document'
+import V1 from './__fixtures__/legacy-v1.json?raw'
+import V2 from './__fixtures__/legacy-v2.json?raw'
 
 // Files as the app wrote them at the time (format history in git), frozen: never regenerate them from today's code.
+// v1 (last format before the timeline: pacing on, no film) and v2 (first format with the timeline: a stop and a text)
+// are in __fixtures__/legacy-v1.json and legacy-v2.json (written afterwards, see the README there); frozen.test.ts opens
+// one file per version.
 
 const REMOVED_PACING_MESSAGE = '« Ralentir aux temps forts » n’existe plus : ajoutez des arrêts ou des vitesses sur la timeline.'
-
-/** v1, last format before the timeline: pacing on, no film. */
-const V1 = `{
-  "format": "openflyover-project",
-  "version": 1,
-  "name": "Tour du Mont Blanc",
-  "settings": {
-    "terrainSourceId": "mapterhorn",
-    "imagerySourceId": "swisstopo",
-    "imageryZoomOffset": 2,
-    "exaggeration": 1.5,
-    "wireframe": false,
-    "atmosphere": true,
-    "shadows": false,
-    "sunHour": 8.5,
-    "sunFromTrack": false,
-    "exposureEv": 0.5,
-    "trackColorBy": "elevation",
-    "camera": { "style": "orbit", "distance": 1.2, "pitchDeg": 30, "headingOffsetDeg": 0, "smoothing": 1, "northUp": false },
-    "flyoverDurationS": 90,
-    "pacing": { "enabled": true, "climbs": true, "landmarks": false, "slowFactor": 0.5, "windowM": 800, "pauseS": 3, "keepDuration": false },
-    "labels": { "climbs": true, "waypoints": false },
-    "weather": { "enabled": false },
-    "weatherScene": { "enabled": true, "strength": 0.5 },
-    "overlay": {
-      "enabled": true,
-      "style": "broadcast",
-      "title": { "enabled": true, "anchor": "center", "size": 1, "title": "TMB", "subtitle": "Étape 1", "showDate": true, "end": 0.1 },
-      "end": { "enabled": true, "anchor": "center", "size": 1, "title": "", "start": 0.9, "showWeather": true },
-      "counters": { "enabled": true, "anchor": "top-left", "size": 1, "fields": { "distance": true, "altitude": true, "ascent": true, "time": true, "speed": false, "heartRate": true } },
-      "profile": { "enabled": true, "anchor": "top-right", "width": 0.3, "height": 0.12 },
-      "logo": { "enabled": false, "anchor": "bottom-right", "size": 1, "image": "" },
-      "text": { "enabled": false, "anchor": "bottom-left", "size": 1, "text": "" },
-      "weather": { "enabled": true, "anchor": "top-left", "size": 1 },
-      "minimap": { "enabled": true, "anchor": "bottom-right", "size": 1.5, "northArrow": false }
-    },
-    "video": { "aspect": "9:16", "resolution": "1080p", "fps": 60, "quality": "max" },
-    "landmarks": { "enabled": true, "kinds": { "peak": true, "pass": true, "hut": false, "lake": true, "waterfall": false, "place": false, "viewpoint": false, "glacier": false }, "maxDistanceM": 800 },
-    "race": { "enabled": false, "sync": "elapsed" }
-  },
-  "playback": { "speed": 2 },
-  "tracks": [
-    {"id":"track-1","name":"Chamonix – Les Houches","source":"gpx","color":"#3f6b4a","segments":[{"lon":[6.8694,6.8701,6.8712],"lat":[45.9237,45.9229,45.9218],"ele":[1035,1041.5,null],"time":[1720760400000,1720760460000,1720760520000]}],"waypoints":[{"lon":6.8701,"lat":45.9229,"name":"Pont","ele":1041.5}]}
-  ]
-}
-`
-
-/** v2, first format with the timeline: film with a stop and a text. */
-const V2 = `{
-  "format": "openflyover-project",
-  "version": 2,
-  "name": "Lac Blanc",
-  "settings": {
-    "terrainSourceId": "aws-terrarium",
-    "imagerySourceId": "ign-ortho",
-    "imageryZoomOffset": 1,
-    "exaggeration": 1,
-    "wireframe": false,
-    "atmosphere": true,
-    "shadows": true,
-    "sunHour": 10,
-    "sunFromTrack": true,
-    "exposureEv": 0,
-    "trackColorBy": "none",
-    "camera": { "style": "chase", "distance": 1.5, "pitchDeg": 40, "headingOffsetDeg": 10, "smoothing": 2, "northUp": false },
-    "flyoverDurationS": 60,
-    "pacing": { "enabled": false, "climbs": true, "landmarks": true, "slowFactor": 0.35, "windowM": 1000, "pauseS": 2, "keepDuration": true },
-    "film": {
-      "opening": { "style": "saut", "durationS": 4 },
-      "closing": { "style": "aucune", "durationS": 5 },
-      "autoStops": false,
-      "autoMode": "temps-forts",
-      "stops": [{ "id": "stop-1", "atM": 120, "durationS": 6, "camera": "orbite", "label": "Lac" }],
-      "texts": [{ "id": "text-1", "startS": 3, "durationS": 4, "text": "Départ", "anchor": "bottom-left", "size": 1 }],
-      "media": []
-    },
-    "labels": { "climbs": false, "waypoints": true },
-    "weather": { "enabled": true },
-    "weatherScene": { "enabled": true, "strength": 1 },
-    "overlay": {
-      "enabled": false,
-      "style": "editorial",
-      "title": { "enabled": true, "anchor": "center", "size": 1, "title": "", "subtitle": "", "showDate": true, "end": 0.1 },
-      "end": { "enabled": true, "anchor": "center", "size": 1, "title": "", "start": 0.9, "showWeather": true },
-      "counters": { "enabled": true, "anchor": "top-left", "size": 1, "fields": { "distance": true, "altitude": true, "ascent": true, "time": true, "speed": false, "heartRate": false } },
-      "profile": { "enabled": true, "anchor": "top-right", "width": 0.3, "height": 0.12 },
-      "logo": { "enabled": false, "anchor": "bottom-right", "size": 1, "image": "" },
-      "text": { "enabled": false, "anchor": "bottom-left", "size": 1, "text": "" },
-      "weather": { "enabled": false, "anchor": "top-left", "size": 1 },
-      "minimap": { "enabled": false, "anchor": "bottom-right", "size": 1, "northArrow": true }
-    },
-    "video": { "aspect": "16:9", "resolution": "1080p", "fps": 30, "quality": "high" },
-    "landmarks": { "enabled": true, "kinds": { "peak": true, "pass": true, "hut": true, "lake": true, "waterfall": false, "place": false, "viewpoint": false, "glacier": false }, "maxDistanceM": 1500 },
-    "race": { "enabled": false, "sync": "elapsed" }
-  },
-  "playback": { "speed": 1 },
-  "tracks": [
-    {"id":"a","name":"Montée","source":"fit","activityType":"hiking","color":"#a9ccd9","segments":[{"lon":[6.8879,6.8885,6.8891],"lat":[45.9794,45.9801,45.9812],"ele":[2000,2080,2350],"hr":[120,null,150]}]}
-  ]
-}
-`
 
 /** Settings the file does not hold: today's defaults. */
 function expectDefaultsBut(settings: Settings, saved: readonly (keyof Settings)[]) {

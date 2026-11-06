@@ -7,6 +7,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 - **Reference projects for the export speed**: `bench/` holds two project files built on the same dated track (a vertical 1080 × 1920 « Haute » film with clouds for a phone, a 1080p film with forests, water and landmarks for a computer), and `docs/benchmark.md` gives the procedure (« Mesurer le coût des couches », the wait for the graphics card, ms per image to minutes per minute of film) and the results table, starting with the 6.0.0 iPhone figures. A test checks that the files open.
 - **A written vision and a roadmap for 7.0**: `VISION.md` says who OpenFlyover is for, what it promises and how a change is judged; `ROADMAP.md` gives the three works of 7.0 (a beautiful film by default, an export that finishes, projects that keep opening), their targets and how they are checked.
+- **The project format, described and guarded**: `docs/project-format.md` lists the container, the fields, their units, which version introduced what and the steps to change the format. There is now one frozen project file per format version (1 to 8), each opened and migrated in CI, and a test fails when `PROJECT_VERSION` is raised without the file of the new version.
 
 ## 6.1.0 (November 2026)
 
