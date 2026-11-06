@@ -4501,7 +4501,7 @@ comfortable rate says nothing of the heavier rung, and each change re-places the
 film plays, and only by the shadow refresh.
 Light = `LIGHT_PREVIEW`, the lower of it and the device's: pixel ratio 1.5, 1 while playing or touching, preview clouds
 0.5, 16 still frames, shadow map 2048² (~32 MB, not ~128 MB), at most 125,000 trees (far chunks thin first,
-`forestPoints.ts`). The export sets its own pixel ratio (1) and cloud pass (full resolution; a phone whose preview had to be lightened, rung above 0, draws it at `exportCloudResolutionScale` 0.75, `exportCloudScale`: a phone that keeps up exports its clouds as sharp as a computer, #434), and `sceneBudget(preview, exporting)` gives
+`forestPoints.ts`). The export sets its own pixel ratio (1) and cloud pass (full resolution; a phone whose preview had to be lightened, rung above 0, draws it at `exportCloudResolutionScale` 0.75, `exportCloudScale`: a phone that keeps up exports its clouds as sharp as a computer, #434; that phone also draws the shadow map of the clouds on one noise slice in `exportCloudShadowEvery` 4, `exportCloudShadowEvery()`, the others reuse it: the map has a fixed size, 256² × 3 cascades marched through the whole layer on each of the 24 slices of « medium », the part of the clouds' time that half resolution did not lower, #490; a computer still draws it on every slice), and `sceneBudget(preview, exporting)` gives
 `AtmosphereLayer` and `ForestLayer` the device's own shadow map and trees whenever `isExportBusy` (video, poster and
 « Capturer cette image » all run through `runExport`): films do not change. The shadow map and the trees are made again
 when the preview changes and at the start and end of an export (~0.3 s for 250,000 trees). Not lightened: imagery

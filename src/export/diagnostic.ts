@@ -8,7 +8,7 @@
 import { create } from 'zustand'
 import { deviceBudget } from '../core/deviceBudget'
 import type { DeviceBudget, DeviceKind } from '../core/deviceBudget'
-import { currentPreviewBudget, currentPreviewRung, exportCloudScale } from '../scene/previewQuality'
+import { currentPreviewBudget, currentPreviewRung, exportCloudScale, exportCloudShadowEvery } from '../scene/previewQuality'
 import type { PreviewRung } from '../scene/previewQuality'
 import type { Track } from '../core/types'
 import { isAudioAsset, isVideoAsset, useMediaStore, usedMedia } from '../film/media'
@@ -229,7 +229,9 @@ function exportRows({ request, settings, budget, canStreamToDisk, noEncoding, gp
   if (previewRung !== undefined) {
     // the measures of « Coût des couches » only compare when this is the same from one report to the next
     const scale = exportCloudScale(budget, previewRung)
-    rows.push(['Nuages de l’export', `${Math.round(scale * 100)} % de la résolution (aperçu ${previewRung === 0 ? 'complet' : `allégé, palier ${previewRung}`})`])
+    const every = exportCloudShadowEvery(budget, previewRung)
+    const shadow = every > 1 ? `, ombre une tranche sur ${every}` : ''
+    rows.push(['Nuages de l’export', `${Math.round(scale * 100)} % de la résolution${shadow} (aperçu ${previewRung === 0 ? 'complet' : `allégé, palier ${previewRung}`})`])
   }
   // the encoder's bitrate for H.264 (the codec chosen is in the steps), or the one set by hand
   const cap = deviceBitrateCap(budget, canStreamToDisk)

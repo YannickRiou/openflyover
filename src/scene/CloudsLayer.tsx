@@ -52,7 +52,7 @@ import {
 import type { MarkerTrack } from './AtmosphereLayer'
 import { patchRegionalCoverage } from './cloudShaders'
 import { shutterSubFrame, subFrameSlices } from './lens'
-import { exportCloudScale, usePreviewBudget, usePreviewRung } from './previewQuality'
+import { exportCloudScale, exportCloudShadowEvery, usePreviewBudget, usePreviewRung } from './previewQuality'
 import { previewCloudPass } from './renderOnDemand'
 import { useFilmClock } from './usePacing'
 import { useTerrainContext } from './terrainContext'
@@ -70,6 +70,8 @@ const STILL_MARCH = { maxIterationCount: 200, minStepSize: 100, shadowIterationC
  * cascades of 256² texels over that range gave the clouds black below a sun of ~35°.
  */
 const SHADOW_MAX_FAR_M = 5e4
+/** stands for `ShadowPass.update` on the slices that keep the shadow map of the slice before */
+const skipShadow = (): void => {}
 /** Period of the shape noise of three-clouds (`shapeRepeat` 0.0003 per metre). */
 const DEFAULT_SHAPE_PERIOD_M = 1 / 0.0003
 const HISTORY_FETCH = 'vec4 historyColor = texture(colorHistoryBuffer, prevUv);'
@@ -185,7 +187,9 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
    */
   const { cloudResolutionScale, cloudSettleFrames } = usePreviewBudget()
   // the export's: full, unless the device was too slow for its preview (decided before the film starts: the preview stops while it runs)
-  const exportScale = exportCloudScale(deviceBudget(), usePreviewRung())
+  const rung = usePreviewRung()
+  const exportScale = exportCloudScale(deviceBudget(), rung)
+  const shadowEvery = exportCloudShadowEvery(deviceBudget(), rung)
   const ref = useRef<CloudsEffect>(null)
   /** preview: inputs of the last frame and number of frames since they last changed */
   const last = useRef<number[]>([])
@@ -228,18 +232,26 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
       const previous = alpha.value
       // motion blur: this sub-frame's share of the slices, the other sub-frames average the rest
       const slices = subFrameSlices(samples, shutterSubFrame())
+      const shadow = this.shadowPass
       for (let k = 0; k < slices.count; k++) {
         // the frame counter picks the noise slice: fixed per sample, never carried over from the previous frame
         Reflect.set(this, 'frame', slices.first + k)
         alpha.value = 1 / (k + 1)
-        update.call(this, renderer, inputBuffer, 0)
+        // a slow phone: the shadow map of the slice before is kept (same camera and sun, no reprojection: temporalPass off)
+        const keepShadow = k % shadowEvery !== 0
+        if (keepShadow) shadow.update = skipShadow
+        try {
+          update.call(this, renderer, inputBuffer, 0)
+        } finally {
+          if (keepShadow) Reflect.deleteProperty(shadow, 'update')
+        }
       }
       alpha.value = previous
     }
     return () => {
       effect.update = update
     }
-  }, [exporting, quality, cloudResolutionScale, exportScale])
+  }, [exporting, quality, cloudResolutionScale, exportScale, shadowEvery])
 
   useFrame(({ camera, invalidate }) => {
     const effect = ref.current

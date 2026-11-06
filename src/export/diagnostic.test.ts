@@ -109,7 +109,7 @@ describe('diagnostic report', () => {
     expect(rowsOf(privateInput({ request: undefined }), 'Export')).toMatchObject({ Demande: 'aucune (réglages actuels)', Destination: 'mémoire' })
     // a lightened preview lowers the clouds of an export on a phone: said, so two « Coût des couches » compare
     expect(rowsOf(privateInput({ previewRung: 0 }), 'Export')['Nuages de l’export']).toBe('100 % de la résolution (aperçu complet)')
-    expect(rowsOf(privateInput({ previewRung: 1 }), 'Export')['Nuages de l’export']).toMatch(/^\d+ % de la résolution \(aperçu allégé, palier 1\)$/)
+    expect(rowsOf(privateInput({ previewRung: 1 }), 'Export')['Nuages de l’export']).toMatch(/^\d+ % de la résolution(, ombre une tranche sur \d+)? \(aperçu allégé, palier 1\)$/)
   })
 
   it('says when « Export de test sans encodage » is on, a switch of the tab only', () => {

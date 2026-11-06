@@ -23,6 +23,7 @@ describe('budgetFor', () => {
       cloudSettleFrames: 32,
       cloudResolutionScale: 1,
       exportCloudResolutionScale: 1,
+      exportCloudShadowEvery: 1,
       seaRender: 'volume',
       maxExportShortSide: 2160,
       maxLodHeightPx: Infinity,
@@ -50,6 +51,7 @@ describe('budgetFor', () => {
       cloudSettleFrames: 16,
       cloudResolutionScale: 0.5,
       exportCloudResolutionScale: 0.75,
+      exportCloudShadowEvery: 4,
       seaRender: 'surface',
       maxExportShortSide: 1080,
       maxLodHeightPx: 720,
@@ -65,7 +67,7 @@ describe('budgetFor', () => {
   })
 
   it('a tablet exports up to 1440p', () => {
-    expect(budgetFor({ coarsePointer: true, shortSidePx: 820 })).toMatchObject({ kind: 'tablet', exportCloudResolutionScale: 1, maxExportShortSide: 1440, tileBitmaps: 200, maxResidentTiles: 160, maxTileLoads: 12 })
+    expect(budgetFor({ coarsePointer: true, shortSidePx: 820 })).toMatchObject({ kind: 'tablet', exportCloudResolutionScale: 1, exportCloudShadowEvery: 1, maxExportShortSide: 1440, tileBitmaps: 200, maxResidentTiles: 160, maxTileLoads: 12 })
   })
 
   it('lower still with 2 GB or less (Chrome tells, Safari does not)', () => {
