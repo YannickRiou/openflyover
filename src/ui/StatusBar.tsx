@@ -18,8 +18,9 @@ import {
   nextMapStatus,
   type MapStatus,
 } from './mapStatus'
-import { usePreferences } from './preferences'
+
 import { Tip } from './primitives'
+import { DEFAULT_PREFERENCES } from './shell'
 
 /*
  * The strip's classes. It is a container (`@container/status`): narrower than 560 px the providers behind the credits fold
@@ -58,7 +59,6 @@ function useMapStatus(): MapStatus {
   return status
 }
 
-
 /** Small ring filled with the share of the view drawn; it turns slowly while tiles arrive. */
 function ProgressRing({ value }: { value: number }) {
   const circumference = 2 * Math.PI * 5
@@ -83,7 +83,8 @@ function ProgressRing({ value }: { value: number }) {
  */
 function FetchChips() {
   const t = useT()
-  const shown = usePreferences((s) => s.status)
+  // every layer says it loads (the choice of the chips left « Réglages »: the bar shows only what is loading or failed)
+  const shown = DEFAULT_PREFERENCES.status
   // primitives only: a selector returning a new object on every call makes the store re-render forever
   const weatherStatus = useWeatherStore((s) => s.status)
   const weatherMessage = useWeatherStore((s) => s.message)

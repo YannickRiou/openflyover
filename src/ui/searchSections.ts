@@ -45,7 +45,6 @@ const SECTIONS: readonly SectionEntry[] = [
   { tab: 'habillage', title: 'overlay.panel.credits', min: 'expert' },
   { tab: 'projet', title: 'shell.section.offline' },
   { tab: 'reglages', title: 'settings.preferences.appearance.title' },
-  { tab: 'reglages', title: 'settings.preferences.statusBar.title' },
   { tab: 'reglages', title: 'settings.preferences.timeline.title' },
   { tab: 'reglages', title: 'settings.preferences.preview.title' },
 ]

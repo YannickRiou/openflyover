@@ -2,33 +2,17 @@ import { SNAP_GROUPS } from '../film/timeline'
 import type { SnapGroup } from '../film/timeline'
 import { useId } from 'react'
 import { LANGUAGES, t, useLanguage, useT } from '../i18n'
-import { getPlatform } from '../platform'
 import { ACCENT_PRESETS, CHROME_PRESETS, DEFAULT_APPEARANCE, THEMES, clampAccent, clampChrome } from './appearance'
 import type { Theme } from './appearance'
 import { DiagnosticRow } from './DiagnosticDialog'
 import { PanelSection } from './PanelSection'
 import { setPreferences, usePreferences } from './preferences'
-import { PERF_ITEMS, PREVIEW_QUALITIES, STATUS_CHIPS, UI_MODES } from './shell'
-import type { PerfItem, PreviewQuality, StatusChip } from './shell'
+import { PREVIEW_QUALITIES, UI_MODES } from './shell'
+import type { PreviewQuality } from './shell'
 import { usePreviewMeasure } from '../scene/previewQuality'
 import { Button, Chip, ColorField, Radio, RadioGroup, Switch } from './primitives'
 
-const STATUS_LABELS: Record<StatusChip, string> = {
-  get weather() { return t('settings.preferences.status.weather') },
-  get landmarks() { return t('settings.preferences.status.landmarks') },
-  get region() { return t('settings.preferences.status.region') },
-  get water() { return t('settings.preferences.status.water') },
-  get forest() { return t('settings.preferences.status.forest') },
-  get glacier() { return t('settings.preferences.status.glacier') },
-}
 
-const PERF_LABELS: Record<PerfItem, string> = {
-  get fps() { return t('settings.preferences.perf.fps') },
-  get gpu() { return t('settings.preferences.perf.gpu') },
-  get tiles() { return t('settings.preferences.perf.tiles') },
-  get memory() { return t('settings.preferences.perf.memory') },
-  get system() { return t('settings.preferences.perf.system') },
-}
 
 const SNAP_LABELS: Record<SnapGroup, string> = {
   get playhead() { return t('settings.preferences.timeline.snapPlayhead') },
@@ -133,10 +117,6 @@ export function PreferencesPanel() {
   const t = useT()
   const prefs = usePreferences()
   const measuredSlow = usePreviewMeasure((s) => s.rung > 0)
-  const desktop = getPlatform().capabilities.isDesktop
-  // the memory of the JavaScript engine is only told by Chromium; the machine's load only by the desktop app
-  const heap = 'memory' in performance
-  const perfKeys = PERF_ITEMS.filter((key) => (key === 'memory' ? heap : key === 'system' ? desktop : true))
 
   const language = useLanguage()
   const appearance = prefs.appearance
@@ -188,17 +168,6 @@ export function PreferencesPanel() {
         <Button disabled={isDefault} onClick={() => setPreferences({ appearance: DEFAULT_APPEARANCE })}>
           {t('settings.preferences.appearance.reset')}
         </Button>
-      </PanelSection>
-      <PanelSection title={t('settings.preferences.statusBar.title')}>
-        <Chips
-          legend={t('settings.preferences.statusBar.loads')}
-          labels={STATUS_LABELS}
-          keys={STATUS_CHIPS}
-          value={prefs.status}
-          onChange={(status) => setPreferences({ status })}
-        />
-        <Chips legend={t('settings.preferences.statusBar.performance')} labels={PERF_LABELS} keys={perfKeys} value={prefs.performance} onChange={(performance) => setPreferences({ performance })} />
-        <p className="type-hint">{t('settings.preferences.statusBar.hint')}</p>
       </PanelSection>
       <PanelSection title={t('settings.preferences.timeline.title')}>
         <Switch

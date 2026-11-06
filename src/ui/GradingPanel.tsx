@@ -6,7 +6,7 @@ import { getSettingsHistory } from '../project/history'
 import { GRADING_PRESETS, GRADING_RANGES, gradingOfPreset, withGradingValue } from '../scene/grading'
 import type { GradingPresetId, GradingValues } from '../scene/grading'
 import { editFilm, getFilmSource, useKeyedValue } from '../scene/usePacing'
-import { useAppStore } from '../state/store'
+import { DEFAULT_SETTINGS, useAppStore } from '../state/store'
 import { PanelKeys } from './KeyControls'
 import { formatEv } from './format'
 import { InfoTip, PanelSection, RangeField, SettingRow } from './PanelSection'
@@ -129,7 +129,7 @@ function GradingSlider({ name, label, tip }: { name: keyof GradingValues; label:
           </span>
           {tip && <InfoTip text={tip} />}
         </div>
-        <Slider aria-label={label} min={range.min} max={range.max} step={range.step} value={value} onChange={setValue} format={() => text} wide={false} />
+        <Slider aria-label={label} min={range.min} max={range.max} step={range.step} value={value} resetTo={DEFAULT_SETTINGS.grading[name]} onChange={setValue} format={() => text} wide={false} />
       </div>
       <PanelKeys target={{ kind: 'param', param: name }} />
     </SettingRow>

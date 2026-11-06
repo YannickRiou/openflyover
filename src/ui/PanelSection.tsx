@@ -1,11 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createContext, use, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { presetBadge } from '../export/qualityTier'
 import { useT } from '../i18n'
 import type { MessageKey } from '../i18n'
 import type { PresetKnob } from '../export/qualityTier'
 import { getPlatform } from '../platform'
-import { modifiedPaths } from '../project/apply'
+import { defaultAt, modifiedPaths } from '../project/apply'
 import type { SettingPath } from '../project/apply'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
@@ -204,6 +204,9 @@ const ROW_VALUE_MODIFIED = 'max-w-[55%] truncate text-body font-medium text-text
 /** The control unfolds under the head; a lone field does not repeat the name of its row (screen readers still read it). */
 const ROW_BODY =
   'flex flex-col gap-3 pb-3 [&>.field:only-child_.type-label]:sr-only [&>fieldset:only-child>legend]:sr-only'
+/** The paths of the `SettingRow` around a control: a `RangeField` in a row of one number setting resets it on a double click. */
+const RowPaths = createContext<readonly SettingPath[]>([])
+
 /**
  * A secondary setting on one row: its name and current value (`value`), its control hidden until the row is pressed,
  * then unfolded under it with the focus on it. The value reads as changed when one of `paths` differs from its default.
@@ -267,7 +270,7 @@ export function SettingRow({
         </>
       }
     >
-      {children}
+      <RowPaths value={paths}>{children}</RowPaths>
     </Disclosure>
   )
 }
@@ -334,6 +337,7 @@ export function RangeField({
   weight,
   preset,
   spoken = format,
+  defaultValue,
 }: {
   label: string
   min: number
@@ -342,6 +346,8 @@ export function RangeField({
   value: number
   format(value: number): string
   onChange(value: number): void
+  /** what a double click on the slider puts back; by default the default of the one setting of the `SettingRow` around it */
+  defaultValue?: number
   disabled?: boolean
   wide?: boolean
   /** explanation in an ⓘ next to the label */
@@ -354,6 +360,9 @@ export function RangeField({
   spoken?(value: number): string
 }) {
   const labelEl = <span className="type-label">{label}</span>
+  const rowPaths = use(RowPaths)
+  const fromRow = rowPaths.length === 1 ? defaultAt(rowPaths[0]) : undefined
+  const resetTo = defaultValue ?? (typeof fromRow === 'number' ? fromRow : undefined)
   return (
     <div className="field">
       {tip || weight || preset ? (
@@ -366,7 +375,7 @@ export function RangeField({
       ) : (
         labelEl
       )}
-      <Slider aria-label={label} min={min} max={max} step={step} value={value} disabled={disabled} wide={wide} format={format} spoken={spoken} onChange={onChange} />
+      <Slider aria-label={label} min={min} max={max} step={step} value={value} disabled={disabled} wide={wide} format={format} spoken={spoken} onChange={onChange} resetTo={resetTo} />
     </div>
   )
 }
