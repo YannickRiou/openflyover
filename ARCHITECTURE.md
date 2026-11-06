@@ -4408,8 +4408,8 @@ bug 300782, October 2025): the device budget below is conservative, to be measur
 - **Manifest** (`public/manifest.webmanifest`): « OpenFlyover », `display: standalone`, theme `#1c2a33` (top bar ink),
   background `#f5f2ea` (cream), icons rendered from `src-tauri/icons/source/` (`icon.svg`, `icon-maskable.svg`) by
   `npm run icons` (`scripts/icons.mjs`: headless Chromium, then PNG with a palette of 256 colours and a Floyd–Steinberg
-  dither, a third of the truecolor size since the service worker precaches them; the desktop PNG too, and the .icns and
-  .ico by `tauri icon` unless `--no-desktop-bundle`) (`icons/`: 192 and 512 px, a 512 px maskable one with a full-bleed
+  dither, a third of the truecolor size since the service worker precaches them; the desktop PNG in truecolor RGBA, the only
+  form `tauri::generate_context!` accepts; the .icns and .ico by `tauri icon` unless `--no-desktop-bundle`) (`icons/`: 192 and 512 px, a 512 px maskable one with a full-bleed
   background, a 180 px `apple-touch-icon`). Every URL is relative
   (`start_url`, `scope`, `id`: `./`), so the same file works under `/openflyover/` and at a root (tested,
   `webApp.test.ts`). `index.html` links it with `theme-color` and `apple-touch-icon` (Vite adds the base).

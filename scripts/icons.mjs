@@ -7,7 +7,7 @@
  *                        src-tauri/icons/32x32.png, 128x128.png, 128x128@2x.png, icon.png, icon.icns, icon.ico (desktop)
  *   icon-maskable.svg  → public/icons/icon-maskable-512.png (Android crops it), apple-touch-icon.png (iOS rounds it itself)
  *
- * One headless Chromium draws each SVG at its size on a canvas. The PNG are then written with a palette of 256 colours at
+ * One headless Chromium draws each SVG at its size on a canvas. The PNG of the website are then written with a palette of 256 colours at
  * most and an error-diffusion dither (Floyd–Steinberg, alpha included), which keeps the frosted glass and the glow without
  * banding at a tenth of the truecolor size: the service worker of the website downloads them all. `icon.icns` and
  * `icon.ico` come from `tauri icon` on a 512 px rendering in truecolor (the size the drawing was made for); the Tauri CLI
@@ -30,16 +30,19 @@ const SOURCE = join(ROOT, 'src-tauri/icons/source')
 const WEB = join(ROOT, 'public/icons')
 const DESKTOP = join(ROOT, 'src-tauri/icons')
 
-/** What to draw: the source, the size, where it goes, whether its pixels may be transparent. */
+/**
+ * What to draw: the source, the size, where it goes, whether its pixels may be transparent, and `rgba` for the desktop's
+ * PNG, which Tauri reads only as truecolor RGBA (`generate_context!` refuses a palette: « icon … is not RGBA »).
+ */
 const OUTPUTS = [
   { svg: 'icon.svg', size: 192, out: join(WEB, 'icon-192.png'), alpha: true },
   { svg: 'icon.svg', size: 512, out: join(WEB, 'icon-512.png'), alpha: true },
   { svg: 'icon-maskable.svg', size: 512, out: join(WEB, 'icon-maskable-512.png'), alpha: false },
   { svg: 'icon-maskable.svg', size: 180, out: join(WEB, 'apple-touch-icon.png'), alpha: false },
-  { svg: 'icon.svg', size: 32, out: join(DESKTOP, '32x32.png'), alpha: true },
-  { svg: 'icon.svg', size: 128, out: join(DESKTOP, '128x128.png'), alpha: true },
-  { svg: 'icon.svg', size: 256, out: join(DESKTOP, '128x128@2x.png'), alpha: true },
-  { svg: 'icon.svg', size: 512, out: join(DESKTOP, 'icon.png'), alpha: true },
+  { svg: 'icon.svg', size: 32, out: join(DESKTOP, '32x32.png'), alpha: true, rgba: true },
+  { svg: 'icon.svg', size: 128, out: join(DESKTOP, '128x128.png'), alpha: true, rgba: true },
+  { svg: 'icon.svg', size: 256, out: join(DESKTOP, '128x128@2x.png'), alpha: true, rgba: true },
+  { svg: 'icon.svg', size: 512, out: join(DESKTOP, 'icon.png'), alpha: true, rgba: true },
 ]
 
 function findChrome() {
@@ -74,6 +77,23 @@ const chunk = (type, data) => {
   data.copy(out, 8)
   out.writeUInt32BE(crc32(out.subarray(4, 8 + data.length)), 8 + data.length)
   return out
+}
+
+/** A truecolor PNG with alpha (colour type 6), filter 0 on every row. */
+function encodeRgbaPng(width, height, rgba) {
+  const header = Buffer.alloc(13)
+  header.writeUInt32BE(width, 0)
+  header.writeUInt32BE(height, 4)
+  header[8] = 8
+  header[9] = 6
+  const raw = Buffer.alloc((width * 4 + 1) * height)
+  for (let y = 0; y < height; y++) Buffer.from(rgba.buffer, rgba.byteOffset + y * width * 4, width * 4).copy(raw, y * (width * 4 + 1) + 1)
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', header),
+    chunk('IDAT', deflateSync(raw, { level: 9 })),
+    chunk('IEND', Buffer.alloc(0)),
+  ])
 }
 
 /** An indexed PNG (colour type 3): `index` one byte per pixel, `palette` [r, g, b, a] per entry. */
@@ -215,11 +235,14 @@ async function render(svg, size) {
 }
 
 const sizeOf = (file) => (existsSync(file) ? statSync(file).size : 0)
-for (const { svg, size, out, alpha } of OUTPUTS) {
+for (const { svg, size, out, alpha, rgba: truecolor } of OUTPUTS) {
   const before = sizeOf(out)
   const rgba = await render(svg, size)
-  const palette = medianCut(rgba, 256, alpha)
-  writeFileSync(out, encodeIndexedPng(size, size, dither(size, size, rgba, palette, alpha), palette, alpha))
+  if (truecolor) writeFileSync(out, encodeRgbaPng(size, size, rgba))
+  else {
+    const palette = medianCut(rgba, 256, alpha)
+    writeFileSync(out, encodeIndexedPng(size, size, dither(size, size, rgba, palette, alpha), palette, alpha))
+  }
   console.log(`${out.replace(ROOT, '')} (${size} px): ${before} → ${sizeOf(out)} octets`)
 }
 
