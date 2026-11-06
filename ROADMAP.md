@@ -36,7 +36,8 @@ depending on the format and the clouds, and a locked screen or a closed tab lose
   frame on a computer at 30 frames per second.
 - **Reference projects.** One or two projects kept in the repository (a vertical phone film with weather clouds, a
   16:9 film with forests and water), measured with « Mesurer le coût des couches » at each minor version, on an iPhone
-  and on a Windows computer. The results go in the release pull request.
+  and on a Windows computer. The results go in the release pull request. The projects are in `bench/` and the
+  procedure and the results table in [`docs/benchmark.md`](docs/benchmark.md).
 - **The length, said before the start.** The export panel estimates the time from the history of past renders
   (`export/history.ts`) and the size of the film. Above the target, it says so and offers what makes it faster: a lower
   quality, a smaller size, lighter clouds.
