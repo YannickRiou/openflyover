@@ -50,6 +50,8 @@ const ALLOWED_ERRORS = [
   /net::ERR_(INTERNET_DISCONNECTED|NAME_NOT_RESOLVED|CONNECTION|TIMED_OUT|NETWORK|HTTP2|QUIC|SSL|ABORTED)/,
   /\b(tile|tuile)s?\b.*(fail|échec|erreur|error)/i,
   /overpass|open-meteo/i,
+  // a tile server answering an error without its CORS header (Esri does when it is busy): network noise too
+  /Access to fetch at 'https:\/\/[^']*\/tile\/[^']*' from origin '[^']*' has been blocked by CORS policy/,
   // SwiftShader / ANGLE chatter
   /GL_INVALID_|WebGL: too many errors|GPU stall due to ReadPixels/,
 ]
@@ -91,6 +93,13 @@ const MODAL = '[role="dialog"][data-modal]'
 const modalClosed = (page) => until(page, (selector) => !document.querySelector(selector), MODAL)
 
 /** Clicks the first visible button whose text contains `text`. */
+/** « Quelle activité ? » opens after the first track of a project (`ActivityDialog`): « Passer » keeps the film as it is. */
+async function skipActivity(page, press = (button) => button.click()) {
+  const skip = await page.waitForSelector('[role="dialog"] button::-p-text(Passer)', { visible: true, timeout: STEP_MS })
+  await press(skip)
+  await page.waitForSelector('[role="dialog"] button::-p-text(Passer)', { hidden: true, timeout: STEP_MS })
+}
+
 async function clickButton(page, text, timeout = STEP_MS) {
   const button = await page.waitForSelector(`button::-p-text(${text})`, { visible: true, timeout })
   await button.click()
@@ -279,6 +288,7 @@ const SCENARIOS = [
       assert(homeTabs.join() === 'projet', `onglets de l'accueil : ${homeTabs.join(', ')}`)
       assert(!(await page.$('[data-testid="topbar-export"]')), '« Exporter » est affiché sans trace')
       await clickButton(page, "Essayer avec l'exemple")
+      await skipActivity(page)
       await until(page, () => {
         const lane = document.querySelector('[role="group"][aria-label="Plans"]')
         const text = lane?.textContent ?? ''
@@ -1205,6 +1215,7 @@ const SCENARIOS = [
           }
         }
         await tap("button::-p-text(Essayer avec l'exemple)")
+        await skipActivity(page, (button) => button.tap())
         // the timeline is open under the preview, its playhead in the middle
         await page.waitForSelector('[data-testid="timeline"][data-centred] [role="group"][aria-label="Plans"] [data-testid="timeline-block"]', { visible: true, timeout: STEP_MS })
         /**
