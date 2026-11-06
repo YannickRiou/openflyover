@@ -20,6 +20,7 @@ import { OpenChoiceDialog } from './ui/OpenChoiceDialog'
 import { EmptyState } from './ui/EmptyState'
 import { GradingPanel } from './ui/GradingPanel'
 import { HelpDialog } from './ui/HelpDialog'
+import { useActivityProposal } from './ui/activityProposal'
 import { ModeQuestion } from './ui/ModeChoice'
 import { Tour } from './ui/Tour'
 import { SettingsSearch } from './ui/SettingsSearch'
@@ -76,6 +77,8 @@ const ExportPanel = lazy(() => import('./ui/ExportPanel').then((m) => ({ default
 const OfflinePanel = lazy(() => import('./ui/OfflinePanel').then((m) => ({ default: m.OfflinePanel })))
 // the film inspector only opens on a selected timeline block
 const RenderWindowBar = lazy(() => import('./ui/RenderWindowBar').then((m) => ({ default: m.RenderWindowBar })))
+// asked once, after the first import of a project
+const ActivityDialog = lazy(() => import('./ui/ActivityDialog').then((m) => ({ default: m.ActivityDialog })))
 const FilmInspector = lazy(() => import('./ui/FilmInspector').then((m) => ({ default: m.FilmInspector })))
 
 const TAB_LABELS: Record<ShellTab, { label: string; icon: IconName }> = {
@@ -343,6 +346,7 @@ export default function App() {
   // progress, result, batch): it is what saves the file
   const [dockMounted, setDockMounted] = useState(false)
   if ((shell.dockOpen || exportBusy) && !dockMounted) setDockMounted(true)
+  const proposed = useActivityProposal((s) => s.figure !== null)
   const [helpOpen, setHelpOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const dockOpen = useRef(shell.dockOpen)
@@ -769,6 +773,11 @@ export default function App() {
       {!renderWindow && <StatusBar />}
       <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
       {!renderWindow && <ModeQuestion />}
+      {!renderWindow && proposed && (
+        <Suspense>
+          <ActivityDialog />
+        </Suspense>
+      )}
       {!renderWindow && <Tour />}
       <SettingsSearch
         open={searchOpen}

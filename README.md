@@ -46,7 +46,7 @@ remembered on the device. The documentation is in English; the [user guide](docs
 
 | Area | Features |
 |---|---|
-| Import | GPX, FIT, IGC and KML, several tracks at once, Strava activities, or a route drawn on the map along the paths (IGN in France, OpenStreetMap elsewhere); heart rate, cadence, power and temperature when present; distance, elevation gain / loss (D+ / D−), duration, elevations |
+| Import | GPX, FIT, IGC and KML, several tracks at once, Strava activities, or a route drawn on the map along the paths (IGN in France, OpenStreetMap elsewhere); heart rate, cadence, power and temperature when present; distance, elevation gain / loss (D+ / D−), duration, elevations; after the first import, a choice of the activity (read from the file) that sets a matching film (camera, marker, overlay, duration) |
 | Terrain and imagery | Mapterhorn or AWS Terrain Tiles terrain; IGN orthophotos in France and swisstopo in Switzerland, chosen automatically; Esri World Imagery elsewhere, with national aerial photos to pick by hand (Austria, Japan, United States); topographic maps; terrain exaggeration; OpenStreetMap lakes and rivers rendered as water that reflects the sky and the sun, with ripples |
 | Flyover | six camera styles (chase, sway, orbit, top-down view, cinematic shot, free: keyframes only), a « Hauteur » slider with six named stops, duration from 15 s to 10 min, camera smoothing, opening and closing shots (including one that dives from the highlighted region onto the track), clickable elevation profile |
 | Pacing | stops (automatic ones at passes and nearby summits, or your own) and speed sections you set on the timeline |

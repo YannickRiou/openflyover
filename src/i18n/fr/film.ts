@@ -100,6 +100,11 @@ export default {
   'auto.souvenir.name': 'Souvenir 3 min',
   'auto.souvenir.hint': 'Paysage 16:9, 3 min, export YouTube HD : caméra calme, arrêts aux cols, aux sommets et aux lieux traversés, cartes de jour ou d’étape, compteurs, titre d’ouverture et carte de clôture.',
   'auto.afterImport': 'Film automatique…',
+  'activity.title': 'Quelle activité ?',
+  'activity.hint': 'L’activité lue dans le fichier est choisie. La caméra, le marqueur, l’habillage et la durée du film s’y adaptent. Tout reste modifiable ensuite.',
+  'activity.apply': 'Appliquer',
+  'activity.skip': 'Passer',
+  'activity.applied': 'Film « {name} » appliqué. Tout reste modifiable.',
   // ---- Film automatique 4.1: the gabarit cards (src/ui/AutoFilmDialog.tsx)
   'auto.card.formatVertical': '9:16 Reels',
   'auto.card.formatWide': '16:9 YouTube',

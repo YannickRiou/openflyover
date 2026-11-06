@@ -102,6 +102,11 @@ const messages: Messages['film'] = {
   'auto.souvenir.name': 'Erinnerung 3 min',
   'auto.souvenir.hint': 'Querformat 16:9, 3 min, Export für YouTube HD: ruhige Kamera, Stopps an Pässen, Gipfeln und durchquerten Orten, Tages- oder Etappenkarten, Zähler, Eröffnungstitel und Schlusskarte.',
   'auto.afterImport': 'Automatischer Film …',
+  'activity.title': 'Welche Aktivität?',
+  'activity.hint': 'Die aus der Datei gelesene Aktivität ist gewählt. Kamera, Marker, Einblendungen und Länge des Films passen sich an. Danach bleibt alles änderbar.',
+  'activity.apply': 'Anwenden',
+  'activity.skip': 'Überspringen',
+  'activity.applied': 'Film „{name}“ angewendet. Alles bleibt änderbar.',
   // ---- Film automatique 4.1: the gabarit cards (src/ui/AutoFilmDialog.tsx)
   'auto.card.formatVertical': '9:16 Reels',
   'auto.card.formatWide': '16:9 YouTube',

@@ -9,6 +9,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **A written vision and a roadmap for 7.0**: `VISION.md` says who OpenFlyover is for, what it promises and how a change is judged; `ROADMAP.md` gives the three works of 7.0 (a beautiful film by default, an export that finishes, projects that keep opening), their targets and how they are checked.
 - **The project format, described and guarded**: `docs/project-format.md` lists the container, the fields, their units, which version introduced what and the steps to change the format. There is now one frozen project file per format version (1 to 8), each opened and migrated in CI, and a test fails when `PROJECT_VERSION` is raised without the file of the new version.
 
+- **The activity, proposed at import**: after the first track of a project, a window shows the 17 activities of the markers, the one read from the file selected. « Appliquer » sets a film for it (camera style and height, marker, overlay style, flight duration) as ordinary settings, in one undo step; « Passer » changes nothing. It is not asked again for later imports into the project, nor when a saved project opens.
+
 ## 6.1.0 (November 2026)
 
 - **Faster film export on a phone**: the clouds took 96 % of the time of a frame on an iPhone (1.5 s for 1080 × 1920). On every phone, whether its preview keeps up or not, they are now computed at 75 % of the film's resolution (they are soft, the rest of the picture stays sharp), and their shadow, whose cost did not depend on the film's size, on one noise slice in four, the slices in between reusing it. A computer or a tablet exports exactly as before. The « Nuages de l’export » line of the diagnostic report tells both.
