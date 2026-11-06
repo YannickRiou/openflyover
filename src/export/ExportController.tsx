@@ -65,11 +65,15 @@ import { ExportCanceledError, type VideoEncodeSession } from './encoder'
 import { createSequenceEncoder, sequencePattern } from './sequenceEncoder'
 import { createGpuTimer, waitForGpu } from './gpuTimer'
 import { createFrameHandover } from './handover'
+import { mountResumeOffer } from '../ui/resumeBoot'
+import { beginRun, projectKey, type ResumeRun } from './resume/session'
+import { openStorage } from './resume/storage'
+import { getPlatform } from '../platform'
 import { shadowSummary, timingsSummary } from './history'
 import { compositorAttributes, createExportEncoder } from './nativeEncoder'
 import { isExportStep, setExportProbe, writeBreadcrumb } from './guard'
 import { effectiveRender } from './qualityTier'
-import { buildFrameSchedule, buildFrameTimes, exportLodHeight } from './schedule'
+import { DEFAULT_ENCODING, VIDEO_CODEC_CHOICES, buildFrameSchedule, buildFrameTimes, exportLodHeight, type VideoCodecChoice } from './schedule'
 import { PRELOAD_MAX_BYTES, dataSaverOn, filmTilesToPreload, preloadTiles } from './tilePreload'
 import {
   EMPTY_TIMINGS,
@@ -496,6 +500,10 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   }
 
   let session: VideoEncodeSession | null = null
+  /** the encoded frames kept on the device, to resume the export after an interruption (export/resume) */
+  let resumeRun: ResumeRun | null = null
+  /** first frame to render: 0, or where the stored export stops */
+  let startFrame = 0
   /** the frame being encoded while the next one renders (`addFrame` reads the canvas before it awaits anything) */
   let encoding: Promise<void> | null = null
   /** wait for the frame being encoded: the encoder's back-pressure, counted apart */
@@ -549,12 +557,30 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     // an image sequence has no sound
     const audio = request.sequence || request.probe ? null : await filmSoundtrack(settings.film, Math.round(request.holdStartS * fps) / fps, schedule.length / fps, request.encoding?.loudnessLufs ?? null)
     if (isCanceled()) throw new ExportCanceledError()
+    // the web video export keeps its packets on the device; where the browser has no storage for it, nothing is kept
+    if (!noEncoding && !request.sequence && !request.probe && getPlatform().capabilities.videoEncoder === 'webcodecs') {
+      const storage = await openStorage()
+      if (storage) {
+        const job = { key: projectKey(), width, height, fps, frameCount: schedule.length, name: request.baseName }
+        resumeRun = await beginRun(storage, job, request.resumeStored === true)
+        // a continued export keeps the codec it was begun with (VP8, the fallback, cannot be asked for: start over)
+        if (resumeRun.codec && !VIDEO_CODEC_CHOICES.includes(resumeRun.codec as VideoCodecChoice)) resumeRun = await beginRun(storage, job, false)
+        startFrame = resumeRun.startFrame
+        if (startFrame > 0) writeBreadcrumb(`export : reprise à l'image ${startFrame + 1} / ${schedule.length}`)
+      }
+    }
     // WebCodecs, else the system's ffmpeg (desktop app on Linux); the test without encoding ends on its message
     session = noEncoding
       ? noEncodingSession(() => timings.rendered, request.probe === true)
       : request.sequence
         ? createSequenceEncoder(compositor, request.sequence.folder, request.baseName)
-        : await createExportEncoder(compositor, { ...request, audio })
+        : await createExportEncoder(compositor, {
+            ...request,
+            audio,
+            resume: resumeRun?.hooks,
+            ...(resumeRun?.codec && { encoding: { ...(request.encoding ?? DEFAULT_ENCODING), codec: resumeRun.codec as VideoCodecChoice } }),
+          })
+    resumeRun?.recorder.setCodec(session.codec.container, session.codec.codec)
     writeBreadcrumb(
       noEncoding
         ? 'export : test sans encodage'
@@ -665,9 +691,10 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     // the 3D models of the markers are there before the first frame (not their stand-ins)
     await whenMarkerModelsLoaded()
     // the remaining time counts from the first frame: the soundtrack, the encoder and the tiles are made once, before it
-    useExportStore.setState({ startedAt: performance.now() })
+    // a resumed film counts its remaining frames: progress, time left and history are those of this run
+    useExportStore.setState({ startedAt: performance.now(), frameCount: schedule.length - startFrame })
 
-    for (let i = 0; i < schedule.length; i++) {
+    for (let i = startFrame; i < schedule.length; i++) {
       if (isCanceled()) throw new ExportCanceledError()
       // once per frame the page handles its input and paints (the export never waits otherwise when tiles are cached)
       await yieldToEventLoop()
@@ -786,18 +813,20 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       timings.encodeMs += taken
       // a composed image, not a hold: what composing it and handing it over cost, for the choice of the method
       if (composed !== null) handover.record(composed + taken)
-      report(i + 1, performance.now(), timings, i === schedule.length - 1)
+      report(i + 1 - startFrame, performance.now(), timings, i === schedule.length - 1)
     }
     await encoded()
 
     exportStore().finalizing()
     const { blob, sizeBytes } = await session.finish()
+    // the film is whole: what was kept to resume it is no longer needed
+    await resumeRun?.recorder.discard()
     const { container, codec, hardware } = session.codec
     for (let k = 0; gpuTimer && gpuTimer.pending > 0 && k < GPU_TIMER_FLUSH_POLLS; k++) {
       await wait(16)
       readGpuTimer()
     }
-    report(schedule.length, performance.now(), timings, true)
+    report(schedule.length - startFrame, performance.now(), timings, true)
     const s = (ms: number) => (ms / 1000).toFixed(1)
     console.info(
       `[export] ${schedule.length} images (${timings.rendered} rendues) en ${s(performance.now() - startedAt)} s : ${timingsSummary(timings, performance.now() - startedAt)}` +
@@ -829,6 +858,9 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     encoding?.catch(() => undefined)
     readGpuTimer()
     report(exportStore().frame, performance.now(), timings, true)
+    // stopped by the person, or a stored export that cannot be continued: nothing is kept; else (a failure) what was encoded stays
+    const kept = !isCanceled() && !(error instanceof ExportCanceledError) && !(resumeRun?.prior && !session)
+    await (kept ? resumeRun?.recorder.settle() : resumeRun?.recorder.discard())
     await abandon(error, request, session, isCanceled())
   } finally {
     gpuTimer?.dispose()
@@ -877,6 +909,9 @@ export function ExportController({ drawOverlay }: ExportControllerProps) {
     overlayRef.current = drawOverlay
     clockRef.current = clock
   })
+
+  // the scene is up: an export left unfinished by a locked screen or a closed tab is offered to resume (its own root, once)
+  useEffect(mountResumeOffer, [])
 
   useEffect(() => {
     const request = useExportStore.getState().request

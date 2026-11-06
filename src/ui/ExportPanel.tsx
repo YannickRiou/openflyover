@@ -339,7 +339,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   // the clouds chosen by hand: nothing to the overlay alone, which has no sky
   const custom = customised && !overlayOnly
 
-  const start = () => {
+  const start = (options?: { resume?: boolean }) => {
     const asSequence = sequence && !overlayOnly
     if (!trackName || (!codec && !asSequence)) return
     const named = expandNameTemplate(
@@ -392,9 +392,20 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         baseName,
         destination,
         overlayOnly,
+        resumeStored: options?.resume === true,
       })
     })
   }
+
+  // « Reprendre l'export » (ResumeOffer): the film starts again, from the last frame kept on this device
+  const resumeRequested = useExportStore((s) => s.resumeRequested)
+  useEffect(() => {
+    // the film of the project: the overlay or the images alone are not kept
+    if (!resumeRequested || busy || overlayOnly || sequence || !trackName || !codec) return
+    useExportStore.setState({ resumeRequested: false })
+    start({ resume: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `start` reads the panel's current state
+  }, [resumeRequested, busy, overlayOnly, sequence, trackName, codec])
 
   const announcement =
     phase === 'starting' || phase === 'rendering'
@@ -722,7 +733,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
       {!busy && (
         <div className={START_ACTIONS}>
-          <Button variant="primary" onClick={start} disabled={!trackName || (!codec && !(sequence && !overlayOnly))}>
+          <Button variant="primary" onClick={() => start()} disabled={!trackName || (!codec && !(sequence && !overlayOnly))}>
             <Icon name="download" size={18} />
             {overlayOnly ? t('export.panel.exportOverlay') : t('export.panel.exportVideo')}
           </Button>
