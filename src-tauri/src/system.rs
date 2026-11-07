@@ -1,6 +1,7 @@
 //! Load of the machine for the status bar of the desktop app (src/ui/StatusBar.tsx, « Performances »): memory in use
 //! and processor activity, which a webview cannot read. One `System` is kept between calls: the processor usage is
-//! the activity since the previous reading (the first one says 0).
+//! the activity since the previous reading (the first one says 0). None when the system cannot be read (sysinfo ≥ 0.40
+//! says so instead of panicking): `system_stats` then answers an error, which the app reads as « not available ».
 
 use std::sync::Mutex;
 
@@ -8,10 +9,10 @@ use serde::Serialize;
 use sysinfo::System;
 use tauri::State;
 
-pub type SystemState = Mutex<System>;
+pub type SystemState = Mutex<Option<System>>;
 
 pub fn new_state() -> SystemState {
-    Mutex::new(System::new())
+    Mutex::new(System::new().ok())
 }
 
 #[derive(Serialize, Debug)]
@@ -36,7 +37,8 @@ fn read(system: &mut System) -> SystemStats {
 #[tauri::command]
 pub fn system_stats(state: State<'_, SystemState>) -> Result<SystemStats, String> {
     let mut system = state.lock().map_err(|_| "état du système illisible".to_string())?;
-    Ok(read(&mut system))
+    let system = system.as_mut().ok_or_else(|| "mesures du système indisponibles".to_string())?;
+    Ok(read(system))
 }
 
 #[cfg(test)]
@@ -45,7 +47,7 @@ mod tests {
 
     #[test]
     fn reads_memory_and_processor() {
-        let mut system = System::new();
+        let mut system = System::new().expect("system readable");
         read(&mut system);
         std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
         let stats = read(&mut system);
