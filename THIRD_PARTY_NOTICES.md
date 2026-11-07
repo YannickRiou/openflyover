@@ -122,9 +122,99 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 License: OFL-1.1. https://github.com/jpt/barlow, through Fontsource 5.3.0 (`@fontsource/barlow-semi-condensed`), weights 600 and 700, `latin` and `latin-ext`, copied without modification. Full text: `public/fonts/OFL-Barlow.txt`.
 
 ```text
-Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
+Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-ThinItalic.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-ExtraLight.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-ExtraLightItalic.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-Light.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-LightItalic.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-Regular.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-Italic.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-Medium.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-MediumItalic.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-SemiBold.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-SemiBoldItalic.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-Bold.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-BoldItalic.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-ExtraBold.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-ExtraBoldItalic.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-Black.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow) BarlowSemiCondensed-BlackItalic.ttf: Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is copied below, and is also available with a FAQ at:
+http://scripts.sil.org/OFL
+
+
+-----------------------------------------------------------
+SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+-----------------------------------------------------------
+
+PREAMBLE
+The goals of the Open Font License (OFL) are to stimulate worldwide
+development of collaborative font projects, to support the font creation
+efforts of academic and linguistic communities, and to provide a free and
+open framework in which fonts may be shared and improved in partnership
+with others.
+
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The
+fonts, including any derivative works, can be bundled, embedded,
+redistributed and/or sold with any software provided that any reserved
+names are not used by derivative works. The fonts and derivatives,
+however, cannot be released under any other type of license. The
+requirement for fonts to remain under this license does not apply
+to any document created using the fonts or their derivatives.
+
+DEFINITIONS
+"Font Software" refers to the set of files released by the Copyright
+Holder(s) under this license and clearly marked as such. This may
+include source files, build scripts and documentation.
+
+"Reserved Font Name" refers to any names specified as such after the
+copyright statement(s).
+
+"Original Version" refers to the collection of Font Software components as
+distributed by the Copyright Holder(s).
+
+"Modified Version" refers to any derivative made by adding to, deleting,
+or substituting -- in part or in whole -- any of the components of the
+Original Version, by changing formats or by porting the Font Software to a
+new environment.
+
+"Author" refers to any designer, engineer, programmer, technical
+writer or other person who contributed to the Font Software.
+
+PERMISSION & CONDITIONS
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of the Font Software, to use, study, copy, merge, embed, modify,
+redistribute, and sell modified and unmodified copies of the Font
+Software, subject to the following conditions:
+
+1) Neither the Font Software nor any of its individual components,
+in Original or Modified Versions, may be sold by itself.
+
+2) Original or Modified Versions of the Font Software may be bundled,
+redistributed and/or sold with any software, provided that each copy
+contains the above copyright notice and this license. These can be
+included either as stand-alone text files, human-readable headers or
+in the appropriate machine-readable metadata fields within text or
+binary files as long as those fields can be easily viewed by the user.
+
+3) No Modified Version of the Font Software may use the Reserved Font
+Name(s) unless explicit written permission is granted by the corresponding
+Copyright Holder. This restriction only applies to the primary font name as
+presented to the users.
+
+4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+Software shall not be used to promote, endorse or advertise any
+Modified Version, except to acknowledge the contribution(s) of the
+Copyright Holder(s) and the Author(s) or with their explicit written
+permission.
+
+5) The Font Software, modified or unmodified, in part or in whole,
+must be distributed entirely under this license, and must not be
+distributed under any other license. The requirement for fonts to
+remain under this license does not apply to any document created
+using the Font Software.
+
+TERMINATION
+This license becomes null and void if any of the above conditions are
+not met.
+
+DISCLAIMER
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
 
 ### Manrope (fonts, public/fonts)
@@ -399,31 +489,30 @@ License: CC0 1.0. By Kenney, https://kenney.nl/assets/nature-kit, licence https:
 
 License: CC0 1.0. By Quaternius, https://poly.pizza/m/qvTrSG9pZF, licence https://creativecommons.org/publicdomain/zero/1.0/. Modified: Gallop animation only, geometry quantised, flat colours and outline added in the app.
 
-## npm packages (139)
+## npm packages (135)
 
 Production dependencies of `package.json` and their transitive dependencies (some are only partly or not at all in a given build).
 
 - @adobe/react-spectrum 3.47.7: Apache-2.0
 - @adobe/react-spectrum-ui 1.2.1: Apache-2.0
 - @adobe/react-spectrum-workflow 2.3.5: Apache-2.0
-- @adobe/react-spectrum/node_modules/@react-types/shared 3.37.0: Apache-2.0
 - @babel/runtime 7.29.7: MIT
 - @dimforge/rapier3d-compat 0.12.0: Apache-2.0
-- @heroui/react 3.2.6: MIT
-- @heroui/styles 3.2.6: MIT
+- @heroui/react 3.2.7: Apache-2.0
+- @heroui/styles 3.2.7: Apache-2.0
 - @internationalized/date 3.12.4: Apache-2.0
 - @internationalized/number 3.6.9: Apache-2.0
 - @internationalized/string 3.2.10: Apache-2.0
 - @mediapipe/tasks-vision 0.10.17: Apache-2.0 (no license file in the package; standard text below; author mediapipe@google.com)
 - @monogrid/gainmap-js 3.4.0: MIT
 - @petamoriken/float16 3.9.3: MIT
-- @radix-ui/primitive 1.1.7: MIT
-- @radix-ui/react-avatar 1.2.6: MIT
+- @radix-ui/primitive 1.2.0: MIT
+- @radix-ui/react-avatar 1.3.1: MIT
 - @radix-ui/react-compose-refs 1.1.5: MIT
-- @radix-ui/react-context 1.2.2: MIT
-- @radix-ui/react-primitive 2.1.10: MIT
-- @radix-ui/react-slot 1.3.3: MIT
-- @radix-ui/react-use-callback-ref 1.1.4: MIT
+- @radix-ui/react-context 1.3.0: MIT
+- @radix-ui/react-primitive 2.2.0: MIT
+- @radix-ui/react-slot 1.5.0: MIT
+- @radix-ui/react-use-callback-ref 1.1.5: MIT
 - @radix-ui/react-use-is-hydrated 0.1.3: MIT
 - @radix-ui/react-use-layout-effect 1.1.4: MIT
 - @react-aria/color 3.2.1: Apache-2.0
@@ -435,9 +524,9 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - @react-stately/utils 3.12.1: Apache-2.0
 - @react-three/drei 10.7.9: MIT
 - @react-three/fiber 9.8.2: MIT (no license file in the package; standard text below; author Paul Henschel (https://github.com/drcmda); https://github.com/pmndrs/react-three-fiber)
-- @react-three/postprocessing 3.2.1: MIT
+- @react-three/postprocessing 3.2.2: MIT
 - @react-types/color 3.2.0: Apache-2.0
-- @react-types/shared 3.36.1: Apache-2.0
+- @react-types/shared 3.37.0: Apache-2.0
 - @spectrum-icons/ui 3.7.2: Apache-2.0
 - @spectrum-icons/workflow 4.3.2: Apache-2.0
 - @swc/helpers 0.5.23: Apache-2.0
@@ -445,10 +534,10 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - @takram/three-clouds 0.7.6: MIT (no license file in the package; standard text below; author Shota Matsuda; https://github.com/takram-design-engineering/three-geospatial)
 - @takram/three-geospatial 0.9.1: MIT (no license file in the package; standard text below; author Shota Matsuda; https://github.com/takram-design-engineering/three-geospatial)
 - @tauri-apps/api 2.12.4: Apache-2.0 OR MIT
-- @tauri-apps/plugin-dialog 2.8.3: MIT OR Apache-2.0
+- @tauri-apps/plugin-dialog 2.8.4: MIT OR Apache-2.0
 - @tauri-apps/plugin-fs 2.7.1: MIT OR Apache-2.0
 - @tauri-apps/plugin-process 2.4.0: MIT OR Apache-2.0
-- @tauri-apps/plugin-updater 2.14.0: MIT OR Apache-2.0
+- @tauri-apps/plugin-updater 2.14.1: MIT OR Apache-2.0
 - @tweenjs/tween.js 23.1.3: MIT
 - @types/dom-mediacapture-transform 0.1.12: MIT
 - @types/dom-webcodecs 0.1.13: MIT
@@ -458,7 +547,7 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - @types/react-dom 19.3.0: MIT
 - @types/react-reconciler 0.28.9: MIT
 - @types/stats.js 0.17.4: MIT
-- @types/three 0.186.0: MIT
+- @types/three 0.187.0: MIT
 - @types/webxr 0.5.24: MIT
 - @use-gesture/core 10.3.1: MIT
 - @use-gesture/react 10.3.1: MIT
@@ -489,26 +578,23 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - loose-envify 1.4.0: MIT
 - loose-envify/node_modules/js-tokens 4.0.0: MIT
 - maath 0.10.8: MIT (no license file in the package; standard text below)
-- mediabunny 1.61.6: MPL-2.0
+- mediabunny 1.65.1: MPL-2.0
 - meshline 3.3.1: MIT
 - meshoptimizer 1.1.1: MIT
 - n8ao 2.0.1: ISC
 - object-assign 4.1.1: MIT
 - path-key 3.1.1: MIT
-- postprocessing 6.39.5: Zlib
+- postprocessing 6.39.6: Zlib
 - potpack 1.0.2: ISC
 - promise-worker-transferable 1.0.4: Apache-2.0
 - prop-types 15.8.1: MIT
 - react 19.3.1: MIT
 - react-aria 3.53.1: Apache-2.0
 - react-aria-components 1.22.1: Apache-2.0
-- react-aria-components/node_modules/@react-types/shared 3.37.0: Apache-2.0
-- react-aria/node_modules/@react-types/shared 3.37.0: Apache-2.0
 - react-dom 19.3.1: MIT
 - react-is 16.13.1: MIT
 - react-merge-refs 3.0.2: MIT
 - react-stately 3.51.0: Apache-2.0
-- react-stately/node_modules/@react-types/shared 3.37.0: Apache-2.0
 - react-transition-group 4.4.5: BSD-3-Clause
 - react-use-measure 2.1.7: MIT
 - require-from-string 2.0.2: MIT
@@ -521,8 +607,8 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - suspend-react 0.1.3: MIT
 - tagged-tag 1.0.0: MIT
 - tailwind-variants 3.3.1: MIT
-- tailwindcss 4.3.3: MIT
-- three 0.186.1: MIT
+- tailwindcss 4.3.4: MIT
+- three 0.187.0: MIT
 - three-mesh-bvh 0.8.3: MIT
 - three-stdlib 2.36.1: MIT
 - three-stdlib/node_modules/fflate 0.6.11: MIT
@@ -541,11 +627,11 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - webgl-constants 1.1.1: MIT
 - webgl-sdf-generator 1.1.1: MIT
 - which 2.0.2: ISC
-- zustand 5.0.15: MIT
+- zustand 5.0.16: MIT
 
 ### License texts of the npm packages
 
-#### @adobe/react-spectrum 3.47.7, @adobe/react-spectrum/node_modules/@react-types/shared 3.37.0, @internationalized/date 3.12.4, @internationalized/number 3.6.9, @internationalized/string 3.2.10, @react-aria/color 3.2.1, @react-aria/ssr 3.10.1, @react-aria/utils 3.34.1, @react-spectrum/color 3.2.1, @react-spectrum/provider 3.11.1, @react-stately/color 3.10.1, @react-stately/utils 3.12.1, @react-types/color 3.2.0, @react-types/shared 3.36.1, @spectrum-icons/ui 3.7.2, @spectrum-icons/workflow 4.3.2, react-aria 3.53.1, react-aria-components 1.22.1, react-aria-components/node_modules/@react-types/shared 3.37.0, react-aria/node_modules/@react-types/shared 3.37.0, react-stately 3.51.0, react-stately/node_modules/@react-types/shared 3.37.0
+#### @adobe/react-spectrum 3.47.7, @internationalized/date 3.12.4, @internationalized/number 3.6.9, @internationalized/string 3.2.10, @react-aria/color 3.2.1, @react-aria/ssr 3.10.1, @react-aria/utils 3.34.1, @react-spectrum/color 3.2.1, @react-spectrum/provider 3.11.1, @react-stately/color 3.10.1, @react-stately/utils 3.12.1, @react-types/color 3.2.0, @react-types/shared 3.37.0, @spectrum-icons/ui 3.7.2, @spectrum-icons/workflow 4.3.2, react-aria 3.53.1, react-aria-components 1.22.1, react-stately 3.51.0
 
 ```text
 Apache License
@@ -751,7 +837,7 @@ Apache License
    limitations under the License.
 ```
 
-#### @types/dom-mediacapture-transform 0.1.12, @types/dom-webcodecs 0.1.13, @types/draco3d 1.4.10, @types/offscreencanvas 2019.7.3, @types/react 19.3.0, @types/react-dom 19.3.0, @types/react-reconciler 0.28.9, @types/stats.js 0.17.4, @types/three 0.186.0, @types/webxr 0.5.24
+#### @types/dom-mediacapture-transform 0.1.12, @types/dom-webcodecs 0.1.13, @types/draco3d 1.4.10, @types/offscreencanvas 2019.7.3, @types/react 19.3.0, @types/react-dom 19.3.0, @types/react-reconciler 0.28.9, @types/stats.js 0.17.4, @types/three 0.187.0, @types/webxr 0.5.24
 
 ```text
 MIT License
@@ -777,7 +863,7 @@ MIT License
     SOFTWARE
 ```
 
-#### @radix-ui/primitive 1.1.7, @radix-ui/react-avatar 1.2.6, @radix-ui/react-compose-refs 1.1.5, @radix-ui/react-context 1.2.2, @radix-ui/react-primitive 2.1.10, @radix-ui/react-slot 1.3.3, @radix-ui/react-use-callback-ref 1.1.4, @radix-ui/react-use-is-hydrated 0.1.3, @radix-ui/react-use-layout-effect 1.1.4
+#### @radix-ui/primitive 1.2.0, @radix-ui/react-avatar 1.3.1, @radix-ui/react-compose-refs 1.1.5, @radix-ui/react-context 1.3.0, @radix-ui/react-primitive 2.2.0, @radix-ui/react-slot 1.5.0, @radix-ui/react-use-callback-ref 1.1.5, @radix-ui/react-use-is-hydrated 0.1.3, @radix-ui/react-use-layout-effect 1.1.4
 
 ```text
 MIT License
@@ -803,7 +889,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### @tauri-apps/plugin-dialog 2.8.3, @tauri-apps/plugin-fs 2.7.1, @tauri-apps/plugin-process 2.4.0, @tauri-apps/plugin-updater 2.14.0
+#### @tauri-apps/plugin-dialog 2.8.4, @tauri-apps/plugin-fs 2.7.1, @tauri-apps/plugin-process 2.4.0, @tauri-apps/plugin-updater 2.14.1
 
 ```text
 SPDXVersion: SPDX-2.1
@@ -1087,7 +1173,7 @@ Apache License
    limitations under the License.
 ```
 
-#### @heroui/react 3.2.6, @heroui/styles 3.2.6
+#### @heroui/react 3.2.7, @heroui/styles 3.2.7
 
 ```text
 Apache License
@@ -1291,7 +1377,7 @@ Apache License
    limitations under the License.
 ```
 
-#### @react-three/drei 10.7.9, @react-three/postprocessing 3.2.1
+#### @react-three/drei 10.7.9, @react-three/postprocessing 3.2.2
 
 ```text
 MIT License
@@ -1402,7 +1488,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-#### tunnel-rat/node_modules/zustand 4.5.7, zustand 5.0.15
+#### tunnel-rat/node_modules/zustand 4.5.7, zustand 5.0.16
 
 ```text
 MIT License
@@ -2684,7 +2770,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-#### mediabunny 1.61.6
+#### mediabunny 1.65.1
 
 ```text
 Mozilla Public License Version 2.0
@@ -3266,7 +3352,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-#### postprocessing 6.39.5
+#### postprocessing 6.39.6
 
 ```text
 Copyright © 2015 Raoul van Rüschen
@@ -3813,7 +3899,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### tailwindcss 4.3.3
+#### tailwindcss 4.3.4
 
 ```text
 MIT License
@@ -3839,7 +3925,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### three 0.186.1
+#### three 0.187.0
 
 ```text
 The MIT License
@@ -4254,7 +4340,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Rust crates (513)
+## Rust crates (503)
 
 Every registry crate of `src-tauri/Cargo.lock`, including those used only on one operating system or at build time. License as declared on crates.io; the copyright notice of each crate is in its source, <https://crates.io/crates/NAME/VERSION>.
 
@@ -4545,7 +4631,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - regex-automata 0.4.18: MIT OR Apache-2.0
 - regex-syntax 0.8.11: MIT OR Apache-2.0
 - reqwest 0.13.5: MIT OR Apache-2.0
-- rfd 0.16.0: MIT
+- rfd 0.17.2: MIT
 - ring 0.17.14: Apache-2.0 AND ISC
 - rustc-hash 2.1.3: Apache-2.0 OR MIT
 - rustc_version 0.4.1: MIT OR Apache-2.0
@@ -4607,7 +4693,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - syn 3.0.6: MIT OR Apache-2.0
 - sync_wrapper 1.0.2: Apache-2.0
 - synstructure 0.14.0: MIT
-- sysinfo 0.39.6: MIT
+- sysinfo 0.40.1: MIT
 - system-configuration 0.7.0: MIT OR Apache-2.0
 - system-configuration-sys 0.6.0: MIT OR Apache-2.0
 - system-deps 6.2.2: MIT OR Apache-2.0
@@ -4620,7 +4706,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - tauri-codegen 2.7.4: Apache-2.0 OR MIT
 - tauri-macros 2.7.4: Apache-2.0 OR MIT
 - tauri-plugin 2.7.1: Apache-2.0 OR MIT
-- tauri-plugin-dialog 2.8.3: Apache-2.0 OR MIT
+- tauri-plugin-dialog 2.8.4: Apache-2.0 OR MIT
 - tauri-plugin-fs 2.7.1: Apache-2.0 OR MIT
 - tauri-plugin-oauth 2.1.0: MIT OR Apache-2.0
 - tauri-plugin-opener 2.7.2: Apache-2.0 OR MIT
@@ -4714,36 +4800,26 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - windows-strings 0.5.1: MIT OR Apache-2.0
 - windows-sys 0.45.0: MIT OR Apache-2.0
 - windows-sys 0.52.0: MIT OR Apache-2.0
-- windows-sys 0.60.2: MIT OR Apache-2.0
 - windows-sys 0.61.2: MIT OR Apache-2.0
 - windows-targets 0.42.2: MIT OR Apache-2.0
 - windows-targets 0.52.6: MIT OR Apache-2.0
-- windows-targets 0.53.5: MIT OR Apache-2.0
 - windows-threading 0.2.1: MIT OR Apache-2.0
 - windows-version 0.1.7: MIT OR Apache-2.0
 - windows_aarch64_gnullvm 0.42.2: MIT OR Apache-2.0
 - windows_aarch64_gnullvm 0.52.6: MIT OR Apache-2.0
-- windows_aarch64_gnullvm 0.53.1: MIT OR Apache-2.0
 - windows_aarch64_msvc 0.42.2: MIT OR Apache-2.0
 - windows_aarch64_msvc 0.52.6: MIT OR Apache-2.0
-- windows_aarch64_msvc 0.53.1: MIT OR Apache-2.0
 - windows_i686_gnu 0.42.2: MIT OR Apache-2.0
 - windows_i686_gnu 0.52.6: MIT OR Apache-2.0
-- windows_i686_gnu 0.53.1: MIT OR Apache-2.0
 - windows_i686_gnullvm 0.52.6: MIT OR Apache-2.0
-- windows_i686_gnullvm 0.53.1: MIT OR Apache-2.0
 - windows_i686_msvc 0.42.2: MIT OR Apache-2.0
 - windows_i686_msvc 0.52.6: MIT OR Apache-2.0
-- windows_i686_msvc 0.53.1: MIT OR Apache-2.0
 - windows_x86_64_gnu 0.42.2: MIT OR Apache-2.0
 - windows_x86_64_gnu 0.52.6: MIT OR Apache-2.0
-- windows_x86_64_gnu 0.53.1: MIT OR Apache-2.0
 - windows_x86_64_gnullvm 0.42.2: MIT OR Apache-2.0
 - windows_x86_64_gnullvm 0.52.6: MIT OR Apache-2.0
-- windows_x86_64_gnullvm 0.53.1: MIT OR Apache-2.0
 - windows_x86_64_msvc 0.42.2: MIT OR Apache-2.0
 - windows_x86_64_msvc 0.52.6: MIT OR Apache-2.0
-- windows_x86_64_msvc 0.53.1: MIT OR Apache-2.0
 - winnow 0.5.40: MIT
 - winnow 1.0.4: MIT
 - winreg 0.56.0: MIT
