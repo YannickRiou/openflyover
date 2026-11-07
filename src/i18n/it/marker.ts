@@ -80,6 +80,8 @@ const messages: Messages['marker'] = {
   'track.sameAsMeasure': 'Quella della misura',
   'track.verticalSpeedHint': 'Giallo: si sale. Viola: si scende. Il centro della legenda è zero.',
   'track.legendAnchor': 'Posizione della legenda',
+  'track.legendShown': 'Mostra la legenda',
+  'track.legendShownTip': 'La legenda indica la misura che colora la traccia e il nastro, con i suoi limiti. Resta nel film anche con la grafica spenta.',
   'track.smoothing': 'Smussatura della traccia',
   'track.smoothingTip': 'Traccia a zigzag o camera che trema? La smussatura fa la media delle posizioni GPS su questa distanza: la traccia e la camera seguono una linea calma.',
   'track.width': 'Spessore della traccia',

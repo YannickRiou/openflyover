@@ -69,7 +69,7 @@ adding a setting needs no new version. The blocks, with their units:
 | --- | --- |
 | `terrainSourceId`, `demClean`, `imagerySourceId`, `imageryDate`, `imageryZoomOffset`, `imageryVivid`, `exaggeration` | terrain and imagery sources by id (a removed source opens in its successor), the date of the photos, the extra imagery zoom (0, 1 or 2 levels), vivid colours (0 to 1), vertical exaggeration (a factor above 0) |
 | `atmosphere`, `shadows`, `cloudShadows`, `sunHour`, `sunDate`, `sunFromTrack`, `exposureEv`, `nightLightEv`, `grading`, `lens` | light and picture: local mean solar time in hours (0 to 24), `YYYY-MM-DD`, exposure in stops (-4 to 4), night light in stops (0 to 4), colour grading, lens effects |
-| `trackColorBy`, `trackLegendAnchor`, `trackStyle`, `marker`, `markerValue`, `trackTail`, `trackRibbon` | how the tracks and the progress marker are drawn |
+| `trackColorBy`, `trackLegendAnchor`, `trackLegendShown`, `trackLegendFree`, `trackStyle`, `marker`, `markerValue`, `trackTail`, `trackRibbon` | how the tracks and the progress marker are drawn |
 | `camera`, `flyoverDurationS`, `pacing`, `film` | the flight: camera style (distances as a multiplier, angles in degrees, smoothing in seconds); the duration at x1 in seconds; the transitions (`pacing`, seconds); the film on the timeline |
 | `labels`, `landmarks`, `race` | 3D labels (`kmStep` in km, `rangeKm` in km from the camera), OpenStreetMap landmarks (`maxDistanceM` in metres), ghost race and stages |
 | `weather`, `weatherScene`, `clouds`, `water`, `snow`, `contours`, `forest` | weather and its scene (strengths from 0 to 1), clouds, water, snow line, contour lines, trees |

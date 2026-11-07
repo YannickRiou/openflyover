@@ -78,6 +78,8 @@ export default {
   'track.sameAsMeasure': 'Celle de la mesure',
   'track.verticalSpeedHint': 'Jaune : on monte. Violet : on descend. Le milieu de la légende, c’est zéro.',
   'track.legendAnchor': 'Position de la légende',
+  'track.legendShown': 'Afficher la légende',
+  'track.legendShownTip': 'La légende donne la mesure de la couleur de la trace et du ruban, avec ses bornes. Elle reste dans le film même quand l’habillage est éteint.',
   'track.smoothing': 'Lissage de la trace',
   'track.smoothingTip': 'Trace en zigzag ou caméra qui tremble ? Le lissage moyenne les positions GPS sur cette distance : la trace et la caméra suivent une ligne calme.',
   'track.width': 'Épaisseur de la trace',

@@ -33,7 +33,7 @@ import { DEFAULT_CONTOURS, type ContourSettings } from '../terrain/contours'
 import { DEFAULT_SNOW, type SnowSettings } from '../weather/snowLine'
 import type { LandmarkSettings } from '../osm/landmarks'
 import { DEFAULT_OVERLAY } from '../overlay/settings'
-import type { OverlayAnchor, OverlaySettings } from '../overlay/settings'
+import type { OverlayAnchor, OverlaySettings, WidgetOffset } from '../overlay/settings'
 import { DEFAULT_POSTER } from '../poster/settings'
 import type { PosterSettings } from '../poster/settings'
 import { DEFAULT_GRADING } from '../scene/grading'
@@ -81,6 +81,10 @@ export interface Settings {
   trackColorBy: TrackColorBy
   /** where the legend of that colouring sits in the film, as an overlay widget (drawn while the colouring is on) */
   trackLegendAnchor: OverlayAnchor
+  /** « Afficher la légende »: false hides the legend of the colouring and of the data ribbon */
+  trackLegendShown: boolean
+  /** « Position libre » of that legend, a share of the safe area from its anchor; null: at the anchor */
+  trackLegendFree: WidgetOffset | null
   /** width, dashes, glow and « trace qui se dessine » of every track (see scene/markerSettings.ts) */
   trackStyle: TrackStyle
   /** progress marker of the flyover (and of the ghost racers): ball, figurine or picture, size */
@@ -230,6 +234,8 @@ export const DEFAULT_SETTINGS: Settings = {
   lens: DEFAULT_LENS,
   trackColorBy: 'none',
   trackLegendAnchor: 'bottom-left',
+  trackLegendShown: true,
+  trackLegendFree: null,
   trackStyle: DEFAULT_TRACK_STYLE,
   trackTail: DEFAULT_TRACK_TAIL,
   trackRibbon: DEFAULT_TRACK_RIBBON,

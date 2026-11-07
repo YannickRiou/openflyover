@@ -80,6 +80,8 @@ const messages: Messages['marker'] = {
   'track.sameAsMeasure': 'That of the measure',
   'track.verticalSpeedHint': 'Yellow: climbing. Purple: sinking. The middle of the legend is zero.',
   'track.legendAnchor': 'Legend position',
+  'track.legendShown': 'Show the legend',
+  'track.legendShownTip': 'The legend names the measure behind the colour of the track and of the ribbon, with its bounds. It stays in the film even with the overlay off.',
   'track.smoothing': 'Track smoothing',
   'track.smoothingTip': 'Zigzagging track or shaky camera? Smoothing averages the GPS positions over this distance: the track and the camera follow a calm line.',
   'track.width': 'Track width',

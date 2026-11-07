@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Neuheiten',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v72.legend.title': "Die Legende des Datenbands nach Wunsch",
+  'v72.legend.text': "Unter „Datenband“ (Trace) blendet „Legende anzeigen“ die Legende ein oder aus. Sie steht in einer Ecke, an einem Rand, in der Mitte oder mit „Freie Position“ an beliebiger Stelle.",
   'v71.nights.title': "Eine Pause für jede Nacht, nach Wahl",
   'v71.nights.text': "Unter Licht › Tage und Nächte listet „Pause in jeder Nacht“ alle Nächte des Tracks auf, auch die durchfahrenen. Standardmäßig hält der Film für eine Ruhenacht an und durchquert eine durchfahrene Nacht im Dunkeln. Ein Haken ändert diese Wahl.",
   'v71.dayCards.title': "Tageskarten frei platziert",

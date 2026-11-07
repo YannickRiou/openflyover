@@ -3,6 +3,11 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 7.2.0 (unreleased)
+
+- **« Nouveautés 7.2 »**: the ribbon legend, your way.
+- **The legend of the colouring and of the data ribbon, shown or hidden and placed freely**: in « Ligne » (Trace), the legend block now sits under « Ruban de données », since it serves both. « Afficher la légende » (`trackLegendShown`, on by default) shows or hides it; « Position de la légende » keeps its nine places (corners, edges, centre) and gets the « Position libre » of the overlay widgets (`trackLegendFree`, a share of the safe area from the anchor). At a free position the two legends (line and ribbon) move together, one under the other.
+
 ## 7.1.0 (November 2026)
 
 - **« Nouveautés 7.1 »**: a pause for each night, your choice; day cards placed freely.

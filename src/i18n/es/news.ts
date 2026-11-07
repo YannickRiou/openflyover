@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v72.legend.title': "La leyenda de la cinta, a tu gusto",
+  'v72.legend.text': "Bajo «Cinta de datos» (Trace), «Mostrar la leyenda» muestra u oculta la leyenda. Colócala en una esquina, en un borde, en el centro o donde quieras con «Posición libre».",
   'v71.nights.title': "Una pausa para cada noche, a tu elección",
   'v71.nights.text': "En Luz › Días y noches, «Pausa en cada noche» lista todas las noches del track, incluso aquellas en las que rodaste. Por defecto la película se detiene en una noche de descanso y cruza a oscuras una noche rodada. Una casilla basta para cambiarlo.",
   'v71.dayCards.title': "Tarjetas de día colocadas libremente",

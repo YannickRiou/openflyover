@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'What’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v72.legend.title': 'The ribbon legend, your way',
+  'v72.legend.text': 'Under “Data ribbon” (Trace), “Show the legend” shows or hides the legend. Put it in a corner, on an edge, in the centre, or anywhere with “Free position”.',
   'v71.nights.title': "A pause for each night, your choice",
   'v71.nights.text': "In Light › Days and nights, “Pause at each night” lists every night of the track, even those you rode through. By default the film pauses for a night of rest and crosses a night spent riding in the dark. One tick changes that choice.",
   'v71.dayCards.title': "Day cards, placed freely",

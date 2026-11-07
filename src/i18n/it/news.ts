@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v72.legend.title': "La legenda del nastro, come vuoi tu",
+  'v72.legend.text': "Sotto \"Nastro di dati\" (Trace), \"Mostra la legenda\" mostra o nasconde la legenda. Mettila in un angolo, su un bordo, al centro o dove vuoi con \"Posizione libera\".",
   'v71.nights.title': "Una pausa per ogni notte, a tua scelta",
   'v71.nights.text': "In Luce › Giorni e notti, \"Pausa a ogni notte\" elenca tutte le notti della traccia, anche quelle passate in sella. Di base il film si ferma per una notte di riposo e attraversa al buio una notte pedalata. Basta una spunta per cambiare.",
   'v71.dayCards.title': "Schede del giorno posizionate liberamente",

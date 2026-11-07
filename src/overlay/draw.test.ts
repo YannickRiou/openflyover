@@ -1005,6 +1005,21 @@ describe('legend of the track colouring', () => {
     const withMap = title(render(enabled({ minimap: { ...TITLED.minimap, enabled: true, anchor: 'top-right' } }), extras))!
     expect(withMap.y).toBeGreaterThan(alone.y)
   })
+
+  it('« Position libre » moves both legends together, the second still under the first', () => {
+    const speed = trackLegend([sampleTrack], 'speed')!
+    const anchor = 'top-left' as const
+    const at = (free?: { x: number; y: number }) => {
+      const texts = render(TITLED, { trackLegend: { ...legend, anchor, free }, ribbonLegend: { ...speed, anchor, free } })
+      return [texts.find((t) => t.text === legend.label)!, texts.find((t) => t.text === speed.label)!]
+    }
+    const [first, second] = at()
+    const [movedFirst, movedSecond] = at({ x: 0.5, y: 0.25 })
+    const safe = { w: SIZE.width * (1 - 2 * SAFE_MARGIN), h: SIZE.height * (1 - 2 * SAFE_MARGIN) }
+    expect(movedFirst.x - first.x).toBeCloseTo(0.5 * safe.w, 0)
+    expect(movedFirst.y - first.y).toBeCloseTo(0.25 * safe.h, 0)
+    expect(movedSecond.y - movedFirst.y).toBeCloseTo(second.y - first.y, 0)
+  })
 })
 
 describe('leaderboard', () => {

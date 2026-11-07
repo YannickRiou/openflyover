@@ -139,6 +139,8 @@ export interface OverlayExtras {
 /** Legend of the track colouring as the overlay draws it: the values, and the anchor chosen for it. */
 export interface OverlayTrackLegend extends TrackLegend {
   anchor: OverlayAnchor
+  /** « Position libre », a share of the safe area from the anchor (`trackLegendFree`) */
+  free?: WidgetOffset
 }
 
 /** The figures of a day or stage card that `fields` chooses (distance, D+, time, start), those it has. */
@@ -1262,6 +1264,25 @@ export function minimapWidget(p: Painter, frame: OverlayFrame, settings: Overlay
   }
 }
 
+/** `items` (one anchor) as one widget, stacked `gap` apart and aligned like their anchor. */
+function stackedWidget(items: readonly Widget[], gap: number): Widget {
+  const width = Math.max(...items.map((w) => w.width))
+  const height = items.reduce((sum, w) => sum + w.height, 0) + gap * (items.length - 1)
+  const align = alignOf(items[0].anchor)
+  return {
+    ...items[0],
+    width,
+    height,
+    draw(x, y) {
+      let cy = y
+      for (const w of items) {
+        w.draw(align === 'left' ? x : align === 'right' ? x + width - w.width : x + (width - w.width) / 2, cy)
+        cy += w.height + gap
+      }
+    },
+  }
+}
+
 /** Narrowest track legend (u): the colour ramp stays readable. */
 const TRACK_LEGEND_WIDTH_U = 22
 
@@ -2253,8 +2274,13 @@ export function drawOverlay(
     if (opacity > 0.001) texts.push({ item, opacity })
   }
   // the legend of the track colouring follows the colouring, overlay on or off
-  if (legend && live > 0) add(trackLegendWidget(p, legend, live))
-  if (extras.ribbonLegend && live > 0) add(trackLegendWidget(p, extras.ribbonLegend, live))
+  if (live > 0) {
+    const legends = [legend, extras.ribbonLegend].flatMap((l) => (l ? [trackLegendWidget(p, l, live)] : []))
+    // at a free position the two legends move together, one above the other
+    const free = legend?.free ?? extras.ribbonLegend?.free
+    if (free && legends.length > 0) add({ ...stackedWidget(legends, 2 * p.u), offset: { x: free.x * safe.w, y: free.y * safe.h } })
+    else legends.forEach(add)
+  }
   // photo cards after the widgets of their anchor; the caption of a full-screen photo is drawn like a text
   for (const { item, opacity, image } of photos) {
     const caption = item.caption?.trim()
