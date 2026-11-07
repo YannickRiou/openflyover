@@ -119,7 +119,7 @@ const messages: Messages['light'] = {
   'clouds.backToPreset': 'Volver a « Según la calidad de la exportación »',
   'water.enable': 'Agua reflectante (mar, lagos y ríos)',
   'water.tip': 'Dibuja el agua de OpenStreetMap alrededor del track: el mar a lo largo de las costas, los lagos, los ríos y los arroyos, con reflejos del cielo y del sol y pequeñas olas. Los datos se descargan una vez por track (hace falta conexión a Internet).',
-  'water.strength': 'Intensidad del agua',
+  'water.strength': 'Intensidad de lagos y ríos',
   'demClean.enable': 'Limpiar el relieve en el mar',
   'demClean.tip': 'Elimina los picos aislados que los datos de altitud dejan a veces sobre el mar (el track 3D sigue ese relieve). Las montañas y las costas no se tocan.',
   'demClean.seaToZero': 'Llevar el mar a 0 m',

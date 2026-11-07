@@ -18,7 +18,8 @@ import type { LocalFrame, TerrainEngine } from '../core/types'
 import { registerDrapeFlush } from '../export/store'
 import { mergeByTrack } from '../osm/byTrack'
 import { useWaterStore } from '../osm/store'
-import { fetchTrackWater, fetchTrackWaterShapes, isWaterLine, lineWidthM, runsOutside, waterCover, type WaterPolygon } from '../osm/water'
+import { corridorBoxes } from '../osm/overpass'
+import { fetchTrackWater, fetchTrackWaterShapes, isWaterLine, lineWidthM, runsOutside, WATER_MARGIN_M, waterCover, type WaterPolygon } from '../osm/water'
 import { useAppStore } from '../state/store'
 import { GROUND_DROP_PER_M2, NO_SNOW_LINE_M, SNOW_NOISE_GLSL, snowRagGlsl, snowUniforms } from '../terrain/snowShader'
 import { useDebouncedCallback } from './useDebouncedCallback'
@@ -134,8 +135,10 @@ const fragmentReflection = /* glsl */ `
   #else
   vec3 sky = waterSkyColor;
   #endif
-  reflectedLight.indirectSpecular += sky * fresnel * waterStrength * (1.0 - waterIce);
-  diffuseColor.a = mix(vWaterFade * mix(waterOpacity, 1.0, fresnel), 1.0, waterIce) * waterStrength;
+  // the intensity setting is that of the lakes and rivers: the sea is always drawn in full
+  float waterAmount = mix(waterStrength, 1.0, vWaterSea);
+  reflectedLight.indirectSpecular += sky * fresnel * waterAmount * (1.0 - waterIce);
+  diffuseColor.a = mix(vWaterFade * mix(waterOpacity, 1.0, fresnel), 1.0, waterIce) * waterAmount;
 }
 `
 
@@ -295,14 +298,16 @@ export function WaterLayer() {
 
   const pieces = useMemo<WaterPiece[]>(() => {
     const cover = waterCover(polygons)
+    // the sea is cut to the corridors of the tracks: it fades towards their edge
+    const corridor = tracks.flatMap((track) => corridorBoxes(track, WATER_MARGIN_M))
     return [
-      ...polygons.map((polygon): WaterPiece => ({ kind: polygon.kind, mesh: polygon.kind === 'sea' ? buildSeaMesh(polygon) : buildWaterMesh(polygon) })),
+      ...polygons.map((polygon): WaterPiece => ({ kind: polygon.kind, mesh: polygon.kind === 'sea' ? buildSeaMesh(polygon, corridor) : buildWaterMesh(polygon) })),
       // a river mapped as a line inside a riverbank polygon is the polygon's
       ...lines
         .flatMap((line) => runsOutside(line, cover))
         .map((line): WaterPiece => ({ kind: 'line', mesh: buildRiverStrip(line.points, lineWidthM(line)) })),
     ]
-  }, [polygons, lines])
+  }, [polygons, lines, tracks])
   const drape = useCallback(
     (current: TerrainEngine | null, factor: number) => {
       if (!frame) return

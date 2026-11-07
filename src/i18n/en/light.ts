@@ -119,7 +119,7 @@ const messages: Messages['light'] = {
   'clouds.backToPreset': 'Back to « Following the export quality »',
   'water.enable': 'Reflective water (sea, lakes and rivers)',
   'water.tip': 'Draws the OpenStreetMap water around the track: the sea along coasts, lakes, rivers and streams, with reflections of the sky and the sun and small waves. The data is downloaded once per track (an Internet connection is needed).',
-  'water.strength': 'Water intensity',
+  'water.strength': 'Lakes and rivers intensity',
   'demClean.enable': 'Clean up the terrain over the sea',
   'demClean.tip': 'Removes the isolated spikes that elevation data sometimes leaves above the sea (the 3D track follows this terrain). Mountains and coasts are not touched.',
   'demClean.seaToZero': 'Bring the sea to 0 m',

@@ -119,7 +119,7 @@ const messages: Messages['light'] = {
   'clouds.backToPreset': 'Torna a « Secondo la qualità dell’export »',
   'water.enable': 'Acqua riflettente (mare, laghi e fiumi)',
   'water.tip': 'Disegna l’acqua di OpenStreetMap attorno alla traccia: il mare lungo le coste, i laghi, i fiumi e i torrenti, con i riflessi del cielo e del sole e piccole onde. I dati vengono scaricati una volta per traccia (serve una connessione a Internet).',
-  'water.strength': 'Intensità dell’acqua',
+  'water.strength': 'Intensità di laghi e fiumi',
   'demClean.enable': 'Pulizia del rilievo in mare',
   'demClean.tip': 'Elimina i picchi isolati che i dati di altitudine lasciano a volte sopra il mare (la traccia 3D segue questo rilievo). Montagne e coste non vengono toccate.',
   'demClean.seaToZero': 'Riporta il mare a 0 m',

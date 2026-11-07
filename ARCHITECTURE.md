@@ -91,7 +91,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/ui/tourSteps.ts` + `src/ui/Tour.tsx` | guided tour of the first launch | `TOUR_STEPS` (import, tabs, panel, timeline, export), `useTour`, `startTour`, `stopTour`, `placeBubble` (pure, tested); the key `openflyover.tour.v1` remembers that it ran; starts 1.5 s after the first screen, never under automation (`navigator.webdriver`); « Revoir la visite guidée » in the help |
 | `src/ui/searchSections.ts` + `src/ui/SettingsSearch.tsx` | search for a setting (`Ctrl+K`) | pure, tested: the sections searched by title (the ones a mode hides too: `SectionMatch.needs` is the mode that has it), the matching section opened |
 | `src/ui/uiMode.ts` + `src/ui/ModeChoice.tsx` | interface modes (« Débutant », « Confirmé », « Expert ») | `UI_MODES`, `UiMode`, `Preferences.uiMode` (`shell.ts`); `modeAtLeast`, `useModeShows`, `useModeTabs`, `pathsBut`; `ModeGate`, `ModeHint` (`PanelSection.tsx`); `ModeSwitcher` (top bar), `ModeQuestion` (first launch) |
-| `src/osm/water.ts` + `src/osm/coast.ts` + `src/scene/waterMesh.ts` + `src/scene/riverStrip.ts` + `src/scene/WaterLayer.tsx` | reflective water (sea, lakes, rivers) | `WaterSettings`, `DEFAULT_WATER`, `WATER_MARGIN_M`, `waterQuery`, `stitchRings`, `ringAreaM2`, `pointInRing`, `parseWater`, `fetchTrackWater`; `clipRing`, `buildWaterMesh`, `DEFAULT_WATER_MESH`; `WaterLayer`, `WATER_LIFT_M`; `useWaterStore` (`osm/store.ts`); `waterLinesQuery`, `parseWaterShapes`, `fetchTrackWaterShapes`, `runsOutside`, `lineWidthM`, `LINE_WIDTH_M`; `seaPolygons`, `chainCoastWays`, `reduceCoast`, `seaSide`, `seaCells`; `buildSeaMesh`; `buildRiverStrip`, `stripHeights` |
+| `src/osm/water.ts` + `src/osm/coast.ts` + `src/scene/waterMesh.ts` + `src/scene/riverStrip.ts` + `src/scene/WaterLayer.tsx` | reflective water (sea, lakes, rivers) | `WaterSettings`, `DEFAULT_WATER`, `WATER_MARGIN_M`, `waterQuery`, `stitchRings`, `ringAreaM2`, `pointInRing`, `parseWater`, `fetchTrackWater`; `clipRing`, `buildWaterMesh`, `DEFAULT_WATER_MESH`; `WaterLayer`, `WATER_LIFT_M`; `useWaterStore` (`osm/store.ts`); `waterLinesQuery`, `parseWaterShapes`, `fetchTrackWaterShapes`, `runsOutside`, `lineWidthM`, `LINE_WIDTH_M`; `seaPolygons`, `chainCoastWays`, `reduceCoast`, `seaSide`, `seaCells`; `buildSeaMesh`, `SEA_EDGE_FADE_M`; `buildRiverStrip`, `stripHeights` |
 | `src/weather/sceneClouds.ts` + `src/scene/CloudsLayer.tsx` | volumetric clouds | `CloudSettings`, `DEFAULT_CLOUDS`, `isValidClouds`, `withCloudDefaults`, `seaTopFor`, `cloudCoversAt`, `sceneCloudsFrom`, `cloudCoverField`, `zonedCloudsFrom`, `seaOfClouds`, `filmWind`, `cloudDrift`, `cubeSphereUv`, `weatherOffsetFor`; `CloudsLayer`, `createCloudNoiseTexture` (`cloudNoise.ts`); `patchRegionalCoverage`, `patchCloudShadow` (`scene/cloudShaders.ts`) |
 | `src/osm/forest.ts` + `src/scene/forestPoints.ts` + `src/scene/treeGeometry.ts` + `src/scene/ForestLayer.tsx` | forests (see "Forests") | `ForestSettings`, `DEFAULT_FOREST`, `FOREST_DENSITY_RANGE`, `isValidForest`, `FOREST_MARGIN_M`, `forestQuery`, `parseForest`, `fetchTrackForest`; `placeTrees`, `treeKind`, `densityFactor`, `hash01`, `CHUNK_M`, `ForestChunk`; `createTreeGeometries`, `TREE_WIDTH_RATIO`; `ForestLayer`, `FOREST_FAR_M`, `FOREST_FADE_M`; `useForestStore` (`osm/store.ts`) |
 | `src/osm/glacier.ts` + `src/scene/glacierMesh.ts` + `src/scene/glacierMaterial.ts` + `src/scene/GlacierLayer.tsx` | glaciers (see "Glaciers") | `GLACIER_MARGIN_M`, `MIN_GLACIER_AREA_M2`, `GlacierPolygon`, `glacierQuery`, `parseGlacier`, `fetchTrackGlacier`; `buildGlacierMesh`, `fillHeights`; `createGlacierMaterial`; `GlacierLayer`, `GLACIER_LIFT_M`; `useGlacierStore` (`osm/store.ts`), `useGlacierStatusStore` (`glacierStatus.ts`) |
@@ -3595,9 +3595,12 @@ exports) gets it from the terrain source of the settings.
 - **Pure mesh** (`waterMesh.ts`, tested): polygon cut by a grid of square cells (60 m, at most 40 per side,
   Sutherland–Hodgman of each ring against each cell), each piece triangulated with its holes (`ShapeUtils`, earcut). The
   grid puts vertices inside the water: a river follows its valley and the opacity fades toward the bank (`fade` = distance to the closest
-  edge / 40 m, capped at 1). **The sea** has no grid: `buildSeaMesh` triangulates the polygon with its holes as it is (flat water
-  needs no vertex inside), with `fade` 1 everywhere: where the relief rises above the plane the land hides the water, so the
-  shore is the relief's own. **A line river** (`riverStrip.ts`, tested `buildRiverStrip`): the polyline resampled every 10 m
+  edge / 40 m, capped at 1). **The sea** fades at no shore: where the relief rises above the plane the land hides the water, so the
+  shore is the relief's own. It is only drawn in the corridor it was cut to, so it fades towards the corridor's edge instead
+  (7.2.1: at full strength it ended on straight lines and steps across the open water): `buildSeaMesh(polygon, corridor)` cuts the
+  polygon by a grid (500 m, at most 40 per side) and `fade` = distance inside the corridor (the largest of the distances inside each of its
+  boxes, `corridorBoxes(track, WATER_MARGIN_M)` of every track) / `SEA_EDGE_FADE_M` 3 km, capped at 1. Without a corridor it
+  triangulates the polygon as it is, `fade` 1. **A line river** (`riverStrip.ts`, tested `buildRiverStrip`): the polyline resampled every 10 m
   (`STRIP_STEP_M`, the track's step, so the ribbon follows its valley: 60 m pieces cut through a steep slope and the stream showed in broken bits), three vertices per sample (left bank, middle, right bank, banks mitred
   at bends up to twice the half-width), `fade` 1 in the middle and 0 on the banks (`EDGE_FADE`), triangles counter-clockwise like
   the lakes'. The ribbons of a track total at most 20,000 samples (`MAX_LINE_LENGTH_M`, 200 km, at 10 m), mostly far fewer.
@@ -3617,7 +3620,7 @@ exports) gets it from the terrain source of the settings.
   (`playback.timeS`, otherwise `clock.timeAtProgress`), faded out when their wavelength covers fewer than ~8 pixels (no
   shimmering in the distance); sky reflection = Schlick Fresnel (F0 0.02) × 1.5 × irradiance of the Takram sky probe (`lightProbe`)
   in the reflected direction raised above the horizon / π (fixed glacier color without the atmosphere); opacity = bank fade
-  × mix(0.82, 1, Fresnel) × `strength`. A function of the film time only: the export stays deterministic. The sea is told
+  × mix(0.82, 1, Fresnel) × `strength` (1 for the sea: `waterAmount = mix(waterStrength, 1, waterSea)`, the slider is that of the lakes and rivers). A function of the film time only: the export stays deterministic. The sea is told
   from the rest by a vertex attribute (`waterSea`): its waves are 3 × longer and 1.5 × taller.
   **Ice** (4.1): a second attribute, `waterLake`, marks the lakes (not the river areas, the sea or the ribbons). The material reads the terrain's own
   `snowUniforms` (`snowLine`, `snowBand`, `snowExaggeration`, the same objects, no copy) and, for a lake whose altitude
@@ -3630,7 +3633,7 @@ exports) gets it from the terrain source of the settings.
   projection only, so the export frames the same streams as the preview, whatever its resolution.
 - **Setting**: `settings.water { enabled, strength }` (true, 1; `SETTING_CHECKS`: 0 ≤ strength ≤ 1), "Eau reflétante (mer,
   lacs et rivières)" (reflective water: sea, lakes and rivers; « Lacs et rivières reflétants » before 4.0, same field, so the
-  render history and the old projects are unchanged) checkbox and "Intensité de l'eau" (water intensity) slider in the "Fond de carte" section.
+  render history and the old projects are unchanged) checkbox and "Intensité des lacs et rivières" (lakes and rivers intensity; « Intensité de l'eau » before 7.2.1, when it also set the sea) slider in the "Fond de carte" section.
 - **Limits**: the reflection is that of the average sky (SH probe), neither of mountains nor of clouds; lakes at DEM level (no OSM
   level); only the 8 km corridor is queried (4 km for the lines); the sea is flat (no tide, no swell, no depth colour) and its shore is
   the OSM coast cut by the relief, so a DEM below 0.5 m just inside the OSM coast is flooded (tidal flats, estuaries up to the

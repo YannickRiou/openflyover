@@ -117,7 +117,7 @@ export default {
   'clouds.backToPreset': 'Revenir à « Selon la qualité de l’export »',
   'water.enable': 'Eau reflétante (mer, lacs et rivières)',
   'water.tip': 'Dessine l’eau d’OpenStreetMap autour de la trace : la mer le long des côtes, les lacs, les rivières et les ruisseaux, avec les reflets du ciel et du soleil et de petites vagues. Les données sont téléchargées une fois par trace (connexion Internet nécessaire).',
-  'water.strength': 'Intensité de l’eau',
+  'water.strength': 'Intensité des lacs et rivières',
   'demClean.enable': 'Nettoyer le relief en mer',
   'demClean.tip': 'Supprime les pics isolés que les données d’altitude laissent parfois au-dessus de la mer (la trace 3D suit ce relief). Les montagnes et les côtes ne sont pas touchées.',
   'demClean.seaToZero': 'Ramener la mer à 0 m',
