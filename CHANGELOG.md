@@ -3,8 +3,9 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
+## 7.1.0 (November 2026)
 
+- **« Nouveautés 7.1 »**: a pause for each night, your choice; day cards placed freely.
 - **A pause for each night, your choice**: « Jours et nuits » (Lumière) lists every night of a multi-day track under « Pause à chaque nuit », with the distance covered at night. By default nothing changes: the film pauses for a night of rest, and crosses a night spent riding in the dark. A tick gives a ridden night a pause (`film.nights.added`) or takes one away (`film.nights.skipped`); « Tout remettre en automatique » undoes them. Deleting a night block on the timeline takes its pause away the same way. A 7-day raid ridden day and night showed only two nights before, with no way to pause on the four others.
 - **Day cards, placed freely**: the day cards get the « Position libre » of the other overlay widgets (`film.dayCards.free`, a share of the safe area from their anchor).
 
