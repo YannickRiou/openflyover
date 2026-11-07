@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 7.2.2 (unreleased)
+
+- **The sea is no longer drawn**: « Eau reflétante » now draws the lakes and rivers only (renamed « Eau reflétante (lacs et rivières) », same `water` field, old projects unchanged). The sea stays as in the aerial photos, as when the water is off: the flat sea plane of 7.2.1 hid them under a dark uniform blue, and the elevation data's noise along the coast showed through it as jagged dark streaks. The coastline is no longer asked of Overpass, so the second water request is lighter.
+
 ## 7.2.1 (November 2026)
 
 - **The sea no longer ends on a hard line, and the slider no longer touches it**: the sea is only drawn in the 8 km corridor around the track, and at full strength its edge showed as straight lines and steps across the open water. It now fades out over the last 3 km inside the corridor (`buildSeaMesh` cuts it by a 500 m grid and fades it from the corridor's edge, `SEA_EDGE_FADE_M`). The slider is renamed « Intensité des lacs et rivières » (`water.strength`, same field, old projects unchanged): it sets the lakes, river areas and streams only; the sea is always drawn in full while « Eau reflétante » is on.
