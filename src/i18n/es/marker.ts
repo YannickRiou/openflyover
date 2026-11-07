@@ -80,6 +80,8 @@ const messages: Messages['marker'] = {
   'track.sameAsMeasure': 'La de la medida',
   'track.verticalSpeedHint': 'Amarillo: se sube. Violeta: se baja. El medio de la leyenda es cero.',
   'track.legendAnchor': 'Posición de la leyenda',
+  'track.legendShown': 'Mostrar la leyenda',
+  'track.legendShownTip': 'La leyenda indica la medida que da color a la traza y a la cinta, con sus límites. Se queda en la película aunque la superposición esté apagada.',
   'track.smoothing': 'Suavizado del track',
   'track.smoothingTip': '¿Track en zigzag o cámara que tiembla? El suavizado promedia las posiciones GPS en esta distancia: el track y la cámara siguen una línea tranquila.',
   'track.width': 'Grosor del track',

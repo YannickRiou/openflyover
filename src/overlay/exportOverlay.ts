@@ -36,7 +36,6 @@ import { modelCreditsInUse, needsAttribution } from '../scene/modelCredits'
 import type { CreditSources, LeaderboardRow, OverlayFilm } from './data'
 import { bilanStampAt, drawOverlay, mediaCoversFrame } from './draw'
 import type { OverlayAssets, OverlayExtras, OverlayTime, OverlayTrackLegend } from './draw'
-import type { OverlayAnchor } from './settings'
 
 /** Leaderboard of the ghost race at `progress`, while the race and its widget are on (2+ tracks). */
 function leaderboardAt(progress: number): LeaderboardRow[] | undefined {
@@ -53,13 +52,14 @@ function leaderboardAt(progress: number): LeaderboardRow[] | undefined {
 /** Legends already made (one per quantity): their values are worked out again only when the tracks or the language change. */
 let legendCache: { tracks: readonly Track[]; language: string; byQuantity: Map<TrackColorBy, TrackLegend | null> } | null = null
 
-/** Legend of a quantity of the track colouring (the line's, or the data ribbon's) and its place; none for « none ». */
-function trackLegendOf(tracks: readonly Track[], colorBy: TrackColorBy, anchor: OverlayAnchor): OverlayTrackLegend | null {
+/** Legend of a quantity of the track colouring (the line's, or the data ribbon's) and its place; none for « none » or when hidden. */
+function trackLegendOf(tracks: readonly Track[], colorBy: TrackColorBy, place: Pick<OverlayTrackLegend, 'anchor' | 'free'> | null): OverlayTrackLegend | null {
+  if (!place) return null
   const language = getLanguage()
   if (!legendCache || legendCache.tracks !== tracks || legendCache.language !== language) legendCache = { tracks, language, byQuantity: new Map() }
   if (!legendCache.byQuantity.has(colorBy)) legendCache.byQuantity.set(colorBy, trackLegend(tracks, colorBy))
   const legend = legendCache.byQuantity.get(colorBy)
-  return legend ? { ...legend, anchor } : null
+  return legend ? { ...legend, ...place } : null
 }
 
 let dayMemo: { track: Track; series: WeatherSeries | null; figures: DayFigures[] } | null = null
@@ -124,14 +124,16 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
   const sources = currentCreditSources()
   const sequence = filmSequenceOf(tracks, settings.race)
   const stamp = sequence ? bilanStampAt(sequence, time) : null
+  // « Afficher la légende » off: neither legend is drawn
+  const legendPlace = settings.trackLegendShown ? { anchor: settings.trackLegendAnchor, free: settings.trackLegendFree ?? undefined } : null
   return {
     time,
     leaderboard: leaderboardAt(progress),
     // the legend of the line's colouring; the data ribbon's comes first when the line is not coloured, else second when it shows another quantity
-    trackLegend: trackLegendOf(tracks, settings.trackColorBy !== 'none' ? settings.trackColorBy : settings.trackRibbon.enabled ? settings.trackRibbon.metric : 'none', settings.trackLegendAnchor),
+    trackLegend: trackLegendOf(tracks, settings.trackColorBy !== 'none' ? settings.trackColorBy : settings.trackRibbon.enabled ? settings.trackRibbon.metric : 'none', legendPlace),
     ribbonLegend:
       settings.trackRibbon.enabled && settings.trackColorBy !== 'none' && settings.trackRibbon.metric !== settings.trackColorBy
-        ? trackLegendOf(tracks, settings.trackRibbon.metric, settings.trackLegendAnchor)
+        ? trackLegendOf(tracks, settings.trackRibbon.metric, legendPlace)
         : null,
     // a « Bilan »: the date of the outing being drawn, with the film's own texts
     texts: stamp ? [...settings.film.texts, stamp] : settings.film.texts,

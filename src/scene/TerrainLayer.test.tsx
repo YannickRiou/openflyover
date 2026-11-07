@@ -120,6 +120,8 @@ describe('engine options from settings', () => {
     lens: DEFAULT_LENS,
     trackColorBy: 'none' as const,
     trackLegendAnchor: 'bottom-left' as const,
+    trackLegendShown: true,
+    trackLegendFree: null,
     camera: { style: 'chase' as const, distance: 1, pitchDeg: 30, headingOffsetDeg: 0, smoothing: 1, northUp: false, turnSmoothingM: 0, aimSmoothingS: 0, cameraSmoothingS: 3, endingS: 0, orbitTurns: 1, leadRoomPct: 15, bankDeg: 3, focalMm: 26 },
     flyoverDurationS: 60,
     pacing: { keepDuration: true, transitionS: 1.5 },

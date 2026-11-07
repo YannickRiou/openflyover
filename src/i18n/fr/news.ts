@@ -2,6 +2,8 @@ export default {
   title: 'Nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v72.legend.title': "La légende du ruban, à votre main",
+  'v72.legend.text': "Sous le « Ruban de données » (Trace), « Afficher la légende » montre ou cache la légende. Vous la placez dans un coin, sur un bord, au centre, ou n’importe où avec « Position libre ».",
   'v71.nights.title': "Une pause pour chaque nuit, à votre choix",
   'v71.nights.text': "Dans Lumière › Jours et nuits, « Pause à chaque nuit » liste toutes les nuits de la trace, même celles où vous avez roulé. Par défaut, le film s’arrête pour une nuit de repos et traverse dans le noir une nuit roulée. Une case suffit pour changer ce choix.",
   'v71.dayCards.title': "Les cartes de jour, placées librement",

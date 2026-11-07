@@ -80,6 +80,8 @@ const messages: Messages['marker'] = {
   'track.sameAsMeasure': 'Die des Messwerts',
   'track.verticalSpeedHint': 'Gelb: Steigen. Violett: Sinken. Die Mitte der Legende ist null.',
   'track.legendAnchor': 'Position der Legende',
+  'track.legendShown': 'Legende anzeigen',
+  'track.legendShownTip': 'Die Legende nennt den Messwert hinter der Farbe der Spur und des Datenbands, mit seinen Grenzen. Sie bleibt im Film, auch wenn die Einblendungen aus sind.',
   'track.smoothing': 'Glättung des Tracks',
   'track.smoothingTip': 'Zickzack-Track oder wackelnde Kamera? Die Glättung mittelt die GPS-Positionen über diese Distanz: Track und Kamera folgen einer ruhigen Linie.',
   'track.width': 'Linienstärke des Tracks',

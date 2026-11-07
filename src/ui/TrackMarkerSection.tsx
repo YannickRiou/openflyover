@@ -46,6 +46,7 @@ import { addJunctionMarkerKeys, useFilmSequence, useFilmTrack } from '../scene/u
 import { useAppStore } from '../state/store'
 import { formatDistance, formatPercent, formatShort } from './format'
 import { AnchorPicker } from './AnchorPicker'
+import { FreePosition } from './OverlayPanel'
 import { Icon } from './icons'
 import { PanelKeys } from './KeyControls'
 import { InfoTip, ModeGate, PanelSection, RangeField, SettingRow } from './PanelSection'
@@ -179,7 +180,7 @@ function MarkerImageField({ marker, update }: { marker: MarkerSettings; update(p
  * rows (name and value, control on demand).
  */
 /** What the track section shows from « Confirmé » on: every setting of the track but its width, which every mode shows. */
-const TRACK_BEYOND_WIDTH: SettingPath[] = ['trackTail', 'trackColorBy', 'trackLegendAnchor', 'trackRibbon', ...pathsBut('trackStyle', DEFAULT_TRACK_STYLE, 'width')]
+const TRACK_BEYOND_WIDTH: SettingPath[] = ['trackTail', 'trackColorBy', 'trackLegendAnchor', 'trackLegendShown', 'trackLegendFree', 'trackRibbon', ...pathsBut('trackStyle', DEFAULT_TRACK_STYLE, 'width')]
 /** What the marker section shows from « Confirmé » on: every setting of the marker but its shape. */
 const MARKER_BEYOND_SHAPE = pathsBut('marker', DEFAULT_MARKER, 'kind')
 
@@ -198,6 +199,8 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
   const updateRibbon = (patch: Partial<TrackRibbonSettings>) => setSetting('trackRibbon', { ...ribbon, ...patch })
   const trackColorBy = useAppStore((s) => s.settings.trackColorBy)
   const legendAnchor = useAppStore((s) => s.settings.trackLegendAnchor)
+  const legendShown = useAppStore((s) => s.settings.trackLegendShown)
+  const legendFree = useAppStore((s) => s.settings.trackLegendFree)
   const firstTrack = useAppStore((s) => s.tracks[0])
   // the colouring and the ribbon apply to every track: a measure is offered when one of them has it
   const tracks = useAppStore((s) => s.tracks)
@@ -223,7 +226,7 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
     <PanelSection
       title={t('marker.track.title')}
       summary={[trackColorBy === 'none' ? t('marker.track.solid') : TRACK_METRICS[trackColorBy].label, `${formatShort(style.width)} px`, TRACK_DASH_LABELS[style.dash]].join(' · ')}
-      keys={['trackColorBy', 'trackLegendAnchor', 'trackStyle', 'trackTail', 'trackRibbon']} hidden={hidden}>
+      keys={['trackColorBy', 'trackLegendAnchor', 'trackLegendShown', 'trackLegendFree', 'trackStyle', 'trackTail', 'trackRibbon']} hidden={hidden}>
       <ModeGate min="confirme" paths={TRACK_BEYOND_WIDTH}>
       <h3 className={GROUP}>{t('marker.track.lineGroup')}</h3>
       <div className="flex items-center gap-1">
@@ -292,15 +295,6 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
           {trackColorBy === 'verticalSpeed' && <p className="type-hint">{t('marker.track.verticalSpeedHint')}</p>}
         </div>
       </SettingRow>
-      {(trackColorBy !== 'none' || ribbon.enabled) && (
-        <SettingRow label={t('marker.track.legendAnchor')} value={OVERLAY_ANCHOR_LABELS[legendAnchor]} paths={['trackLegendAnchor']}>
-          <AnchorPicker
-            label={t('marker.track.legendAnchor')}
-            value={legendAnchor}
-            onChange={(anchor) => setSetting('trackLegendAnchor', anchor)}
-          />
-        </SettingRow>
-      )}
       <div className="flex items-center gap-1">
         {/* (switched on, it stays free to switch off) */}
         <Switch checked={ribbon.enabled} disabled={!ribbonPossible && !ribbon.enabled} onChange={(enabled) => updateRibbon({ enabled })}>{t('marker.track.ribbon')}</Switch>
@@ -331,6 +325,25 @@ export function TrackStyleSection({ hidden }: { hidden: boolean }) {
               onChange={(heightM) => updateRibbon({ heightM })}
             />
           </SettingRow>
+        </>
+      )}
+      {/* one legend block for the colouring and the ribbon, under both */}
+      {(trackColorBy !== 'none' || ribbon.enabled) && (
+        <>
+          <div className="flex items-center gap-1">
+            <Switch checked={legendShown} onChange={(on) => setSetting('trackLegendShown', on)}>{t('marker.track.legendShown')}</Switch>
+            <InfoTip text={t('marker.track.legendShownTip')} />
+          </div>
+          {legendShown && (
+            <SettingRow label={t('marker.track.legendAnchor')} value={OVERLAY_ANCHOR_LABELS[legendAnchor]} paths={['trackLegendAnchor', 'trackLegendFree']}>
+              <AnchorPicker
+                label={t('marker.track.legendAnchor')}
+                value={legendAnchor}
+                onChange={(anchor) => setSetting('trackLegendAnchor', anchor)}
+              />
+              <FreePosition anchor={legendAnchor} free={legendFree ?? undefined} onChange={(free) => setSetting('trackLegendFree', free)} />
+            </SettingRow>
+          )}
         </>
       )}
       <SettingRow label={t('marker.track.smoothing')} value={formatSmoothing(style.smoothingM)} paths={['trackStyle.smoothingM']}>

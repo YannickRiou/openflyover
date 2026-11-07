@@ -23,7 +23,7 @@ import { isValidVideoSettings, videoSize, withVideoDefaults } from '../export/sc
 import type { VideoAspect, VideoResolution } from '../export/schedule'
 import { isValidForest } from '../osm/forest'
 import { LANDMARK_DENSITIES, LANDMARK_DISTANCE_RANGE, withLandmarkDefaults } from '../osm/landmarks'
-import { OVERLAY_ANCHORS, isValidOverlay, withFreePositions, withKnownStyle, withOverlayDefaults } from '../overlay/settings'
+import { OVERLAY_ANCHORS, isValidOffset, isValidOverlay, withFreePositions, withKnownStyle, withOverlayDefaults } from '../overlay/settings'
 import { isValidPoster, withPosterDefaults } from '../poster/settings'
 import { isValidGrading } from '../scene/grading'
 import { isValidLens, withLensDefaults } from '../scene/lens'
@@ -145,6 +145,7 @@ export const SETTING_CHECKS: { [K in keyof Settings]?: (value: Settings[K]) => b
   forest: isValidForest,
   trackColorBy: (v) => (TRACK_COLOR_MODES as readonly string[]).includes(v),
   trackLegendAnchor: (v) => (OVERLAY_ANCHORS as readonly string[]).includes(v),
+  trackLegendFree: (v) => v === null || isValidOffset(v),
   overlay: isValidOverlay,
   video: isValidVideoSettings,
   poster: isValidPoster,

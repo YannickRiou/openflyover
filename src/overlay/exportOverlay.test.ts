@@ -105,6 +105,24 @@ describe('createOverlayDrawer', () => {
     drawer.dispose()
   })
 
+  it('« Afficher la légende » off hides both legends; the free position goes with them', () => {
+    useAppStore.getState().addTracks([track])
+    const drawer = createOverlayDrawer()
+    const last = () => vi.mocked(drawOverlay).mock.lastCall?.[5]
+    const { settings, setSetting } = useAppStore.getState()
+    setSetting('trackColorBy', 'elevation')
+    setSetting('trackRibbon', { ...settings.trackRibbon, enabled: true, metric: 'speed' })
+    setSetting('trackLegendFree', { x: 0.1, y: 0.2 })
+    drawer.draw(ctx, at(0.5), 1920, 1080)
+    expect(last()?.trackLegend?.free).toEqual({ x: 0.1, y: 0.2 })
+    expect(last()?.ribbonLegend?.free).toEqual({ x: 0.1, y: 0.2 })
+    setSetting('trackLegendShown', false)
+    drawer.draw(ctx, at(0.5), 1920, 1080)
+    expect(last()?.trackLegend).toBeNull()
+    expect(last()?.ribbonLegend).toBeNull()
+    drawer.dispose()
+  })
+
   it('« À la suite »: each stage’s own figures, its card and the dip of its cut', () => {
     const other = buildTrack({ name: 'u', source: 'gpx', segments: [{ points: points.map((p) => ({ ...p, lat: p.lat + 0.01 })) }] })
     useAppStore.getState().addTracks([track, other])
