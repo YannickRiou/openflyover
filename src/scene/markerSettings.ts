@@ -63,7 +63,7 @@ export const DEFAULT_TRACK_STYLE: TrackStyle = {
   glowIntensity: 0.75,
   glowWidth: 24,
   glowColor: '',
-  drawOn: false,
+  drawOn: true,
   comet: false,
   cometLengthM: 300,
   cometIntensity: 0.8,

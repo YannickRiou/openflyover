@@ -6,6 +6,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## 7.2.1 (unreleased)
 
 - **The sea no longer ends on a hard line, and the slider no longer touches it**: the sea is only drawn in the 8 km corridor around the track, and at full strength its edge showed as straight lines and steps across the open water. It now fades out over the last 3 km inside the corridor (`buildSeaMesh` cuts it by a 500 m grid and fades it from the corridor's edge, `SEA_EDGE_FADE_M`). The slider is renamed « Intensité des lacs et rivières » (`water.strength`, same field, old projects unchanged): it sets the lakes, river areas and streams only; the sea is always drawn in full while « Eau reflétante » is on.
+- **The track draws itself by default**: « Trace qui se dessine » (`trackStyle.drawOn`) is now on in every new project, whatever the interface mode (Débutant included): only the part already travelled by the marker is drawn. A saved project keeps its own choice. The reference projects of the benchmark (`bench/`) are regenerated.
 
 ## 7.2.0 (November 2026)
 

@@ -170,7 +170,7 @@ describe('settings and misc', () => {
       trackLegendAnchor: 'bottom-left',
       trackLegendShown: true,
       trackLegendFree: null,
-      trackStyle: { width: 4, dash: 'plein', glow: false, glowIntensity: 0.75, glowWidth: 24, glowColor: '', drawOn: false, comet: false, cometLengthM: 300, cometIntensity: 0.8, smoothingM: 0, flightCurtain: true, flightCurtainM: 1000, flightShadow: true },
+      trackStyle: { width: 4, dash: 'plein', glow: false, glowIntensity: 0.75, glowWidth: 24, glowColor: '', drawOn: true, comet: false, cometLengthM: 300, cometIntensity: 0.8, smoothingM: 0, flightCurtain: true, flightCurtainM: 1000, flightShadow: true },
       trackTail: { enabled: false, lengthM: 1000 },
       marker: {
         kind: 'boule',
