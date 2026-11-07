@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v72.weather.title': "Chiavi per il meteo",
+  'v72.weather.text': "Una chiave \"Meteo\" fa sparire o tornare il meteo in dissolvenza: cielo grigio, foschia, le nuvole del meteo e il pannello dell'overlay. I suoi pulsanti sono nella scheda Meteo. Per toglierlo alla fine, metti una chiave allo 0 % poco prima della fine della traccia.",
   'v72.legend.title': "La legenda del nastro, come vuoi tu",
   'v72.legend.text': "Sotto \"Nastro di dati\" (Trace), \"Mostra la legenda\" mostra o nasconde la legenda. Mettila in un angolo, su un bordo, al centro o dove vuoi con \"Posizione libera\".",
   'v71.nights.title': "Una pausa per ogni notte, a tua scelta",

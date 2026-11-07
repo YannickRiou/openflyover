@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v72.weather.title': "Claves para la meteorología",
+  'v72.weather.text': "Una clave «Meteo» hace desaparecer o volver la meteorología con un fundido: cielo gris, bruma, las nubes de la meteorología y el panel de los gráficos. Sus botones están en la pestaña Meteo. Para quitarla al final, pon una clave al 0 % justo antes del final del track.",
   'v72.legend.title': "La leyenda de la cinta, a tu gusto",
   'v72.legend.text': "Bajo «Cinta de datos» (Trace), «Mostrar la leyenda» muestra u oculta la leyenda. Colócala en una esquina, en un borde, en el centro o donde quieras con «Posición libre».",
   'v71.nights.title': "Una pausa para cada noche, a tu elección",

@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'What’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v72.weather.title': "Keyframes for the weather",
+  'v72.weather.text': "A “Weather” key fades the weather out or back: grey sky, haze, the clouds of the weather and the overlay panel. Its buttons are in the Weather tab. To cut it at the end, put a key at 0 % just before the end of the track.",
   'v72.legend.title': 'The ribbon legend, your way',
   'v72.legend.text': 'Under “Data ribbon” (Trace), “Show the legend” shows or hides the legend. Put it in a corner, on an edge, in the centre, or anywhere with “Free position”.',
   'v71.nights.title': "A pause for each night, your choice",

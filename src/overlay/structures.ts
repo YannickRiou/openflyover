@@ -41,6 +41,8 @@ export interface StructureInput {
   slot(key: LaidOutWidget): boolean
   /** opacity of the live widgets (they give way to the cards) and of the opening and closing cards */
   live: number
+  /** opacity of the weather widget on top of `live` (the « Météo » keys) */
+  weatherOpacity: number
   titleOpacity: number
   endOpacity: number
   markerColor?: string
@@ -211,7 +213,7 @@ function subtitlePart(id: CounterId, frame: OverlayFrame): string | null {
 }
 
 function cinema(i: StructureInput): Structure {
-  const { p, of, frame, settings, slot, live, markerColor } = i
+  const { p, of, frame, settings, slot, live, weatherOpacity, markerColor } = i
   const { ctx, u, size } = p
   const barH = CINEMA_BAR * size.height
   const margin = size.width * p.margin
@@ -286,7 +288,7 @@ function cinema(i: StructureInput): Structure {
       ctx.restore()
       if (profileShown) faded(p, live, profile)
       if (slot('counters') && settings.counters.enabled) faded(p, live, counters)
-      if (slot('weather') && settings.weather.enabled && frame.weather) faded(p, live, weather)
+      if (slot('weather') && settings.weather.enabled && frame.weather) faded(p, live * weatherOpacity, weather)
       if (slot('minimap') && settings.minimap.enabled) faded(p, live, minimap)
     },
   }
@@ -362,7 +364,7 @@ function headerBlock(p: Painter, text: { title: string; subtitle: string }, widt
 }
 
 function journal(i: StructureInput): Structure {
-  const { p, of, frame, settings, slot, live, endOpacity, markerColor } = i
+  const { p, of, frame, settings, slot, live, weatherOpacity, endOpacity, markerColor } = i
   const { ctx, theme, u, size } = p
   const W = size.width
   const H = size.height
@@ -412,7 +414,13 @@ function journal(i: StructureInput): Structure {
       if (list.length > 0) y += 1.6 * u
     }
     if (slot('counters') && settings.counters.enabled) rows(counterRows(), 'counters', settings.counters.size)
-    if (slot('weather') && settings.weather.enabled) rows(weatherRows(), 'weather', settings.weather.size)
+    if (slot('weather') && settings.weather.enabled) {
+      // faded in place: the map under it does not move
+      ctx.save()
+      ctx.globalAlpha *= weatherOpacity
+      rows(weatherRows(), 'weather', settings.weather.size)
+      ctx.restore()
+    }
     if (slot('minimap') && settings.minimap.enabled) {
       const pm = of('minimap')
       const first = minimapWidget(pm, frame, settings, 1, markerColor)

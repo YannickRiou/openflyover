@@ -192,7 +192,9 @@ export function AtmosphereLayer() {
     if (under && under.path.count > 0 && under.series && settings.weatherScene.enabled) {
       const { path } = under
       const marker = samplePath(path, Math.min(1, Math.max(0, under.progress)) * path.lengthM)
-      weather = sceneWeatherAt(under.series, date.getTime(), marker.lon, marker.lat, settings.weatherScene)
+      // the « Météo » keys fade the weather towards a clear sky (0: none of it)
+      const keyed = paramAt(film, 1, 'weather', playback.progress * lengthM)
+      weather = sceneWeatherAt(under.series, date.getTime(), marker.lon, marker.lat, { ...settings.weatherScene, strength: settings.weatherScene.strength * keyed })
       const ground = engine?.sampleHeight(marker.lon, marker.lat) ?? marker.ele ?? 0
       hazeBaseY = frame.toLocal(marker.lon, marker.lat, ground * settings.exaggeration, _marker).y
     }

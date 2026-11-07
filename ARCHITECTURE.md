@@ -1564,7 +1564,11 @@ The interface and the texts drawn into the films and posters exist in **French**
   `paramKeys[]` `{ id, atM, param, value }` (a film-wide setting pinned along the first track in metres,
   like the camera keys, so values hold during stops; `param`: `speed` (×0.25–×4), `exposure` (±4 EV), `sunHour` (0–24 h
   solar), `saturation`, `contrast`, `warmth`, `vignette`, `labels` (0–1 opacity of the 3D labels, 1 without a key: read by `Labels`
-  per frame, set from « Habillage » › « Étiquettes 3D », hidden under 2 %); `paramAt(film, base, param, atM)`, pure: base value without a
+  per frame, set from « Habillage » › « Étiquettes 3D », hidden under 2 %), `weather` (0–1 share of the weather, 1 without a
+  key: multiplies `weatherScene.strength` in `AtmosphereLayer`, the clouds' `densityScale` in `CloudsLayer` when they follow
+  the weather (« Météo » mode), and the overlay's weather panel through `OverlayExtras.weatherOpacity`, structures included;
+  its ◀ ◇ ▶ group sits in the Météo tab under « Météo de la sortie »; anchored in metres like the others, so the last key holds
+  through the closing shot); `paramAt(film, base, param, atM)`, pure: base value without a
   key, first key's value before it, last key's after it, smootherstep between keys (geometric for the speed). Readers:
   `AtmosphereLayer` (exposure; sun hour: sun keys replace `sunFromTrack`, linear, no wrap past midnight),
   `useGradingEffect` (grading per frame; composer mounted when a grading key exists), the clock (speed keys become a
@@ -1572,7 +1576,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   redistribute time; speed portions are not migrated). A function of the progress only, so the export stays
   deterministic and held frames need no change. Speed keys (◆) are on the « Vitesse » lane with a ◀ ◇ ▶ group in its
   header; every other parameter gets a lane of its own once keyed (`paramLanes`, labels `PARAM_LANE_LABELS`: « Exposition »,
-  « Soleil », « Saturation », « Contraste », « Température », « Vignettage », « Étiquettes » (the opacity of the 3D labels, `labels`); the lane disappears with its last key; ◆:
+  « Soleil », « Saturation », « Contraste », « Température », « Vignettage », « Étiquettes » (the opacity of the 3D labels, `labels`), « Météo » (`weather`); the lane disappears with its last key; ◆:
   click selects and goes there, drag moves, Delete removes). Their ◀ ◇ ▶ group (`PanelKeys`, `src/ui/KeyControls.tsx`) is
   under the slider in the left panels: exposure and sun hour in the Lumière tab (`SettingsPanel`), saturation, contrast,
   warmth and vignette in `GradingPanel`. ◇ = `addParamKeyHere(param)`: a key at the marker holding the value the film

@@ -2,6 +2,8 @@ export default {
   title: 'Nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v72.weather.title': "Des images clés pour la météo",
+  'v72.weather.text': "Une clé « Météo » fait disparaître ou revenir la météo en fondu : ciel gris, voile, nuages de la météo et panneau de l’habillage. Ses boutons sont dans l’onglet Météo. Pour la couper à la fin, posez une clé à 0 % juste avant la fin de la trace.",
   'v72.legend.title': "La légende du ruban, à votre main",
   'v72.legend.text': "Sous le « Ruban de données » (Trace), « Afficher la légende » montre ou cache la légende. Vous la placez dans un coin, sur un bord, au centre, ou n’importe où avec « Position libre ».",
   'v71.nights.title': "Une pause pour chaque nuit, à votre choix",
