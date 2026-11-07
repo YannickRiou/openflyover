@@ -3570,7 +3570,10 @@ exports) gets it from the terrain source of the settings.
   unclosed ring dropped), inner rings attached to the outer ring that contains their first point, member way of a
   returned relation ignored, Douglas–Peucker 4 m, polygons < 2,000 m² discarded, the 300 largest kept, coordinates to 1e-6°;
   `lake` (flat surface) or `river` (`waterway=riverbank`, `water=river|stream|canal…`). Only this compact result is cached.
-  **The sea** (`coast.ts`, tested, `parseWaterShapes` → `seaPolygons`): by OSM convention the land is on the LEFT of a coastline
+  **The sea** (4.0 to 7.2.1; **not drawn since 7.2.2**: `waterLinesQuery` no longer asks for the coastline, so `parseWaterShapes`
+  finds none and `seaPolygons` returns nothing. The aerial photos show the sea; the flat plane over the DEM ended on hard lines at
+  the corridor's edge and let the DEM's coastal noise and spikes show through. The code below is kept, unreached.)
+  (`coast.ts`, tested, `parseWaterShapes` → `seaPolygons`): by OSM convention the land is on the LEFT of a coastline
   way and the water on its right. Ways are joined end to end **in their own direction only** (`chainCoastWays`), cut to the
   corridor (`clipChainsToBoxes`: `out geom` returns whole ways, and only the segments that cross a box are counted),
   simplified at 8 m, coarser while the corridor holds more than 20,000 points (`reduceCoast`). The corridor boxes overlap (their margins), and
@@ -3631,8 +3634,8 @@ exports) gets it from the terrain source of the settings.
   pushes the banks along it so that the ribbon is at least `MIN_STREAM_FRACTION` of the frame high on screen (1.5 px of a 1080 p frame: size of a pixel at
   its depth `depth × 2 / projection[1][1] × fraction`), up to `MAX_STREAM_WIDENING` (4) × its width. The fraction of the frame rather than pixels: a function of the camera and the
   projection only, so the export frames the same streams as the preview, whatever its resolution.
-- **Setting**: `settings.water { enabled, strength }` (true, 1; `SETTING_CHECKS`: 0 ≤ strength ≤ 1), "Eau reflétante (mer,
-  lacs et rivières)" (reflective water: sea, lakes and rivers; « Lacs et rivières reflétants » before 4.0, same field, so the
+- **Setting**: `settings.water { enabled, strength }` (true, 1; `SETTING_CHECKS`: 0 ≤ strength ≤ 1), "Eau reflétante (lacs
+  et rivières)" (reflective water: lakes and rivers; « Lacs et rivières reflétants » before 4.0, « Eau reflétante (mer, lacs et rivières) » from 4.0 to 7.2.1, same field, so the
   render history and the old projects are unchanged) checkbox and "Intensité des lacs et rivières" (lakes and rivers intensity; « Intensité de l'eau » before 7.2.1, when it also set the sea) slider in the "Fond de carte" section.
 - **Limits**: the reflection is that of the average sky (SH probe), neither of mountains nor of clouds; lakes at DEM level (no OSM
   level); only the 8 km corridor is queried (4 km for the lines); the sea is flat (no tide, no swell, no depth colour) and its shore is

@@ -138,15 +138,15 @@ function eastLine(lon: number, lat: number, n: number, stepM = 100): { lat: numb
 }
 
 describe('waterLinesQuery', () => {
-  it('asks for the coastline in the wide corridor and for the waterway lines in the narrow one', () => {
+  it('asks for the waterway lines in the narrow corridor, not for the coastline: the sea is left to the imagery', () => {
     const q = waterLinesQuery(track)
-    expect(q).toContain('way["natural"="coastline"]')
+    expect(q).not.toContain('coastline')
     expect(q).toContain('way["waterway"="river"]')
     expect(q).toContain('way["waterway"="stream"]')
     expect(q).toContain('way["waterway"="canal"]')
     expect(q).toContain('out geom qt;')
     const souths = [...q.matchAll(/\((-?[\d.]+),/g)].map((m) => Number(m[1]))
-    expect(Math.min(...souths)).toBeCloseTo(45.9 - WATER_MARGIN_M / M, 4)
+    expect(Math.min(...souths)).toBeCloseTo(45.9 - WATER_LINE_MARGIN_M / M, 4)
     expect(souths.filter((v) => Math.abs(v - (45.9 - WATER_LINE_MARGIN_M / M)) < 1e-4)).toHaveLength(3)
   })
 })

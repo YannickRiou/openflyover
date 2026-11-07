@@ -221,14 +221,16 @@ export function fetchTrackWater(track: Track, signal?: AbortSignal, deps?: Overp
 // The sea and the waterway lines (second query)
 // ---------------------------------------------------------------------------
 
-/** Overpass QL query of the coastline (in the water corridor) and of the river, canal and stream lines (in the narrower line corridor), full geometry. */
+/**
+ * Overpass QL query of the river, canal and stream lines (in the line corridor), full geometry. The coastline is not
+ * asked for (7.2.2): the sea is left to the imagery, so `parseWaterShapes` finds no coast and draws no sea.
+ */
 export function waterLinesQuery(track: Track): string {
-  const coast = corridorBoxes(track, WATER_MARGIN_M).map((b) => `  way["natural"="coastline"]${overpassBbox(b)};`)
   const lines = corridorBoxes(track, WATER_LINE_MARGIN_M).flatMap((b) => {
     const bbox = overpassBbox(b)
     return Object.keys(LINE_WIDTH_M).map((type) => `  way["waterway"="${type}"]${bbox};`)
   })
-  return `[out:json][timeout:${QUERY_TIMEOUT_S}];\n(\n${[...coast, ...lines].join('\n')}\n);\nout geom qt;\n`
+  return `[out:json][timeout:${QUERY_TIMEOUT_S}];\n(\n${lines.join('\n')}\n);\nout geom qt;\n`
 }
 
 /** The `width` tag ("12", "12.5 m", "8,5", the first of "2;3") in metres, clamped; undefined when missing or in another unit ("50 ft"). */
