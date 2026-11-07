@@ -3,7 +3,7 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## 7.2.0 (unreleased)
+## 7.2.0 (November 2026)
 
 - **« Nouveautés 7.2 »**: the ribbon legend, your way; weather keys.
 - **Weather keys**: a « Météo » key (`film.paramKeys`, param `weather`, 0 to 100 %, 100 % without a key) fades the weather of the film out or back, smoothly from one key to the next: the weather in the scene (grey sky, haze: it multiplies « Intensité de la météo »), the clouds when they follow the weather (« Météo » mode: their density), and the overlay's weather panel, the styles' structures included. Its ◀ ◇ ▶ buttons are in the Météo tab under « Météo de la sortie », its lane « Météo » on the timeline. Keys are placed along the track like the others: to cut the weather for the wide closing shot, a key at 0 % just before the end of the track holds through it.
