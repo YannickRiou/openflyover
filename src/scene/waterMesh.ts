@@ -7,6 +7,7 @@
  * Pure (three is used for its triangulation only).
  */
 import { ShapeUtils, Vector2 } from 'three'
+import type { LonLatBounds } from '../core/types'
 import type { WaterPolygon } from '../osm/water'
 
 export interface WaterMesh {
@@ -87,18 +88,11 @@ function segmentDistance(p: Pt, a: Pt, b: Pt): number {
   return Math.hypot(p[0] - a[0] - t * bx, p[1] - a[1] - t * by)
 }
 
-/** Mesh of `polygon` (local metres around its bounding box centre, then back to lon / lat). */
-export function buildWaterMesh(polygon: WaterPolygon, options: WaterMeshOptions = DEFAULT_WATER_MESH): WaterMesh {
-  const [w, s, e, n] = bounds(polygon.outer)
-  const lon0 = (w + e) / 2
-  const lat0 = (s + n) / 2
-  const kx = Math.cos((lat0 * Math.PI) / 180) * M_PER_DEG
-  const project = (ring: readonly [number, number][]): Pt[] => ring.map(([lon, lat]) => [(lon - lon0) * kx, (lat - lat0) * M_PER_DEG])
-  const outer = project(polygon.outer)
-  const holes = polygon.holes.map(project)
+/** The polygon (local metres) cut by a grid of square cells of at least `cellM`, at most `maxCells` along its longer side, each piece triangulated with its holes. */
+function gridTriangles(outer: readonly Pt[], holes: readonly Pt[][], cellM: number, maxCells: number): { xy: number[]; index: number[] } {
   const holeBounds = holes.map(bounds)
   const [bx0, by0, bx1, by1] = bounds(outer)
-  const cell = Math.max(options.cellM, Math.max(bx1 - bx0, by1 - by0) / options.maxCells)
+  const cell = Math.max(cellM, Math.max(bx1 - bx0, by1 - by0) / maxCells)
 
   const xy: number[] = []
   const index: number[] = []
@@ -122,6 +116,19 @@ export function buildWaterMesh(polygon: WaterPolygon, options: WaterMeshOptions 
       for (const [a, b, c] of ShapeUtils.triangulateShape(contour, holeVectors)) index.push(base + a, base + b, base + c)
     }
   }
+  return { xy, index }
+}
+
+/** Mesh of `polygon` (local metres around its bounding box centre, then back to lon / lat). */
+export function buildWaterMesh(polygon: WaterPolygon, options: WaterMeshOptions = DEFAULT_WATER_MESH): WaterMesh {
+  const [w, s, e, n] = bounds(polygon.outer)
+  const lon0 = (w + e) / 2
+  const lat0 = (s + n) / 2
+  const kx = Math.cos((lat0 * Math.PI) / 180) * M_PER_DEG
+  const project = (ring: readonly [number, number][]): Pt[] => ring.map(([lon, lat]) => [(lon - lon0) * kx, (lat - lat0) * M_PER_DEG])
+  const outer = project(polygon.outer)
+  const holes = polygon.holes.map(project)
+  const { xy, index } = gridTriangles(outer, holes, options.cellM, options.maxCells)
 
   // distance to the nearest shore edge, only up to fadeM (edges farther than that by their box are skipped)
   const rings = [outer, ...holes]
@@ -147,25 +154,54 @@ export function buildWaterMesh(polygon: WaterPolygon, options: WaterMeshOptions 
   return { lonLat, fade, index: Uint32Array.from(index) }
 }
 
+/** Grid of the sea when it fades towards the edge of the corridor: cells of at least 500 m, at most 40 along a side. */
+const SEA_CELL_M = 500
+const SEA_MAX_CELLS = 40
+/** Width of the fade of the sea inside the edge of the corridor (metres): the sea is not drawn beyond it, so it must not stop on a hard line. */
+export const SEA_EDGE_FADE_M = 3000
+
+/** Distance (metres) from (lon, lat) to the edge of the union of `boxes`, measured inwards: the largest of its distances inside each box (negative outside them all). */
+function insideCorridorM(lon: number, lat: number, boxes: readonly LonLatBounds[]): number {
+  const kx = Math.cos((lat * Math.PI) / 180) * M_PER_DEG
+  let d = -Infinity
+  for (const b of boxes) d = Math.max(d, Math.min((lon - b.west) * kx, (b.east - lon) * kx, (lat - b.south) * M_PER_DEG, (b.north - lat) * M_PER_DEG))
+  return d
+}
+
 /**
- * Mesh of a sea polygon (osm/coast.ts): the polygon triangulated as it is, with its holes (islands). The sea is flat, so
- * it needs no grid, and it fades at no shore: where the relief rises above the plane the land hides the water.
+ * Mesh of a sea polygon (osm/coast.ts), with its holes (islands). It fades at no shore: where the relief rises above the
+ * plane the land hides the water. Without `corridor` the polygon is triangulated as it is (flat water needs no vertex
+ * inside) and `fade` is 1. With the `corridor` the sea was cut to (its boxes), the polygon is cut by a grid and `fade` goes
+ * from 0 on the corridor's edge to 1 at `SEA_EDGE_FADE_M` inside it: the sea melts into the imagery instead of ending on a
+ * straight line in the open water.
  */
-export function buildSeaMesh(polygon: WaterPolygon): WaterMesh {
+export function buildSeaMesh(polygon: WaterPolygon, corridor: readonly LonLatBounds[] = []): WaterMesh {
   const [w, s, e, n] = bounds(polygon.outer)
   const lon0 = (w + e) / 2
   const lat0 = (s + n) / 2
   const kx = Math.cos((lat0 * Math.PI) / 180) * M_PER_DEG
-  const project = (ring: readonly Pt[]) => ring.map(([lon, lat]) => new Vector2((lon - lon0) * kx, (lat - lat0) * M_PER_DEG))
-  const contour = project(polygon.outer)
+  const project = (ring: readonly Pt[]): Pt[] => ring.map(([lon, lat]) => [(lon - lon0) * kx, (lat - lat0) * M_PER_DEG])
+  const outer = project(polygon.outer)
   const holes = polygon.holes.map(project)
-  const vertices = [contour, ...holes].flat()
-  const lonLat = new Float64Array(vertices.length * 2)
-  vertices.forEach((v, i) => {
-    lonLat[2 * i] = lon0 + v.x / kx
-    lonLat[2 * i + 1] = lat0 + v.y / M_PER_DEG
-  })
-  return { lonLat, fade: new Float32Array(vertices.length).fill(1), index: Uint32Array.from(ShapeUtils.triangulateShape(contour, holes).flat()) }
+  let xy: number[]
+  let index: number[]
+  if (corridor.length > 0) ({ xy, index } = gridTriangles(outer, holes, SEA_CELL_M, SEA_MAX_CELLS))
+  else {
+    const toVectors = (ring: readonly Pt[]) => ring.map(([x, y]) => new Vector2(x, y))
+    const contour = toVectors(outer)
+    const holeVectors = holes.map(toVectors)
+    xy = [contour, ...holeVectors].flat().flatMap((v) => [v.x, v.y])
+    index = ShapeUtils.triangulateShape(contour, holeVectors).flat()
+  }
+  const count = xy.length / 2
+  const lonLat = new Float64Array(count * 2)
+  const fade = new Float32Array(count).fill(1)
+  for (let v = 0; v < count; v++) {
+    lonLat[2 * v] = lon0 + xy[2 * v] / kx
+    lonLat[2 * v + 1] = lat0 + xy[2 * v + 1] / M_PER_DEG
+    if (corridor.length > 0) fade[v] = Math.min(1, Math.max(0, insideCorridorM(lonLat[2 * v], lonLat[2 * v + 1], corridor) / SEA_EDGE_FADE_M))
+  }
+  return { lonLat, fade, index: Uint32Array.from(index) }
 }
 
 /** Share of `fade` from which a vertex counts as inside the water, away from the shore (an OSM shore is a few metres off the DEM's). */

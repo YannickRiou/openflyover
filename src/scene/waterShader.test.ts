@@ -24,8 +24,9 @@ describe('water material', () => {
     expect(fragmentShader).toContain('vWaterLake > 0.5')
     expect(fragmentShader).toContain('(1.0 - waterIce) * amplitude')
     expect(fragmentShader).toContain('roughnessFactor = mix(roughnessFactor, 1.0, waterIce);')
-    expect(fragmentShader).toContain('indirectSpecular += sky * fresnel * waterStrength * (1.0 - waterIce)')
-    expect(fragmentShader).toContain(', 1.0, waterIce) * waterStrength;')
+    expect(fragmentShader).toContain('indirectSpecular += sky * fresnel * waterAmount * (1.0 - waterIce)')
+    expect(fragmentShader).toContain(', 1.0, waterIce) * waterAmount;')
+    expect(fragmentShader).toContain('float waterAmount = mix(waterStrength, 1.0, vWaterSea);')
     // the albedo is set before the lights read it
     expect(fragmentShader.indexOf('diffuseColor.rgb = mix(diffuseColor.rgb')).toBeLessThan(fragmentShader.indexOf('#include <lights_physical_fragment>'))
   })

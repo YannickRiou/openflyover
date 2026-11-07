@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { WaterPolygon } from '../osm/water'
-import { buildSeaMesh, buildWaterMesh, clipRing, lakeLevel } from './waterMesh'
+import { buildSeaMesh, buildWaterMesh, clipRing, lakeLevel, SEA_EDGE_FADE_M } from './waterMesh'
 
 const M = 111_320
 const LAT = 45.9
@@ -92,6 +92,28 @@ describe('buildSeaMesh', () => {
 
   it('has no shore to fade from', () => {
     expect([...buildSeaMesh(sea).fade].every((f) => f === 1)).toBe(true)
+  })
+
+  it('fades towards the edge of the corridor it was cut to, not at the coast', () => {
+    // the sea fills the west half of a 20 km corridor box; the coast is its east side, in the middle of the box
+    const h = 10_000
+    const box = { west: 6.8 - h / K, south: LAT - h / M, east: 6.8 + h / K, north: LAT + h / M }
+    const half: WaterPolygon = { id: 'sea/0', kind: 'sea', outer: [[box.west, box.south], [6.8, box.south], [6.8, box.north], [box.west, box.north]], holes: [] }
+    const mesh = buildSeaMesh(half, [box])
+    expect(meshArea(mesh)).toBeCloseTo(2 * h * h, -4)
+    const fadeAt = (x: number, y: number) => {
+      let best = Infinity
+      let fade = Number.NaN
+      for (let v = 0; v < mesh.fade.length; v++) {
+        const d = Math.hypot((mesh.lonLat[2 * v] - 6.8) * K - x, (mesh.lonLat[2 * v + 1] - LAT) * M - y)
+        if (d < best) [best, fade] = [d, mesh.fade[v]]
+      }
+      return fade
+    }
+    expect(fadeAt(-h, 0)).toBeCloseTo(0, 1) // the west edge of the corridor
+    expect(fadeAt(-h + SEA_EDGE_FADE_M / 2, 0)).toBeCloseTo(0.5, 1)
+    expect(fadeAt(0, 0)).toBe(1) // the coast: the relief hides the sea there
+    expect(fadeAt(-h / 2, h)).toBeCloseTo(0, 1) // the north edge
   })
 })
 

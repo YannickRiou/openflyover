@@ -119,7 +119,7 @@ const messages: Messages['light'] = {
   'clouds.backToPreset': 'Zurück zu „Nach der Exportqualität“',
   'water.enable': 'Spiegelndes Wasser (Meer, Seen und Flüsse)',
   'water.tip': 'Zeichnet das Wasser aus OpenStreetMap rund um den Track: das Meer entlang der Küsten, Seen, Flüsse und Bäche, mit Spiegelungen von Himmel und Sonne und kleinen Wellen. Die Daten werden einmal pro Track heruntergeladen (Internetverbindung nötig).',
-  'water.strength': 'Intensität des Wassers',
+  'water.strength': 'Intensität der Seen und Flüsse',
   'demClean.enable': 'Gelände im Meer bereinigen',
   'demClean.tip': 'Entfernt einzelne Spitzen, die Höhendaten manchmal über dem Meer hinterlassen (der 3D-Track folgt diesem Gelände). Berge und Küsten bleiben unberührt.',
   'demClean.seaToZero': 'Meer auf 0 m setzen',
