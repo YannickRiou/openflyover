@@ -220,7 +220,7 @@ const messages: Messages['inspector'] = {
   'dayCard.hint': 'Queste impostazioni valgono per le schede di tutti i giorni. Trascina il bordo destro di un blocco per la loro durata; « Rimuovi » le disattiva tutte (Luce › Giorni e notti le riporta con le loro impostazioni).',
   'night.title': 'Notte {n}',
   'night.remove': 'Rimuovi questa notte',
-  'night.hint': 'Il film si ferma qui per {pause}, per il crepuscolo, la notte e l’alba. Questa durata è la stessa per tutte le notti: si regola in Luce › Giorni e notti, dove si possono anche ripristinare le notti rimosse.',
+  'night.hint': 'Il film si ferma qui per {pause}, per il crepuscolo, la notte e l’alba. Questa durata è la stessa per tutte le notti. Si regola in Luce › Giorni e notti, dove ogni notte può anche tenere o perdere la sua pausa.',
   'stageCard.remove': 'Nascondi la scheda',
   'stageCard.backToCommon': 'Torna all’impostazione comune',
   'stageCard.common': 'Impostazione comune a tutte le schede (Traccia › Più tracce); cambiarla qui la rende propria di questa scheda.',

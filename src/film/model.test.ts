@@ -58,9 +58,16 @@ describe('film model', () => {
     expect(isValidSetting('film', DEFAULT_FILM)).toBe(true)
   })
 
-  it('the nights removed on the timeline are an optional list of keys', () => {
-    expect(isValidFilm({ ...DEFAULT_FILM, nights: { ...DEFAULT_FILM.nights, skipped: ['2026-06-01'] } })).toBe(true)
-    for (const skipped of ['2026-06-01', [1]]) expect(isValidFilm({ ...DEFAULT_FILM, nights: { ...DEFAULT_FILM.nights, skipped } as unknown as typeof DEFAULT_FILM.nights })).toBe(false)
+  it('the nights chosen by hand (pause taken away, pause added) are optional lists of keys', () => {
+    expect(isValidFilm({ ...DEFAULT_FILM, nights: { ...DEFAULT_FILM.nights, skipped: ['2026-06-01'], added: ['2026-06-02'] } })).toBe(true)
+    for (const list of ['2026-06-01', [1]]) {
+      for (const key of ['skipped', 'added']) expect(isValidFilm({ ...DEFAULT_FILM, nights: { ...DEFAULT_FILM.nights, [key]: list } as unknown as typeof DEFAULT_FILM.nights })).toBe(false)
+    }
+  })
+
+  it('the day cards may leave their anchor for a free position', () => {
+    expect(isValidFilm({ ...DEFAULT_FILM, dayCards: { ...DEFAULT_DAY_CARDS, free: { x: 0.1, y: -0.2 } } })).toBe(true)
+    expect(isValidFilm({ ...DEFAULT_FILM, dayCards: { ...DEFAULT_DAY_CARDS, free: { x: 5, y: 0 } } })).toBe(false)
   })
 
   it('shot duration: none for « aucune »', () => {

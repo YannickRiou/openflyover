@@ -94,15 +94,39 @@ export const nightKeyOf = (item: string) => item.slice(NIGHT_PREFIX.length)
 export const nightPauseS = (nights: Pick<FilmNights, 'duskS' | 'nightS' | 'dawnS'>) => nights.duskS + nights.nightS + nights.dawnS
 
 /**
- * Nights of `path` the film pauses for (`settings.enabled`): those the flight, at its base speed over `durationS`,
- * would cross faster than the pause lasts (a night spent riding is already shown by the flight), but those removed
- * by hand (`settings.skipped`).
+ * The flight already shows night `n`: at its base speed over `durationS`, it crosses the distance ridden that night
+ * in more time than a pause lasts (`pauseS`), the sun setting and rising on the move.
+ */
+export const riddenNight = (n: Pick<TrackNight, 'nightM'>, path: TrackPath, durationS: number, pauseS: number) =>
+  !((n.nightM / path.lengthM) * durationS < pauseS)
+
+/**
+ * Nights of `path` the film pauses for (`settings.enabled`): by default those the flight does not already show
+ * (`riddenNight`); by hand, a night taken out (`settings.skipped`) or a ridden one given a pause (`settings.added`).
  */
 export function flightNights(path: TrackPath, settings: FilmNights, durationS: number): FlightNight[] {
   const pauseS = nightPauseS(settings)
   if (!settings.enabled || !(pauseS > 0) || !(path.lengthM > 0)) return []
   const { duskS, nightS, dawnS } = settings
   return trackNights(path)
-    .filter((n) => (n.nightM / path.lengthM) * durationS < pauseS && !settings.skipped?.includes(nightKey(n)))
+    .filter((n) => nightPaused(n, path, settings, durationS))
     .map((n) => ({ ...n, duskS, nightS, dawnS }))
+}
+
+/** Night `n` has a pause: its choice by hand (`added`, `skipped`), else the automatic one. */
+export function nightPaused(n: TrackNight, path: TrackPath, settings: FilmNights, durationS: number): boolean {
+  const key = nightKey(n)
+  if (settings.added?.includes(key)) return true
+  if (settings.skipped?.includes(key)) return false
+  return !riddenNight(n, path, durationS, nightPauseS(settings))
+}
+
+/**
+ * `settings` with the night of `key` (`nightKey`) given a pause or not (`paused`); `automatic`: the pause it has by
+ * default. A choice equal to the automatic one is not kept, so the night follows the track again.
+ */
+export function withNightPaused(settings: FilmNights, key: string, paused: boolean, automatic: boolean): FilmNights {
+  const skipped = [...(settings.skipped ?? []).filter((k) => k !== key), ...(!paused && automatic ? [key] : [])]
+  const added = [...(settings.added ?? []).filter((k) => k !== key), ...(paused && !automatic ? [key] : [])]
+  return { ...settings, skipped: skipped.length > 0 ? skipped : undefined, added: added.length > 0 ? added : undefined }
 }

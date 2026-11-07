@@ -220,7 +220,7 @@ const messages: Messages['inspector'] = {
   'dayCard.hint': 'These settings apply to the cards of every day. Drag the right edge of a block for their length; « Remove » switches them all off (Light › Days and nights brings them back with their settings).',
   'night.title': 'Night {n}',
   'night.remove': 'Remove this night',
-  'night.hint': 'The film pauses here for {pause} for the dusk, the night and the dawn. That length is the same for every night: set it in Light › Days and nights, which also brings removed nights back.',
+  'night.hint': 'The film pauses here for {pause} for the dusk, the night and the dawn. That length is the same for every night. Set it in Light › Days and nights, where each night can also keep or lose its pause.',
   'stageCard.remove': 'Hide the card',
   'stageCard.backToCommon': 'Back to the common setting',
   'stageCard.common': 'Setting common to every card (Track › Several tracks); changing it here makes it this card’s own.',

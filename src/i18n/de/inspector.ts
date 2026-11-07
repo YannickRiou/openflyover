@@ -220,7 +220,7 @@ const messages: Messages['inspector'] = {
   'dayCard.hint': 'Diese Einstellungen gelten für die Karten aller Tage. Ziehen Sie den rechten Rand eines Blocks für ihre Dauer; „Entfernen“ schaltet alle aus (Licht › Tage und Nächte holt sie mit ihren Einstellungen zurück).',
   'night.title': 'Nacht {n}',
   'night.remove': 'Diese Nacht entfernen',
-  'night.hint': 'Der Film hält hier {pause} an, für Dämmerung, Nacht und Morgengrauen. Diese Dauer ist für alle Nächte gleich: Sie wird unter Licht › Tage und Nächte eingestellt, wo sich entfernte Nächte auch wiederherstellen lassen.',
+  'night.hint': 'Der Film hält hier {pause} an, für Dämmerung, Nacht und Morgengrauen. Diese Dauer ist für alle Nächte gleich. Sie wird unter Licht › Tage und Nächte eingestellt, wo jede Nacht ihre Pause auch behalten oder verlieren kann.',
   'stageCard.remove': 'Karte ausblenden',
   'stageCard.backToCommon': 'Gemeinsame Einstellung übernehmen',
   'stageCard.common': 'Gemeinsame Einstellung aller Karten (Track › Mehrere Tracks); eine Änderung hier gilt nur für diese Karte.',

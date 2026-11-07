@@ -5,7 +5,7 @@ import { DEFAULT_FILM, DEFAULT_NIGHTS } from '../film/model'
 import type { Film } from '../film/model'
 import { buildTrack } from '../import/stats'
 import { hasFilmItem, removeFilmItem } from '../film/timeline'
-import { flightNights, isNightItem, nightItemId, nightKey, nightPauseS, trackNights } from './nights'
+import { flightNights, isNightItem, nightItemId, nightKey, nightPaused, nightPauseS, trackNights, withNightPaused } from './nights'
 import { DEFAULT_PACING } from './pacing'
 import { buildTrackPath, recordedTimeAt } from './path'
 import { NIGHT_DARK_MARGIN_MS, nightAt, nightSunDate, sunTimes } from './sun'
@@ -102,6 +102,33 @@ describe('flightNights', () => {
     expect(clockOf(removed).nights).toEqual([])
     expect(clockOf(removed).totalTime()).toBeCloseTo(clockOf(film).totalTime() - nightPauseS(DEFAULT_NIGHTS), 9)
     expect(hasFilmItem(removed, [], id, [], clockOf(removed).nights)).toBe(false)
+  })
+
+  it('a night spent riding can be given a pause by hand (`added`); taking it away again keeps no choice', () => {
+    const allNight = buildTrack({ name: 'nuit', source: 'gpx', segments: [{ points: ride(8, 40, 6.8, 2) }] })
+    const path = buildTrackPath(allNight)
+    const [night] = trackNights(path)
+    expect(nightPaused(night, path, DEFAULT_NIGHTS, 60)).toBe(false)
+    const added = withNightPaused(DEFAULT_NIGHTS, nightKey(night), true, false)
+    expect(added).toMatchObject({ added: ['2026-06-01'], skipped: undefined })
+    expect(flightNights(path, added, 60)).toHaveLength(1)
+    const back = withNightPaused(added, nightKey(night), false, false)
+    expect(back.added).toBeUndefined()
+    expect(back.skipped).toBeUndefined()
+    // the block of a night added by hand, deleted on the timeline: the night rides through again, nothing more
+    const film: Film = { ...DEFAULT_FILM, autoStops: false, nights: added }
+    expect(removeFilmItem(film, nightItemId(night)).nights).toMatchObject({ added: undefined, skipped: undefined })
+  })
+
+  it('a night with its pause taken away, then given back, follows the track again', () => {
+    const path = buildTrackPath(twoDays())
+    const [night] = trackNights(path)
+    const off = withNightPaused(DEFAULT_NIGHTS, nightKey(night), false, true)
+    expect(off.skipped).toEqual(['2026-06-01'])
+    expect(nightPaused(night, path, off, 60)).toBe(false)
+    const on = withNightPaused(off, nightKey(night), true, true)
+    expect(on.skipped).toBeUndefined()
+    expect(nightPaused(night, path, on, 60)).toBe(true)
   })
 })
 

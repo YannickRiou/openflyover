@@ -10,8 +10,8 @@
 import { isRecord, oneOf } from '../core/guards'
 import { smootherstep } from '../core/math'
 import { CAMERA_RANGES } from '../flyover/cameraSettings'
-import { OVERLAY_ANCHORS, OVERLAY_FONT_IDS, WIDGET_SIZE_MAX, WIDGET_SIZE_MIN, isHexColor, isValidOverrides } from '../overlay/settings'
-import type { OverlayAnchor, OverlayFontId, OverlayOverrides } from '../overlay/settings'
+import { OVERLAY_ANCHORS, OVERLAY_FONT_IDS, WIDGET_SIZE_MAX, WIDGET_SIZE_MIN, isHexColor, isValidOffset, isValidOverrides } from '../overlay/settings'
+import type { OverlayAnchor, OverlayFontId, OverlayOverrides, WidgetOffset } from '../overlay/settings'
 import { isValidMarkerLook } from './markerKeys'
 import type { FilmMarkerKey } from './markerKeys'
 import { FILM_PARAMS, PARAM_SPECS } from './paramKeys'
@@ -368,8 +368,10 @@ export interface FilmNights {
   duskS: number
   nightS: number
   dawnS: number
-  /** nights removed on the timeline (`nightKey`: the date of their sunset); absent: none */
+  /** nights without the pause they would have by default (`nightKey`: the date of their sunset); absent: none */
   skipped?: string[]
+  /** nights ridden through given a pause all the same (`nightKey`); absent: none */
+  added?: string[]
 }
 /** Range of each part of a night (seconds at ×1; also their validity range in a loaded project). */
 export const NIGHT_PART_RANGE = { min: 0, max: 20, step: 0.5 } as const
@@ -397,6 +399,8 @@ export interface FilmDayCards {
   enabled: boolean
   durationS: number
   anchor: OverlayAnchor
+  /** free position from the anchor (« Position libre », share of the safe area); absent: at the anchor */
+  free?: WidgetOffset
   size: number
   fields: Record<DayCardField, boolean>
   /** title with `{n}` (day number), `{count}` (days) and `{date}`; absent: « Jour n » */
@@ -855,6 +859,7 @@ export function isValidDayCards(cards: unknown): cards is FilmDayCards {
     typeof cards.enabled === 'boolean' &&
     within(cards.durationS, DAY_CARD_DURATION_RANGE.min, DAY_CARD_DURATION_RANGE.max) &&
     oneOf(OVERLAY_ANCHORS, cards.anchor) &&
+    isValidOffset(cards.free) &&
     within(cards.size, WIDGET_SIZE_MIN, WIDGET_SIZE_MAX) &&
     isDayCardFields(cards.fields) &&
     optionalString(cards.title) &&
@@ -863,6 +868,8 @@ export function isValidDayCards(cards: unknown): cards is FilmDayCards {
   )
 }
 
+const keyList = (keys: unknown) => keys === undefined || (Array.isArray(keys) && keys.every((k) => typeof k === 'string'))
+
 export function isValidNights(nights: FilmNights): boolean {
   const part = (v: unknown) => within(v, NIGHT_PART_RANGE.min, NIGHT_PART_RANGE.max)
   return (
@@ -870,7 +877,8 @@ export function isValidNights(nights: FilmNights): boolean {
     part(nights.duskS) &&
     part(nights.nightS) &&
     part(nights.dawnS) &&
-    (nights.skipped === undefined || (Array.isArray(nights.skipped) && nights.skipped.every((k) => typeof k === 'string')))
+    keyList(nights.skipped) &&
+    keyList(nights.added)
   )
 }
 

@@ -220,7 +220,7 @@ const messages: Messages['inspector'] = {
   'dayCard.hint': 'Estos ajustes valen para las tarjetas de todos los días. Arrastre el borde derecho de un bloque para su duración; « Quitar » las desactiva todas (Luz › Días y noches las recupera con sus ajustes).',
   'night.title': 'Noche {n}',
   'night.remove': 'Quitar esta noche',
-  'night.hint': 'La película se detiene aquí {pause} para el crepúsculo, la noche y el amanecer. Esa duración es la misma para todas las noches: se ajusta en Luz › Días y noches, que también recupera las noches quitadas.',
+  'night.hint': 'La película se detiene aquí {pause} para el crepúsculo, la noche y el amanecer. Esa duración es la misma para todas las noches. Se ajusta en Luz › Días y noches, donde cada noche también puede conservar o perder su pausa.',
   'stageCard.remove': 'Ocultar la tarjeta',
   'stageCard.backToCommon': 'Volver al ajuste común',
   'stageCard.common': 'Ajuste común a todas las tarjetas (Track › Varios tracks); cambiarlo aquí lo hace propio de esta tarjeta.',
