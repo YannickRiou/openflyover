@@ -38,7 +38,7 @@ import {
   inStyleSlot,
   placedSettings,
 } from '../overlay/settings'
-import type { CounterId, LabelKind, LogoSettings, OverlayFontId, OverlayOverrides, OverlaySettings, OverlayStyleId, PlacedWidget, StyledWidget, WidgetOffset } from '../overlay/settings'
+import type { CounterId, LabelKind, LogoSettings, OverlayAnchor, OverlayFontId, OverlayOverrides, OverlaySettings, OverlayStyleId, PlacedWidget, StyledWidget, WidgetOffset } from '../overlay/settings'
 import { showToast } from './toast'
 import { panelColorOf, resolveLabelStyle, resolveOverlayTheme, toHex } from '../overlay/themes'
 import { getPlatform } from '../platform'
@@ -119,26 +119,28 @@ function OffsetField({ id, label, value, onCommit }: { id: string; label: string
  */
 export function WidgetPosition({ widget, index = 0 }: { widget: PlacedWidget; index?: number }) {
   const t = useT()
-  const id = useId()
   const overlay = useAppStore((s) => s.settings.overlay)
   const set = (next: OverlaySettings) => useAppStore.getState().setSetting('overlay', next)
   const { anchor, free } = placedSettings(overlay, widget, index)
-  const [row, column] = anchor === 'center' ? ['middle', 'center'] : anchor.split('-')
-  const axis = (key: keyof WidgetOffset, label: string, current: WidgetOffset) => (
-    <OffsetField
-      id={`${id}-${key}`}
-      label={label}
-      value={current[key]}
-      onCommit={(share) => set(withWidgetOffset(overlay, widget, { ...current, [key]: share }, index))}
-    />
-  )
   return (
     <>
       <AnchorPicker label={t('overlay.position')} value={anchor} onChange={(next) => set(withWidgetAnchor(overlay, widget, next, index))} />
-      <Checkbox
-        checked={free !== undefined}
-        onChange={(on) => set(withWidgetOffset(overlay, widget, on ? { x: 0, y: 0 } : null, index))}
-      >
+      <FreePosition anchor={anchor} free={free} onChange={(next) => set(withWidgetOffset(overlay, widget, next, index))} />
+    </>
+  )
+}
+
+/** « Position libre » from `anchor`: a tick, then the two shares of the safe area (null: back at the anchor). */
+export function FreePosition({ anchor, free, onChange }: { anchor: OverlayAnchor; free: WidgetOffset | undefined; onChange(free: WidgetOffset | null): void }) {
+  const t = useT()
+  const id = useId()
+  const [row, column] = anchor === 'center' ? ['middle', 'center'] : anchor.split('-')
+  const axis = (key: keyof WidgetOffset, label: string, current: WidgetOffset) => (
+    <OffsetField id={`${id}-${key}`} label={label} value={current[key]} onCommit={(share) => onChange({ ...current, [key]: share })} />
+  )
+  return (
+    <>
+      <Checkbox checked={free !== undefined} onChange={(on) => onChange(on ? { x: 0, y: 0 } : null)}>
         {t('overlay.freePosition')}
       </Checkbox>
       {free && (

@@ -197,6 +197,8 @@ export interface DayCard {
   title?: string
   /** colours, fonts and text backing over the overlay's (`FilmDayCards.overrides`) */
   overrides?: OverlayOverrides
+  /** free position from the anchor, share of the safe area (`FilmDayCards.free`) */
+  free?: WidgetOffset
 }
 
 /**
@@ -2306,7 +2308,8 @@ export function drawOverlay(
   }
   // the card of a day, laid out on its own like a stage's
   if (day && dayOpacity > 0.001) {
-    const card = dayWidget(day.overrides ? { ...p, theme: resolveOverlayTheme(settings.style, { ...settings.overrides, ...day.overrides }) } : p, day, dayOpacity)
+    const widget = dayWidget(day.overrides ? { ...p, theme: resolveOverlayTheme(settings.style, { ...settings.overrides, ...day.overrides }) } : p, day, dayOpacity)
+    const card = day.free ? { ...widget, offset: { x: day.free.x * safe.w, y: day.free.y * safe.h } } : widget
     const [at] = layoutWidgets([card], size, 2 * p.u, area)
     ctx.save()
     ctx.globalAlpha = card.opacity

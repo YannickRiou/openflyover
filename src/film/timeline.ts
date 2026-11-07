@@ -37,7 +37,7 @@ import {
   nextFilmId,
 } from './model'
 import { dayCardIndexOf, isDayCardItem } from './days'
-import { isNightItem, nightItemId, nightKeyOf, type TrackNight } from '../flyover/nights'
+import { isNightItem, nightItemId, nightKeyOf, withNightPaused, type TrackNight } from '../flyover/nights'
 import type { Film, FilmAudio, FilmCameraKey, FilmMedia, FilmShot, FilmSpeed, FilmStop, FilmText, MediaSync } from './model'
 import { clampParamValue } from './paramKeys'
 import type { FilmParam, FilmParamKey } from './paramKeys'
@@ -1177,8 +1177,11 @@ export function removeFilmItem(film: Film, id: TimelineItem): Film {
   if (isStageCardItem(id)) return withJunctionCard(film, stageCardAfterOf(id), { enabled: false })
   // the cards of the days go together: deleting one block switches them off (their settings are kept)
   if (isDayCardItem(id)) return { ...film, dayCards: { ...(film.dayCards ?? DEFAULT_DAY_CARDS), enabled: false } }
-  // a night is left out of the film (« Rétablir les nuits » in the Lumière tab brings them back)
-  if (isNightItem(id)) return { ...film, nights: { ...film.nights, skipped: [...(film.nights.skipped ?? []), nightKeyOf(id)] } }
+  // a night loses its pause: one added by hand goes back to riding through, the others are left out (Lumière › Jours et nuits)
+  if (isNightItem(id)) {
+    const key = nightKeyOf(id)
+    return { ...film, nights: withNightPaused(film.nights, key, false, !film.nights.added?.includes(key)) }
+  }
   // a stage goes back to its share of the flyover duration
   if (isStageItem(id)) return withStageDuration(film, stageTrackOf(id), null)
   return {

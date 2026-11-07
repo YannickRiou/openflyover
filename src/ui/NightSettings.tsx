@@ -7,25 +7,26 @@
  * and the high view of the stage (Trace › Plusieurs traces).
  */
 import { useId, useMemo } from 'react'
-import { isDayCard, trackDays, withoutDayCards } from '../film/days'
+import { isDayCard, localDate, trackDays, withoutDayCards } from '../film/days'
 import { useT } from '../i18n'
 import { DAY_CARD_DURATION_RANGE, DAY_CARD_FIELD_LABELS, DAY_CARD_FIELDS, DEFAULT_DAY_CARDS, NIGHT_PARTS, NIGHT_PART_RANGE } from '../film/model'
 import type { FilmDayCards, FilmNights } from '../film/model'
-import { nightKey, nightPauseS, trackNights } from '../flyover/nights'
+import { nightKey, nightPaused, nightPauseS, riddenNight, trackNights, withNightPaused } from '../flyover/nights'
+import { formatDate } from '../i18n/format'
 import { trackPathOf } from '../flyover/path'
 import { mergeOverrides } from '../overlay/settings'
 import { editFilm, useFilmClock, useFilmSequence, useFilmSource } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import { AnchorPicker } from './AnchorPicker'
-import { formatSecondsShort } from './format'
-import { SizeField, StyleOverrides } from './OverlayPanel'
+import { formatDistance, formatSecondsShort } from './format'
+import { FreePosition, SizeField, StyleOverrides } from './OverlayPanel'
 import { PanelSection, RangeField, SettingRow } from './PanelSection'
-import { Button, Chip, Switch, TextField } from './primitives'
+import { Button, Checkbox, Chip, Switch, TextField } from './primitives'
 
 export function NightSettings() {
   const tr = useT()
   const id = useId()
-  const { track, film } = useFilmSource()
+  const { track, film, durationS } = useFilmSource()
   const clock = useFilmClock()
   const sequence = useFilmSequence() !== null
   const nights = film.nights
@@ -38,15 +39,12 @@ export function NightSettings() {
     editFilm((f) => ({ film: { ...(patch.enabled ? withoutDayCards(f) : f), dayCards: { ...(f.dayCards ?? DEFAULT_DAY_CARDS), ...patch } } }), { step })
   // « À la suite », the nights passed by « Nuit » junctions count too
   const shown = clock.nights.length + clock.junctions.filter((j) => j.kind === 'nuit').length
-  // the nights removed on the timeline (a key whose night is gone with a new track does not count)
-  const keys = useMemo(() => (track ? trackNights(trackPathOf(track)).map(nightKey) : []), [track])
-  const removed = (nights.skipped ?? []).filter((k) => keys.includes(k)).length
+  // every night of the track, with or without its pause (a key whose night is gone with a new track does not count)
+  const path = useMemo(() => (track ? trackPathOf(track) : null), [track])
+  const all = useMemo(() => (path ? trackNights(path) : []), [path])
+  const byHand = all.filter((n) => nights.skipped?.includes(nightKey(n)) || nights.added?.includes(nightKey(n))).length
   const nightsHint =
-    shown === 0
-      ? removed > 0
-        ? ''
-        : tr('light.nights.none')
-      : tr('light.nights.hint', { count: shown, pause: formatSecondsShort(nightPauseS(nights)) })
+    shown === 0 ? (all.length > 0 ? '' : tr('light.nights.none')) : tr('light.nights.hint', { count: shown, pause: formatSecondsShort(nightPauseS(nights)) })
 
   return (
     <PanelSection title={tr('light.nights.title')} summary={nights.enabled ? tr('common.on') : tr('common.off')} min="confirme" paths={['film.nights', 'film.dayCards']}>
@@ -61,11 +59,29 @@ export function NightSettings() {
       <p id={`${id}-nights-hint`} className="type-hint">
         {nights.enabled ? nightsHint : tr('light.nights.instant')}
       </p>
-      {nights.enabled && removed > 0 && (
-        <>
-          <p className="type-hint">{tr('light.nights.removed', { count: removed })}</p>
-          <Button onClick={() => setNights({ skipped: undefined })}>{tr('light.nights.restore')}</Button>
-        </>
+      {/* one line per night: automatic by default, a tick gives or takes its pause */}
+      {nights.enabled && !sequence && path && all.length > 0 && (
+        <fieldset className="field min-w-0">
+          <legend className="type-label mb-1">{tr('light.nights.list')}</legend>
+          {all.map((n, k) => {
+            const key = nightKey(n)
+            const automatic = !riddenNight(n, path, durationS, nightPauseS(nights))
+            const paused = nightPaused(n, path, nights, durationS)
+            const date = formatDate(new Date(`${localDate(n.sunsetMs, track?.utcOffsetMin)}T12:00:00Z`), { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
+            const hint = `${tr(automatic ? 'light.nights.autoPause' : 'light.nights.autoRide', { distance: formatDistance(n.nightM) })}${paused !== automatic ? ` ${tr('light.nights.byHand')}` : ''}`
+            return (
+              <div key={key} className="flex flex-col gap-0.5">
+                <Checkbox checked={paused} aria-describedby={`${id}-night-${k}`} onChange={(on) => setNights(withNightPaused(nights, key, on, automatic))}>
+                  {tr('light.nights.item', { n: k + 1, date })}
+                </Checkbox>
+                <p id={`${id}-night-${k}`} className="type-hint ml-7">
+                  {hint}
+                </p>
+              </div>
+            )
+          })}
+          {byHand > 0 && <Button onClick={() => setNights({ skipped: undefined, added: undefined })}>{tr('light.nights.restore')}</Button>}
+        </fieldset>
       )}
       {sequence && <p className="type-hint">{tr('light.nights.sequenceHint')}</p>}
       {/* « À la suite », the « Nuit » transitions use these seconds whether the nights inside the stages show or not */}
@@ -125,6 +141,7 @@ export function DayCardFields() {
       />
       <p className="type-hint">{tr('light.days.titleHint')}</p>
       <AnchorPicker label={tr('overlay.position')} value={cards.anchor} onChange={(anchor) => setCards({ anchor })} />
+      <FreePosition anchor={cards.anchor} free={cards.free} onChange={(free) => setCards({ free: free ?? undefined }, false)} />
       <SizeField value={cards.size} onChange={(size) => setCards({ size }, false)} />
       <StyleOverrides overlay={overlay} own={cards.overrides ?? {}} onChange={(patch) => setCards({ overrides: mergeOverrides(cards.overrides, patch) }, false)} />
       <SettingRow label={tr('light.days.duration')} value={formatSecondsShort(cards.durationS)} paths={['film.dayCards']}>
