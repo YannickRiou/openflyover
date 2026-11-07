@@ -5,7 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## 7.2.2 (November 2026)
 
-- **Dependencies of the app updated**, security fixes included: the list is in the commits since 7.2.1.
+- **The sea is no longer drawn**: « Eau reflétante » now draws the lakes and rivers only (renamed « Eau reflétante (lacs et rivières) », same `water` field, old projects unchanged). The sea stays as in the aerial photos, as when the water is off: the flat sea plane of 7.2.1 hid them under a dark uniform blue, and the elevation data's noise along the coast showed through it as jagged dark streaks. The coastline is no longer asked of Overpass, so the second water request is lighter.
+- **Dependencies updated**: three 0.187, HeroUI 3.2.7, mediabunny 1.65, vitest 5.1 and the other npm minor versions; on the desktop, the Tauri dialog plugin 2.8.4 and sysinfo 0.40 (the machine readout of « À propos » shows nothing instead of failing when the system cannot be read). The first-screen budget goes from 589 to 594 kB gzip for HeroUI 3.2.7.
 
 ## 7.2.1 (November 2026)
 
