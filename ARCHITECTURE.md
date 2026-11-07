@@ -1413,7 +1413,7 @@ The interface and the texts drawn into the films and posters exist in **French**
 
 ## Track and marker
 
-- **Settings** `settings.trackStyle { width, dash: 'plein' | 'tirets' | 'points', glow, glowIntensity, glowWidth, glowColor, drawOn,
+- **Settings** `settings.trackStyle { width, dash: 'plein' | 'tirets' | 'points', glow, glowIntensity, glowWidth, glowColor, drawOn (on by default since 7.2.1, in every interface mode: a saved project keeps its own value),
   smoothingM }` and `settings.marker { kind:
   'boule' | 'figurine' | 'image', figure ('auto' | figure id), image, size, animated, color, ballStyle, figureColor, shape,
   label, labelText, stick }` (`src/scene/markerSettings.ts`, pure). `color` ('#rrggbb', '' = track colour, default
