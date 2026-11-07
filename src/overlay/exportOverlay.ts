@@ -27,6 +27,7 @@ import { trackPathOf } from '../flyover/path'
 import { buildRace, raceAt, raceTrackOf } from '../flyover/race'
 import { filmSequenceOf, filmTrackOf, trackUnderMarker } from '../flyover/sequence'
 import { trackLegend } from '../flyover/trackColor'
+import { paramAt } from '../film/paramKeys'
 import type { TrackColorBy, TrackLegend } from '../flyover/trackColor'
 import { getLanguage } from '../i18n'
 import type { Sequence } from '../flyover/sequence'
@@ -126,8 +127,11 @@ export function overlayExtras(time: OverlayTime, progress: number): OverlayExtra
   const stamp = sequence ? bilanStampAt(sequence, time) : null
   // « Afficher la légende » off: neither legend is drawn
   const legendPlace = settings.trackLegendShown ? { anchor: settings.trackLegendAnchor, free: settings.trackLegendFree ?? undefined } : null
+  const flown = filmTrackOf(tracks, settings.race)
   return {
     time,
+    // the « Météo » keys fade the weather panel, anchored in metres along the film track like the other parameter keys
+    weatherOpacity: paramAt(settings.film, 1, 'weather', progress * (flown ? trackPathOf(flown).lengthM : 0)),
     leaderboard: leaderboardAt(progress),
     // the legend of the line's colouring; the data ribbon's comes first when the line is not coloured, else second when it shows another quantity
     trackLegend: trackLegendOf(tracks, settings.trackColorBy !== 'none' ? settings.trackColorBy : settings.trackRibbon.enabled ? settings.trackRibbon.metric : 'none', legendPlace),

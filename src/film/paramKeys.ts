@@ -1,6 +1,6 @@
 /**
  * Parameter keys of the film (`film.paramKeys`; one timeline lane per keyed parameter): values of a film-wide setting
- * (speed, exposure, sun hour, colour grading, label opacity) pinned along the track and eased from one key to the next. Same anchor as
+ * (speed, exposure, sun hour, colour grading, label opacity, weather) pinned along the track and eased from one key to the next. Same anchor as
  * the camera keys, the distance along the first track: a key holds during a stop. Pure module (no three.js), generic over the parameter so
  * other keyed values can reuse it: add a name to `FILM_PARAMS` and its entry to `PARAM_SPECS`.
  */
@@ -11,7 +11,7 @@ import { t } from '../i18n'
 import { formatNumberIntl } from '../i18n/format'
 
 /** The parameters a key can drive (closed list). */
-export const FILM_PARAMS = ['speed', 'exposure', 'sunHour', 'saturation', 'contrast', 'warmth', 'vignette', 'labels'] as const
+export const FILM_PARAMS = ['speed', 'exposure', 'sunHour', 'saturation', 'contrast', 'warmth', 'vignette', 'labels', 'weather'] as const
 export type FilmParam = (typeof FILM_PARAMS)[number]
 
 export interface FilmParamKey {
@@ -97,6 +97,16 @@ export const PARAM_SPECS: Record<FilmParam, ParamSpec> = {
     step: 0.05,
     format: (v) => t('film.param.percentValue', { value: Math.round(v * 100) }),
   },
+  // how much of the weather shows: the scene's (grey sky, haze), the clouds of « Météo » and the overlay's weather panel; 0 fades them out
+  weather: {
+    get label() {
+      return t('film.param.weather')
+    },
+    min: 0,
+    max: 1,
+    step: 0.05,
+    format: (v) => t('film.param.percentValue', { value: Math.round(v * 100) }),
+  },
 }
 
 /** Names of the timeline lanes, one per keyed parameter (shorter than the labels of `PARAM_SPECS`). */
@@ -109,6 +119,7 @@ export const PARAM_LANE_LABELS: Record<FilmParam, string> = {
   get warmth() { return t('film.lane.warmth') },
   get vignette() { return t('film.lane.vignette') },
   get labels() { return t('film.lane.labels') },
+  get weather() { return t('film.lane.weather') },
 }
 
 /** The keys of one parameter among `keys` (the film's or the clock's: any key with a `param`), in their order. */
@@ -186,6 +197,7 @@ export function paramBase(settings: ParamBases, param: FilmParam): number {
   switch (param) {
     case 'speed':
     case 'labels':
+    case 'weather':
       return 1
     case 'exposure':
       return settings.exposureEv

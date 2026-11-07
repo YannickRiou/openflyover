@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Neuheiten',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v72.weather.title': "Keyframes für das Wetter",
+  'v72.weather.text': "Ein Keyframe „Wetter“ blendet das Wetter aus oder wieder ein: grauer Himmel, Dunst, die Wolken des Wetters und das Feld des Overlays. Seine Buttons sind im Reiter Wetter. Um es am Ende auszublenden, setzen Sie kurz vor dem Ende des Tracks einen Keyframe auf 0 %.",
   'v72.legend.title': "Die Legende des Datenbands nach Wunsch",
   'v72.legend.text': "Unter „Datenband“ (Trace) blendet „Legende anzeigen“ die Legende ein oder aus. Sie steht in einer Ecke, an einem Rand, in der Mitte oder mit „Freie Position“ an beliebiger Stelle.",
   'v71.nights.title': "Eine Pause für jede Nacht, nach Wahl",

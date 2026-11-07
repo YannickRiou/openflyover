@@ -9,6 +9,7 @@ import { summarizeOuting, weatherWidgetData } from '../weather/series'
 import { syncStageWeather, syncWeather, useWeatherStore } from '../weather/store'
 import { formatClock, formatNumber } from './format'
 import { Icon } from './icons'
+import { PanelKeys } from './KeyControls'
 import { Button, Switch } from './primitives'
 
 function formatTemperature(c: number): string {
@@ -193,6 +194,8 @@ export function WeatherSection({ hidden }: { hidden: boolean }) {
   return (
     <PanelSection title={t('shell.section.weather')} summary={enabled ? t('common.on') : t('common.off')} keys={['weather']} hidden={hidden} min="confirme">
       <WeatherPanel />
+      {/* the « Météo » keys: the weather of the scene, its clouds and the overlay's panel fade together */}
+      <PanelKeys target={{ kind: 'param', param: 'weather' }} />
     </PanelSection>
   )
 }

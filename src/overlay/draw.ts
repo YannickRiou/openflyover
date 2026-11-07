@@ -134,6 +134,8 @@ export interface OverlayExtras {
   trackLegend?: OverlayTrackLegend | null
   /** second legend, the data ribbon's, when it shows another quantity than the line's colouring */
   ribbonLegend?: OverlayTrackLegend | null
+  /** how much of the weather panel shows (the « Météo » keys, 0–1); absent: all of it */
+  weatherOpacity?: number
 }
 
 /** Legend of the track colouring as the overlay draws it: the values, and the anchor chosen for it. */
@@ -2177,6 +2179,7 @@ export function drawOverlay(
   const day = extras.day ?? null
   const dayOpacity = day ? filmTextOpacity(day, time.timeS) : 0
   const legend = extras.trackLegend ?? null
+  const weatherO = extras.weatherOpacity ?? 1
   // the titles and the texts of the timeline are drawn with the overlay off too
   const titles = settings.title.enabled || settings.end.enabled || (extras.texts?.length ?? 0) > 0
   // the full credits close the film, whatever the mode: on the closing card (its roll when it has one), else along the bottom edge
@@ -2239,7 +2242,7 @@ export function drawOverlay(
     const free = placedSettings(settings, key, index).free
     return w && { ...w, id: key === 'logo' ? `logo${index}` : key, ...(free && { offset: { x: free.x * safe.w, y: free.y * safe.h } }) }
   }
-  if (settings.enabled) structure = styleStructure({ p, of, frame, settings, slot, live, titleOpacity, endOpacity, markerColor: extras.markerColor })
+  if (settings.enabled) structure = styleStructure({ p, of, frame, settings, slot, live, weatherOpacity: weatherO, titleOpacity, endOpacity, markerColor: extras.markerColor })
   // the widgets of the settings, given to `put`, with the opening card, the closing card and the live widgets at these opacities
   const collect = (put: (w: Widget | null) => void, titleO: number, endO: number, liveO: number, onRoll?: (card: Widget, credits: string[]) => void) => {
     if (titleO > 0 && !slot('title')) put(placed('title', titleWidget(of('title'), frame, settings, titleO, assets)))
@@ -2253,7 +2256,7 @@ export function drawOverlay(
     if (settings.enabled) {
       if (settings.counters.enabled && liveO > 0 && !slot('counters')) put(placed('counters', countersWidget(of('counters'), frame, settings, liveO)))
       if (settings.profile.enabled && liveO > 0 && !slot('profile')) put(placed('profile', profileWidget(of('profile'), frame, settings, liveO, extras.markerColor)))
-      if (settings.weather.enabled && liveO > 0 && !slot('weather')) put(placed('weather', weatherWidget(of('weather'), frame, settings, liveO)))
+      if (settings.weather.enabled && liveO * weatherO > 0 && !slot('weather')) put(placed('weather', weatherWidget(of('weather'), frame, settings, liveO * weatherO)))
       if (settings.minimap.enabled && liveO > 0 && !slot('minimap')) put(placed('minimap', minimapWidget(of('minimap'), frame, settings, liveO, extras.markerColor)))
       if (settings.leaderboard.enabled && liveO > 0) put(placed('leaderboard', leaderboardWidget(of('leaderboard'), extras.leaderboard ?? [], settings, liveO)))
       if (settings.text.enabled) put(placed('text', textWidget(of('text'), settings)))
@@ -2267,7 +2270,7 @@ export function drawOverlay(
       sourcesCover = drawCreditsRoll(of('end'), card, lines, settings.end.size, creditsRollProgress(time, settings.end.start, settings.end.window), sources)
     }
   })
-  weatherShown = widgets.some((w) => w.id === 'weather') || (slot('weather') && settings.weather.enabled && frame.weather !== undefined && live > 0.001)
+  weatherShown = widgets.some((w) => w.id === 'weather') || (slot('weather') && settings.weather.enabled && frame.weather !== undefined && live * weatherO > 0.001)
   // texts of the timeline inside their window, overlay on or off
   for (const item of extras.texts ?? []) {
     const opacity = filmTextOpacity(item, time.timeS)

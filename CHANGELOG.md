@@ -5,7 +5,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## 7.2.0 (unreleased)
 
-- **« Nouveautés 7.2 »**: the ribbon legend, your way.
+- **« Nouveautés 7.2 »**: the ribbon legend, your way; weather keys.
+- **Weather keys**: a « Météo » key (`film.paramKeys`, param `weather`, 0 to 100 %, 100 % without a key) fades the weather of the film out or back, smoothly from one key to the next: the weather in the scene (grey sky, haze: it multiplies « Intensité de la météo »), the clouds when they follow the weather (« Météo » mode: their density), and the overlay's weather panel, the styles' structures included. Its ◀ ◇ ▶ buttons are in the Météo tab under « Météo de la sortie », its lane « Météo » on the timeline. Keys are placed along the track like the others: to cut the weather for the wide closing shot, a key at 0 % just before the end of the track holds through it.
 - **The legend of the colouring and of the data ribbon, shown or hidden and placed freely**: in « Ligne » (Trace), the legend block now sits under « Ruban de données », since it serves both. « Afficher la légende » (`trackLegendShown`, on by default) shows or hides it; « Position de la légende » keeps its nine places (corners, edges, centre) and gets the « Position libre » of the overlay widgets (`trackLegendFree`, a share of the safe area from the anchor). At a free position the two legends (line and ribbon) move together, one under the other.
 
 ## 7.1.0 (November 2026)

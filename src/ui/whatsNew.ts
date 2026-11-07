@@ -23,6 +23,7 @@ export const WHATS_NEW: readonly NewsVersion[] = [
   {
     version: '7.2',
     items: [
+      { icon: 'cloud-sun', get title() { return t('news.v72.weather.title') }, get text() { return t('news.v72.weather.text') } },
       { icon: 'layers', get title() { return t('news.v72.legend.title') }, get text() { return t('news.v72.legend.text') } },
     ],
   },

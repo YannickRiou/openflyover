@@ -54,7 +54,7 @@ describe('paramAt', () => {
 
   it('bases come from the film-wide settings; sortedParamKeys sorts one parameter', () => {
     const settings = { exposureEv: 1, sunHour: 14, grading: { ...DEFAULT_GRADING, contrast: 0.4 } }
-    expect(FILM_PARAMS.map((p) => paramBase(settings, p))).toEqual([1, 1, 14, 0, 0.4, 0, 0, 1])
+    expect(FILM_PARAMS.map((p) => paramBase(settings, p))).toEqual([1, 1, 14, 0, 0.4, 0, 0, 1, 1])
     expect(sortedParamKeys(f.paramKeys, 'exposure').map((k) => k.id)).toEqual(['param-1', 'param-2'])
     expect(valueAtKeys([], 7, 3)).toBe(7)
   })
@@ -182,6 +182,18 @@ describe('label opacity keys', () => {
     expect(PARAM_SPECS.labels.format(0.5)).toBe('50 %')
     expect(clampParamValue('labels', 1.4)).toBe(1)
     expect(clampParamValue('labels', -1)).toBe(0)
+  })
+})
+
+describe('weather keys', () => {
+  it('show all the weather without a key, then ease it out to the last key, which holds to the end', () => {
+    const keys = [key('a', 1000, 'weather', 1), key('b', 2000, 'weather', 0)]
+    expect(paramBase({ exposureEv: 0, sunHour: 12, grading: { contrast: 0, saturation: 0, warmth: 0, vignette: 0 } }, 'weather')).toBe(1)
+    expect(paramAt(film([]), 1, 'weather', 500)).toBe(1)
+    expect(paramAt(film(keys), 1, 'weather', 1500)).toBeCloseTo(0.5, 9)
+    expect(paramAt(film(keys), 1, 'weather', 9000)).toBe(0)
+    expect(paramLanes(film(keys))).toEqual(['weather'])
+    expect(PARAM_SPECS.weather.format(0.25)).toBe('25 %')
   })
 })
 

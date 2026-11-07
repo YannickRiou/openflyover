@@ -33,7 +33,9 @@ import { Clouds, type CloudsProps } from '@takram/three-clouds/r3f'
 import { deviceBudget } from '../core/deviceBudget'
 import { effectiveRender } from '../export/qualityTier'
 import { isExportBusy, useExportStore } from '../export/store'
-import { samplePath } from '../flyover/path'
+import { paramAt } from '../film/paramKeys'
+import { samplePath, trackPathOf } from '../flyover/path'
+import { filmTrackOf } from '../flyover/sequence'
 import { geoidUndulation } from '../geo/geoid'
 import { useAppStore } from '../state/store'
 import {
@@ -254,7 +256,7 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
   useFrame(({ camera, invalidate }) => {
     const effect = ref.current
     if (!effect || !frame) return
-    const { playback, settings } = useAppStore.getState()
+    const { playback, settings, tracks } = useAppStore.getState()
     const now = date.current
     const under = marker.current
     const path = under?.path
@@ -294,12 +296,15 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
       target.regionalAmount.value = field && clouds ? 1 : 0
     }
     effect.coverage = clouds?.coverage ?? 0
+    // the « Météo » keys thin the clouds of the weather out (0: none), anchored in metres along the film track
+    const flown = settings.clouds.mode === 'meteo' ? filmTrackOf(tracks, settings.race) : null
+    const keyed = flown ? paramAt(settings.film, 1, 'weather', playback.progress * trackPathOf(flown).lengthM) : 1
     for (let i = 0; i < 3; i++) {
       const layer = effect.cloudLayers[i]
       const params = clouds?.layers[i]
       layer.altitude = (params?.altitudeM ?? 0) + undulation
       layer.height = params?.heightM ?? 0
-      layer.densityScale = params?.densityScale ?? 0
+      layer.densityScale = (params?.densityScale ?? 0) * keyed
       layer.weatherExponent = params?.weatherExponent ?? 1
       const shape = params?.shape
       const initial = CloudLayers.DEFAULT[i]

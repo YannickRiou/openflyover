@@ -472,6 +472,15 @@ describe('drawOverlay', () => {
     // no weather shown, no credit
     expect(render(0.5, enabled())).not.toContain(OPEN_METEO_SHORT.toUpperCase())
     expect(draw(0.5, settings).joined).not.toContain(OPEN_METEO_SHORT.toUpperCase())
+    // the « Météo » keys: half of it fades the panel, none of it takes the panel and its credit away
+    const keyed = (weatherOpacity: number) => {
+      const { ctx, texts } = fakeContext()
+      drawOverlay(ctx, overlayFrameAt(withWeather, 0.5), settings, SIZE, {}, { weatherOpacity })
+      return texts
+    }
+    expect(keyed(0.5).find((t) => t.text.toLowerCase().includes('plutôt dégagé'))?.alpha).toBeCloseTo(0.5, 6)
+    expect(keyed(0).map((t) => t.text.toLowerCase()).join(' | ')).not.toContain('plutôt dégagé')
+    expect(keyed(0).map((t) => t.text).join(' | ')).not.toContain(OPEN_METEO_SHORT.toUpperCase())
   })
 
   it('draws the logo when its image is loaded', () => {
