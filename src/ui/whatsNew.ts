@@ -21,6 +21,15 @@ export interface NewsVersion {
 
 export const WHATS_NEW: readonly NewsVersion[] = [
   {
+    version: '8.0',
+    items: [
+      { icon: 'mountain', get title() { return t('news.v80.camera.title') }, get text() { return t('news.v80.camera.text') } },
+      { icon: 'sun', get title() { return t('news.v80.shadows.title') }, get text() { return t('news.v80.shadows.text') } },
+      { icon: 'sparkles', get title() { return t('news.v80.look.title') }, get text() { return t('news.v80.look.text') } },
+      { icon: 'aperture', get title() { return t('news.v80.focal.title') }, get text() { return t('news.v80.focal.text') } },
+    ],
+  },
+  {
     version: '7.2',
     items: [
       { icon: 'cloud-sun', get title() { return t('news.v72.weather.title') }, get text() { return t('news.v72.weather.text') } },
