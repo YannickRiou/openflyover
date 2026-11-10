@@ -22,7 +22,7 @@ import type { LocalFrame, TerrainEngine } from '../core/types'
 import { filmSoundtrack } from './soundtrack'
 import type { FilmClock } from '../film/clock'
 import { pinsMoveWithTime } from '../film/photoPins'
-import { fovDegOf } from '../flyover/cameraSettings'
+import { CAMERA_FOV_DEG } from '../flyover/cameraSettings'
 import { filmViewMovesWithTime, lookAtView, overviewView } from '../flyover/filmCamera'
 import { filmTrackOf } from '../flyover/sequence'
 import { smoothedTrackPath } from '../flyover/smooth'
@@ -354,8 +354,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     const engine = deps.engine()
     if (!framing || framing.count === 0 || !frame) return
     const sampler: HeightSampler | null = engine ? (lon, lat) => engine.sampleHeight(lon, lat) : null
-    const { exaggeration, camera: lens } = useAppStore.getState().settings
-    const view = overviewView(framing, frame, sampler, exaggeration, width / height, FROM_SOUTH, undefined, lens.focalMm)
+    const { exaggeration } = useAppStore.getState().settings
+    const view = overviewView(framing, frame, sampler, exaggeration, width / height, FROM_SOUTH)
     camera.position.copy(view.position)
     lookAtView(camera, view)
     controlsTarget()?.copy(view.target)
@@ -716,7 +716,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
               i,
               shutter,
               (r) => filmViewAt(path, filmClock, r.progress, r.timeS, localFrame, null, aspect),
-              { heightPx: height, aspect, fovDeg: fovDegOf(settings.camera.focalMm) },
+              { heightPx: height, aspect, fovDeg: CAMERA_FOV_DEG },
               keep,
               maxSubFrames,
             )

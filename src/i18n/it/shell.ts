@@ -42,7 +42,7 @@ const messages: Messages['shell'] = {
   'mode.hint.carte.confirme': 'Data e dettaglio delle immagini, sorgente del rilievo, pulizia del DEM: in modalità Esperto.',
   'mode.hint.meteo.confirme': 'Pioggia e foschia: in modalità Esperto.',
   'mode.hint.lumiere.confirme': 'Atmosfera, ombre delle nuvole e chiarore delle notti: in modalità Esperto.',
-  'mode.hint.survol.debutant': 'Lunghezza focale, distanza, inclinazione e transizioni: in modalità Intermedio.',
+  'mode.hint.survol.debutant': 'Distanza, inclinazione e transizioni: in modalità Intermedio.',
   'mode.hint.survol.confirme': 'Direzione, anticipo e smussature: in modalità Esperto.',
   'mode.hint.habillage.debutant': 'Contatori, profilo e minimappa, meteo, logo e testo, etichette 3D: in modalità Intermedio.',
   'mode.hint.habillage.confirme': 'Colori e caratteri imposti, chiavi delle etichette, crediti: in modalità Esperto.',

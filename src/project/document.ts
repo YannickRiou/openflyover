@@ -665,6 +665,9 @@ export function parseProject(text: string): LoadedProject {
 
   const warnings: string[] = []
   if (isRecord(doc.settings) && isRecord(doc.settings.pacing) && doc.settings.pacing.enabled === true) warnings.push(t('project.doc.pacingRemoved'))
+  // « Focale » was removed: another focal length than the usual one is lost
+  const focalMm = isRecord(doc.settings) && isRecord(doc.settings.camera) ? doc.settings.camera.focalMm : undefined
+  if (typeof focalMm === 'number' && focalMm !== 26) warnings.push(t('project.doc.focalRemoved'))
   const { settings, invalid } = sanitizeSettings(doc.settings)
   if (invalid.length > 0) {
     warnings.push(t('project.doc.settingsReplaced', { list: invalid.join(', ') }))
