@@ -80,8 +80,8 @@ export interface OfflinePlan {
 }
 
 /**
- * Distance (metres) under which the engine splits `key`: r = cell · H / (2 · errorTarget · tan(fov / 2)), for the default
- * lens: another focal length moves the camera by the same factor (`focalDolly`), so the tiles seen are the same.
+ * Distance (metres) under which the engine splits `key`: r = cell · H / (2 · errorTarget · tan(fov / 2)), for the film's
+ * lens (`CAMERA_FOV_DEG`).
  */
 export function splitDistanceM(key: TileKey, viewportHeightPx: number): number {
   const cell = tileGroundSizeM(key) / DEFAULT_SEGMENTS

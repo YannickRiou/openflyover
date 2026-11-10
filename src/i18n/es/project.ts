@@ -34,6 +34,7 @@ const messages: Messages['project'] = {
   'doc.duplicateId': 'Proyecto no válido: dos tracks tienen el identificador «{id}».',
   'doc.settingsReplaced': 'Ajustes no válidos sustituidos por su valor por defecto: {list}.',
   'doc.pacingRemoved': '«Ralentizar en los momentos destacados» ya no existe: añada paradas o velocidades en la línea de tiempo.',
+  'doc.focalRemoved': '«Focal» ya no existe: la película se rueda con el objetivo habitual.',
   'doc.speedInvalid': 'Velocidad de reproducción no válida: se usa la velocidad ×1.',
   'file.empty': 'El archivo está vacío.',
   'file.notProject': 'No es un proyecto de OpenFlyover (ni un archivo .opnflvr, ni un antiguo proyecto JSON).',

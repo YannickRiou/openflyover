@@ -11,6 +11,7 @@ import V2 from './__fixtures__/legacy-v2.json?raw'
 // are in __fixtures__/legacy-v1.json and legacy-v2.json (written afterwards, see the README there); frozen.test.ts opens
 // one file per version.
 
+const REMOVED_FOCAL_MESSAGE = '« Focale » n’existe plus : le film est filmé avec l’objectif habituel.'
 const REMOVED_PACING_MESSAGE = '« Ralentir aux temps forts » n’existe plus : ajoutez des arrêts ou des vitesses sur la timeline.'
 
 /** Settings the file does not hold: today's defaults. */
@@ -54,7 +55,7 @@ describe('frozen old projects', () => {
     })
     expect(s.camera).toEqual({
       style: 'orbit', distance: 1.2, pitchDeg: 30, headingOffsetDeg: 0, smoothing: 1, northUp: false,
-      turnSmoothingM: 0, aimSmoothingS: 0, cameraSmoothingS: 3, endingS: 0, orbitTurns: 1, leadRoomPct: 15, bankDeg: 3, focalMm: 26,
+      turnSmoothingM: 0, aimSmoothingS: 0, cameraSmoothingS: 3, endingS: 0, orbitTurns: 1, leadRoomPct: 15, bankDeg: 3,
     })
     expect(s.pacing).toEqual({ keepDuration: false, transitionS: 1.5 })
     expect(s.film).toEqual({
@@ -207,6 +208,21 @@ describe('frozen old projects', () => {
       expect(on.settings.film.stops.map((x) => x.id)).toEqual(['stop-1'])
       doc.settings.pacing.enabled = false
       expect(parseProject(JSON.stringify(doc)).warnings).toEqual([])
+    })
+  })
+
+  describe('« Focale » (option removed)', () => {
+    it('another focal length than 26 mm opens without it and a message says it is gone; 26 mm: no message', () => {
+      const doc = JSON.parse(V2)
+      doc.settings.camera.focalMm = 85
+      const other = parseProject(JSON.stringify(doc))
+      expect(other.warnings).toEqual([REMOVED_FOCAL_MESSAGE])
+      expect(other.settings.camera).not.toHaveProperty('focalMm')
+      expect(other.settings.camera.pitchDeg).toBe(doc.settings.camera.pitchDeg)
+      doc.settings.camera.focalMm = 26
+      const usual = parseProject(JSON.stringify(doc))
+      expect(usual.warnings).toEqual([])
+      expect(usual.settings.camera).not.toHaveProperty('focalMm')
     })
   })
 })

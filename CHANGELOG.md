@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 8.0.0 (unreleased)
+
+- **« Focale » is gone**: the row is removed from Survol › Caméra and every film is shot with the usual lens (a vertical field of view of 50°, `CAMERA_FOV_DEG`), which is what a film saved at the default 26 mm always showed: those come out exactly as before. A project (or a saved camera preset) that had another focal length opens with a message (`project.doc.focalRemoved`) and its other settings unchanged; the `camera.focalMm` key is dropped on opening (`withCameraDefaults`), with no change of `PROJECT_VERSION`. The audit of the opening and closing shots (`filmAudit.test.ts`) now runs for this one lens, which is what made a test time out on the coverage run of master. Removed with it: `focalMm`, `DEFAULT_FOCAL_MM`, `fovDegOf`, `focalDolly`, the lens parameter of the framing functions and the news entry `v45.focal`.
+
 ## 7.2.3 (November 2026)
 
 - **Nothing shows through the title of a panel any more**: in the panel of a block of the timeline (« Ouverture », a stop…) and in the poster panel, a slider moved with the keyboard kept its thumb drawn over the sticky title once the row had scrolled under it, and the written value of a slider showed in the 4 px between the title and the close button, as did the rows under that button (lower than the title). The thumb with the keyboard focus now stays inside its slider, and a strip of the panel behind the whole title row hides what scrolls under it. The close button also stays where it is at rest: it used to rise by 8 px as soon as the panel scrolled.

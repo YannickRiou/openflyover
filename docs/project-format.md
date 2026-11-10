@@ -96,7 +96,8 @@ The film (`settings.film`) is the one block with its own lists, all positions al
 Many things were added between these versions without a new version, because a missing key takes its default and a
 grown block is completed by its `SETTING_UPGRADES` line: the overlay widgets, the camera options, the lens, clouds,
 snow, contours, forest, poster, landmark density, `labels`, `trackStyle`, `marker`. Removed options follow the same
-rule (`landmarkTitles` simply goes; a removed imagery source opens in its successor).
+rule (`landmarkTitles` and `camera.focalMm` simply go, a file that had a focal length other than 26 mm opens with the message
+`project.doc.focalRemoved`; a removed imagery source opens in its successor).
 
 ## Changing the format
 

@@ -28,6 +28,7 @@ const messages: Messages['project'] = {
   'doc.duplicateId': 'Progetto non valido: due tracce hanno lo stesso identificatore «{id}».',
   'doc.settingsReplaced': 'Impostazioni non valide sostituite dal valore predefinito: {list}.',
   'doc.pacingRemoved': '«Rallenta nei punti salienti» non esiste più: aggiungi soste o velocità sulla timeline.',
+  'doc.focalRemoved': '«Focale» non esiste più: il film viene girato con l’obiettivo abituale.',
   'doc.speedInvalid': 'Velocità di riproduzione non valida: usata la velocità ×1.',
   'file.empty': 'Il file è vuoto.',
   'file.notProject': 'Non è un progetto OpenFlyover (né un file .opnflvr, né un vecchio progetto JSON).',

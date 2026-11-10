@@ -9,7 +9,7 @@ import type { LocalFrame } from '../core/types'
 import type { FilmClock } from '../film/clock'
 import type { HeightSampler } from '../scene/trackLineSet'
 import { MIN_TERRAIN_CLEARANCE_M } from './camera'
-import { DEFAULT_FOCAL_MM, fovDegOf } from './cameraSettings'
+import { CAMERA_FOV_DEG } from './cameraSettings'
 import { computeFilmView, lookAtView, type FilmViewOptions } from './filmCamera'
 import type { TrackPath } from './path'
 
@@ -89,7 +89,7 @@ export function auditPoses(
   poses: readonly AuditPose[],
   frame: LocalFrame,
   sample: HeightSampler | null,
-  { exaggeration, aspect, camera: settings }: Pick<FilmViewOptions, 'exaggeration' | 'aspect' | 'camera'>,
+  { exaggeration, aspect }: Pick<FilmViewOptions, 'exaggeration' | 'aspect'>,
   { fromS = 0, fps = AUDIT_FPS }: { fromS?: number; fps?: number } = {},
 ): AuditIssue[] {
   const issues: AuditIssue[] = []
@@ -101,7 +101,7 @@ export function auditPoses(
     } else issues.push({ kind, startS: atS, endS: atS, worst })
   }
   const atJunction = (i: number) => [i - 2, i - 1, i + 1, i + 2].some((j) => poses[j] !== undefined && poses[j].state !== poses[i].state)
-  const camera = new PerspectiveCamera(fovDegOf(settings?.focalMm ?? DEFAULT_FOCAL_MM), aspect)
+  const camera = new PerspectiveCamera(CAMERA_FOV_DEG, aspect)
   const scratch = new Vector3()
   const sightOf = (p: AuditPose) => new Vector3().subVectors(p.target, p.position).normalize()
   const ndc = new Vector3()

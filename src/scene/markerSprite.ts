@@ -509,8 +509,7 @@ export function setMarkerReferenceDistance(distanceM: number | null): void {
  * Radius (world metres) of the ball of a marker at `position`, times `size`: that of its distance to the camera (the constant
  * on-screen size), or, with a reference distance (`setMarkerReferenceDistance`), the real size of that distance, kept
  * whatever the camera does but never under MARKER_MIN_REAL_RADIUS_PX on the screen. MARKER_SCREEN_FACTOR is for the default
- * field of view: a narrower or wider lens (« Focale », the camera stands farther or closer for it) scales it, so the marker
- * keeps its size on the screen.
+ * field of view: a narrower or wider one scales it, so the marker keeps its size on the screen.
  */
 export function markerRadius(camera: Camera, position: Vector3, size: number): number {
   const lens = 'fov' in camera ? Math.tan(((camera as PerspectiveCamera).fov * Math.PI) / 360) / Math.tan((CAMERA_FOV_DEG * Math.PI) / 360) : 1

@@ -369,7 +369,7 @@ describe('CameraPanel: the modes of the interface', () => {
     expect(host.textContent).toContain('Cinéma')
     expect(host.querySelector('[data-testid="camera-height-name"]')).not.toBeNull()
     await act(async () => usePreferences.setState({ uiMode: 'confirme' }))
-    expect(labels()).toEqual(expect.arrayContaining(['Focale', 'Distance', 'Inclinaison']))
+    expect(labels()).toEqual(expect.arrayContaining(['Distance', 'Inclinaison']))
     expect(labels()).not.toContain('Style')
     expect(labels()).not.toContain('Visée')
     await act(async () => usePreferences.setState({ uiMode: 'expert' }))
