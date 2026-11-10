@@ -59,6 +59,8 @@ export const LABEL_TEXT_COLOR = '#FFFFFF' // --color-white
 export const WAYPOINT_PRIORITY = 50
 /** Start and finish come above the waypoints, below the points of interest. */
 export const ENDPOINT_PRIORITY = 150
+/** Without its text, the flag alone gives way to every label that names something (the landmarks start at 0). */
+export const BARE_ENDPOINT_PRIORITY = -1
 /** Closer than this (metres), the start and the finish are one label: a loop. */
 export const LOOP_GAP_M = 100
 /** Kilometre markers give way to every named label. */
@@ -103,7 +105,7 @@ export function endpointLabels(track: Track, withText = true): LandmarkLabel[] {
     ele: at.ele,
     text: withText ? text : '',
     kind: 'endpoint',
-    priority: ENDPOINT_PRIORITY,
+    priority: withText ? ENDPOINT_PRIORITY : BARE_ENDPOINT_PRIORITY,
     icon: 'drapeau',
   })
   if (haversineM(start, end) < LOOP_GAP_M) return [label('loop', start, t('scene.label.loop'))]
