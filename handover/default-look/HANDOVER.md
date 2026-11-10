@@ -1,5 +1,8 @@
 # Handover: « Allumé par défaut » (feat/default-look)
 
+> Rebased on master c7f228ed on 2026-11-11 (the « Focale » commit fee9bbd7 was squash-merged as #524): the feature commit `49049d9a` is now `8722eaaa` on `feat/default-look`, and `033cf924` is now `e136a36e`. Related pull requests: #525 (camera study), #526 (camera that keeps its tilt), and the near-shadows one.
+
+
 Branch `feat/default-look`, based on `fee9bbd7` (« Focale » removed, base of the 8.0 work). Commit `49049d9a` is the
 default-look change; the commit that adds this folder sits on top. Nothing is pushed, no pull request exists.
 
