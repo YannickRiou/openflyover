@@ -98,7 +98,7 @@ Expect to break if the rule is made less lifting: `markerVisible.test.ts` (hidde
 1. `git apply` the debug hooks; run `scripts/whole.mjs` for the cases still missing (see section 9) to complete the "before" table; STEP_S 4 takes about 7 min per case on a cold tile cache.
 2. Pick and implement the smallest rule change (section 6), iterating with variants in `whole.mjs` (variants are JSON files of `__rule` overrides; add hooks for new parameters) and with the node fixtures test.
 3. Revert the hooks; unit tests next to existing ones in `src/flyover/camera.test.ts` (marker behind a ridge: camera still rises; old rose for nothing: now does not).
-4. After numbers for all cases, then sheets with `stills.mjs` (before uses a Vite plugin that redirects `filmView.ts` to `src/flyoverOld/filmCamera.ts`), ffmpeg `hstack/vstack` with drawtext as in the study's `sheets2.py` (in `scratchpad/camera-study`, not copied).
+4. After numbers for all cases, then sheets with `stills.mjs` (before uses a Vite plugin that redirects `filmView.ts` to `src/flyoverOld/filmCamera.ts`), ffmpeg `hstack/vstack` with drawtext as in the study's `sheets2.py` (branch `study/camera-distance`, `handover/camera-distance/sheets2.py`, PR #525).
 5. Docs (ARCHITECTURE.md, handbook if relevant, CHANGELOG 8.0.0 entry), remove `handover/`, run typecheck, lint, full vitest under heavy lock, build; one commit `feat(caméra) : …`.
 
 ## 9. How to run (needs a real GPU; the cloud has none)
@@ -119,4 +119,4 @@ Layout: scripts take the repo path and an output folder. Copy `scaffolding/flyov
 
 ## 11. Left out of the handover
 
-`scratchpad/camera-tilt/profile` (Chrome profile with cached tiles, large, regenerable), `v0.json` (empty variants), and the study's images and `results*.json` in `scratchpad/camera-study` (earlier study: 15 sampled states, quoted in the goal). No images were produced in this session.
+`scratchpad/camera-tilt/profile` (Chrome profile with cached tiles, large, regenerable), `v0.json` (empty variants), The earlier study (15 sampled states, quoted in the goal) is not copied here: its scripts, results and contact sheets are on branch `study/camera-distance`, folder `handover/camera-distance/` (PR #525). No images were produced in this session.
