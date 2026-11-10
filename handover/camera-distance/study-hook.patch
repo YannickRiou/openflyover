@@ -1,0 +1,56 @@
+diff --git a/src/flyover/camera.ts b/src/flyover/camera.ts
+index 5c1adacc..7afbee8c 100644
+--- a/src/flyover/camera.ts
++++ b/src/flyover/camera.ts
+@@ -995,6 +995,7 @@ function lowestClearY(
+   cellM: number,
+   liftM: number,
+ ): number {
++  const ovr = ((globalThis as unknown as { __ovr?: { noLos?: boolean; noClear?: boolean } }).__ovr) ?? {}
+   const samples = LINE_OF_SIGHT_SAMPLES
+   let floor = -Infinity
+   const grid = terrainGrid(cellM, frame, sample)
+@@ -1015,9 +1016,9 @@ function lowestClearY(
+     return to.y + ((floorY - to.y) * share) / (1 - f)
+   }
+   const left = Math.max(LINE_OF_SIGHT_END_M / Math.max(1, position.distanceTo(target)), 1 / LINE_OF_SIGHT_MAX_GAIN)
+-  for (let i = 0; i <= samples; i++) {
++  for (let i = 0; i <= (ovr.noLos ? 0 : samples); i++) {
+     const f = (i / samples) * (1 - Math.min(0.5, left))
+-    const clearance = Math.max(MIN_GROUND_CLEARANCE_M * (1 - f), LINE_OF_SIGHT_MIN_CLEARANCE_M)
++    const clearance = Math.max(ovr.noClear ? 0 : MIN_GROUND_CLEARANCE_M * (1 - f), LINE_OF_SIGHT_MIN_CLEARANCE_M)
+     // the fine grid's lift eased out between LINE_OF_SIGHT_FINE_GAIN and twice that
+     const t = clamp(2 - 1 / ((1 - f) * LINE_OF_SIGHT_FINE_GAIN), 0, 1)
+     const share = t * t * (3 - 2 * t)
+diff --git a/src/flyover/filmCamera.ts b/src/flyover/filmCamera.ts
+index 3ec24dc8..dc3e4860 100644
+--- a/src/flyover/filmCamera.ts
++++ b/src/flyover/filmCamera.ts
+@@ -831,8 +831,10 @@ function flightAt(
+       raises.set(instantS, { raiseM, version: raiseM === fresh ? version : known.version })
+       return raiseM
+     }
+-    flown.view.position.y += anticipatedRaise(raiseAt, timeS) - flown.view.raiseM
+-    flown.view.target = flown.view.leadTarget(flown.view.position)
++    if (!(globalThis as unknown as { __ovr?: { noAnticip?: boolean } }).__ovr?.noAnticip) {
++      flown.view.position.y += anticipatedRaise(raiseAt, timeS) - flown.view.raiseM
++      flown.view.target = flown.view.leadTarget(flown.view.position)
++    }
+   }
+   const view = flown.view
+   const marker = followed?.markerOnFilm ? markerAt(path, progress, frame, sample, options.exaggeration, options.liftM) : view.marker
+diff --git a/src/scene/FlyoverRig.tsx b/src/scene/FlyoverRig.tsx
+index 26ee8655..08570f3f 100644
+--- a/src/scene/FlyoverRig.tsx
++++ b/src/scene/FlyoverRig.tsx
+@@ -92,6 +92,10 @@ export function FlyoverRig() {
+   // the same function as the other views' (`filmFollow`), so the film camera keeps what it computed (`computeFilmView`)
+   const follow = useMemo(() => filmFollow(tracks, race, smoothingM), [tracks, race, smoothingM])
+   const clock = useFilmClock()
++  const studyGet = useThree((s) => s.get)
++  useEffect(() => {
++    ;(window as unknown as { __study: unknown }).__study = { path, clock, frame, engine, follow, getThree: studyGet }
++  }, [path, clock, frame, engine, follow, studyGet])
+   /** clock the store's film time was computed with */
+   const clockRef = useRef(clock)
+   const markerRef = useRef<Sprite>(null)
