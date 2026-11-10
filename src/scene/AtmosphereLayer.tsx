@@ -11,7 +11,7 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Color, Uniform, Vector3, type HemisphereLight, type Mesh } from 'three'
+import { Color, DirectionalLight, Uniform, Vector3, type HemisphereLight, type Mesh } from 'three'
 import { EffectComposer, ToneMapping, disposePassWithoutEffects } from '@react-three/postprocessing'
 import { EffectPass, SMAAEffect, ToneMappingMode } from 'postprocessing'
 import type { AerialPerspectiveEffect, SkyLightProbe, SunDirectionalLight } from '@takram/three-atmosphere'
@@ -92,6 +92,7 @@ export function AtmosphereLayer() {
   const { shadowMapSize } = sceneBudget(usePreviewBudget(), exporting)
   const track = useAppStore((s) => s.tracks[0])
   const gl = useThree((s) => s.gl)
+  const farRef = useRef<DirectionalLight | null>(null)
   const camera = useThree((s) => s.camera)
   const atmosphereRef = useRef<AtmosphereApi>(null)
   const aerialRef = useRef<AerialPerspectiveEffect>(null)
@@ -206,6 +207,7 @@ export function AtmosphereLayer() {
     setMarkerLight(markerLight(elevation, weather))
     if (nightFillRef.current) nightFillRef.current.intensity = nightFillIntensity(elevation, settings.nightLightEv)
     if (sun) {
+      if (farRef.current) { farRef.current.position.copy(sun.position); farRef.current.target.position.copy(sun.target.position); farRef.current.updateMatrixWorld(); farRef.current.target.updateMatrixWorld() }
       sun.intensity = weather.sunScale
       sun.shadow.intensity = weather.shadowStrength
       // rung 2 of the preview, film playing: the map of the relief is drawn every second frame (still there in between)
@@ -286,10 +288,21 @@ export function AtmosphereLayer() {
           return ground === undefined ? undefined : frame.toLocal(at.lon, at.lat, ground * useAppStore.getState().settings.exaggeration, _ground).y
         }
       : undefined
-    const shadow = new TerrainShadow(engine.group, Math.min(shadowMapSize, gl.capabilities.maxTextureSize), groundUnder)
+    const half = Math.min(shadowMapSize, gl.capabilities.maxTextureSize) / ((globalThis as any).__ONEMAP ? 1 : 2)
+    const shadow = new TerrainShadow(engine.group, half, groundUnder)
     sun.shadow = shadow
     sun.castShadow = true
+    // PROTO: second light, same direction, far map (old 30 km rule), nearly no intensity: measures a second shadow pass
+    let far: DirectionalLight | null = null
+    if (!(globalThis as any).__ONEMAP) {
+      far = new DirectionalLight(0xffffff, 0.0005)
+      far.shadow = new TerrainShadow(engine.group, half)
+      far.castShadow = true
+      sun.parent?.add(far, far.target)
+      farRef.current = far
+    }
     return () => {
+      if (far) { far.parent?.remove(far, far.target); far.shadow.dispose(); farRef.current = null }
       sun.castShadow = false
       sun.shadow = original
       shadow.dispose()
