@@ -84,6 +84,8 @@ describe('label texts and sources', () => {
     expect(endpointLabels(loop).map((l) => l.text)).toEqual(['Départ et arrivée'])
     expect(endpointLabels(loop, false).map((l) => l.text)).toEqual([''])
     expect(ENDPOINT_PRIORITY).toBeLessThan(POI_PRIORITY)
+    // the flag alone never hides a named label (a landmark of the map, a kilometre marker)
+    expect(endpointLabels(east, false).every((l) => l.priority < 0)).toBe(true)
   })
 
   it('pins the photos of the film whose file gives a position, with their caption', () => {

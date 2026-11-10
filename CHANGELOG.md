@@ -6,6 +6,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## 7.2.3 (unreleased)
 
 - **Nothing shows through the title of a panel any more**: in the panel of a block of the timeline (« Ouverture », a stop…) and in the poster panel, a slider moved with the keyboard kept its thumb drawn over the sticky title once the row had scrolled under it, and the written value of a slider showed in the 4 px between the title and the close button, as did the rows under that button (lower than the title). The thumb with the keyboard focus now stays inside its slider, and a strip of the panel behind the whole title row hides what scrolls under it. The close button also stays where it is at rest: it used to rise by 8 px as soon as the panel scrolled.
+- **The flag of the start and finish no longer hides a name**: with « Départ et arrivée » unticked, the small flag kept the priority of the full label, so it won over the landmarks of the map at the same place (the village or the pass the outing starts from, even one set to « Toujours ») and only the flag was left. The flag alone now gives way to every label that names something; it stays wherever nothing overlaps it. With the box ticked, « Départ » and « Arrivée » keep their place as before.
 
 ## 7.2.2 (November 2026)
 

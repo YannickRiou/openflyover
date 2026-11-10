@@ -2623,7 +2623,7 @@ exports) gets it from the terrain source of the settings.
   temporal smoothing): each export frame is rendered in isolation. The opening and closing cards do not hide them (the cards are drawn over the 3D view, labels
   included). Start and finish (`endpointLabels`, priority 150): a flag pin at both ends of every track (one when
   both ends are less than 100 m apart: a loop), always shown; with `labels.endpoints` ("Départ et arrivée") the pins of the
-  first track read "Départ", "Arrivée" or "Départ et arrivée", otherwise the pin alone (a square panel). They and the photos of the film whose file gave a GPS position (`photoLabels`,
+  first track read "Départ", "Arrivée" or "Départ et arrivée", otherwise the pin alone (a square panel, priority -1: it gives way to every named label). They and the photos of the film whose file gave a GPS position (`photoLabels`,
   `labels.photos`, priority 190, `MediaAsset.lon` / `lat` read from EXIF when the photo is added) use the pictogram
   panel of the points of interest. Setting `settings.labels { waypoints, kmStep, endpoints, photos, size, rangeKm }` (old projects completed by
   `withLabelDefaults`, values checked by `isValidLabelSettings`), section
