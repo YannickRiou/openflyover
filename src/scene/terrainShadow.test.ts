@@ -13,11 +13,14 @@ import {
   Vector3,
 } from 'three'
 import {
+  FULL_SHADOW_AIM_M,
   MIN_SHADOW_DISTANCE_M,
+  NEAR_SHADOW_DISTANCE_M,
   NORMAL_BIAS_TEXELS,
   SHADOW_DISTANCE_PER_HEIGHT,
   TerrainShadow,
   fitShadowFrustum,
+  aimDistance,
   lastShadowPass,
   mayShadowView,
   shadowDistance,
@@ -72,6 +75,112 @@ describe('shadowDistance', () => {
     expect(shadowDistance(1500, 1000)).toBe(MIN_SHADOW_DISTANCE_M)
     expect(shadowDistance(41_000, 1000)).toBe(SHADOW_DISTANCE_PER_HEIGHT * 40_000)
   })
+
+  it('is the far distance, unchanged, from a camera that looks at ground 2 km away or farther, or at none', () => {
+    for (const aim of [FULL_SHADOW_AIM_M, 3000, 12_000, Infinity]) expect(shadowDistance(1500, 1000, aim)).toBe(MIN_SHADOW_DISTANCE_M)
+    // an overview camera is 40 km or more from the ground it looks at
+    for (const aim of [40_000, 60_000, Infinity]) expect(shadowDistance(41_000, 1000, aim)).toBe(SHADOW_DISTANCE_PER_HEIGHT * 40_000)
+  })
+
+  it('falls with the square of the distance to the ground looked at, down to a floor', () => {
+    expect(shadowDistance(2000, 0, 1000)).toBeCloseTo(MIN_SHADOW_DISTANCE_M / 4)
+    expect(shadowDistance(2000, 0, 700)).toBeCloseTo(MIN_SHADOW_DISTANCE_M * 0.35 ** 2)
+    expect(shadowDistance(2000, 0, 300)).toBe(NEAR_SHADOW_DISTANCE_M)
+    expect(shadowDistance(2000, 0, 0)).toBe(NEAR_SHADOW_DISTANCE_M)
+    // never farther than a far camera's
+    expect(shadowDistance(2000, 0, 1900)).toBeLessThanOrEqual(MIN_SHADOW_DISTANCE_M)
+  })
+})
+
+describe('aimDistance', () => {
+  const flat = () => 0
+  const ahead = (pitchDeg: number) => new Vector3(0, -Math.sin((pitchDeg * Math.PI) / 180), -Math.cos((pitchDeg * Math.PI) / 180))
+
+  /** The first version: one ray marched along the axis, steps growing by 8 %, first point under the ground. */
+  function firstHit(eye: Vector3, forward: Vector3, groundY: (point: Vector3) => number | undefined, maxM: number): number {
+    const p = new Vector3()
+    let step = 25
+    for (let t = step; t <= maxM; t += step, step *= 1.08) {
+      p.copy(eye).addScaledVector(forward, t)
+      const y = groundY(p)
+      if (y !== undefined && p.y <= y) return t
+    }
+    return Infinity
+  }
+
+  /** Ridges and valleys across the way: 600 m of relief every 700 m. */
+  const broken = (p: Vector3) => 300 + 300 * Math.sin(p.z / 220) * Math.cos(p.x / 330 + 1) + 40 * Math.sin(p.x / 37)
+  const direction = (yawDeg: number, pitchDeg: number) => {
+    const yaw = (yawDeg * Math.PI) / 180
+    const pitch = (pitchDeg * Math.PI) / 180
+    return new Vector3(Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch))
+  }
+  /** Largest frame-to-frame ratio of the shadow distance over a sweep of views. */
+  function worstJump(views: Array<[Vector3, Vector3]>, aim: (eye: Vector3, forward: Vector3) => number): number {
+    let worst = 1
+    let last = 0
+    views.forEach(([eye, forward], i) => {
+      const d = shadowDistance(eye.y, 0, aim(eye, forward))
+      if (i > 0) worst = Math.max(worst, d / last, last / d)
+      last = d
+    })
+    return worst
+  }
+  // the camera turns by 0.1 degree a frame at 200 m over the ground, axis 8 to 25 degrees below the horizon
+  const turning: Array<[Vector3, Vector3]> = []
+  for (let yaw = -60; yaw <= 60; yaw += 0.1) {
+    const eye = new Vector3(0, 500, 0)
+    turning.push([eye, direction(yaw, 8 + (yaw + 60) / 7)])
+  }
+  // and it flies 2 m a frame, axis 12 degrees below the horizon
+  const flying: Array<[Vector3, Vector3]> = []
+  for (let z = 0; z >= -2000; z -= 2) flying.push([new Vector3(300, 300 + 300 * Math.sin(z / 220) * Math.cos(1.9) + 200, z), direction(0, 12)])
+
+  it('is the height over the ground under the camera divided by the sine of the tilt', () => {
+    expect(aimDistance(new Vector3(0, 500, 0), ahead(30), flat)).toBeCloseTo(1000, 6)
+    expect(aimDistance(new Vector3(0, 500, 0), ahead(30), () => 300)).toBeCloseTo(400, 6)
+    // under the ground: the closest case
+    expect(aimDistance(new Vector3(0, 500, 0), ahead(30), () => 800)).toBe(0)
+  })
+
+  it('is Infinity for a camera that looks level or up, or over unknown ground', () => {
+    const eye = new Vector3(0, 500, 0)
+    expect(aimDistance(eye, ahead(0), flat)).toBe(Infinity)
+    expect(aimDistance(eye, ahead(-10), flat)).toBe(Infinity)
+    expect(aimDistance(eye, ahead(30), () => undefined)).toBe(Infinity)
+  })
+
+  it('keeps a high camera on the far distance, and a low one on the near texel goal', () => {
+    // « Avion »: 2 km or more from the ground, same distance as before
+    expect(shadowDistance(2500, 0, aimDistance(new Vector3(0, 2500, 0), ahead(60), flat))).toBe(shadowDistance(2500, 0))
+    expect(shadowDistance(6000, 0, aimDistance(new Vector3(0, 6000, 0), ahead(45), flat))).toBe(shadowDistance(6000, 0))
+    // « Au ras » (440 to 500 m) and « Proche » (700 to 870 m)
+    expect(shadowDistance(300, 0, aimDistance(new Vector3(0, 170, 0), ahead(20), flat))).toBe(NEAR_SHADOW_DISTANCE_M)
+    const proche = shadowDistance(500, 0, aimDistance(new Vector3(0, 400, 0), ahead(30), flat))
+    expect(proche).toBeGreaterThan(3000)
+    expect(proche).toBeLessThan(5000)
+  })
+
+  it('moves the shadow distance smoothly when the camera turns over broken relief (the first ray jumped)', () => {
+    const jump = worstJump(turning, (eye, forward) => aimDistance(eye, forward, broken))
+    const old = worstJump(turning, (eye, forward) => firstHit(eye, forward, broken, FULL_SHADOW_AIM_M))
+    expect(jump).toBeLessThan(1.25)
+    expect(old).toBeGreaterThan(1.5)
+  })
+
+  it('moves the shadow distance smoothly when the camera flies over broken relief', () => {
+    const jump = worstJump(flying, (eye, forward) => aimDistance(eye, forward, broken))
+    expect(jump).toBeLessThan(1.25)
+  })
+
+  it('has no 8 % steps on smooth ground (the march quantised the aim, so the distance moved by 17 %)', () => {
+    const flatSweep: Array<[Vector3, Vector3]> = []
+    for (let pitch = 10; pitch <= 30; pitch += 0.05) flatSweep.push([new Vector3(0, 300, 0), direction(0, pitch)])
+    const smooth = worstJump(flatSweep, (eye, forward) => aimDistance(eye, forward, flat))
+    const old = worstJump(flatSweep, (eye, forward) => firstHit(eye, forward, flat, FULL_SHADOW_AIM_M))
+    expect(smooth).toBeLessThan(1.02)
+    expect(old).toBeGreaterThan(1.1)
+  })
 })
 
 describe('fitShadowFrustum', () => {
@@ -103,6 +212,30 @@ describe('fitShadowFrustum', () => {
     expect(near.right - near.left).toBeLessThan(full.right - full.left)
     expect(near.texelSize).toBeLessThan(full.texelSize)
     expect(near.texelSize).toBeLessThan(16_000 / MAP_SIZE)
+  })
+
+  it('gives a texel of about 1 m close to the ground and the far texel from a far camera, at the same map size', () => {
+    const close = viewCamera(new Vector3(0, 1500, 19_000), new Vector3(0, 1000, 18_400))
+    const farView = viewCamera(new Vector3(0, 3000, 19_000), new Vector3(0, 1500, 15_000))
+    const closeFit = fit(close, HIGH_SUN, shadowDistance(1500, 1000, 700), new Box3(new Vector3(-20_000, 1000, -20_000), new Vector3(20_000, 4000, 20_000)))!
+    const farFit = fit(farView, HIGH_SUN, shadowDistance(3000, 1000, 2500))!
+    // 1024 texels here: 4096 on a desktop divides these by 4
+    expect(closeFit.texelSize).toBeLessThan(farFit.texelSize / 4)
+    expect(shadowDistance(3000, 1000, 2500)).toBe(shadowDistance(3000, 1000))
+  })
+
+  it('keeps the bounds, extent and texel grid for a move of a metre and an aim that varies by 1 %', () => {
+    const at = (x: number, aim: number) => fit(viewCamera(new Vector3(x, 1500, 19_000), new Vector3(x, 1000, 18_400)), HIGH_SUN, shadowDistance(1500, 1000, aim))!
+    const a = at(0, 700)
+    const b = at(1, 707)
+    expect(b.right - b.left).toBe(a.right - a.left)
+    expect(b.top - b.bottom).toBe(a.top - a.bottom)
+    for (const f of [a, b]) {
+      const texelX = (f.right - f.left) / MAP_SIZE
+      const texelY = (f.top - f.bottom) / MAP_SIZE
+      expect(Math.abs(f.left / texelX - Math.round(f.left / texelX))).toBeLessThan(1e-6)
+      expect(Math.abs(f.bottom / texelY - Math.round(f.bottom / texelY))).toBeLessThan(1e-6)
+    }
   })
 
   it('reaches the casters between the view and a low sun', () => {
@@ -152,6 +285,19 @@ describe('TerrainShadow', () => {
     expect(shadow.normalBias).toBeCloseTo((NORMAL_BIAS_TEXELS * Math.max(width, ortho.top - ortho.bottom)) / MAP_SIZE)
     expect(shadow.bias).toBeLessThan(0)
     expect(shadow.mapSize.x).toBe(MAP_SIZE)
+  })
+
+  it('fits a smaller shadow when the camera flies close to the ground it is given', () => {
+    const { terrain, light } = scene()
+    const camera = viewCamera(new Vector3(0, 2300, 4000), new Vector3(0, 2000, 3500))
+    const widthWith = (groundUnder?: (point: Vector3) => number | undefined) => {
+      const shadow = new TerrainShadow(terrain, MAP_SIZE, groundUnder)
+      shadow.updateMatrices(light, camera)
+      return shadow.camera.right - shadow.camera.left
+    }
+    expect(widthWith(() => 2000)).toBeLessThan(widthWith() / 2)
+    // ground unknown: as before
+    expect(widthWith(() => undefined)).toBe(widthWith())
   })
 
   it('counts the tiles and triangles of the shadow pass, the off-screen casters apart', () => {
