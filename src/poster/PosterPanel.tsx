@@ -221,7 +221,7 @@ export function PosterPanel({ modes, onClose, hidden }: { modes: ReactNode; onCl
         <Tip text={withShortcut(t('common.close'), 'export')} align="end">
           <Button
             variant="icon"
-            className="dock-head col-3 mt-1 -mr-1.5 ml-1 self-center phone:hidden"
+            className="dock-head top-2 col-3 mt-2 -mr-1.5 ml-1 self-start phone:hidden"
             onClick={onClose}
             aria-label={t('poster.panel.closeAria')}
           >
