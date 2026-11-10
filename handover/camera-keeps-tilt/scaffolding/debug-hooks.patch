@@ -1,0 +1,54 @@
+diff --git a/src/flyover/camera.ts b/src/flyover/camera.ts
+index 5c1adacc..1391aa20 100644
+--- a/src/flyover/camera.ts
++++ b/src/flyover/camera.ts
+@@ -1014,10 +1014,11 @@ function lowestClearY(
+     const floorY = frame.toLocal(at.lon, at.lat, ground * exaggeration + clearance, _sight).y
+     return to.y + ((floorY - to.y) * share) / (1 - f)
+   }
+-  const left = Math.max(LINE_OF_SIGHT_END_M / Math.max(1, position.distanceTo(target)), 1 / LINE_OF_SIGHT_MAX_GAIN)
+-  for (let i = 0; i <= samples; i++) {
++  const RR = (k: string, d: number): number => (globalThis as any).__rule?.[k] ?? d
++  const left = Math.max(RR('end', LINE_OF_SIGHT_END_M) / Math.max(1, position.distanceTo(target)), 1 / RR('maxGain', LINE_OF_SIGHT_MAX_GAIN))
++  for (let i = 0; i <= (RR('noLos', 0) ? -1 : samples); i++) {
+     const f = (i / samples) * (1 - Math.min(0.5, left))
+-    const clearance = Math.max(MIN_GROUND_CLEARANCE_M * (1 - f), LINE_OF_SIGHT_MIN_CLEARANCE_M)
++    const clearance = Math.max(RR('taper', MIN_GROUND_CLEARANCE_M) * (1 - f), RR('minClear', LINE_OF_SIGHT_MIN_CLEARANCE_M))
+     // the fine grid's lift eased out between LINE_OF_SIGHT_FINE_GAIN and twice that
+     const t = clamp(2 - 1 / ((1 - f) * LINE_OF_SIGHT_FINE_GAIN), 0, 1)
+     const share = t * t * (3 - 2 * t)
+diff --git a/src/flyover/filmCamera.ts b/src/flyover/filmCamera.ts
+index 3ec24dc8..5c634c05 100644
+--- a/src/flyover/filmCamera.ts
++++ b/src/flyover/filmCamera.ts
+@@ -831,7 +831,7 @@ function flightAt(
+       raises.set(instantS, { raiseM, version: raiseM === fresh ? version : known.version })
+       return raiseM
+     }
+-    flown.view.position.y += anticipatedRaise(raiseAt, timeS) - flown.view.raiseM
++    if (!(globalThis as any).__rule?.noAnticip) flown.view.position.y += anticipatedRaise(raiseAt, timeS) - flown.view.raiseM
+     flown.view.target = flown.view.leadTarget(flown.view.position)
+   }
+   const view = flown.view
+diff --git a/src/scene/FlyoverRig.tsx b/src/scene/FlyoverRig.tsx
+index 26ee8655..859767af 100644
+--- a/src/scene/FlyoverRig.tsx
++++ b/src/scene/FlyoverRig.tsx
+@@ -236,6 +236,7 @@ export function FlyoverRig() {
+     const region = useRegionStore.getState().frame
+     // the export places its camera with the same function
+     const aspect = size.height > 0 ? size.width / size.height : 1
++    ;(window as any).__study = { engine, path, clock, frame, follow, getThree: () => ({ camera, size }) }
+     const view = filmViewAt(path, clock, progress, timeS, frame, engine, aspect, follow)
+     marker.visible = true
+ 
+diff --git a/src/scene/filmView.ts b/src/scene/filmView.ts
+index 75cb1c96..23aff158 100644
+--- a/src/scene/filmView.ts
++++ b/src/scene/filmView.ts
+@@ -102,3 +102,5 @@ export function keyFramingOfView(
+   const { sampler, options } = viewInputs(engine, 1, follow)
+   return keyFramingAt(path, clock, timeS ?? clock.timeAtProgress(progress), progress, frame, sampler, options, position, lookAt)
+ }
++
++export { viewInputs as __viewInputs }
