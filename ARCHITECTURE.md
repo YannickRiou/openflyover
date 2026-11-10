@@ -1235,10 +1235,15 @@ The interface and the texts drawn into the films and posters exist in **French**
   the atmosphere): the Takram `SunLight` receives a `TerrainShadow` (one shadow map, `deviceBudget().shadowMapSize`: 4096² on a computer, 2048² on a phone or tablet,
   1024² with 2 GB or less; PCF through `shadows="percentage"`).
   Its orthographic bounds are recomputed in `updateMatrices(light, viewCamera)`, which three calls just before
-  drawing the map: area = view frustum cut at max(30 km, 5 × camera height above the lowest terrain),
-  intersected with the box of the visible tiles (`fitShadowFrustum`, pure and tested); near plane pushed toward the sun
+  drawing the map: area = view frustum cut at `shadowDistance` (max(30 km, 5 × camera height above the lowest terrain),
+  but for a camera that looks at ground less than 2 km away along its axis, 30 km × (that distance / 2 km)², never under
+  3 km: `groundDistance` marches the view axis against `engine.sampleHeight`, handed in by `AtmosphereLayer` as
+  `groundUnder`; no ground met within 2 km, or an unknown terrain, keeps the 30 km), intersected with the box of the visible tiles (`fitShadowFrustum`, pure and tested); near plane pushed toward the sun
   up to the top of that box; bounds rounded in steps of 2^(1/8) and snapped to whole texels (no shimmering);
-  texel-based bias (normalBias 1.5 texel, depth 2 m). Texel ≈ 8–9 m in chase, 15–25 m in overview.
+  texel-based bias (normalBias 1.5 texel, depth 2 m). Texel (4096² map) ≈ 1.1–1.3 m at « Au ras » (view axis meeting the
+  ground 450–500 m away), 1.4–2 m at « Proche » (700–870 m), ≈ 3 m at 1 km, then ≈ 10–12 m from 2 km (« Avion ») and in
+  overview, as before. A pure function of the view and the loaded tiles (no state between frames), so the preview and the
+  export agree.
   **Caster selection** (`selectCasters`, `mayShadowView`, after the fit): three only draws a mesh into the map when
   `castShadow` is on and its box meets the shadow camera's frustum, so `TerrainShadow` switches `castShadow` per tile
   each frame (the main pass ignores it; `dispose` puts it back to `true`). A tile casts only if its box, swept from its top

@@ -13,11 +13,14 @@ import {
   Vector3,
 } from 'three'
 import {
+  FULL_SHADOW_AIM_M,
   MIN_SHADOW_DISTANCE_M,
+  NEAR_SHADOW_DISTANCE_M,
   NORMAL_BIAS_TEXELS,
   SHADOW_DISTANCE_PER_HEIGHT,
   TerrainShadow,
   fitShadowFrustum,
+  groundDistance,
   lastShadowPass,
   mayShadowView,
   shadowDistance,
@@ -72,6 +75,45 @@ describe('shadowDistance', () => {
     expect(shadowDistance(1500, 1000)).toBe(MIN_SHADOW_DISTANCE_M)
     expect(shadowDistance(41_000, 1000)).toBe(SHADOW_DISTANCE_PER_HEIGHT * 40_000)
   })
+
+  it('is the far distance, unchanged, from a camera that looks at ground 2 km away or farther, or at none', () => {
+    for (const aim of [FULL_SHADOW_AIM_M, 3000, 12_000, Infinity]) expect(shadowDistance(1500, 1000, aim)).toBe(MIN_SHADOW_DISTANCE_M)
+    // an overview camera is 40 km or more from the ground it looks at
+    for (const aim of [40_000, 60_000, Infinity]) expect(shadowDistance(41_000, 1000, aim)).toBe(SHADOW_DISTANCE_PER_HEIGHT * 40_000)
+  })
+
+  it('falls with the square of the distance to the ground looked at, down to a floor', () => {
+    expect(shadowDistance(2000, 0, 1000)).toBeCloseTo(MIN_SHADOW_DISTANCE_M / 4)
+    expect(shadowDistance(2000, 0, 700)).toBeCloseTo(MIN_SHADOW_DISTANCE_M * 0.35 ** 2)
+    expect(shadowDistance(2000, 0, 300)).toBe(NEAR_SHADOW_DISTANCE_M)
+    expect(shadowDistance(2000, 0, 0)).toBe(NEAR_SHADOW_DISTANCE_M)
+    // never farther than a far camera's
+    expect(shadowDistance(2000, 0, 1900)).toBeLessThanOrEqual(MIN_SHADOW_DISTANCE_M)
+  })
+})
+
+describe('groundDistance', () => {
+  const flat = () => 0
+  const ahead = (pitchDeg: number) => new Vector3(0, -Math.sin((pitchDeg * Math.PI) / 180), -Math.cos((pitchDeg * Math.PI) / 180))
+
+  it('finds the ground along the axis within one step (8 %)', () => {
+    const d = groundDistance(new Vector3(0, 500, 0), ahead(30), flat, 5000)
+    expect(d).toBeGreaterThanOrEqual(1000)
+    expect(d).toBeLessThan(1000 * 1.09)
+  })
+
+  it('is the same for the same view, and Infinity for the sky, the unknown or ground beyond the limit', () => {
+    const eye = new Vector3(0, 500, 0)
+    expect(groundDistance(eye, ahead(30), flat, 5000)).toBe(groundDistance(eye, ahead(30), flat, 5000))
+    expect(groundDistance(eye, ahead(-10), flat, 5000)).toBe(Infinity)
+    expect(groundDistance(eye, ahead(30), () => undefined, 5000)).toBe(Infinity)
+    expect(groundDistance(eye, ahead(5), flat, 2000)).toBe(Infinity)
+  })
+
+  it('follows a rising slope: ground met sooner than on the flat', () => {
+    const slope = (p: Vector3) => -p.z * 0.3
+    expect(groundDistance(new Vector3(0, 500, 0), ahead(10), slope, 5000)).toBeLessThan(groundDistance(new Vector3(0, 500, 0), ahead(10), flat, 5000))
+  })
 })
 
 describe('fitShadowFrustum', () => {
@@ -103,6 +145,30 @@ describe('fitShadowFrustum', () => {
     expect(near.right - near.left).toBeLessThan(full.right - full.left)
     expect(near.texelSize).toBeLessThan(full.texelSize)
     expect(near.texelSize).toBeLessThan(16_000 / MAP_SIZE)
+  })
+
+  it('gives a texel of about 1 m close to the ground and the far texel from a far camera, at the same map size', () => {
+    const close = viewCamera(new Vector3(0, 1500, 19_000), new Vector3(0, 1000, 18_400))
+    const farView = viewCamera(new Vector3(0, 3000, 19_000), new Vector3(0, 1500, 15_000))
+    const closeFit = fit(close, HIGH_SUN, shadowDistance(1500, 1000, 700), new Box3(new Vector3(-20_000, 1000, -20_000), new Vector3(20_000, 4000, 20_000)))!
+    const farFit = fit(farView, HIGH_SUN, shadowDistance(3000, 1000, 2500))!
+    // 1024 texels here: 4096 on a desktop divides these by 4
+    expect(closeFit.texelSize).toBeLessThan(farFit.texelSize / 4)
+    expect(shadowDistance(3000, 1000, 2500)).toBe(shadowDistance(3000, 1000))
+  })
+
+  it('keeps the bounds, extent and texel grid for a move of a metre and an aim that varies by 1 %', () => {
+    const at = (x: number, aim: number) => fit(viewCamera(new Vector3(x, 1500, 19_000), new Vector3(x, 1000, 18_400)), HIGH_SUN, shadowDistance(1500, 1000, aim))!
+    const a = at(0, 700)
+    const b = at(1, 707)
+    expect(b.right - b.left).toBe(a.right - a.left)
+    expect(b.top - b.bottom).toBe(a.top - a.bottom)
+    for (const f of [a, b]) {
+      const texelX = (f.right - f.left) / MAP_SIZE
+      const texelY = (f.top - f.bottom) / MAP_SIZE
+      expect(Math.abs(f.left / texelX - Math.round(f.left / texelX))).toBeLessThan(1e-6)
+      expect(Math.abs(f.bottom / texelY - Math.round(f.bottom / texelY))).toBeLessThan(1e-6)
+    }
   })
 
   it('reaches the casters between the view and a low sun', () => {
@@ -152,6 +218,19 @@ describe('TerrainShadow', () => {
     expect(shadow.normalBias).toBeCloseTo((NORMAL_BIAS_TEXELS * Math.max(width, ortho.top - ortho.bottom)) / MAP_SIZE)
     expect(shadow.bias).toBeLessThan(0)
     expect(shadow.mapSize.x).toBe(MAP_SIZE)
+  })
+
+  it('fits a smaller shadow when the camera flies close to the ground it is given', () => {
+    const { terrain, light } = scene()
+    const camera = viewCamera(new Vector3(0, 2300, 4000), new Vector3(0, 2000, 3500))
+    const widthWith = (groundUnder?: (point: Vector3) => number | undefined) => {
+      const shadow = new TerrainShadow(terrain, MAP_SIZE, groundUnder)
+      shadow.updateMatrices(light, camera)
+      return shadow.camera.right - shadow.camera.left
+    }
+    expect(widthWith(() => 2000)).toBeLessThan(widthWith() / 2)
+    // ground unknown: as before
+    expect(widthWith(() => undefined)).toBe(widthWith())
   })
 
   it('counts the tiles and triangles of the shadow pass, the off-screen casters apart', () => {

@@ -58,6 +58,7 @@ const CLOUDS_SKY_VEIL = 0.3
 const STAGE_EDGE = 1e-9
 const WORLD_UP = new Vector3(0, 1, 0)
 const _marker = new Vector3()
+const _ground = new Vector3()
 const _irradiance = new Vector3()
 const _grey = new Color()
 
@@ -277,7 +278,15 @@ export function AtmosphereLayer() {
   useLayoutEffect(() => {
     if (!sun || !engine || !shadows) return
     const original = sun.shadow
-    const shadow = new TerrainShadow(engine.group, Math.min(shadowMapSize, gl.capabilities.maxTextureSize))
+    // height of the (exaggerated) ground under a point of the local frame, to know how close to it the camera flies
+    const groundUnder = frame
+      ? (point: Vector3): number | undefined => {
+          const at = frame.toLonLat(point)
+          const ground = engine.sampleHeight(at.lon, at.lat)
+          return ground === undefined ? undefined : frame.toLocal(at.lon, at.lat, ground * useAppStore.getState().settings.exaggeration, _ground).y
+        }
+      : undefined
+    const shadow = new TerrainShadow(engine.group, Math.min(shadowMapSize, gl.capabilities.maxTextureSize), groundUnder)
     sun.shadow = shadow
     sun.castShadow = true
     return () => {
@@ -285,7 +294,7 @@ export function AtmosphereLayer() {
       sun.shadow = original
       shadow.dispose()
     }
-  }, [sun, engine, shadows, gl, shadowMapSize])
+  }, [sun, engine, frame, shadows, gl, shadowMapSize])
 
   if (!frame) return null
   return (
