@@ -2,7 +2,9 @@
  * Cast shadows of the relief under the atmosphere's sun (a DirectionalLight).
  *
  * One shadow map, refitted every frame to the part of the scene that can receive a visible shadow: the view frustum
- * cut at a distance that grows with the camera height, intersected with the bounding box of the drawn terrain meshes.
+ * cut at a distance that grows with the camera height (and shrinks, down to 3 km, for a camera that looks at ground
+ * a few hundred metres away: the same map is then 3 to 10 times sharper), intersected with the bounding box of the drawn
+ * terrain meshes.
  * Its near plane is pushed towards the sun so a ridge outside the view still casts into it (the terrain engine keeps
  * those ready tiles visible for that purpose; three culls them from the main pass). The ortho bounds are quantised and
  * snapped to whole texels so the shadows do not shimmer when the camera moves. A tile is only drawn into the map when
@@ -17,6 +19,10 @@ import type { Camera, Light, Mesh, Object3D } from 'three'
 export const MIN_SHADOW_DISTANCE_M = 30_000
 /** ...and up to this many times the camera height above the lowest terrain (overview: the whole area). */
 export const SHADOW_DISTANCE_PER_HEIGHT = 5
+/** A camera that looks at ground this far away (metres, along its axis) or farther draws shadows as far as MIN_SHADOW_DISTANCE_M ("Avion"). */
+export const FULL_SHADOW_AIM_M = 2000
+/** Closer than that, shadows are still drawn at least this far (metres): a close camera sees about as far as that with detail. */
+export const NEAR_SHADOW_DISTANCE_M = 3000
 /** Normal offset of the shadow lookup, in shadow texels (hides the acne of slopes grazed by a low sun). */
 export const NORMAL_BIAS_TEXELS = 1.5
 /** Constant depth offset of the shadow lookup (metres). */
@@ -77,9 +83,33 @@ export interface ShadowFit {
   texelSize: number
 }
 
-/** How far from the camera shadows are drawn: a few camera heights, never less than MIN_SHADOW_DISTANCE_M. */
-export function shadowDistance(cameraY: number, terrainMinY: number): number {
-  return Math.max(MIN_SHADOW_DISTANCE_M, SHADOW_DISTANCE_PER_HEIGHT * (cameraY - terrainMinY))
+/**
+ * How far from the camera shadows are drawn: a few camera heights, never less than MIN_SHADOW_DISTANCE_M, unless the
+ * camera is close to the ground it looks at (`aimDistance`, see `groundDistance`): the distance then falls with the
+ * square of that distance, from MIN_SHADOW_DISTANCE_M at FULL_SHADOW_AIM_M down to NEAR_SHADOW_DISTANCE_M, so that
+ * the one shadow map is spent on what a close camera sees. It never exceeds the distance of a far camera.
+ */
+export function shadowDistance(cameraY: number, terrainMinY: number, aimDistance = Infinity): number {
+  const far = Math.max(MIN_SHADOW_DISTANCE_M, SHADOW_DISTANCE_PER_HEIGHT * (cameraY - terrainMinY))
+  const near = MIN_SHADOW_DISTANCE_M * (aimDistance / FULL_SHADOW_AIM_M) ** 2
+  return Math.min(far, Math.max(NEAR_SHADOW_DISTANCE_M, near))
+}
+
+const _march = new Vector3()
+
+/**
+ * Distance from `eye` along `forward` to the ground (metres): the first point of a march, steps growing by 8 %, that
+ * is under `groundY`'s answer. Infinity when the ray does not meet known ground within `maxM` (sky, unknown terrain),
+ * which keeps the far distance. Pure: the same view and terrain always give the same distance.
+ */
+export function groundDistance(eye: Vector3, forward: Vector3, groundY: (point: Vector3) => number | undefined, maxM: number): number {
+  let step = 25
+  for (let t = step; t <= maxM; t += step, step *= 1.08) {
+    _march.copy(eye).addScaledVector(forward, t)
+    const y = groundY(_march)
+    if (y !== undefined && _march.y <= y) return t
+  }
+  return Infinity
 }
 
 const EPSILON_M = 1e-3
@@ -209,10 +239,13 @@ export class TerrainShadow extends LightShadow<OrthographicCamera> {
   readonly isDirectionalLightShadow = true
   /** group of the terrain tile meshes (the engine's) */
   terrain: Object3D
+  /** local y of the ground under a point (the camera), undefined where the terrain is not known */
+  private readonly groundUnder: ((point: Vector3) => number | undefined) | undefined
 
-  constructor(terrain: Object3D, mapSize: number) {
+  constructor(terrain: Object3D, mapSize: number, groundUnder?: (point: Vector3) => number | undefined) {
     super(new OrthographicCamera())
     this.terrain = terrain
+    this.groundUnder = groundUnder
     this.mapSize.set(mapSize, mapSize)
     this.radius = SHADOW_RADIUS
   }
@@ -289,7 +322,8 @@ export class TerrainShadow extends LightShadow<OrthographicCamera> {
     _frustum.setFromProjectionMatrix(_viewProjection, view.coordinateSystem)
     view.getWorldPosition(_eye)
     view.getWorldDirection(_forward)
-    const distance = shadowDistance(_eye.y, _box.min.y)
+    const aim = this.groundUnder ? groundDistance(_eye, _forward, this.groundUnder, FULL_SHADOW_AIM_M) : Infinity
+    const distance = shadowDistance(_eye.y, _box.min.y, aim)
     return fitShadowFrustum(_frustum, _eye, _forward, distance, _box, this.camera.matrixWorldInverse, this.mapSize.x)
   }
 }
