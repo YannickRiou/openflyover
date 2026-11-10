@@ -1270,6 +1270,8 @@ The interface and the texts drawn into the films and posters exist in **French**
   texts and logos keep the colors of their style.
 - **Place in the chain**: with the atmosphere, last effect of the `AtmosphereLayer` composer, **after** tone mapping and
   SMAA (SMAA reads the input of its pass: an effect placed before it in the same pass would be ignored on the edges).
+  That pass (SMAA, « Objectif » effects, grading) is built in a layout effect (`useEffectPass`, `src/scene/useLensEffects.ts`),
+  never in a `useMemo`: StrictMode's simulated unmount would empty a memoised pass and keep it, ungraded, in development.
   Without the atmosphere, there is no composer: `GradingComposer` (`src/scene/GradingComposer.tsx`, loaded on demand
   by `FlyoverCanvas`) mounts a minimal one (render, SMAA, grading). Since the canvas is then transparent over the CSS sky
   gradient, the effect first lays the (premultiplied) image over the **same gradient** (`SKY_TOP_COLOR` → `SKY_HORIZON_COLOR`,
