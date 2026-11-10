@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 7.2.3 (unreleased)
+
+- **Nothing shows through the title of a panel any more**: in the panel of a block of the timeline (« Ouverture », a stop…) and in the poster panel, a slider moved with the keyboard kept its thumb drawn over the sticky title once the row had scrolled under it, and the written value of a slider showed in the 4 px between the title and the close button, as did the rows under that button (lower than the title). The thumb with the keyboard focus now stays inside its slider, and a strip of the panel behind the whole title row hides what scrolls under it.
+
 ## 7.2.2 (November 2026)
 
 - **The sea is no longer drawn**: « Eau reflétante » now draws the lakes and rivers only (renamed « Eau reflétante (lacs et rivières) », same `water` field, old projects unchanged). The sea stays as in the aerial photos, as when the water is off: the flat sea plane of 7.2.1 hid them under a dark uniform blue, and the elevation data's noise along the coast showed through it as jagged dark streaks. The coastline is no longer asked of Overpass, so the second water request is lighter.

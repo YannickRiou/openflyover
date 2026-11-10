@@ -17,6 +17,8 @@
   gap: 0 var(--space-2);
   width: 100%;
   min-width: 0;
+  /* HeroUI lifts the thumb that has the keyboard focus (z-index 10): kept inside the slider, under the sticky heads of the panels */
+  isolation: isolate;
 }
 
 .slider--field[data-orientation] .slider__track[data-slot] {
