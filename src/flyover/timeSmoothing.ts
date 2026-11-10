@@ -64,8 +64,8 @@ export function groundSpeedMps(clock: Pick<FilmClock, 'progressAtTime'>, timeS: 
  * shakes. Longer reach: earlier and gentler climbs, but a camera kept higher for longer.
  */
 export const ANTICIPATION_STEP_S = 0.5
-export const ANTICIPATION_HOLD_S = 1
-export const ANTICIPATION_REACH_S = 3
+export const ANTICIPATION_HOLD_S = 0
+export const ANTICIPATION_REACH_S = 2
 
 /**
  * The raises are eased into one over this band (`smoothMax`), so the camera has no kink when another instant's raise

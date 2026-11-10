@@ -946,7 +946,10 @@ The interface and the texts drawn into the films and posters exist in **French**
   portions); what hides it is the relief. The sight line is checked from the camera to the marker itself (at its
   steady ground height) down to 100 m short of it, at most 1/20 of the line, against the grid ground raised by the
   relief its cells miss (`reliefGround`: each corner by the largest rise of its four cell centres above their corners'
-  mean: fixed samples, so a crest narrower than a cell is cleared without riding it), tapering to 20 m of clearance;
+  mean: fixed samples, so a crest narrower than a cell is cleared without riding it), tapering from 80 m under the camera to
+  20 m of clearance as the square of the share of the line left (a lift is the shortfall divided by that share, so a linear
+  taper asked as much for a bump halfway as for the ground under the camera and raised the camera for relief the line
+  cleared: the camera now keeps the tilt asked more often, `markerVisible.test.ts` unchanged);
   48 samples, each grid corner and centre read once per view. Where a metre of ground lifts the camera by more than
   3 m (eased out up to 6), the line is checked against a coarse grid instead (cells ≥ 150 m, each corner the mean of
   2 × 2 samples over a cell when the ground cell is finer), ending on that grid's ground at the marker, never above its
@@ -1073,9 +1076,10 @@ The interface and the texts drawn into the films and posters exist in **French**
   clearance rules above raise the camera by what the relief needs at that very instant, and that raise changed fast as
   the marker and the camera swept the relief (0 → 590 m in half a second down a pass of the sample outing, with a 6 m
   shake on calmer stretches): the camera jumped and shook. The flight camera now takes the raises of the fixed film
-  instants every `ANTICIPATION_STEP_S` (0.5 s) around now: all of each within `ANTICIPATION_HOLD_S` (1 s), less and less
-  out to `ANTICIPATION_REACH_S` (3 s, raised cosine), the largest counting. The camera starts
-  climbing 3 s before the relief needs it and comes down as gently after; an instant's raise stays the same from frame
+  instants every `ANTICIPATION_STEP_S` (0.5 s) around now: all of the one of now (`ANTICIPATION_HOLD_S`, 0 s), less and less
+  out to `ANTICIPATION_REACH_S` (2 s, raised cosine), the largest counting (it was 1 s of hold and 3 s of reach: one bad
+  instant lifted a whole stretch: in the mountains the view axis came out 26 to 56° below the horizon for 15° asked). The camera starts
+  climbing 2 s before the relief needs it and comes down as gently after; an instant's raise stays the same from frame
   to frame (its marker and camera stay put), so nothing shakes. The opening and closing shots blend with the flight view
   of the flight's ends, still as before. Cost: the raise of an instant is kept per terrain sampler (`raiseTable`): a
   frame computes the instants that came into reach (about one flight camera every 0.5 s of film) and, while tiles
