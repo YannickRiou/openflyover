@@ -286,6 +286,7 @@ export function AtmosphereLayer() {
           return ground === undefined ? undefined : frame.toLocal(at.lon, at.lat, ground * useAppStore.getState().settings.exaggeration, _ground).y
         }
       : undefined
+    ;(globalThis as any).__groundUnder = groundUnder // TEMP
     const shadow = new TerrainShadow(engine.group, Math.min(shadowMapSize, gl.capabilities.maxTextureSize), groundUnder)
     sun.shadow = shadow
     sun.castShadow = true
