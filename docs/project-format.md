@@ -99,6 +99,14 @@ snow, contours, forest, poster, landmark density, `labels`, `trackStyle`, `marke
 rule (`landmarkTitles` and `camera.focalMm` simply go, a file that had a focal length other than 26 mm opens with the message
 `project.doc.focalRemoved`; a removed imagery source opens in its successor).
 
+A default that changes is not a format change as long as a file can be told from a new project. In 8.0 a new project starts
+on the grading « Contrasté » and with the halo of the track on, while every file saved before opens as it looked: the
+app writes every setting, so a file without `grading` or `trackStyle` is older than both, and `parseProject` fills them
+with the old look (`withLookOfItsTime`, « Naturel » and a track style with `LEGACY_TRACK_GLOW`); a track style that lacks
+the halo fields gets the old ones from `withTrackStyleDefaults`. Both are frozen in the code (they never read today's
+defaults), so `PROJECT_VERSION` stays 8. Only a file read by `parseProject` is filled this way: a preset or a partial
+object still completes from the current settings. `frozen.test.ts` and `legacy.test.ts` check it.
+
 ## Changing the format
 
 Most changes need no new version: add a key with a default and a `SETTING_CHECKS` line, and, if an existing block grows,

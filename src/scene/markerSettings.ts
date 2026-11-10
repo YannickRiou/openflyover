@@ -59,7 +59,7 @@ export const TRACK_COMET_INTENSITY_RANGE = { min: 0.1, max: 1, step: 0.05 } as c
 export const DEFAULT_TRACK_STYLE: TrackStyle = {
   width: 4,
   dash: 'plein',
-  glow: false,
+  glow: true,
   glowIntensity: 0.75,
   glowWidth: 24,
   glowColor: '',
@@ -463,7 +463,18 @@ export function isValidMarker(marker: MarkerSettings): boolean {
   )
 }
 
-export const withTrackStyleDefaults = withDefaults(DEFAULT_TRACK_STYLE)
+const withTrackStyleFields = withDefaults(DEFAULT_TRACK_STYLE)
+
+/**
+ * The halo of a track as it was before it was on by default (frozen: it never reads `DEFAULT_TRACK_STYLE`, which moves on).
+ * A saved track style without these fields keeps the look it had, and so does a project without any track style.
+ */
+export const LEGACY_TRACK_GLOW = { glow: false, glowIntensity: 0.75, glowWidth: 24, glowColor: '' } as const
+
+/** A saved track style completed: the halo fields it lacks keep their old values, the others take the defaults. */
+export function withTrackStyleDefaults(raw: unknown): unknown {
+  return withTrackStyleFields(isRecord(raw) ? { ...LEGACY_TRACK_GLOW, ...raw } : raw)
+}
 const withMarkerFields = withDefaults(DEFAULT_MARKER)
 
 /** A saved marker completed with the defaults; the 'anneau' ball style (dropped in 2.1.1) opens as 'plat'. */

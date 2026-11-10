@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { filmClockFor } from '../film/clock'
+import { DEFAULT_GRADING } from '../scene/grading'
+import { DEFAULT_TRACK_STYLE } from '../scene/markerSettings'
 import { DEFAULT_SETTINGS } from '../state/store'
 import type { Settings } from '../state/store'
 import { parseProject } from './document'
@@ -25,8 +27,12 @@ function expectDefaultsBut(settings: Settings, saved: readonly (keyof Settings)[
 const CHECKED = [
   'terrainSourceId', 'imagerySourceId', 'imageryZoomOffset', 'exaggeration', 'atmosphere', 'shadows', 'sunHour',
   'sunFromTrack', 'exposureEv', 'trackColorBy', 'camera', 'flyoverDurationS', 'pacing', 'film', 'labels', 'weather',
-  'weatherScene', 'overlay', 'video', 'landmarks', 'race',
+  'weatherScene', 'overlay', 'video', 'landmarks', 'race', 'grading', 'trackStyle',
 ] as const
+
+/** The look of every film saved before a new project started graded (« Contrasté ») with a halo on its line. */
+const OLD_GRADING = { preset: 'naturel', contrast: 0, saturation: 0, warmth: 0, vignette: 0 }
+const OLD_GLOW = { glow: false, glowIntensity: 0.75, glowWidth: 24, glowColor: '' }
 
 describe('frozen old projects', () => {
   it('v1: every saved setting kept, « Ralentir aux temps forts » and its stops dropped with a message, the fields added since filled in', () => {
@@ -94,6 +100,9 @@ describe('frozen old projects', () => {
       density: 'normal',
     })
     expectDefaultsBut(s, [...CHECKED, 'sunDate'])
+    // no grading and no track style in the file (they did not exist): the film keeps its ungraded look and its line without a halo
+    expect(s.grading).toEqual(OLD_GRADING)
+    expect(s.trackStyle).toEqual({ ...DEFAULT_TRACK_STYLE, ...OLD_GLOW })
     // « Filaire », removed since: dropped on loading
     expect(s).not.toHaveProperty('wireframe')
     expect(s.sunDate).toBe('')
@@ -141,6 +150,8 @@ describe('frozen old projects', () => {
     expect(s.overlay.enabled).toBe(false)
     expect(s.landmarks.maxDistanceM).toBe(1500)
     expectDefaultsBut(s, [...CHECKED, 'sunDate'])
+    expect(s.grading).toEqual(OLD_GRADING)
+    expect(s.trackStyle).toEqual({ ...DEFAULT_TRACK_STYLE, ...OLD_GLOW })
 
     const [track] = p.tracks
     expect(track).toMatchObject({ id: 'a', name: 'Montée', source: 'fit', activityType: 'hiking', color: '#a9ccd9' })
@@ -150,6 +161,37 @@ describe('frozen old projects', () => {
       { lon: 6.8891, lat: 45.9812, ele: 2350, hr: 150 },
     ])
     expect(track.stats).toMatchObject({ ascentM: 350, minEle: 2000, maxEle: 2350, pointCount: 3 })
+  })
+
+  describe('the new default look (« Contrasté », halo of the track on)', () => {
+    const settingsOf = (settings: Record<string, unknown>) => parseProject(JSON.stringify({ ...JSON.parse(V2), settings })).settings
+
+    it('a new project starts on « Contrasté » with the halo on', () => {
+      expect(DEFAULT_SETTINGS.grading).toEqual(DEFAULT_GRADING)
+      expect(DEFAULT_SETTINGS.grading.preset).toBe('contraste')
+      expect(DEFAULT_SETTINGS.trackStyle.glow).toBe(true)
+    })
+
+    it('a file without grading or track style keeps « Naturel » and a line without halo', () => {
+      const s = settingsOf({})
+      expect(s.grading).toEqual(OLD_GRADING)
+      expect(s.trackStyle).toEqual({ ...DEFAULT_TRACK_STYLE, ...OLD_GLOW })
+    })
+
+    it('a track style saved without the halo fields keeps the halo off, one saved with them keeps them', () => {
+      const { glow, glowIntensity, glowWidth, glowColor, ...older } = DEFAULT_TRACK_STYLE
+      expect([glow, glowIntensity, glowWidth, glowColor]).toBeDefined()
+      expect(settingsOf({ trackStyle: older }).trackStyle).toEqual({ ...older, ...OLD_GLOW })
+      const saved = { ...DEFAULT_TRACK_STYLE, glow: true, glowIntensity: 0.4, glowWidth: 16, glowColor: '#ff0000' }
+      expect(settingsOf({ trackStyle: saved }).trackStyle).toEqual(saved)
+      expect(settingsOf({ trackStyle: { ...DEFAULT_TRACK_STYLE, glow: false } }).trackStyle.glow).toBe(false)
+    })
+
+    it('a saved grading is kept as it is, « Naturel » included', () => {
+      expect(settingsOf({ grading: { ...OLD_GRADING } }).grading).toEqual(OLD_GRADING)
+      const warm = { preset: 'chaud-du-soir', contrast: 0.1, saturation: 0.1, warmth: 0.55, vignette: 0.3 }
+      expect(settingsOf({ grading: warm }).grading).toEqual(warm)
+    })
   })
 
   describe('« Ralentir et titrer aux repères » (option removed)', () => {

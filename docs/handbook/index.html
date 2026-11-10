@@ -1842,6 +1842,7 @@ export const DEFAULT_SETTINGS: Settings = {
       <li>The export looks like the preview. Switch to English: no missing text.</li>
     </ul>
     <p>No migration is needed to <em>add</em> a key: a missing key takes its default. Raise <code>PROJECT_VERSION</code> only if you change the meaning of existing data in a way <code>SETTING_UPGRADES</code> cannot express.</p>
+    <p>Changing the <em>default</em> of an existing setting is the case to watch: a file that lacks the key (or the field) would silently take the new look. 8.0 started every new project on the grading « Contrasté » with the halo of the track on; <code>withLookOfItsTime</code> (<code>project/document.ts</code>) and <code>LEGACY_TRACK_GLOW</code> (<code>scene/markerSettings.ts</code>) hold the old values, frozen, so a file written before opens as it looked. No version was needed, since the app writes every setting and a missing one can only come from an older file.</p>
   </details>
 
   <h3 class="sub" id="recipe-key">Add a keyframed setting</h3>

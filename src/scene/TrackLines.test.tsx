@@ -483,7 +483,7 @@ describe('applyTrackStyle', () => {
     // dash distances are measured along the draped line
     expect(set.segments[0].geometry.getAttribute('instanceDistanceStart')).toBeDefined()
 
-    applyTrackStyle(sets.values(), DEFAULT_TRACK_STYLE, 1, 0)
+    applyTrackStyle(sets.values(), { ...DEFAULT_TRACK_STYLE, glow: false }, 1, 0)
     expect(set.solidMaterial.dashed).toBe(false)
     expect(set.segments[0].glow.visible).toBe(false)
   })

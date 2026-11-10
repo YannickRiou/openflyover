@@ -26,10 +26,11 @@ import { LANDMARK_DENSITIES, LANDMARK_DISTANCE_RANGE, withLandmarkDefaults } fro
 import { OVERLAY_ANCHORS, isValidOffset, isValidOverlay, withFreePositions, withKnownStyle, withOverlayDefaults } from '../overlay/settings'
 import { isValidPoster, withPosterDefaults } from '../poster/settings'
 import { isValidGrading } from '../scene/grading'
+import type { GradingSettings } from '../scene/grading'
 import { isValidLens, withLensDefaults } from '../scene/lens'
 import { isValidLabelSettings, upgradeLabelSettings } from '../scene/labelModel'
 import { TRACK_COLOR_MODES } from '../flyover/trackColor'
-import { isValidMarker, isValidTrackRibbon, isValidTrackStyle, isValidTrackTail, withMarkerDefaults, withTrackStyleDefaults } from '../scene/markerSettings'
+import { DEFAULT_TRACK_STYLE, LEGACY_TRACK_GLOW, isValidMarker, isValidTrackRibbon, isValidTrackStyle, isValidTrackTail, withMarkerDefaults, withTrackStyleDefaults } from '../scene/markerSettings'
 import { DEFAULT_PLAYBACK, DEFAULT_SETTINGS, PLAYBACK_SPEEDS } from '../state/store'
 import type { AppState, Settings } from '../state/store'
 import { IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
@@ -170,6 +171,24 @@ const REMOVED_IMAGERY_SOURCES: Readonly<Record<string, string>> = {
   'ign-ortho-2000-2005': 'ign-ortho',
   'ign-ortho-1965-1980': 'ign-ortho',
   'ign-ortho-1950-1965': 'ign-ortho',
+}
+
+/** « Naturel », the grading every project had before a new one started on « Contrasté » (frozen: never read `DEFAULT_GRADING`). */
+const LEGACY_GRADING: GradingSettings = { preset: 'naturel', contrast: 0, saturation: 0, warmth: 0, vignette: 0 }
+
+/**
+ * A project file that holds no `grading` or no `trackStyle` was saved before they existed (the app writes every setting),
+ * when the film had no grading and no halo on its line. Those two settings are filled with that look, not with the
+ * defaults of a new project (« Contrasté », halo on), so the film stays the same. Only for a file: a preset or a
+ * partial settings object still completes from the current settings (`sanitizeSettings`).
+ */
+function withLookOfItsTime(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw
+  const missing = {
+    ...('grading' in raw ? {} : { grading: LEGACY_GRADING }),
+    ...('trackStyle' in raw ? {} : { trackStyle: { ...DEFAULT_TRACK_STYLE, ...LEGACY_TRACK_GLOW } }),
+  }
+  return { ...missing, ...raw }
 }
 
 /**
@@ -668,7 +687,7 @@ export function parseProject(text: string): LoadedProject {
   // « Focale » was removed: another focal length than the usual one is lost
   const focalMm = isRecord(doc.settings) && isRecord(doc.settings.camera) ? doc.settings.camera.focalMm : undefined
   if (typeof focalMm === 'number' && focalMm !== 26) warnings.push(t('project.doc.focalRemoved'))
-  const { settings, invalid } = sanitizeSettings(doc.settings)
+  const { settings, invalid } = sanitizeSettings(withLookOfItsTime(doc.settings))
   if (invalid.length > 0) {
     warnings.push(t('project.doc.settingsReplaced', { list: invalid.join(', ') }))
   }
