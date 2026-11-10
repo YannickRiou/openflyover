@@ -1,5 +1,8 @@
 # Near shadows: handover
 
+> Rebased on master c7f228ed on 2026-11-11 (the « Focale » commit fee9bbd7 was squash-merged as #524): the feature commit `1d594dc0` is now `ed573175` on `feat/near-shadows`, and the prototype `f1790b72` is now `f252043f` on `proto/shadows-two-maps` (on top of `3782b154`, the same feature commit). The old hashes below refer to the same changes. Pull request: see the PR of `feat/near-shadows`. Related: the camera that keeps its tilt (PR #526) makes the view look towards the horizon, the case this rule must hold for; the camera study is PR #525.
+
+
 Branch `feat/near-shadows`, commit `1d594dc0` (the feature), plus one WIP commit on top (this note, scripts, results, a one-line debug hook). Nothing pushed. Branch `proto/shadows-two-maps` (commit `f1790b72`) is a throwaway measurement, do not merge.
 
 Legend: **[M]** measured, **[J]** judgement (my reading of images or reasoning).
