@@ -1,0 +1,205 @@
+{
+ "stills": [],
+ "perf": [
+  {
+   "rep": 0,
+   "variant": "after-atm",
+   "preview": {
+    "frames": 118,
+    "fps": 14.75,
+    "p50": 78.5,
+    "p95": 102.19999999925494,
+    "mean": 68.51965811964857
+   },
+   "exp": {
+    "phase": "done",
+    "wallMs": 76692,
+    "frames": 30,
+    "wallOuter": 77785
+   }
+  },
+  {
+   "rep": 0,
+   "variant": "before-atm",
+   "preview": {
+    "frames": 124,
+    "fps": 15.5,
+    "p50": 54.70000000111759,
+    "p95": 106.09999999962747,
+    "mean": 65.07235772358027
+   },
+   "exp": {
+    "phase": "done",
+    "wallMs": 48272,
+    "frames": 30,
+    "wallOuter": 49942
+   }
+  },
+  {
+   "rep": 0,
+   "variant": "after-noatm",
+   "preview": {
+    "frames": 104,
+    "fps": 13,
+    "p50": 82.19999999925494,
+    "p95": 123.30000000074506,
+    "mean": 77.43883495146716
+   },
+   "exp": {
+    "phase": "done",
+    "wallMs": 58856,
+    "frames": 30,
+    "wallOuter": 60518
+   }
+  },
+  {
+   "rep": 0,
+   "variant": "before-noatm",
+   "preview": {
+    "frames": 107,
+    "fps": 13.375,
+    "p50": 81.09999999962747,
+    "p95": 122.5,
+    "mean": 75.71792452829837
+   },
+   "exp": {
+    "phase": "done",
+    "wallMs": 59786,
+    "frames": 30,
+    "wallOuter": 61492
+   }
+  },
+  {
+   "rep": 1,
+   "variant": "after-atm",
+   "preview": {
+    "frames": 103,
+    "fps": 12.875,
+    "p50": 80.19999999925494,
+    "p95": 121.5,
+    "mean": 79.1696078431263
+   },
+   "exp": {
+    "phase": "done",
+    "wallMs": 56980,
+    "frames": 30,
+    "wallOuter": 58716
+   }
+  },
+  {
+   "rep": 1,
+   "variant": "before-atm",
+   "preview": {
+    "frames": 97,
+    "fps": 12.125,
+    "p50": 89.10000000149012,
+    "p95": 139.19999999925494,
+    "mean": 83.61041666666279
+   },
+   "exp": {
+    "phase": "done",
+    "wallMs": 63111,
+    "frames": 30,
+    "wallOuter": 64959
+   }
+  },
+  {
+   "rep": 1,
+   "variant": "after-noatm",
+   "preview": {
+    "frames": 103,
+    "fps": 12.875,
+    "p50": 85.69999999925494,
+    "p95": 114.29999999888241,
+    "mean": 78.90784313725125
+   },
+   "exp": {
+    "phase": "done",
+    "wallMs": 59079,
+    "frames": 30,
+    "wallOuter": 60804
+   }
+  },
+  {
+   "rep": 1,
+   "variant": "before-noatm",
+   "preview": {
+    "frames": 111,
+    "fps": 13.875,
+    "p50": 74.30000000074506,
+    "p95": 115.60000000149012,
+    "mean": 73.06999999999323
+   },
+   "exp": {
+    "phase": "done",
+    "wallMs": 60302,
+    "frames": 30,
+    "wallOuter": 62011
+   }
+  },
+  {
+   "variant": "bloom-0-atm",
+   "preview": {
+    "frames": 98,
+    "fps": 12.25,
+    "p50": 90.69999999925494,
+    "p95": 130.59999999962747,
+    "mean": 83.12371134020619
+   },
+   "exp": {
+    "phase": "done",
+    "wallMs": 67976,
+    "frames": 30,
+    "wallOuter": 69786
+   }
+  },
+  {
+   "variant": "bloom-0.3-atm",
+   "preview": {
+    "frames": 99,
+    "fps": 12.375,
+    "p50": 92,
+    "p95": 129.2999999988824,
+    "mean": 82.63979591835974
+   },
+   "exp": {
+    "phase": "done",
+    "wallMs": 67090,
+    "frames": 30,
+    "wallOuter": 68955
+   }
+  },
+  {
+   "variant": "bloom-0-noatm",
+   "preview": {
+    "frames": 101,
+    "fps": 12.625,
+    "p50": 87.29999999888241,
+    "p95": 127.40000000037253,
+    "mean": 81.04
+   },
+   "exp": {
+    "phase": "done",
+    "wallMs": 68509,
+    "frames": 30,
+    "wallOuter": 70304
+   }
+  },
+  {
+   "variant": "bloom-0.3-noatm",
+   "preview": {
+    "frames": 108,
+    "fps": 13.5,
+    "p50": 82.09999999962747,
+    "p95": 119.09999999962747,
+    "mean": 75.46074766354096
+   },
+   "exp": {
+    "phase": "done",
+    "wallMs": 73148,
+    "frames": 30,
+    "wallOuter": 74924
+   }
+  }
+ ]
+}
