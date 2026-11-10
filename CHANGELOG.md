@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 7.2.3 (unreleased)
+
+- **The flag of the start and finish no longer hides a name**: with « Départ et arrivée » unticked, the small flag kept the priority of the full label, so it won over the landmarks of the map at the same place (the village or the pass the outing starts from, even one set to « Toujours ») and only the flag was left. The flag alone now gives way to every label that names something; it stays wherever nothing overlaps it. With the box ticked, « Départ » and « Arrivée » keep their place as before.
+
 ## 7.2.2 (November 2026)
 
 - **The sea is no longer drawn**: « Eau reflétante » now draws the lakes and rivers only (renamed « Eau reflétante (lacs et rivières) », same `water` field, old projects unchanged). The sea stays as in the aerial photos, as when the water is off: the flat sea plane of 7.2.1 hid them under a dark uniform blue, and the elevation data's noise along the coast showed through it as jagged dark streaks. The coastline is no longer asked of Overpass, so the second water request is lighter.
