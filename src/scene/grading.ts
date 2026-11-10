@@ -4,7 +4,8 @@
  * (scene/gradingEffect.ts), identical in the preview and the export.
  *
  * This module is the pure part (no DOM, no Three): the setting, the presets, their validation and the shader
- * parameters derived from them (`gradingUniforms`). « Naturel » is the identity: no effect is mounted at all.
+ * parameters derived from them (`gradingUniforms`). « Naturel » is the identity: no effect is mounted at all. A new
+ * project starts on « Contrasté » (`DEFAULT_GRADING`).
  */
 import { clamp } from '../core/math'
 import { t } from '../i18n'
@@ -38,7 +39,8 @@ export interface GradingSettings extends GradingValues {
   preset: GradingPresetId | 'personnalise'
 }
 
-export const DEFAULT_GRADING: GradingSettings = { preset: 'naturel', ...GRADING_PRESETS[0].values }
+/** « Contrasté » for a new project: a gentle S curve and darker corners, the film is graded from the start. « Naturel » stays one chip away. */
+export const DEFAULT_GRADING: GradingSettings = { preset: 'contraste', ...GRADING_PRESETS[3].values }
 
 /** Slider bounds of each value (also the validation of saved projects). */
 export const GRADING_RANGES: Record<keyof GradingValues, { min: number; max: number; step: number }> = {

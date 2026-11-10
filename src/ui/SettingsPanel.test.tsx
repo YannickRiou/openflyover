@@ -5,6 +5,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { buildTrack } from '../import/stats'
 import { getPlatform } from '../platform'
 import { getSettingsHistory } from '../project/history'
+import { gradingOfPreset } from '../scene/grading'
 import { useAppStore } from '../state/store'
 import { findImageryDates } from '../terrain/imageryDates'
 import { GradingPanel } from './GradingPanel'
@@ -89,6 +90,8 @@ describe('« Couleurs »: a grading preset with keys', () => {
     ]
     useAppStore.getState().replaceTracks([{ ...buildTrack({ name: 't', source: 'gpx', segments: [{ points }] }), color: '#ff5a36' }])
     const { settings, setSetting } = useAppStore.getState()
+    // « Contrasté » is the default: start from another grading so that its chip changes something
+    setSetting('grading', gradingOfPreset('naturel'))
     setSetting('film', { ...settings.film, paramKeys: [{ id: 'param-1', param: 'contrast', atM: 0, value: -0.5 }] })
     useAppStore.getState().setProgress(0, null)
     const host = document.body.appendChild(document.createElement('div'))
