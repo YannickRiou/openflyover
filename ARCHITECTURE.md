@@ -1278,6 +1278,9 @@ The interface and the texts drawn into the films and posters exist in **French**
   interpolated in sRGB like the CSS): the sky is graded too and the output is opaque; the export, which paints this gradient under
   the canvas (`fillSky`), gets the same image. Chosen over grading in the export's 2D compositor: a single
   code path for the preview and the export.
+- **Default**: a new project starts on « Contrasté » (`DEFAULT_GRADING`, the `contraste` preset), with the halo of the track on
+  (`DEFAULT_TRACK_STYLE.glow`); a project saved before keeps its look (`withLookOfItsTime` in `project/document.ts`, `LEGACY_TRACK_GLOW`
+  in `markerSettings.ts`: frozen values, no format version).
 - **Cost**: "Naturel" (natural; zero values, `isIdentityGrading`) mounts **nothing** (no effect, no pass; without atmosphere, no
   composer and no loading of `postprocessing`). Otherwise a few dozen operations per pixel, merged into the existing
   pass. Without atmosphere, switching from "Naturel" to a preset replaces the canvas's native MSAA with SMAA.
@@ -1425,7 +1428,7 @@ The interface and the texts drawn into the films and posters exist in **French**
   « Trace » and « Marqueur » sections of the Trace tab (`src/ui/TrackMarkerSection.tsx`).
 - **Width**: pixels of a 1080 px image, times `exportRenderScale` of the canvas (short side / 1080) in the export and in
   the preview alike, so the preview shows the line as the film will (a phone's small 9:16 preview: a thin line). **Glow** (« Halo de la trace »):
-  a second `Line2` on the same geometry, `glowWidth` px wide (6–64, default 24), `LineMaterial` material whose fragment
+  a second `Line2` on the same geometry (on by default since 8.0, a saved project keeps its own choice), `glowWidth` px wide (6–64, default 24), `LineMaterial` material whose fragment
   shader is replaced (`onBeforeCompile`, own program key): colour × `glowStrength` × gaussian radial fade (`vUv`,
   exp(−4x²) shifted to reach 0 at the edge) from the edge of the line (`glowInner` = width / glowWidth) outwards,
   **MAX** blending — no beads at the joints of overlapping pieces. Strength = `glowIntensity` (0.1–1, default 0.75) ×

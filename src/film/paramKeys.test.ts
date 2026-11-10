@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_PACING } from '../flyover/pacing'
-import { DEFAULT_GRADING } from '../scene/grading'
+import { gradingOfPreset } from '../scene/grading'
 import { buildFilmClock } from './clock'
 import type { FilmClockInput } from './clock'
 import { DEFAULT_FILM, SPEED_FACTOR_RANGE, isValidFilm, isValidParamKey, nextFilmId, withFilmDefaults } from './model'
@@ -11,6 +11,9 @@ import { addParamKey, removeFilmItem, updateParamKey } from './timeline'
 
 const key = (id: string, atM: number, param: FilmParam, value: number): FilmParamKey => ({ id, atM, param, value })
 const film = (paramKeys: FilmParamKey[]): Film => ({ ...DEFAULT_FILM, paramKeys })
+
+/** The neutral grading: the tests below move one value at a time from zero. */
+const NATUREL = gradingOfPreset('naturel')
 
 describe('paramAt', () => {
   const f = film([key('param-2', 1000, 'exposure', 2), key('param-1', 0, 'exposure', -1), key('param-3', 500, 'sunHour', 18)])
@@ -47,13 +50,13 @@ describe('paramAt', () => {
   })
 
   it('grading values: only the keyed ones move, the base object is returned without keys', () => {
-    expect(gradingAt(film([]), DEFAULT_GRADING, 10)).toBe(DEFAULT_GRADING)
-    const g = gradingAt(film([key('a', 0, 'saturation', -1), key('b', 100, 'saturation', 1)]), { ...DEFAULT_GRADING, warmth: 0.3 }, 50)
+    expect(gradingAt(film([]), NATUREL, 10)).toBe(NATUREL)
+    const g = gradingAt(film([key('a', 0, 'saturation', -1), key('b', 100, 'saturation', 1)]), { ...NATUREL, warmth: 0.3 }, 50)
     expect(g).toMatchObject({ saturation: 0, warmth: 0.3, contrast: 0, vignette: 0 })
   })
 
   it('bases come from the film-wide settings; sortedParamKeys sorts one parameter', () => {
-    const settings = { exposureEv: 1, sunHour: 14, grading: { ...DEFAULT_GRADING, contrast: 0.4 } }
+    const settings = { exposureEv: 1, sunHour: 14, grading: { ...NATUREL, contrast: 0.4 } }
     expect(FILM_PARAMS.map((p) => paramBase(settings, p))).toEqual([1, 1, 14, 0, 0.4, 0, 0, 1, 1])
     expect(sortedParamKeys(f.paramKeys, 'exposure').map((k) => k.id)).toEqual(['param-1', 'param-2'])
     expect(valueAtKeys([], 7, 3)).toBe(7)

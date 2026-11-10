@@ -178,7 +178,14 @@ describe('serializeProject / parseProject', () => {
     d.playback = { speed: 3 }
     d.unknownTopLevel = { anything: true }
     const loaded = parseProject(JSON.stringify(d))
-    expect(loaded.settings).toEqual({ ...DEFAULT_SETTINGS, atmosphere: false, sunHour: 14 })
+    // no grading, no track style: the look of the files saved before (« Naturel », no halo), not the one of a new project
+    expect(loaded.settings).toEqual({
+      ...DEFAULT_SETTINGS,
+      atmosphere: false,
+      sunHour: 14,
+      grading: { preset: 'naturel', contrast: 0, saturation: 0, warmth: 0, vignette: 0 },
+      trackStyle: { ...DEFAULT_SETTINGS.trackStyle, glow: false },
+    })
     expect(loaded.settings).not.toHaveProperty('extra')
     expect(loaded.speed).toBe(1)
     expect(loaded.warnings).toEqual([

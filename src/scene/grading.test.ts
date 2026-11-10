@@ -14,10 +14,11 @@ import {
 const luminance = ([r, g, b]: readonly number[]) => LUMA_WEIGHTS[0] * r + LUMA_WEIGHTS[1] * g + LUMA_WEIGHTS[2] * b
 
 describe('presets', () => {
-  it('« Naturel » is the default and the identity, the other presets change the image', () => {
-    expect(DEFAULT_GRADING.preset).toBe('naturel')
-    expect(isIdentityGrading(DEFAULT_GRADING)).toBe(true)
+  it('« Naturel » is the identity, the other presets change the image, and a new project starts on « Contrasté »', () => {
+    expect(isIdentityGrading(GRADING_PRESETS[0].values)).toBe(true)
     for (const preset of GRADING_PRESETS.slice(1)) expect(isIdentityGrading(preset.values), preset.id).toBe(false)
+    expect(DEFAULT_GRADING).toEqual(gradingOfPreset('contraste'))
+    expect(matchingPreset(DEFAULT_GRADING)).toBe('contraste')
   })
 
   it('every preset is valid and recognised from its values', () => {
@@ -58,7 +59,7 @@ describe('isValidGrading', () => {
 
 describe('gradingUniforms', () => {
   it('leaves the image unchanged at the identity', () => {
-    const { gain, ...rest } = gradingUniforms(DEFAULT_GRADING)
+    const { gain, ...rest } = gradingUniforms(gradingOfPreset('naturel'))
     expect(rest).toEqual({ saturation: 1, contrast: 1, vignette: 0 })
     for (const g of gain) expect(g).toBeCloseTo(1, 12)
   })

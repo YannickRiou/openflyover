@@ -48,4 +48,12 @@ describe('frozen project files, one per format version', () => {
       expect(settings.film.texts.map((s) => s.id), `v${version}`).toEqual(['text-1'])
     }
   })
+
+  it('every version: the film keeps the look of its time, ungraded and without a halo on its line', () => {
+    for (const { version, text } of frozen) {
+      const { settings } = parseProject(text)
+      expect(settings.grading, `v${version}`).toEqual({ preset: 'naturel', contrast: 0, saturation: 0, warmth: 0, vignette: 0 })
+      expect(settings.trackStyle.glow, `v${version}`).toBe(false)
+    }
+  })
 })
