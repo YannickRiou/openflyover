@@ -1270,7 +1270,7 @@ export function FilmInspector() {
         {title}
       </h2>
       <Tip text={t('inspector.close.tip')} align="end">
-        <Button variant="icon" className="dock-head col-3 mt-1 -mr-1.5 ml-1 self-center phone:hidden" onClick={close} aria-label={t('inspector.close.aria')}>
+        <Button variant="icon" className="dock-head top-2 col-3 mt-2 -mr-1.5 ml-1 self-start phone:hidden" onClick={close} aria-label={t('inspector.close.aria')}>
           <Icon name="x" size={18} />
         </Button>
       </Tip>

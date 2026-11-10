@@ -334,6 +334,12 @@
   :where(&) > * {
     @apply col-span-full;
   }
+
+  /* the heads leave gaps (a margin before the close button, which is also lower than the title): a strip of the panel behind the whole row hides what scrolls under them */
+  &::before {
+    content: '';
+    @apply sticky top-0 z-1 col-span-full row-1 bg-surface-panel;
+  }
 }
 
 @utility dock-head {
