@@ -174,6 +174,40 @@ describe('computeCameraView — chase (default)', () => {
     }
   })
 
+  describe('sight line over a mound halfway to the marker', () => {
+    const flat = () => 1000
+    const free = computeCameraView(northbound, 0.5, frame, flat, options())
+    const half = free.position.clone().lerp(free.marker, 0.5)
+    const halfAt = frame.toLonLat(half)
+    // a round mound 240 m wide centred under the middle of the straight line from the camera to the marker
+    const mound = (topM: number) => (lon: number, lat: number) => {
+      const dx = (lon - halfAt.lon) * M_PER_DEG_LON
+      const dy = (lat - halfAt.lat) * M_PER_DEG_LAT
+      return 1000 + topM * Math.max(0, Math.cos((Math.PI / 2) * Math.min(1, Math.hypot(dx, dy) / 120)) ** 2)
+    }
+    const lineM = halfAt.height - 1000
+
+    it('keeps the camera where it is when the line passes well over the mound', () => {
+      // 60 m under the line, more than the margin kept near it (the old linear taper asked 80 m under the camera and
+      // still 40 m halfway: it raised the camera for a mound the line clears)
+      const sample = mound(lineM - 60)
+      const view = computeCameraView(northbound, 0.5, frame, sample, options())
+      expect(view.position.y).toBeCloseTo(free.position.y, 0)
+      expect(pitchDeg(view.position, view.target)).toBeCloseTo(pitchDeg(free.position, free.target), 1)
+    })
+
+    it('still raises the camera when the mound hides the marker', () => {
+      // the top 40 m above the line: the marker is behind it
+      const sample = mound(lineM + 40)
+      const view = computeCameraView(northbound, 0.5, frame, sample, options())
+      expect(view.position.y).toBeGreaterThan(free.position.y + 40)
+      for (let f = 0.1; f <= 0.9; f += 0.01) {
+        const at = frame.toLonLat(view.position.clone().lerp(view.marker, f))
+        expect(at.height, `f=${f.toFixed(2)}`).toBeGreaterThan(sample(at.lon, at.lat))
+      }
+    })
+  })
+
   it('clears a crest narrower than a ground cell', () => {
     // a ridge 60 m wide at its foot (one grid cell is 37.5 m here), 300 m high, 170 m south of the marker (between two grid corners)
     const ridgeLat = 45.9 - 170 / M_PER_DEG_LAT
