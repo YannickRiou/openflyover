@@ -12,8 +12,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Color, Uniform, Vector3, type HemisphereLight, type Mesh } from 'three'
-import { EffectComposer, ToneMapping, disposePassWithoutEffects } from '@react-three/postprocessing'
-import { EffectPass, SMAAEffect, ToneMappingMode } from 'postprocessing'
+import { EffectComposer, ToneMapping } from '@react-three/postprocessing'
+import { SMAAEffect, ToneMappingMode } from 'postprocessing'
 import type { AerialPerspectiveEffect, SkyLightProbe, SunDirectionalLight } from '@takram/three-atmosphere'
 import { AerialPerspective, Atmosphere, Sky, SkyLight, Stars, SunLight, type AtmosphereApi } from '@takram/three-atmosphere/r3f'
 import { deviceBudget } from '../core/deviceBudget'
@@ -36,7 +36,7 @@ import { CloudSeaSurface } from './CloudSeaSurface'
 import { CloudsLayer } from './CloudsLayer'
 import { DEFAULT_GROUND_HEIGHT_M } from './CameraRig'
 import { useGradingEffect } from './GradingComposer'
-import { useLensEffects } from './useLensEffects'
+import { useEffectPass, useLensEffects } from './useLensEffects'
 import { NEUTRAL_MARKER_LIGHT, markerLight, nightFillIntensity, sceneExposure, sunElevation } from './exposure'
 import { setMarkerLight } from './markerSprite'
 import { useTerrainContext } from './terrainContext'
@@ -128,12 +128,11 @@ export function AtmosphereLayer() {
   useEffect(() => () => smaa.dispose(), [smaa])
   // the sky is drei's ScreenQuad, which never disposes its geometry: one GPU buffer per mount otherwise
   const disposeSky = useCallback((sky: Mesh | null) => () => sky?.geometry.dispose(), [])
-  const antialiasPass = useMemo(
-    () => new EffectPass(camera, smaa, ...lens.effects, ...(grading.active ? [grading.effect] : [])),
-    [camera, smaa, lens.effects, grading.active, grading.effect],
+  const antialiasEffects = useMemo(
+    () => [smaa, ...lens.effects, ...(grading.active ? [grading.effect] : [])],
+    [smaa, lens.effects, grading.active, grading.effect],
   )
-  // the effects are owned above: dispose only the pass
-  useEffect(() => () => disposePassWithoutEffects(antialiasPass), [antialiasPass])
+  const antialiasPass = useEffectPass(camera, antialiasEffects)
 
   // Restore the renderer exposure (and the neutral light of the markers) when the atmosphere is switched off.
   useLayoutEffect(() => {
@@ -303,7 +302,7 @@ export function AtmosphereLayer() {
         <AerialPerspective ref={aerialRef} stbnTexture={noise} />
         <primitive object={weatherEffect} mainCamera={camera} />
         <ToneMapping mode={ToneMappingMode.NEUTRAL} />
-        <primitive object={antialiasPass} />
+        {antialiasPass && <primitive object={antialiasPass} />}
         {lens.shutter && <primitive object={lens.shutter} />}
       </EffectComposer>
     </Atmosphere>

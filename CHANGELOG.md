@@ -6,6 +6,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## 8.0.0 (unreleased)
 
 - **« Focale » is gone**: the row is removed from Survol › Caméra and every film is shot with the usual lens (a vertical field of view of 50°, `CAMERA_FOV_DEG`), which is what a film saved at the default 26 mm always showed: those come out exactly as before. A project (or a saved camera preset) that had another focal length opens with a message (`project.doc.focalRemoved`) and its other settings unchanged; the `camera.focalMm` key is dropped on opening (`withCameraDefaults`), with no change of `PROJECT_VERSION`. The audit of the opening and closing shots (`filmAudit.test.ts`) now runs for this one lens, which is what made a test time out on the coverage run of master. Removed with it: `focalMm`, `DEFAULT_FOCAL_MM`, `fovDegOf`, `focalDolly`, the lens parameter of the framing functions and the news entry `v45.focal`.
+- **The grading and the anti-aliasing are applied from the first image in development**: with the atmosphere on, the pass of the SMAA, the « Objectif » effects and the grading was built once and emptied by React's StrictMode, so a project opened with a grading (or a new project) showed it ungraded in `npm run dev` until the grading was changed. The pass is now built in a layout effect (`useEffectPass`, also for the motion-blur pass of « Obturateur »). The installed app and the hosted version were not affected.
 
 ## 7.2.3 (November 2026)
 

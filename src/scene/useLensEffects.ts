@@ -1,9 +1,9 @@
 /** « Objectif » effects of a composer, with or without the atmosphere (ARCHITECTURE.md, « Objectif »). */
-import { useEffect, useMemo, useRef, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { disposePassWithoutEffects } from '@react-three/postprocessing'
 import { BloomEffect, DepthOfFieldEffect, EffectPass, type Effect } from 'postprocessing'
-import { Matrix4, PerspectiveCamera, Vector2, Vector3, type Object3D } from 'three'
+import { Matrix4, PerspectiveCamera, Vector2, Vector3, type Camera, type Object3D } from 'three'
 import type { AtmosphereApi } from '@takram/three-atmosphere/r3f'
 import { smoothedTrackPath } from '../flyover/smooth'
 import { useAppStore } from '../state/store'
@@ -41,6 +41,23 @@ const _uv = new Vector2()
 const _size = new Vector2()
 const _travel = new Vector3()
 
+/**
+ * A pass of effects owned elsewhere (null without effects), disposed without them. Built in a layout effect, never in
+ * useMemo: StrictMode's simulated unmount would empty a memoised pass (`disposePassWithoutEffects`) and keep it, so
+ * the composer would render it without its effects (no SMAA, no grading) in development.
+ */
+export function useEffectPass(camera: Camera, effects: readonly Effect[]): EffectPass | null {
+  const [pass, setPass] = useState<EffectPass | null>(null)
+  useLayoutEffect(() => {
+    if (effects.length === 0) return
+    const created = new EffectPass(camera, ...effects)
+    // oxlint-disable-next-line react/set-state-in-effect -- publishes the pass this effect creates (disposed in the cleanup below)
+    setPass(created)
+    return () => disposePassWithoutEffects(created)
+  }, [camera, effects])
+  return effects.length === 0 ? null : pass
+}
+
 export interface LensEffects {
   /** merged after the SMAA, before the grading */
   effects: Effect[]
@@ -67,13 +84,12 @@ export function useLensEffects(atmosphere?: RefObject<AtmosphereApi | null>): Le
   const depth = useMemo(() => (depthOn ? new DepthOfFieldEffect(camera) : null), [depthOn, camera])
   const flare = useMemo(() => (flareOn ? new FlareEffect() : null), [flareOn])
   const shutterEffect = useMemo(() => (shutterOn ? new ShutterEffect() : null), [shutterOn])
-  const shutter = useMemo(() => (shutterEffect ? new EffectPass(camera, shutterEffect) : null), [camera, shutterEffect])
+  const shutterEffects = useMemo(() => (shutterEffect ? [shutterEffect] : []), [shutterEffect])
+  const shutter = useEffectPass(camera, shutterEffects)
   useEffect(() => () => bloom?.dispose(), [bloom])
   useEffect(() => () => depth?.dispose(), [depth])
   useEffect(() => () => flare?.dispose(), [flare])
   useEffect(() => () => shutterEffect?.dispose(), [shutterEffect])
-  // the effect is owned above: dispose only the pass
-  useEffect(() => () => void (shutter && disposePassWithoutEffects(shutter)), [shutter])
   const effects = useMemo(() => [depth, bloom, flare].filter((e): e is DepthOfFieldEffect | BloomEffect | FlareEffect => e !== null), [depth, bloom, flare])
 
   const markerRef = useRef<Object3D | null>(null)
