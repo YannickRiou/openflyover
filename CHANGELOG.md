@@ -6,6 +6,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 ## 8.0.1 (unreleased)
 
 - **A ridge no longer hides the marker longer than before 8.0**: measured on real mountain relief with a graphics card, the 8.0 camera hid the marker behind a crest on 28 or 29 frames of the film instead of 19 to 25 in 7.2.3, one or two frames longer at each crossing. Without the hold of 7.2.3, the camera kept all of the anticipated height only at the film instants it is computed for, every 0.5 s, and sagged a little between them as it came down after a crest. Those instants are now 0.25 s apart (`ANTICIPATION_STEP_S`): 14 to 17 hidden frames, fewer than in 7.2.3, none on the home page example, no jolt in the film audit, and the camera still keeps the asked tilt much better than before 8.0 (median gap 3.8° to 4.9° instead of 8.8° to 12.2°). The camera computes twice as many of these instants, each once.
+- **The « Nouveautés » read like plain French**: every entry of the French list is rewritten in simpler, warmer sentences that speak to you (« Placez la légende du ruban où vous voulez » instead of « La légende du ruban, à votre main »). Same facts and same setting names; the other languages are unchanged.
 
 ## 8.0.0 (November 2026)
 
