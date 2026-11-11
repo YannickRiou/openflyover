@@ -61,9 +61,11 @@ export function groundSpeedMps(clock: Pick<FilmClock, 'progressAtTime'>, timeS: 
  * ANTICIPATION_HOLD_S of now, less and less of it out to ANTICIPATION_REACH_S (raised cosine), the largest one counting.
  * So the camera starts climbing ANTICIPATION_REACH_S before the relief needs it, holds the height through, and comes
  * down as gently after; an instant's raise is the same from frame to frame (its marker and camera stay put), so nothing
- * shakes. Longer reach: earlier and gentler climbs, but a camera kept higher for longer.
+ * shakes. Longer reach: earlier and gentler climbs, but a camera kept higher for longer. With no hold, the camera keeps
+ * all of a raise only at its own instant: between two instants 0.5 s apart it sagged by up to 4 % and the marker hid
+ * behind a crest a frame or two longer as the camera came down (Arolla, 8.0.0); 0.25 s apart, at most 1 %.
  */
-export const ANTICIPATION_STEP_S = 0.5
+export const ANTICIPATION_STEP_S = 0.25
 export const ANTICIPATION_HOLD_S = 0
 export const ANTICIPATION_REACH_S = 2
 
