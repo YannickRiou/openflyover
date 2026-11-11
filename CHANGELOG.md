@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 8.0.1 (unreleased)
+
+- **The « Nouveautés » read like plain French**: every entry of the French list is rewritten in simpler, warmer sentences that speak to you (« Placez la légende du ruban où vous voulez » instead of « La légende du ruban, à votre main »). Same facts and same setting names; the other languages are unchanged.
+
 ## 8.0.0 (November 2026)
 
 - **« Nouveautés 8.0 »**: the camera keeps its tilt in the mountains; sharp shadows near the camera; a new project starts graded; one lens for every film.
