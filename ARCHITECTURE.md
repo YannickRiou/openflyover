@@ -1076,13 +1076,13 @@ The interface and the texts drawn into the films and posters exist in **French**
   clearance rules above raise the camera by what the relief needs at that very instant, and that raise changed fast as
   the marker and the camera swept the relief (0 → 590 m in half a second down a pass of the sample outing, with a 6 m
   shake on calmer stretches): the camera jumped and shook. The flight camera now takes the raises of the fixed film
-  instants every `ANTICIPATION_STEP_S` (0.5 s) around now: all of the one of now (`ANTICIPATION_HOLD_S`, 0 s), less and less
+  instants every `ANTICIPATION_STEP_S` (0.25 s; 0.5 s in 8.0.0 let the raise sag by up to 4 % between two instants, and a crest hid the marker longer) around now: all of the one of now (`ANTICIPATION_HOLD_S`, 0 s), less and less
   out to `ANTICIPATION_REACH_S` (2 s, raised cosine), the largest counting (it was 1 s of hold and 3 s of reach: one bad
   instant lifted a whole stretch: in the mountains the view axis came out 26 to 56° below the horizon for 15° asked). The camera starts
   climbing 2 s before the relief needs it and comes down as gently after; an instant's raise stays the same from frame
   to frame (its marker and camera stay put), so nothing shakes. The opening and closing shots blend with the flight view
   of the flight's ends, still as before. Cost: the raise of an instant is kept per terrain sampler (`raiseTable`): a
-  frame computes the instants that came into reach (about one flight camera every 0.5 s of film) and, while tiles
+  frame computes the instants that came into reach (about one flight camera every 0.25 s of film) and, while tiles
   arrive (`terrainVersion`, counted by `filmView.ts` from `engine.onChange`), refreshes one instant computed on older
   terrain, so the height follows sharper tiles an instant at a time. On the sample outing over the 12 presets: change of
   vertical speed per frame (max) 16,000–155,000 → under 3,000 m/s², shake 8–110 → under 2.5 m, terrain reads +5 %.
