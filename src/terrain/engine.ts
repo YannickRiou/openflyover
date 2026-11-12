@@ -39,7 +39,6 @@ import {
   forEachNode,
   selectTiles,
   updateCameraState,
-  zoomLimit,
   type QuadtreeContext,
   type SelectionParams,
   type TileFailureCause,
@@ -344,14 +343,16 @@ export function createTerrainEngine(
   }
 
   /**
-   * Imagery levels drawn finer than a tile's own (« Détail de l'imagerie »): only on a tile at its deepest zoom
-   * (`zoomLimit`). Any other tile is drawn only while its grid cells look under `errorTargetPx` (3 px): its own level
+   * Imagery levels drawn finer than a tile's own (« Détail de l'imagerie »): only on a tile at the deepest zoom of the
+   * relief (`maxZoom`), not on one only held back by the outer zoom of a « situation » view (`zoomLimit`, OUTER_MAX_ZOOM):
+   * that landscape is seen from afar, and its finer imagery made each of those tiles 4 (« Fin ») or 16 (« Très fin »)
+   * times heavier for nothing, enough to fill a 6 GB graphics card during the descent of a 400 km opening (November 2026). Any other tile is drawn only while its grid cells look under `errorTargetPx` (3 px): its own level
    * already gives more than one image pixel per screen pixel (256 px over 64 cells), a finer one would be averaged away.
    * At the deepest zoom the cells grow on screen as the camera comes closer, and the finer level shows. Measured on three
    * 1080p views: the same image as the setting on every tile (PSNR ≥ 49 dB), about 60 % fewer imagery tiles.
    */
   function imageryOffsetOf(node: TileNode): number {
-    return node.key.z >= zoomLimit(node, { ...selectionParams, maxZoom: opts.maxZoom, detailArea: opts.detailArea }) ? opts.imageryZoomOffset : 0
+    return node.key.z >= opts.maxZoom ? opts.imageryZoomOffset : 0
   }
 
   /** the browser says the network is down (`navigator.onLine`); unknown counts as online */
