@@ -4,7 +4,8 @@
  *
  * A preset keeps every setting or one family of them (`PRESET_SCOPES`). A full one keeps the opening and closing shots
  * of the film, not its stops, texts and media (they belong to the track of the project it was saved from), and of the
- * poster the style, not the format, title and figures.
+ * poster the style, not the format, title and figures. Applying one never changes the sun's date nor the landmarks hidden
+ * or pinned one by one: they are about one outing.
  */
 import type { Film } from '../film/model'
 import { getPlatform } from '../platform'
@@ -44,7 +45,7 @@ export const PRESET_SCOPE_KEYS: Record<Exclude<PresetScope, 'tout'>, readonly (k
   trace: ['trackColorBy', 'trackLegendAnchor', 'trackLegendShown', 'trackLegendFree', 'trackStyle', 'trackTail', 'trackRibbon', 'marker', 'markerValue'],
   // the 3D labels are set in Habillage › Étiquettes 3D, their colours in the overlay
   habillage: ['overlay', 'labels'],
-  'prise-de-vue': ['camera', 'sunHour', 'sunDate', 'sunFromTrack', 'exposureEv'],
+  'prise-de-vue': ['camera', 'sunHour', 'sunFromTrack', 'exposureEv'],
 }
 
 export interface Preset {
@@ -63,6 +64,8 @@ export interface PresetStore {
    * it (full or blocked): the preset still works for this session.
    */
   save(name: string, settings: Settings, scope?: PresetScope): boolean
+  /** put `preset` back as it was (a replaced or deleted one); false when the storage refused */
+  restore(preset: Preset): boolean
   remove(name: string): void
 }
 
@@ -87,7 +90,13 @@ export function presetSettings(preset: Preset, base: Settings): Settings {
   }
   // only the style: the format, title and figures stay those of `base`
   if (poster !== null && typeof poster === 'object') raw.poster = { ...base.poster, style: (poster as Partial<PosterSettings>).style }
-  const settings = sanitizeSettings(raw, base).settings
+  const sanitized = sanitizeSettings(raw, base).settings
+  // about one outing, not a look: the date of the sun and the landmarks hidden or pinned one by one stay those of `base`
+  const settings = {
+    ...sanitized,
+    sunDate: base.sunDate,
+    landmarks: { ...sanitized.landmarks, hiddenIds: base.landmarks.hiddenIds, pinnedIds: base.landmarks.pinnedIds },
+  }
   // the overlay's look, not the words and pictures of the project: its titles, lines, credits and logo images stay those of `base`
   return 'overlay' in raw ? { ...settings, overlay: withOverlayContentOf(settings.overlay, base.overlay) } : settings
 }
@@ -141,6 +150,10 @@ export function createPresetStore(storage: StorageLike | null): PresetStore {
           ? { name: clean, settings: { ...settings, film: { opening: settings.film.opening, closing: settings.film.closing }, poster: { style: settings.poster.style } } }
           : { name: clean, scope, settings: Object.fromEntries(PRESET_SCOPE_KEYS[scope].map((key) => [key, settings[key]])) as PresetSettings }
       presets = [...presets.filter((p) => p.name !== clean), preset]
+      return write()
+    },
+    restore(preset) {
+      presets = [...presets.filter((p) => p.name !== preset.name), preset]
       return write()
     },
     remove(name) {

@@ -97,6 +97,28 @@ describe('presetSettings', () => {
     expect(presetSettings(preset, base)).toEqual({ ...base, exaggeration: 2 })
   })
 
+  it('keeps the sun date and the landmarks hidden or pinned of the project: they are about one outing', () => {
+    const base = { ...DEFAULT_SETTINGS, sunDate: '2026-07-01', landmarks: { ...DEFAULT_SETTINGS.landmarks, hiddenIds: ['a'], pinnedIds: ['b'] } }
+    const saved = { ...DEFAULT_SETTINGS, sunDate: '2025-01-01', landmarks: { ...DEFAULT_SETTINGS.landmarks, maxDistanceM: 900, hiddenIds: ['x'], pinnedIds: ['y'] } }
+    const store = createPresetStore(memoryStorage())
+    store.save('tout', saved)
+    const applied = presetSettings(store.list()[0], base)
+    expect(applied.sunDate).toBe('2026-07-01')
+    expect(applied.landmarks).toMatchObject({ maxDistanceM: 900, hiddenIds: ['a'], pinnedIds: ['b'] })
+  })
+
+  it('puts a replaced or deleted preset back as it was', () => {
+    const store = createPresetStore(memoryStorage())
+    store.save('p', { ...DEFAULT_SETTINGS, exaggeration: 2 }, 'carte')
+    const [old] = store.list()
+    store.save('p', { ...DEFAULT_SETTINGS, exaggeration: 3 }, 'carte')
+    store.restore(old)
+    expect(store.list()).toEqual([old])
+    store.remove('p')
+    store.restore(old)
+    expect(store.list()).toEqual([old])
+  })
+
   it('keeps the shots of the film only: the stops, texts and media of the current project stay', () => {
     const stop = { id: 'stop-1', atM: 500, durationS: 3, camera: 'fixe' as const }
     const text = { id: 'text-1', startS: 1, durationS: 2, text: 'Départ', anchor: 'center' as const, size: 1 }

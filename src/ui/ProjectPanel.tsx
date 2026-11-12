@@ -473,15 +473,24 @@ function PresetSection() {
 
   const savePreset = () => {
     try {
-      const stored = presetStore.save(presetName, useAppStore.getState().settings, presetScope)
       const name = normalizePresetName(presetName)
+      const replaced = presetStore.list().find((p) => p.name === name)
+      const stored = presetStore.save(presetName, useAppStore.getState().settings, presetScope)
       setPresets(presetStore.list())
       setSelectedPreset(name)
       setPresetName('')
+      const undo = replaced
+        ? () => {
+            presetStore.restore(replaced)
+            setPresets(presetStore.list())
+          }
+        : null
       showToast(
-        stored
-          ? { kind: 'success', text: translate('project.panel.presetSaved', { name }) }
-          : { kind: 'error', text: translate('project.panel.presetFull') },
+        !stored
+          ? { kind: 'error', text: translate('project.panel.presetFull') }
+          : undo
+            ? { kind: 'info', text: translate('project.panel.presetReplaced', { name }), action: { label: translate('common.undo'), run: undo } }
+            : { kind: 'success', text: translate('project.panel.presetSaved', { name }) },
       )
     } catch (err) {
       showToast({ kind: 'error', text: errorMessage(err) })
@@ -490,9 +499,22 @@ function PresetSection() {
 
   const deletePreset = () => {
     if (!selected) return
-    presetStore.remove(selected.name)
+    const removed = selected
+    presetStore.remove(removed.name)
     setPresets(presetStore.list())
     setSelectedPreset('')
+    showToast({
+      kind: 'info',
+      text: translate('project.panel.presetDeleted', { name: removed.name }),
+      action: {
+        label: translate('common.undo'),
+        run: () => {
+          presetStore.restore(removed)
+          setPresets(presetStore.list())
+          setSelectedPreset(removed.name)
+        },
+      },
+    })
   }
 
   return (
