@@ -26,8 +26,6 @@
     "@heroui/react": "^3.2.7",
     "@heroui/styles": "^3.2.6",
     "@internationalized/date": "^3.12.4",
-    "@react-aria/ssr": "^3.10.1",
-    "@react-aria/utils": "^3.34.1",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "@react-three/postprocessing": "^3.2.2",

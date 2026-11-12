@@ -171,8 +171,9 @@ export interface TileSourceBase {
   /** where the source has data; undefined = worldwide */
   coverage?: LonLatBounds
   /**
-   * most requests at once to its server: one that only speaks HTTP/1.1 gets 6 connections from the browser, and more
-   * requests would only wait in our queues, ahead of the other sources' (`maxRequestsFor`); undefined = no limit of ours
+   * most requests at once to its server (`maxRequestsFor`, looked up by host: a source on the same host as this one
+   * shares the limit); one that only speaks HTTP/1.1 gets 6 connections from the browser, and more requests would only
+   * wait in our queues, ahead of the other sources'; undefined = no limit of ours
    */
   maxRequests?: number
 }

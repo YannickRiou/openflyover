@@ -3,6 +3,15 @@
 What comes next, in the order it will be done, and what waits. Each item names the promise of [VISION.md](VISION.md)
 it serves and how it will be checked. The [changelog](CHANGELOG.md) says what each version brought.
 
+## 8.x: a film that looks like a pro shot, and an export that holds
+
+- **8.0** (November 2026): the camera keeps the tilt you ask for in the mountains, relief shadows are sharp when the
+  camera flies low, a new project starts graded, one lens for every film.
+- **8.0.1**: a ridge hides the marker no longer than before 8.0; the « Nouveautés » are in plainer French.
+- **8.0.2** (next): the export holds on long films and bad networks: tiles that stall give up and are tried again, a
+  graphics card reset is recovered, « Annuler » always works, a failed export can resume from the kept frames.
+- **Still open**: the 7.0 items below that are not marked done, and the points of « To decide ».
+
 ## 7.0: a beautiful film by default, an export that finishes, projects that keep opening
 
 7.0 adds few features. It makes the existing ones reachable without learning the tool, makes the export reliable on
