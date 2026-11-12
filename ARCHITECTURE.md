@@ -236,6 +236,7 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    and 400 (the IGN Géoplateforme returned bursts of "Layer … unknown" as 400 for valid tiles, with a
    `max-age` of 21 days): a sub-tile that still fails makes its terrain tile's imagery incomplete (next item). Before the
    network, the copy from an offline pack when a pack contains the URL's source (see "Offline packs").
+   **Per-server cap in the live fetcher**: its queue skips a request whose server already has `maxRequestsFor(url)` requests in flight (Esri 6; the dated Wayback server is not known to it) and starts the next one of another server, so a busy server no longer takes the 12 slots; never more connections than before. **Exaggeration change**: the meshes are made again in the tile workers (`buildMeshOffThread`, from the grid the node keeps), 8 at a time, and the page only attaches the buffers; without workers (or after one fails) the page rebuilds 4 a frame as before. A mesh that comes back after the exaggeration changed again is dropped and made again.
    **One fetcher for the session** (`TerrainLayer`, `sharedFetcher`): the engine is rebuilt when the tracks or the
    « Depuis la région » shot change, and the decoded tiles outlive it; emptied when no track is left. The export uses
    the preview's engine, so it starts from the tiles the preview loaded (only the finer levels of a film taller than the
@@ -265,7 +266,7 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    throws there, with its usual message). The worker script comes from the page's own origin (`worker-src 'self'` of the
    desktop CSP). The rebuild after an exaggeration change stays on the main thread, 4 tiles a frame.
 4. **Imagery** (`imagery.ts`): for the terrain tile (z,x,y) and `zoomOffset = k`, fetch the `2^k × 2^k` sub-tiles
-   at z+k and draw them into a `tileSize·2^k` canvas → `CanvasTexture` (sRGB, mipmaps, max anisotropy).
+   at z+k and draw them into a `tileSize·2^k` canvas → `CanvasTexture` (sRGB, mipmaps, anisotropy of the device budget: 16 on a computer, 4 on a phone or tablet; three clamps it to the graphics card's maximum). A cached bitmap is probed for a blank tile once (`WeakMap`), and a tile with nothing to draw gets no texture (grey colour, no canvas).
    If z+k > the source's maxZoom: take the deepest available tile and crop it.
    The engine asks for `k` = « Détail de l'imagerie » only on a tile at its deepest zoom (`zoomLimit`), `k` = 0 on the
    others (`imageryOffsetOf`): a tile that can still split is drawn only while its 64 grid cells look under 3 px, so its
@@ -400,10 +401,10 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      ~40 tiles are drawn in view instead of ~137. Computer: budget unbounded, level 0, selections bit-identical.
      Not done: not loading the culled children on a phone (~45 % of the budget in
      that view goes to tiles out of the frustum, but they are the shadow casters).
-   - Bounding sphere: from the geometry if loaded, otherwise from the tile bounds with heights [-500, 9000] m.
+   - Bounding sphere: from the geometry if loaded, otherwise from the tile bounds with a height range: [-500, 9000] m for a root, and for a child the relief of the nearest loaded ancestor (`setHeightRangeFromGrid`: min and max of its DEM, plus 60 m and 10 % of the tile's width, as `heightRange` of the export's tile plan). The wide range made a far, unloaded child count as visible (radius of 4.7 km or more even for a 1 km tile), block the replacement of its parent and load early. On the sample export (1080×1920, 12 s, cold cache) the preload asked for 994 to 1,026 different tiles instead of 1,174.
    - Material: `MeshStandardMaterial({ map, roughness: 1, metalness: 0 })`, `side: FrontSide`.
    - `sampleHeight` allocates nothing (scratch tile fractions, no closures; the labels' lines of sight call it ~6000 times a frame) and keeps the tile coordinates at zoom 0 to derive those of every level exactly (`sampleTileMeshAt`).
-   - `sampleHeight` = the terrain **as drawn**: the triangles of the tile drawn at the point (`sampleTileMesh`), else
+   - `sampleHeight` = the terrain **as drawn**: the triangles of the tile drawn at the point (`sampleTileMeshAt`), else
      (off the view) the deepest loaded tile there, else the `HeightField` (tree rebuilt after a change of imagery).
      The track, the marker and the labels therefore lie on the visible mesh: never on a finer grid the mesh does not
      show yet (or no longer), never on a coarser one or at sea level because the LRU evicted the grid of a drawn tile.
@@ -2778,8 +2779,8 @@ exports) gets it from the terrain source of the settings.
   a pure function of progress (including `mapPoint`, the marker position on the mini-map, and `clockMs`, the recorded
   time of day under the marker).
 - **Fixed parts kept as pictures** (`cachedLayer` in `draw.ts`): the profile's area, played area and ridge line and the
-  mini-map's whole route do not change from frame to frame; on a context without transform (the export's compositor)
-  each is drawn once into an `OffscreenCanvas` starting on the whole pixel at or before its box (so its pixels land where
+  mini-map's whole route do not change from frame to frame; on a context that only scales (the export's compositor, or the preview scaled to the screen's pixel ratio)
+  each is drawn once, in device pixels, into an `OffscreenCanvas` (kept per scale) starting on the whole pixel at or before its box (so its pixels land where
   a direct draw puts them; the anti-aliased edges may differ by 1 / 255 after compositing), kept per profile or outline
   object (`WeakMap`) while its geometry and colours hold, and copied at each frame (the played area clipped up to the
   marker). The covered part of the route, the dots and the marker are drawn at each frame. The preview (scaled to the
@@ -4609,7 +4610,7 @@ Light = `LIGHT_PREVIEW`, the lower of it and the device's: pixel ratio 1.5, 1 wh
 `AtmosphereLayer` and `ForestLayer` the device's own shadow map and trees whenever `isExportBusy` (video, poster and
 « Capturer cette image » all run through `runExport`): films do not change. The shadow map and the trees are made again
 when the preview changes and at the start and end of an export (~0.3 s for 250,000 trees). Not lightened: imagery
-anisotropy (16, set when a tile's texture is created and the canvas freed after upload, so it cannot follow the preview)
+anisotropy (set when a tile's texture is created and the canvas freed after upload, so it cannot follow the preview; 4 on a phone)
 and the canvas's MSAA (fixed with the context; a computer that started with the atmosphere would lose the antialiasing of
 the exports made without it). The pixel ratio goes
 through the `dpr` of <Canvas> (`FlyoverCanvas`): R3F sets it back on each render of the canvas (`configure`, after the
