@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Neuheiten',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v813.export.title': "Schnelle Filme kriechen beim Export nicht mehr",
+  'v813.export.text': "Ein Film, der schnell und tief fliegt, konnte beim Export mehrere Sekunden pro Bild brauchen, vor allem mit dem Bilddetail „Fein“ oder „Sehr fein“. Die App fordert jetzt nur noch die Fotos an, die der Bildschirm zeigen kann, und bereitet immer die nächsten Bilder vor. Bei einer langen Tour ist das bis zu sechsmal schneller, bei gleichem Bild.",
   'v812.labels.title': "Beschriftungen, die man auf dem Handy lesen kann",
   'v812.labels.text': "In einem Hochformat-Film, 9:16 oder 4:5, erscheinen die Namen von Gipfeln, Pässen und Seen jetzt von selbst größer, damit man sie auf dem Handy lesen kann. Wenn Sie sie noch größer möchten: „Größe der Beschriftungen“ geht bis ×3.",
   'v811.situation.title': "Filme aus großer Höhe lassen sich bis zum Ende exportieren",

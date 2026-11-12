@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v813.export.title': "I film veloci non arrancano più all’esportazione",
+  'v813.export.text': "Un film che vola veloce e vicino al suolo poteva richiedere diversi secondi per immagine all’esportazione, soprattutto con il dettaglio delle immagini su «Fine» o «Molto fine». L’app ora chiede solo le foto che lo schermo può mostrare e prepara sempre le immagini successive. Su un lungo raid è fino a sei volte più veloce, con la stessa immagine.",
   'v812.labels.title': "Etichette che si leggono sullo smartphone",
   'v812.labels.text': "In un film verticale, 9:16 o 4:5, i nomi di cime, colli e laghi ora appaiono più grandi da soli, per leggerli sullo smartphone. Se li vuoi ancora più grandi, «Dimensione delle etichette» arriva fino a ×3.",
   'v811.situation.title': "I film visti dal cielo si esportano fino in fondo",
