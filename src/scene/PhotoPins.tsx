@@ -188,6 +188,8 @@ export function PhotoPins() {
   const entriesRef = useRef<PinEntry[]>([])
   // the lines of sight, kept while the camera, the relief and the pin stay as they are
   const sightRef = useRef(createClearanceMemo())
+  // the framed pictures, by thumbnail: a timeline edit that moves the pins keeps them (no reload, no new upload)
+  const cardsRef = useRef(new Map<string, PinTextures>())
   const sharedRef = useRef<{ post: CanvasTexture; postLit: CanvasTexture; foot: CanvasTexture; footLit: CanvasTexture } | null>(null)
 
   useEffect(() => {
@@ -199,6 +201,16 @@ export function PhotoPins() {
     const foot = drawFoot(false)
     const footLit = drawFoot(true)
     sharedRef.current = post && postLit && foot && footLit ? { post, postLit, foot, footLit } : null
+    const cards = cardsRef.current
+    const thumbOf = (src: string) => table[src]?.thumb ?? ''
+    // the pictures no pin shows any more
+    const wanted = new Set(pins.map((pin) => thumbOf(pin.src)))
+    for (const [thumb, textures] of cards) {
+      if (wanted.has(thumb)) continue
+      textures.card.dispose()
+      textures.cardLit.dispose()
+      cards.delete(thumb)
+    }
     const entries: PinEntry[] = pins.map((pin) => {
       const entry: PinEntry = {
         pin,
@@ -206,15 +218,26 @@ export function PhotoPins() {
         foot: makeSprite(group, `photo-pin-foot:${pin.id}`, POST_RENDER_ORDER),
         card: makeSprite(group, `photo-pin:${pin.id}`, PIN_RENDER_ORDER),
       }
+      const thumb = thumbOf(pin.src)
+      const known = cards.get(thumb)
+      if (known) {
+        entry.cardTextures = known
+        return entry
+      }
       const image = new Image()
       image.onload = () => {
         if (!alive) return
-        const card = drawCard(image, false)
-        const cardLit = drawCard(image, true)
-        if (card && cardLit) entry.cardTextures = { card, cardLit }
+        const kept = cards.get(thumb)
+        if (kept) {
+          entry.cardTextures = kept
+        } else {
+          const card = drawCard(image, false)
+          const cardLit = drawCard(image, true)
+          if (card && cardLit) cards.set(thumb, (entry.cardTextures = { card, cardLit }))
+        }
         wakeScene()
       }
-      image.src = table[pin.src]?.thumb ?? ''
+      image.src = thumb
       return entry
     })
     entriesRef.current = entries
@@ -226,14 +249,23 @@ export function PhotoPins() {
           sprite.removeFromParent()
           sprite.material.dispose()
         }
-        entry.cardTextures?.card.dispose()
-        entry.cardTextures?.cardLit.dispose()
       }
       for (const texture of Object.values(sharedRef.current ?? {})) texture.dispose()
       sharedRef.current = null
       entriesRef.current = []
     }
   }, [pins, table])
+
+  useEffect(
+    () => () => {
+      for (const { card, cardLit } of cardsRef.current.values()) {
+        card.dispose()
+        cardLit.dispose()
+      }
+      cardsRef.current.clear()
+    },
+    [],
+  )
 
   useFrame(({ camera, size, gl }) => {
     const entries = entriesRef.current

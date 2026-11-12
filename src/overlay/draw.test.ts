@@ -275,7 +275,7 @@ describe('fixed parts of the profile and the mini-map', () => {
       const settings = enabled({ minimap: { ...TITLED.minimap, enabled: true }, profile: { ...TITLED.profile, enabled: true } })
       const frames = [0.3, 0.6].map((progress) => {
         const fake = fakeContext()
-        ;(fake.ctx as unknown as Record<string, unknown>).getTransform = () => ({ a: 1, b: 0, isIdentity: true })
+        ;(fake.ctx as unknown as Record<string, unknown>).getTransform = () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 })
         drawOverlay(fake.ctx, overlayFrameAt(track, progress), settings, SIZE)
         return fake
       })
@@ -285,6 +285,44 @@ describe('fixed parts of the profile and the mini-map', () => {
       for (const frame of frames) expect(frame.images.length).toBeGreaterThanOrEqual(4)
       // the frame itself only traces the part of the route already covered
       expect(frames[0].points.filter((pt) => pt.op === 'lineTo').length).toBeLessThan(made[3].points.length)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+})
+
+describe('fixed parts on a screen with a pixel ratio', () => {
+  it('the preview scaled to the screen draws them once per scale into pictures in device pixels', () => {
+    const made: ReturnType<typeof fakeContext>[] = []
+    const sizes: number[][] = []
+    vi.stubGlobal(
+      'OffscreenCanvas',
+      class {
+        constructor(w: number, h: number) {
+          sizes.push([w, h])
+        }
+        getContext() {
+          const layer = fakeContext()
+          made.push(layer)
+          return layer.ctx
+        }
+      },
+    )
+    try {
+      const settings = enabled({ minimap: { ...TITLED.minimap, enabled: true }, profile: { ...TITLED.profile, enabled: true } })
+      const draw = (scale: number) => {
+        const fake = fakeContext()
+        ;(fake.ctx as unknown as Record<string, unknown>).getTransform = () => ({ a: scale, b: 0, c: 0, d: scale, e: 0, f: 0 })
+        drawOverlay(fake.ctx, overlayFrameAt(track, 0.4), settings, SIZE)
+        return fake
+      }
+      draw(2)
+      draw(2)
+      expect(made).toHaveLength(4) // the second frame reuses them
+      const at2 = sizes.slice()
+      draw(1.5)
+      expect(made).toHaveLength(8) // another scale: made again
+      expect(sizes[4][0]).toBeLessThan(at2[0][0])
     } finally {
       vi.unstubAllGlobals()
     }

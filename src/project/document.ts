@@ -38,6 +38,7 @@ import { isImageryDate } from '../terrain/imageryDates'
 import { isValidClouds, withCloudDefaults } from '../weather/sceneClouds'
 import { isValidMarkerValue } from '../scene/markerValue'
 import { isValidContours } from '../terrain/contours'
+import { isValidDemClean, withDemCleanDefaults } from '../terrain/demClean'
 import { isValidSnow } from '../weather/snowLine'
 import { PROJECT_EXTENSION } from './file'
 import { t } from '../i18n'
@@ -127,6 +128,7 @@ export const SETTING_CHECKS: { [K in keyof Settings]?: (value: Settings[K]) => b
   imageryDate: isImageryDate,
   imageryZoomOffset: (v) => v === 0 || v === 1 || v === 2,
   imageryVivid: (v) => v >= 0 && v <= 1,
+  demClean: isValidDemClean,
   exaggeration: (v) => v > 0,
   sunHour: (v) => v >= 0 && v <= 24,
   sunDate: isSunDate,
@@ -199,6 +201,8 @@ export const SETTING_UPGRADES: { [K in keyof Settings]?: (raw: unknown) => unkno
   // a removed imagery source opens in its successor: Sentinel-2 (EOX) in Esri World Imagery, the historical IGN photos in IGN BD ORTHO
   imagerySourceId: (raw) => (typeof raw === 'string' ? (REMOVED_IMAGERY_SOURCES[raw] ?? raw) : raw),
   camera: withCameraDefaults,
+  // a project saved before the second switch of « Nettoyer le relief en mer » had a partial object: it takes the defaults
+  demClean: (raw) => (isRecord(raw) ? withDemCleanDefaults(raw) : raw),
   // a style id that was dropped (never released) opens in its successor, in the overlay and on the poster
   overlay: (raw) => withOverlayDefaults(withKnownStyle(raw)),
   video: withVideoDefaults,

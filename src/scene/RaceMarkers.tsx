@@ -8,7 +8,7 @@
  * The camera keeps following the first track (FlyoverRig); mounted after it so the progress and the camera of
  * this frame are used.
  */
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Color, Vector3 } from 'three'
 import type { Group, Sprite } from 'three'
@@ -37,6 +37,16 @@ export function RaceMarkers() {
   /** marker of tracks[i + 1] */
   const markersRef = useRef<(Sprite | null)[]>([])
   const clock = useFilmClock()
+  // one callback per marker, the same from render to render: an inline one is called with null (and the texture released) at each render
+  const markerRefs = useMemo(
+    () =>
+      Array.from({ length: Math.max(0, tracks.length - 1) }, (_, i) => (sprite: Sprite | null) => {
+        // the texture a pulsing ball drew for itself goes with its sprite
+        if (!sprite) releaseMarkerTexture(markersRef.current[i] ?? null)
+        markersRef.current[i] = sprite
+      }),
+    [tracks.length],
+  )
   /** 3D models of the racers (`marker.model3d`), by track and figure */
   const modelGroupRef = useRef<Group>(null)
   const modelsRef = useRef(new Map<string, MarkerModel>())
@@ -124,11 +134,7 @@ export function RaceMarkers() {
           name={`race-marker-${track.id}`}
           visible={false}
           renderOrder={1.5}
-          ref={(sprite) => {
-            // the texture a pulsing ball drew for itself goes with its sprite
-            if (!sprite) releaseMarkerTexture(markersRef.current[i] ?? null)
-            markersRef.current[i] = sprite
-          }}
+          ref={markerRefs[i]}
         >
           <spriteMaterial depthWrite={false} />
         </sprite>

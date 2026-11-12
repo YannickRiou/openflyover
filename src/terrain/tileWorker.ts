@@ -8,7 +8,8 @@
  * pixels back differently from the page (not every one was tried) would otherwise corrupt the relief unseen.
  */
 import { BITMAP_OPTIONS } from './fetch'
-import { runTileJob, type TileJob, type TileResult } from './tileJob'
+import type { TileMeshArrays } from './mesh'
+import { runTileJob, type MeshJob, type TileJob, type TileResult } from './tileJob'
 import { noteTileBuilt, noteWorkersDropped, noteWorkersStarted, noteWorkersUnsupported } from './tileWorkerStatus'
 
 const MAX_WORKERS = 4
@@ -21,7 +22,7 @@ interface Slot {
 /** undefined: not tried yet, null: unavailable */
 let slots: Slot[] | null | undefined
 let nextId = 0
-const pending = new Map<number, { slot: Slot; done: (result?: TileResult) => void }>()
+const pending = new Map<number, { slot: Slot; done: (result?: TileResult | TileMeshArrays) => void }>()
 
 /** Drop the workers for good; the tiles they still hold are built by the page. */
 function retire(): void {
@@ -43,13 +44,13 @@ function start(): Slot[] | null {
     const count = Math.max(1, Math.min(MAX_WORKERS, (navigator.hardwareConcurrency || 2) - 1))
     const pool = Array.from({ length: count }, () => {
       const worker = new Worker(new URL('./tile.worker.ts', import.meta.url), { type: 'module' })
-      worker.onmessage = (event: MessageEvent<{ id: number; result?: TileResult; unsupported?: true }>) => {
-        const { id, result, unsupported } = event.data
+      worker.onmessage = (event: MessageEvent<{ id: number; result?: TileResult; mesh?: TileMeshArrays; unsupported?: true }>) => {
+        const { id, result, mesh, unsupported } = event.data
         const entry = pending.get(id)
         if (!entry) return
         pending.delete(id)
         entry.slot.busy--
-        entry.done(result)
+        entry.done(result ?? mesh)
         if (unsupported) retire()
       }
       worker.onerror = retire
@@ -111,7 +112,7 @@ async function viaWorker(job: TileJob): Promise<TileResult | undefined> {
     const slot = live.reduce((best, s) => (s.busy < best.busy ? s : best))
     return await new Promise<TileResult | undefined>((resolve) => {
       const id = nextId++
-      pending.set(id, { slot, done: resolve })
+      pending.set(id, { slot, done: resolve as (result?: TileResult | TileMeshArrays) => void })
       slot.busy++
       try {
         slot.worker.postMessage({ id, job: { ...job, bitmap } }, [bitmap])
@@ -119,6 +120,32 @@ async function viaWorker(job: TileJob): Promise<TileResult | undefined> {
         pending.delete(id)
         slot.busy--
         bitmap.close()
+        resolve(undefined)
+      }
+    })
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * The mesh arrays of a grid the page holds (rebuilt after an exaggeration change) from a worker; undefined where it
+ * cannot (no worker, a worker that fails): the page then meshes the grid itself. The grid is copied to the worker.
+ */
+export async function buildMeshOffThread(job: MeshJob): Promise<TileMeshArrays | undefined> {
+  if (slots === undefined) slots = start()
+  if (!slots) return undefined
+  try {
+    const slot = slots.reduce((best, s) => (s.busy < best.busy ? s : best))
+    return await new Promise<TileMeshArrays | undefined>((resolve) => {
+      const id = nextId++
+      pending.set(id, { slot, done: resolve as (result?: TileResult | TileMeshArrays) => void })
+      slot.busy++
+      try {
+        slot.worker.postMessage({ id, meshJob: job })
+      } catch {
+        pending.delete(id)
+        slot.busy--
         resolve(undefined)
       }
     })

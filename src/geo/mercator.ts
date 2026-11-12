@@ -112,31 +112,17 @@ export function tileKeyString(key: TileKey): string {
   return `${key.z}/${key.x}/${key.y}`
 }
 
-/** Inverse of tileKeyString. Throws on a malformed key. */
-export function parseTileKey(s: string): TileKey {
-  const parts = s.split('/')
-  if (parts.length !== 3) throw new Error(`Invalid tile key "${s}"`)
-  const [z, x, y] = parts.map(Number)
-  if (!Number.isInteger(z) || !Number.isInteger(x) || !Number.isInteger(y) || z < 0 || x < 0 || y < 0) {
-    throw new Error(`Invalid tile key "${s}"`)
-  }
-  return { z, x, y }
-}
-
-export function tileContains(key: TileKey, lon: number, lat: number): boolean {
-  const f = lonLatToTileFrac(lon, lat, key.z)
-  return f.x >= key.x && f.x < key.x + 1 && f.y >= key.y && f.y < key.y + 1
+/** Tile of zoom `z` containing the point (the edges of the world clamped to its first and last tiles). */
+export function tileAt({ lon, lat }: { lon: number; lat: number }, z: number): TileKey {
+  const n = 2 ** z
+  const f = lonLatToTileFrac(lon, lat, z)
+  return { z, x: Math.min(n - 1, Math.max(0, Math.floor(f.x))), y: Math.min(n - 1, Math.max(0, Math.floor(f.y))) }
 }
 
 /** Position of lon/lat inside the tile, u east 0..1, v south 0..1 (v = 0 at the north edge). */
 export function lonLatToTileUV(key: TileKey, lon: number, lat: number): { u: number; v: number } {
   const f = lonLatToTileFrac(lon, lat, key.z)
   return { u: f.x - key.x, v: f.y - key.y }
-}
-
-/** Inverse of lonLatToTileUV. */
-export function tileUVToLonLat(key: TileKey, u: number, v: number): { lon: number; lat: number } {
-  return { lon: tileXToLon(key.x + u, key.z), lat: tileYToLat(key.y + v, key.z) }
 }
 
 /** True if the two boxes intersect (no antimeridian handling). */

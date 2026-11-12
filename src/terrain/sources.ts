@@ -249,7 +249,10 @@ export function getImagerySource(id: string): ImagerySource {
  * {s} is chosen deterministically from the key so the same tile always maps to the same URL
  * (the fetcher de-duplicates and caches by URL).
  */
-const hostOf = (url: string) => /^https?:\/\/([^/]+)/.exec(url)?.[1] ?? ''
+/** Host of a tile URL (or of a source's template); the proxy path (`/tiles/<source>`) of a source served without CORS. */
+export function hostOf(url: string): string {
+  return /^https?:\/\/([^/]+)/.exec(url)?.[1] ?? (url.split('/').slice(0, 3).join('/') || url)
+}
 
 /**
  * Most requests at once to the server of `url`: `maxRequests` of the source it belongs to, no limit otherwise. `extra`:

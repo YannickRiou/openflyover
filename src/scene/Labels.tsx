@@ -344,6 +344,14 @@ export function Labels() {
     }
   }, [family])
 
+  // read by the build effect, which must not run again for them
+  const engineRef = useRef(engine)
+  const exaggerationRef = useRef(exaggeration)
+  useEffect(() => {
+    engineRef.current = engine
+    exaggerationRef.current = exaggeration
+  }, [engine, exaggeration])
+
   const drape = useCallback(
     (current: TerrainEngine | null, factor: number) => {
       if (setRef.current) drapeLabelSet(setRef.current, current, factor)
@@ -406,8 +414,14 @@ export function Labels() {
     if (!frame || entries.length === 0) return
     const buffer = buildDrapeBuffer(entries.map((e) => e.label), frame)
     setRef.current = { entries, buffer, positions: new Float32Array(buffer.count * 3), sight: createClearanceMemo() }
+    drape(engineRef.current, exaggerationRef.current)
+    // the relief and the exaggeration only move the sprites (the effect below), they do not rebuild them
+  }, [labels, frame, fontVersion, look, family, drape])
+
+  // the sprites follow the relief: a new engine or a slider tick drapes them again, without rebuilding them
+  useEffect(() => {
     drape(engine, exaggeration)
-  }, [labels, frame, engine, exaggeration, fontVersion, look, family, drape])
+  }, [engine, exaggeration, drape])
 
   const redrape = useDebouncedCallback(drape, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS)
   // the video export runs the pending re-drape right away instead of waiting for the debounce

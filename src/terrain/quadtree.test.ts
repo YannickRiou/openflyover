@@ -113,6 +113,19 @@ describe('TileNode', () => {
     }
   })
 
+  it('gives the unloaded children of a loaded tile its relief instead of the -500..9000 m range', () => {
+    const node = new TileNode(ROOT_KEY, undefined, CTX)
+    const wideRadius = node.ensureChildren()[0].boundingSphere.radius
+    node.setHeightRangeFromGrid({ width: 2, height: 2, data: new Float32Array([1000, 1200, 1100, 1500]) })
+    const child = node.children![0]
+    expect(child.heightRangeM[0]).toBeGreaterThan(-2000)
+    expect(child.heightRangeM[1]).toBeLessThan(5000)
+    expect(child.boundingSphere.radius).toBeLessThan(wideRadius)
+    // a child created later inherits it too, and a root keeps the wide default
+    expect(node.children![3].heightRangeM).toBe(node.heightRangeM)
+    expect(new TileNode(ROOT_KEY, undefined, CTX).heightRangeM[1]).toBe(9000)
+  })
+
   it('tightens the sphere to loaded geometry and restores the conservative one', () => {
     const node = new TileNode(ROOT_KEY, undefined, CTX)
     const conservativeRadius = node.boundingSphere.radius

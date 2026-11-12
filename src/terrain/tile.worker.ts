@@ -1,10 +1,12 @@
 /** Worker of `tileWorker.ts`: runs `runTileJob` for each message and sends the buffers back. */
 import { createCanvas } from './dem'
-import { resultBuffers, runTileJob, type TileJob, type TileResult } from './tileJob'
+import { meshBuffers, resultBuffers, runMeshJob, runTileJob, type MeshJob, type TileJob, type TileResult } from './tileJob'
+import type { TileMeshArrays } from './mesh'
 
 interface Reply {
   id: number
   result?: TileResult
+  mesh?: TileMeshArrays
   failed?: true
   unsupported?: true
 }
@@ -14,8 +16,19 @@ const reply = (message: Reply, transfer: Transferable[] = []) => (self as unknow
 let canReadPixels: boolean | undefined
 const readsPixels = () => (canReadPixels ??= typeof OffscreenCanvas !== 'undefined' && createCanvas(1, 1).getContext('2d') !== null)
 
-self.onmessage = (event: MessageEvent<{ id: number; job: TileJob }>) => {
-  const { id, job } = event.data
+self.onmessage = (event: MessageEvent<{ id: number; job?: TileJob; meshJob?: MeshJob }>) => {
+  const { id, job, meshJob } = event.data
+  if (meshJob) {
+    // meshing a grid again: pure typed-array code, no pixel read-back
+    try {
+      const mesh = runMeshJob(meshJob)
+      reply({ id, mesh }, meshBuffers(mesh))
+    } catch {
+      reply({ id, failed: true })
+    }
+    return
+  }
+  if (!job) return
   try {
     if (!readsPixels()) return reply({ id, unsupported: true })
     const result = runTileJob(job)

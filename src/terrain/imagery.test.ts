@@ -204,6 +204,9 @@ function bitmapFor(url: string, white = false): ImageBitmap {
   return { width: 256, height: 256, url, white, close() {} } as unknown as ImageBitmap
 }
 
+/** The texture of a tile that has imagery. */
+const load = async (...args: Parameters<typeof loadImageryTexture>) => (await loadImageryTexture(...args))!
+
 describe('loadImageryTexture', () => {
   beforeEach(() => {
     vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas)
@@ -215,7 +218,7 @@ describe('loadImageryTexture', () => {
   it('composites every sub-tile and returns an sRGB mipmapped CanvasTexture', async () => {
     const src = source()
     const fetcher = fakeFetcher((url) => Promise.resolve(bitmapFor(url)))
-    const texture = await loadImageryTexture(KEY, src, fetcher, { zoomOffset: 1, priority: 7 })
+    const texture = await load(KEY, src, fetcher, { zoomOffset: 1, priority: 7 })
 
     const plan = planImagerySubtiles(KEY, src, 1)
     expect(fetcher.calls.map((c) => c.url)).toEqual(plan.tiles.map((t) => buildTileUrl(src, t.key)))
@@ -245,7 +248,7 @@ describe('loadImageryTexture', () => {
 
   it('releases the canvas once the GPU has the pixels (the renderer calls onUpdate after the upload)', async () => {
     const fetcher = fakeFetcher((url) => Promise.resolve(bitmapFor(url)))
-    const texture = await loadImageryTexture(KEY, source(), fetcher, { zoomOffset: 1 })
+    const texture = await load(KEY, source(), fetcher, { zoomOffset: 1 })
     const canvas = texture.image as FakeOffscreenCanvas
     expect(canvas.width).toBe(512) // not uploaded yet: still needed
     expect(texture.userData.released).toBeUndefined()
@@ -263,7 +266,7 @@ describe('loadImageryTexture', () => {
     const fetcher = fakeFetcher((url) =>
       url.endsWith('/1061/741.jpg') ? Promise.reject(new Error('HTTP 404')) : Promise.resolve(bitmapFor(url)),
     )
-    const texture = await loadImageryTexture(KEY, src, fetcher, { zoomOffset: 1 })
+    const texture = await load(KEY, src, fetcher, { zoomOffset: 1 })
     const canvas = texture.image as FakeOffscreenCanvas
     expect(canvas.ctx.drawImage).toHaveBeenCalledTimes(3)
   })
@@ -271,7 +274,7 @@ describe('loadImageryTexture', () => {
   it('leaves the area grey when drawing a (closed) bitmap throws', async () => {
     const src = source()
     const fetcher = fakeFetcher((url) => Promise.resolve(bitmapFor(url)))
-    const texture = await loadImageryTexture(KEY, src, fetcher, { zoomOffset: 0 })
+    const texture = await load(KEY, src, fetcher, { zoomOffset: 0 })
     expect((texture.image as FakeOffscreenCanvas).ctx.drawImage).toHaveBeenCalledTimes(1)
 
     // Now make drawImage throw once among four sub-tiles: still resolves.
@@ -284,7 +287,7 @@ describe('loadImageryTexture', () => {
       }
     }
     vi.stubGlobal('OffscreenCanvas', ThrowingCanvas)
-    const texture2 = await loadImageryTexture(KEY, src, fetcher, { zoomOffset: 1 })
+    const texture2 = await load(KEY, src, fetcher, { zoomOffset: 1 })
     // the bitmap that was closed is asked for again and drawn
     expect((texture2.image as FakeOffscreenCanvas).ctx.drawImage).toHaveBeenCalledTimes(5)
     expect(fetcher.calls).toHaveLength(1 + 4 + 1)
@@ -299,7 +302,7 @@ describe('loadImageryTexture', () => {
     await new Promise((resolve) => setTimeout(resolve, 5))
     const drawImage = (OffscreenCanvasInstances.at(-1) as FakeOffscreenCanvas).ctx.drawImage
     expect(drawImage).toHaveBeenCalledTimes(3)
-    const texture = await pending
+    const texture = (await pending)!
     expect((texture.image as FakeOffscreenCanvas).ctx.drawImage).toHaveBeenCalledTimes(4)
   })
 
@@ -307,9 +310,9 @@ describe('loadImageryTexture', () => {
     const failing = fakeFetcher((url) =>
       url.endsWith('/1061/741.jpg') ? Promise.reject(new Error('HTTP 400')) : Promise.resolve(bitmapFor(url)),
     )
-    expect((await loadImageryTexture(KEY, source(), failing, { zoomOffset: 1 })).userData.incomplete).toBe(true)
+    expect((await load(KEY, source(), failing, { zoomOffset: 1 })).userData.incomplete).toBe(true)
     const whole = fakeFetcher((url) => Promise.resolve(bitmapFor(url)))
-    expect((await loadImageryTexture(KEY, source(), whole, { zoomOffset: 1 })).userData.incomplete).toBeUndefined()
+    expect((await load(KEY, source(), whole, { zoomOffset: 1 })).userData.incomplete).toBeUndefined()
   })
 
   it('rejects when every sub-tile fails', async () => {
@@ -343,22 +346,19 @@ describe('loadImageryTexture', () => {
     // Cropping case (maxZoom 9 < z 10): the plan reads the 128 px NW quarter of a 256 px tile...
     const src = source({ maxZoom: 9 })
     const fetcher = fakeFetcher((url) => Promise.resolve({ width: 512, height: 512, url, close() {} } as unknown as ImageBitmap))
-    const texture = await loadImageryTexture(KEY, src, fetcher, { zoomOffset: 1 })
+    const texture = await load(KEY, src, fetcher, { zoomOffset: 1 })
     const args = (texture.image as FakeOffscreenCanvas).ctx.drawImage.mock.calls[0]
     // ...which is the 256 px NW quarter of the 512 px bitmap actually received.
     expect(args.slice(1)).toEqual([0, 0, 256, 256, 0, 0, 512, 512])
   })
 
-  it('returns a plain grey texture when the tile is outside the coverage', async () => {
+  it('returns no texture when the tile is outside the coverage (the tile is drawn grey, no canvas is made)', async () => {
     const fetcher = fakeFetcher((url) => Promise.resolve(bitmapFor(url)))
     const australia = lonLatToTileFrac(133, -25, 10)
     const key = { z: 10, x: Math.floor(australia.x), y: Math.floor(australia.y) }
     const src = source({ coverage: { west: -5.6, south: 41.2, east: 10.0, north: 51.3 } })
-    const texture = await loadImageryTexture(key, src, fetcher, { zoomOffset: 1 })
+    expect(await loadImageryTexture(key, src, fetcher, { zoomOffset: 1 })).toBeUndefined()
     expect(fetcher.calls).toHaveLength(0)
-    const canvas = texture.image as FakeOffscreenCanvas
-    expect(canvas.ctx.fillRect).toHaveBeenCalledWith(0, 0, 512, 512)
-    expect(canvas.ctx.drawImage).not.toHaveBeenCalled()
   })
 
   describe('plain white tiles (a regional source outside its country)', () => {
@@ -367,7 +367,7 @@ describe('loadImageryTexture', () => {
 
     it('draws the same ground from the coarser tile instead', async () => {
       const fetcher = fakeFetcher(whiteAt('/11/1061/741.jpg'))
-      const texture = await loadImageryTexture(KEY, covered(), fetcher, { zoomOffset: 1 })
+      const texture = await load(KEY, covered(), fetcher, { zoomOffset: 1 })
       expect(fetcher.calls.map((c) => c.url)).toContain('https://tiles.test/10/530/370.jpg')
       expect(fetcher.calls).toHaveLength(5)
       const calls = (texture.image as FakeOffscreenCanvas).ctx.drawImage.mock.calls
@@ -381,7 +381,7 @@ describe('loadImageryTexture', () => {
 
     it('climbs while the tiles stay white, up to a limit, then draws the last one', async () => {
       const fetcher = fakeFetcher((url) => Promise.resolve(bitmapFor(url, true)))
-      const texture = await loadImageryTexture(KEY, covered(), fetcher, { zoomOffset: 0 })
+      const texture = await load(KEY, covered(), fetcher, { zoomOffset: 0 })
       expect(fetcher.calls.map((c) => c.url)).toEqual(['10/530/370', '9/265/185', '8/132/92', '7/66/46', '6/33/23', '5/16/11', '4/8/5'].map((t) => `https://tiles.test/${t}.jpg`))
       expect((texture.image as FakeOffscreenCanvas).ctx.drawImage).toHaveBeenCalledTimes(1)
     })
@@ -390,7 +390,7 @@ describe('loadImageryTexture', () => {
       const latest = source({ urlTemplate: 'https://latest.test/{z}/{x}/{y}.jpg' })
       const dated = { ...covered(), fallback: latest }
       const fetcher = fakeFetcher((url) => Promise.resolve(bitmapFor(url, url.startsWith('https://tiles.test/'))))
-      const texture = await loadImageryTexture(KEY, dated, fetcher, { zoomOffset: 0 })
+      const texture = await load(KEY, dated, fetcher, { zoomOffset: 0 })
       expect(fetcher.calls.map((c) => c.url)).toEqual(['https://tiles.test/10/530/370.jpg', 'https://latest.test/10/530/370.jpg'])
       const calls = (texture.image as FakeOffscreenCanvas).ctx.drawImage.mock.calls
       expect((calls[0][0] as { url: string }).url).toBe('https://latest.test/10/530/370.jpg')
@@ -400,7 +400,7 @@ describe('loadImageryTexture', () => {
       const latest = source({ urlTemplate: 'https://latest.test/{z}/{x}/{y}.jpg' })
       const dated = { ...covered(), fallback: latest }
       const fetcher = fakeFetcher((url) => (url.startsWith('https://tiles.test/') ? Promise.reject(new TileFetchError(url, 404)) : Promise.resolve(bitmapFor(url))))
-      const texture = await loadImageryTexture(KEY, dated, fetcher, { zoomOffset: 0 })
+      const texture = await load(KEY, dated, fetcher, { zoomOffset: 0 })
       expect(fetcher.calls.map((c) => c.url)).toEqual(['https://tiles.test/10/530/370.jpg', 'https://latest.test/10/530/370.jpg'])
       expect(texture.userData.incomplete).toBeUndefined()
     })
@@ -409,7 +409,7 @@ describe('loadImageryTexture', () => {
       const latest = source({ urlTemplate: 'https://latest.test/{z}/{x}/{y}.jpg' })
       const dated = { ...source(), fallback: latest }
       const fetcher = fakeFetcher((url) => (url.startsWith('https://tiles.test/') ? Promise.reject(new TypeError('Failed to fetch')) : Promise.resolve(bitmapFor(url))))
-      const texture = await loadImageryTexture(KEY, dated, fetcher, { zoomOffset: 0 })
+      const texture = await load(KEY, dated, fetcher, { zoomOffset: 0 })
       expect(fetcher.calls.map((c) => [c.url, c.retryNetworkErrors])).toEqual([
         ['https://tiles.test/10/530/370.jpg', false],
         ['https://latest.test/10/530/370.jpg', true],
@@ -426,7 +426,7 @@ describe('loadImageryTexture', () => {
 
     it('a tile the regional source does not have (404, beyond the border) is drawn from the coarser tile too, not a failure', async () => {
       const fetcher = fakeFetcher((url) => (url.endsWith('/11/1061/741.jpg') ? Promise.reject(new TileFetchError(url, 404)) : Promise.resolve(bitmapFor(url))))
-      const texture = await loadImageryTexture(KEY, covered(), fetcher, { zoomOffset: 1 })
+      const texture = await load(KEY, covered(), fetcher, { zoomOffset: 1 })
       expect(fetcher.calls.map((c) => c.url)).toContain('https://tiles.test/10/530/370.jpg')
       expect((texture.image as FakeOffscreenCanvas).ctx.drawImage).toHaveBeenCalledTimes(4)
       expect(texture.userData.incomplete).toBeUndefined()
@@ -445,7 +445,7 @@ describe('loadImageryTexture', () => {
     const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D)
     try {
       const fetcher = fakeFetcher((url) => Promise.resolve(bitmapFor(url)))
-      const texture = await loadImageryTexture(KEY, source(), fetcher, { zoomOffset: 0 })
+      const texture = await load(KEY, source(), fetcher, { zoomOffset: 0 })
       expect(texture.image).toBeInstanceOf(HTMLCanvasElement)
       expect((texture.image as HTMLCanvasElement).width).toBe(256)
       expect(ctx.drawImage).toHaveBeenCalledTimes(1)

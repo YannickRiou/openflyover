@@ -14,6 +14,7 @@
 import { errorMessage } from '../core/errors'
 import { CanvasTexture, ClampToEdgeWrapping, LinearFilter, LinearMipmapLinearFilter, SRGBColorSpace } from 'three'
 import type { Texture } from 'three'
+import { deviceBudget } from '../core/deviceBudget'
 import type { ImagerySource, LoadImageryOptions, LoadImageryTexture, TileFetcher, TileKey } from '../core/types'
 import { boundsIntersect, tileBounds, tileKeyString } from '../geo/mercator'
 import { buildTileUrl } from './sources'
@@ -132,7 +133,7 @@ function createTexture(canvas: CompositeCanvas, key: TileKey): Texture {
   texture.magFilter = LinearFilter
   texture.wrapS = ClampToEdgeWrapping
   texture.wrapT = ClampToEdgeWrapping
-  texture.anisotropy = 16 // the engine clamps it to the renderer's maximum
+  texture.anisotropy = deviceBudget().anisotropy // three clamps it to the GPU's maximum
   texture.flipY = true // canvas row 0 is the north edge; the mesh builder uses uv.y = 1 - v
   texture.onUpdate = releaseCanvas
   texture.needsUpdate = true
@@ -147,6 +148,16 @@ let probe: Canvas2D | undefined
  * colours. Eight by eight nearest-neighbour samples: a real tile hardly has all 64 that bright, and a mistake only costs a blurrier tile.
  */
 export function isBlank(bitmap: ImageBitmap): boolean {
+  const known = blankBitmaps.get(bitmap)
+  if (known !== undefined) return known // a cached bitmap is probed again at every tile that reads it
+  const blank = probeBlank(bitmap)
+  blankBitmaps.set(bitmap, blank)
+  return blank
+}
+
+const blankBitmaps = new WeakMap<ImageBitmap, boolean>()
+
+function probeBlank(bitmap: ImageBitmap): boolean {
   try {
     probe ??= createCanvas(BLANK_PROBE_PX, BLANK_PROBE_PX).getContext('2d', { willReadFrequently: true }) as Canvas2D
     probe.imageSmoothingEnabled = false
@@ -162,7 +173,7 @@ export const loadImageryTexture: LoadImageryTexture = async (
   source: ImagerySource,
   fetcher: TileFetcher,
   options: LoadImageryOptions,
-): Promise<Texture> => {
+): Promise<Texture | undefined> => {
   const { signal, priority } = options
   if (signal?.aborted) throw createAbortError()
 
@@ -254,7 +265,8 @@ export const loadImageryTexture: LoadImageryTexture = async (
       cause: failure,
     })
   }
-  surface()
+  // nothing to draw (the source starts at a finer zoom): no texture, not a grey canvas of megabytes; the tile gets the grey colour
+  if (!ctx) return undefined
   const texture = createTexture(canvas as CompositeCanvas, key)
   // grey patches where a sub-tile failed: the engine tries the tile again before it keeps them
   if (failure !== undefined) texture.userData.incomplete = true

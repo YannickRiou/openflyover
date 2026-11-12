@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { datedImagerySource, findImageryDates, imageryDateKind, imageryDateValue, isImageryDate, tileAt } from './imageryDates'
+import { datedImagerySource, findImageryDates, imageryDateKind, imageryDateValue, isImageryDate } from './imageryDates'
+import { tileAt } from '../geo/mercator'
 import { buildTileUrl, getImagerySource } from './sources'
 
 const ign = getImagerySource('ign-ortho')

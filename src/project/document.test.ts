@@ -218,6 +218,12 @@ describe('serializeProject / parseProject', () => {
     }
   })
 
+  it('completes a partial demClean and rejects one of the wrong type', () => {
+    expect(sanitizeSettings({ demClean: { enabled: true } }).settings.demClean).toEqual({ enabled: true, seaToZero: false })
+    expect(sanitizeSettings({ demClean: { enabled: 'yes', seaToZero: false } }).invalid).toEqual(['demClean'])
+    expect(sanitizeSettings({ demClean: 'abc' }).invalid).toEqual(['demClean'])
+  })
+
   it('keeps the base value for missing keys in sanitizeSettings', () => {
     const base = { ...DEFAULT_SETTINGS, exaggeration: 2.5 }
     expect(sanitizeSettings({ atmosphere: false }, base).settings).toEqual({ ...base, atmosphere: false })

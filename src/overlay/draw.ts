@@ -1027,6 +1027,7 @@ function cellsWidget(
 interface Layer {
   key: string
   canvas: OffscreenCanvas
+  /** device pixel of the picture's top left corner */
   x0: number
   y0: number
 }
@@ -1035,9 +1036,10 @@ const layers = new WeakMap<object, Map<string, Layer>>()
 
 /**
  * Draw `paint` (absolute coordinates, inside the box `x, y, w, h` plus `margin`) through a picture kept for `owner`
- * while `key` holds, instead of building and filling its path at every frame. The picture starts on the whole pixel at
- * or before the box, so its pixels land where a direct draw puts them. Only on a context without transform (the
- * export's compositor) where OffscreenCanvas exists; elsewhere (the preview scaled to the screen, the tests) drawn as is.
+ * while `key` holds, instead of building and filling its path at every frame. The picture is made in device pixels
+ * (the context's scale, 1 for the export's compositor, the pixel ratio for the preview scaled to the screen) and
+ * starts on the whole pixel at or before the box, so its pixels land where a direct draw puts them. Only where
+ * OffscreenCanvas exists and the context only scales; elsewhere (the tests) drawn as is.
  */
 function cachedLayer(
   ctx: OverlayContext2D,
@@ -1048,28 +1050,33 @@ function cachedLayer(
   paint: (c: OverlayContext2D) => void,
 ): void {
   const t = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null
-  if (typeof OffscreenCanvas === 'undefined' || !t || !t.isIdentity) {
+  if (typeof OffscreenCanvas === 'undefined' || !t || t.b !== 0 || t.c !== 0 || t.e !== 0 || t.f !== 0 || !(t.a > 0) || !(t.d > 0)) {
     paint(ctx)
     return
   }
   let named = layers.get(owner)
   if (!named) layers.set(owner, (named = new Map()))
+  const layerKey = `${key}|${t.a}|${t.d}`
   let layer = named.get(name)
-  if (!layer || layer.key !== key) {
-    const x0 = Math.floor(box.x - box.margin)
-    const y0 = Math.floor(box.y - box.margin)
-    const canvas = new OffscreenCanvas(Math.max(1, Math.ceil(box.x + box.w + box.margin) - x0), Math.max(1, Math.ceil(box.y + box.h + box.margin) - y0))
+  if (!layer || layer.key !== layerKey) {
+    const x0 = Math.floor((box.x - box.margin) * t.a)
+    const y0 = Math.floor((box.y - box.margin) * t.d)
+    const canvas = new OffscreenCanvas(Math.max(1, Math.ceil((box.x + box.w + box.margin) * t.a) - x0), Math.max(1, Math.ceil((box.y + box.h + box.margin) * t.d) - y0))
     const c = canvas.getContext('2d')
     if (!c) {
       paint(ctx)
       return
     }
-    c.translate(-x0, -y0)
+    c.setTransform(t.a, 0, 0, t.d, -x0, -y0)
     paint(c)
-    layer = { key, canvas, x0, y0 }
+    layer = { key: layerKey, canvas, x0, y0 }
     named.set(name, layer)
   }
+  // the picture is in device pixels: drawn without the scale
+  ctx.save()
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.drawImage(layer.canvas, layer.x0, layer.y0)
+  ctx.restore()
 }
 
 function profileWidget(p: Painter, frame: OverlayFrame, settings: OverlaySettings, opacity: number, markerColor?: string): Widget | null {

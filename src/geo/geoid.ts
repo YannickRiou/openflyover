@@ -43,16 +43,6 @@ export function geoidUndulation(lon: number, lat: number): number {
   return top + (bottom - top) * fy
 }
 
-/** Height above mean sea level -> height above the WGS84 ellipsoid (metres). */
-export function mslToEllipsoidHeight(lon: number, lat: number, heightMsl: number): number {
-  return heightMsl + geoidUndulation(lon, lat)
-}
-
-/** Height above the WGS84 ellipsoid -> height above mean sea level (metres). */
-export function ellipsoidToMslHeight(lon: number, lat: number, heightEllipsoid: number): number {
-  return heightEllipsoid - geoidUndulation(lon, lat)
-}
-
 const _up = new Vector3()
 
 /**

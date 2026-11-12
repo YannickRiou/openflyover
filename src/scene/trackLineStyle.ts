@@ -313,10 +313,6 @@ void main() {
     // the ribbon is widened in the screen: which face looks at the camera depends on the direction of travel
     side: DoubleSide,
     depthWrite: false,
-    // pulled towards the camera like the line's lift: the relief between two draped points must not cut it
-    polygonOffset: true,
-    polygonOffsetFactor: -2,
-    polygonOffsetUnits: -2,
   })
   material.userData.cut = cut
   return material

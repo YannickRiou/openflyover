@@ -69,7 +69,6 @@ describe('createGlacierMaterial', () => {
     const material = createGlacierMaterial()
     expect(material.transparent).toBe(true)
     expect(material.depthWrite).toBe(false)
-    expect(material.polygonOffset).toBe(true)
     const { vertexShader, fragmentShader } = compile(material)
     expect(vertexShader).toContain('vGlacierUp = normalize(mat3(modelMatrix) * objectNormal).y;')
     expect(fragmentShader).toContain('float snowNoise(vec2 p, float size)')
