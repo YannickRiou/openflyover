@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 8.1.1 (unreleased)
+
+- **A « situation » opening or closing no longer stalls the export**: during the descent of a « situation » view from far away (400 km on the raid that showed it), every tile loaded kept its whole elevation tile (1 MB) and the distant landscape took the finest imagery; about 3,000 tiles piled up, 5 GB of page memory and 4 GB of textures on a 6 GB graphics card, and the export crawled, then stalled. Same image, much less memory: a tile now keeps only the heights of its mesh (33 kB), the tiles share their triangle list and texture coordinates, the distant landscape of a « situation » view keeps its own imagery level, and on a computer the textures of the tiles have a budget (1 GB, or 600 MB and 400 MB with 6 GB or 4 GB of memory) past which the tiles no frame draws are unloaded first. Measured on that raid (1080×1920, 30 i/s, 2,325 frames): exported to the end in 24 min 52 at 1.5 GB at most, and in 28 min 14 at 743 MB at most as a 4 GB computer; 8.1.0 went up to 5.1 GB.
+
 ## 8.1.0 (November 2026)
 
 - **« Nouveautés 8.1 »**: exports that get to the end, « Reprendre à l’image N », faster exports, days and photos in the right place.

@@ -2,6 +2,8 @@ export default {
   title: 'Nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v811.situation.title': "Les vues « situation » s’exportent sur tous les ordinateurs",
+  'v811.situation.text': "Une ouverture ou une clôture vue de très haut ne bloque plus l’export, même sur un ordinateur modeste. L’image est la même, mais il faut jusqu’à sept fois moins de mémoire pendant la descente.",
   'v81.export.title': "Vos exports vont au bout",
   'v81.export.text': "Un export ne s’arrête plus sur une mer sans photos datées, ne reste plus figé sur une image, et survit à une courte coupure du réseau ou de la carte graphique. S’il s’arrête quand même, le message vous dit pourquoi.",
   'v81.resume.title': "Reprenez là où l’export s’est arrêté",
