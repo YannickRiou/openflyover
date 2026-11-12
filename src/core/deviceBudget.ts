@@ -134,8 +134,18 @@ export interface DeviceTraits {
   memoryGb?: number
 }
 
+/**
+ * Tile texture budget of a computer by the memory it announces (`navigator.deviceMemory`, rounded down, 8 at most in
+ * Chrome; undefined in Firefox and Safari): 1 GB from 8 GB, 600 MB at 6, 400 MB at 4 GB or less. Its graphics card
+ * is not known to the page; a computer with little memory has a modest one too.
+ */
+export function desktopTextureBudget(memoryGb: number | undefined): number {
+  if (memoryGb === undefined || memoryGb >= 8) return DESKTOP_BUDGET.tileTextureBytes
+  return memoryGb >= 6 ? 600e6 : 400e6
+}
+
 export function budgetFor({ coarsePointer, shortSidePx, memoryGb }: DeviceTraits): DeviceBudget {
-  if (!coarsePointer) return { ...DESKTOP_BUDGET }
+  if (!coarsePointer) return { ...DESKTOP_BUDGET, tileTextureBytes: desktopTextureBudget(memoryGb) }
   const phone = shortSidePx < PHONE_MAX_SHORT_SIDE
   const budget: DeviceBudget = {
     ...MOBILE_BUDGET,
