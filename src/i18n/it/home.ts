@@ -5,7 +5,7 @@ const messages: Messages['home'] = {
   'empty.pitch': 'Trasforma una traccia GPS in un filmato di sorvolo in 3D, con il rilievo, il meteo del giorno e la tua musica.',
   'empty.pointFree': 'Gratuito e libero',
   'empty.pointNoAccount': 'Senza account',
-  'empty.pointLocal': 'Tutto resta sul tuo dispositivo',
+  'empty.pointLocal': 'La tua traccia non lascia mai il tuo dispositivo',
   'empty.news': 'Novità della {version}',
   'empty.links': 'Link',
   'empty.download': 'App desktop (Windows, macOS, Linux)',

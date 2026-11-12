@@ -5,7 +5,7 @@ const messages: Messages['home'] = {
   'empty.pitch': 'Convierta un recorrido GPS en un vídeo de sobrevuelo en 3D, con el relieve, el tiempo del día y su música.',
   'empty.pointFree': 'Gratuito y libre',
   'empty.pointNoAccount': 'Sin cuenta',
-  'empty.pointLocal': 'Todo se queda en su dispositivo',
+  'empty.pointLocal': 'Su ruta nunca sale de su dispositivo',
   'empty.news': 'Novedades de la {version}',
   'empty.links': 'Enlaces',
   'empty.download': 'Aplicación de escritorio (Windows, macOS, Linux)',
