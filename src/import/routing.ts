@@ -23,9 +23,11 @@ export function ignCovers(a: LonLat, b: LonLat): boolean {
 
 /** An HTTP error answer of a routing service (`status`), as `FetchJson` rejects it. */
 export class RouteHttpError extends Error {
-  constructor(readonly status: number) {
+  readonly status: number
+  constructor(status: number) {
     super(`HTTP ${status}`)
     this.name = 'RouteHttpError'
+    this.status = status
   }
 }
 
