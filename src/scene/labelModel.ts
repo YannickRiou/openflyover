@@ -180,7 +180,7 @@ export const LABEL_FADE_START_M = 35_000
 /** …and gone beyond this one (the default « Portée »: half of it fully opaque, see `distanceFade`). */
 export const LABEL_FADE_END_M = 70_000
 /** Common size (multiplier) and range (km, where they are gone) of every label, « Étiquettes dans la vue ». */
-export const LABEL_SIZE_RANGE = { min: 0.6, max: 1.6, step: 0.1 } as const
+export const LABEL_SIZE_RANGE = { min: 0.6, max: 3, step: 0.1 } as const
 export const LABEL_RANGE_KM = { min: 10, max: 150, step: 5 } as const
 function smoothstep(edge0: number, edge1: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)))

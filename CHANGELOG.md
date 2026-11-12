@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **« Taille des étiquettes » goes up to ×3** (was ×1.6): the 3D labels follow the short side of the frame, so in 9:16 they are as small as in 16:9 while the film is watched on a phone, and ×1.6 was not enough to read them there. Above ×2 the labels are drawn finer, so they stay sharp (`LABEL_SIZE_RANGE`, `textureScaleFor`). The photo pins follow the same slider.
+
 ## 8.1.1 (November 2026)
 
 - **« Nouveautés » rewritten, all of them**: every version from 2.0 to 8.1.1, in plain and warm sentences that say what changes for you; the items about the same thing are grouped (6.0 goes from 11 to 4), and the patch versions are folded into their main version, except 8.1.1. In the five languages. The French text is half as long.

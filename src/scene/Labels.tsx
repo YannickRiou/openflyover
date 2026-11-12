@@ -70,8 +70,9 @@ const DOT_R = 4
 const PIN_PX = 14
 const PIN_X = 6
 const PIN_GAP = 4
-/** Texture pixels per CSS pixel (sharp on high-density screens). */
+/** Texture pixels per CSS pixel (sharp on high-density screens); a larger « Taille des étiquettes » draws them finer. */
 const TEXTURE_SCALE = 2
+const textureScaleFor = (size: number) => Math.max(TEXTURE_SCALE, Math.ceil(size))
 /** A label's text is wrapped to two lines at most this wide (CSS pixels), then cut with « … ». */
 const MAX_TEXT_PX = 220
 const LINE_H = 16
@@ -116,11 +117,10 @@ function wrapLabel(ctx: CanvasRenderingContext2D, text: string, maxPx: number, s
 }
 
 /** Canvas texture of one label, or null where 2D canvases are unavailable (jsdom). */
-function drawLabelTexture(rawText: string, kind: LandmarkKind, icon: PoiIcon, look: LabelStyle, family: string): LabelTexture | null {
+function drawLabelTexture(rawText: string, kind: LandmarkKind, icon: PoiIcon, look: LabelStyle, family: string, s: number): LabelTexture | null {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
-  const s = TEXTURE_SCALE
   ctx.font = labelFont(s, family)
   const pin = kind === 'poi' || kind === 'endpoint'
   // left of the text: the accent stripe and its padding, or a padding, the pin and a gap
@@ -314,6 +314,7 @@ export function Labels() {
   const look = useMemo(() => resolveLabelStyle(overlayStyle, labelColors), [overlayStyle, labelColors])
   const family = (OVERLAY_THEMES[overlayStyle] ?? OVERLAY_THEMES.editorial).bodyFamily
   const texturesLookRef = useRef<unknown>(null)
+  const texScale = textureScaleFor(show.size)
 
   const labels = useMemo(() => withLanguage(language, () => {
     const out: LandmarkLabel[] = []
@@ -369,9 +370,9 @@ export function Labels() {
     setRef.current = null
     const textures = texturesRef.current
     // the drawn textures depend on the font and on the look of the labels
-    const stamp = { fontVersion, look, family }
+    const stamp = { fontVersion, look, family, texScale }
     const previous = texturesLookRef.current as typeof stamp | null
-    if (!previous || previous.fontVersion !== fontVersion || previous.look !== look || previous.family !== family) {
+    if (!previous || previous.fontVersion !== fontVersion || previous.look !== look || previous.family !== family || previous.texScale !== texScale) {
       for (const tex of textures.values()) tex.texture.dispose()
       textures.clear()
       texturesLookRef.current = stamp
@@ -383,7 +384,7 @@ export function Labels() {
         const key = `${label.kind}\n${label.icon ?? ''}\n${label.text}`
         let tex = textures.get(key)
         if (!tex) {
-          tex = drawLabelTexture(label.text, label.kind, label.icon ?? 'epingle', look, family) ?? undefined
+          tex = drawLabelTexture(label.text, label.kind, label.icon ?? 'epingle', look, family, texScale) ?? undefined
           if (!tex) continue
           textures.set(key, tex)
         }
@@ -416,7 +417,7 @@ export function Labels() {
     setRef.current = { entries, buffer, positions: new Float32Array(buffer.count * 3), sight: createClearanceMemo() }
     drape(engineRef.current, exaggerationRef.current)
     // the relief and the exaggeration only move the sprites (the effect below), they do not rebuild them
-  }, [labels, frame, fontVersion, look, family, drape])
+  }, [labels, frame, fontVersion, look, family, texScale, drape])
 
   // the sprites follow the relief: a new engine or a slider tick drapes them again, without rebuilding them
   useEffect(() => {

@@ -106,7 +106,8 @@ describe('label texts and sources', () => {
   it('older projects get no kilometre markers; size and range stay within their bounds', () => {
     expect(isValidLabelSettings({ kmStep: 5, size: 1.2, rangeKm: 30 })).toBe(true)
     expect(isValidLabelSettings({ kmStep: 3, size: 1, rangeKm: 70 })).toBe(false)
-    expect(isValidLabelSettings({ kmStep: 0, size: 3, rangeKm: 70 })).toBe(false)
+    expect(isValidLabelSettings({ kmStep: 0, size: 3.5, rangeKm: 70 })).toBe(false)
+    expect(isValidLabelSettings({ kmStep: 0, size: 3, rangeKm: 70 })).toBe(true)
     expect(isValidLabelSettings({ kmStep: 0, size: 1, rangeKm: 500 })).toBe(false)
     expect(withLabelDefaults({ climbs: false, waypoints: true })).toEqual({ climbs: false, waypoints: true, kmStep: 0, endpoints: false, photos: false, photoPins: true, size: 1, rangeKm: 70 })
     expect(withLabelDefaults({ climbs: true, waypoints: true, kmStep: 5 })).toMatchObject({ kmStep: 5 })
