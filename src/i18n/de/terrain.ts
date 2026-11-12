@@ -4,6 +4,7 @@ const messages: Messages['terrain'] = {
   'layer.elevation': 'Höhe',
   'layer.imagery': 'Luftbilder',
   'cause.network': 'Netzwerkfehler ({detail})',
+  'cause.timeout': 'keine Antwort innerhalb von {seconds} s',
   'cause.unknown': 'unbekannte Ursache',
   'cause.incompleteImagery': 'unvollständige Luftbilder',
   'dates.unknown': 'Aktualisierungsdatum vom Dienst nicht mitgeteilt',

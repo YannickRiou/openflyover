@@ -1569,6 +1569,33 @@ describe('export: the view is final when the settle loop returns', () => {
     expect(drawn(engine)).toHaveLength(ROOT_KEYS.length)
   })
 
+  it('tries again, when an export starts, the tiles the preview kept with grey patches', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const deps = createFakeDeps()
+    let down = true
+    deps.loadImageryTexture = vi.fn(async () => {
+      const texture = new Texture()
+      if (down) texture.userData.incomplete = true
+      return texture
+    })
+    const clock = { t: 0 }
+    deps.now = () => clock.t
+    const engine = engineWith(deps)
+    const camera = cameraAbove(600_000)
+    for (let i = 0; i < 4; i++) {
+      engine.update(camera, 1000)
+      await settle()
+      clock.t += 6000
+    }
+    // the preview gave up after its attempts and draws them grey
+    expect(engine.stats.missingVisibleTiles).toBe(ROOT_KEYS.length)
+    down = false
+    engine.setExporting?.(true)
+    expect(await exportView(engine, camera, clock).run()).toBe(true)
+    expect(drawn(engine)).toHaveLength(ROOT_KEYS.length)
+    expect(engine.stats.missingVisibleTiles).toBe(0)
+  })
+
   it('costs nothing more when every tile is there: one render, no wait, no request', async () => {
     const deps = createFakeDeps()
     const engine = engineWith(deps, DEEP)

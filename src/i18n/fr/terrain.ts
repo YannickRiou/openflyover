@@ -2,6 +2,7 @@ export default {
   'layer.elevation': 'élévation',
   'layer.imagery': 'imagerie',
   'cause.network': 'erreur réseau ({detail})',
+  'cause.timeout': 'pas de réponse en {seconds} s',
   'cause.unknown': 'cause inconnue',
   'cause.incompleteImagery': 'imagerie incomplète',
   'dates.unknown': 'date de mise à jour non communiquée par le service',

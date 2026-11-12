@@ -44,6 +44,7 @@ import { useAppStore } from '../state/store'
 import { viewTileFailures } from '../terrain/engine'
 import { fetchTileBlob, getStoredTileReader } from '../terrain/fetch'
 import { getImagerySource, getTerrainSource, maxRequestsFor } from '../terrain/sources'
+import { datedImagerySource } from '../terrain/imageryDates'
 import { autoDistanceM } from '../flyover/camera'
 import { trackPathOf } from '../flyover/path'
 import { packImageryLevel } from '../offline/plan'
@@ -658,11 +659,14 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     if (deps.engine() && !dataSaver && !request.probe) {
       const p0 = performance.now()
       const app = useAppStore.getState()
+      // the photos of the date chosen, as the terrain shows them (terrainLayerSetup.ts): the latest ones would fill the
+      // cache with tiles no frame asks for
+      const imagery = datedImagerySource(getImagerySource(settings.imagerySourceId), settings.imageryDate)
       const preload = app.bounds && app.tracks.length > 0 ? filmTilesToPreload({
         points: app.tracks.flatMap((tr) => tr.segments.flatMap((sg) => sg.points)),
         bounds: app.bounds,
         terrain: getTerrainSource(settings.terrainSourceId),
-        imagery: getImagerySource(settings.imagerySourceId),
+        imagery,
         imageryZoomOffset: packImageryLevel(settings.imageryZoomOffset).zoomOffset,
         // the follow camera at its lowest, as « Préparer hors ligne » (OfflinePanel)
         cameraHeightM: Math.min(...app.tracks.map((tr) => autoDistanceM(trackPathOf(tr)))) * settings.camera.distance * Math.sin((settings.camera.pitchDeg * Math.PI) / 180),
@@ -674,7 +678,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         let reportedAt = -Infinity
         const { failed } = await preloadTiles(preload.urls, {
           download: deps.preloadTile ?? ((url) => fetchTileBlob(url)),
-          maxRequestsOf: maxRequestsFor,
+          maxRequestsOf: (url) => maxRequestsFor(url, [imagery]),
           stored: getStoredTileReader(),
           isCanceled,
           onProgress: (done, total) => {

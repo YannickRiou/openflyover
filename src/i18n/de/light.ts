@@ -146,7 +146,7 @@ const messages: Messages['light'] = {
   'map.imageryDateError': 'Die Daten konnten nicht gelesen werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.',
   'map.imageryDateNone': 'Hier gibt es keine anderen Luftbilder als die neuesten.',
   'map.imageryDateHintIgn': 'Aufnahmedaten in der Mitte des Tracks (das IGN befliegt meist im Frühling und Sommer). Wo das gewählte Jahr nicht beflogen wurde, ergänzen die neuesten Luftbilder.',
-  'map.imageryDateHintEsri': 'Aufnahmedatum in der Mitte des Tracks: ein Winterdatum für Schnee, ein Sommerdatum, um ihn zu vermeiden.',
+  'map.imageryDateHintEsri': 'Aufnahmedatum in der Mitte des Tracks: ein Winterdatum für Schnee, ein Sommerdatum, um ihn zu vermeiden. Wo diese Luftbilder fehlen, zum Beispiel über dem Meer, ergänzen die neuesten Luftbilder.',
   'map.imageryPhotos': 'Luftbilder',
   'map.imageryMaps': 'Karten',
   'map.imageryElsewhere': 'Decken den Track nicht ab',

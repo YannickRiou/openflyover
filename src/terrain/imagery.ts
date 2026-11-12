@@ -195,9 +195,13 @@ export const loadImageryTexture: LoadImageryTexture = async (
           let key = op.key
           let from = source
           // a tile a dated or regional source does not have (a 404: the year did not fly there, or the ground lies beyond
-          // the border) is missing, null, rather than a failure
+          // the border) is missing, null, rather than a failure. The Wayback archive answers its 404 without the header that
+          // lets the page read it (no `Access-Control-Allow-Origin`, checked in November 2026): the browser only reports a
+          // network error. A dated source does not retry one, and the latest photos are tried instead (below): when the
+          // network is really down they fail too, and the tile is retried as any other
           const fetchOrMissing = (s: ImagerySource, k: TileKey) =>
-            fetcher.fetchBitmap(buildTileUrl(s, k), { priority, signal }).catch((error: unknown) => {
+            fetcher.fetchBitmap(buildTileUrl(s, k), { priority, signal, retryNetworkErrors: !s.fallback }).catch((error: unknown) => {
+              if (s.fallback && error instanceof TypeError) return null
               if ((s.fallback || s.coverage) && error instanceof TileFetchError && error.status === 404) return null
               throw error
             })

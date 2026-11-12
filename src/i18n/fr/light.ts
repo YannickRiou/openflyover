@@ -144,7 +144,7 @@ export default {
   'map.imageryDateError': 'Les dates n’ont pas pu être lues. Vérifiez la connexion et réessayez.',
   'map.imageryDateNone': 'Pas d’autres photos ici que les plus récentes.',
   'map.imageryDateHintIgn': 'Dates de prise de vue au centre de la trace (l’IGN photographie surtout au printemps et en été). Là où l’année choisie n’a pas été photographiée, les photos les plus récentes complètent.',
-  'map.imageryDateHintEsri': 'Date de prise de vue au centre de la trace : choisissez une date d’hiver pour avoir de la neige, d’été pour l’éviter.',
+  'map.imageryDateHintEsri': 'Date de prise de vue au centre de la trace : choisissez une date d’hiver pour avoir de la neige, d’été pour l’éviter. Là où ces photos manquent, en mer par exemple, les photos les plus récentes complètent.',
   'map.imageryPhotos': 'Photos aériennes',
   'map.imageryMaps': 'Cartes',
   'map.imageryElsewhere': 'Ne couvrent pas la trace',

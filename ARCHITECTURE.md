@@ -49,7 +49,7 @@ full customization through a single project document, WebCodecs video export, Ta
 | `src/import/index.ts` | entry point | `importFile(file: File, colorIndex?): Promise<Track[]>`, `importText(text, fileName, colorIndex?)`, `TRACK_COLORS`, `assignColors` |
 | `src/strava/*` | Strava import (see "Strava import") | `api.ts`: pure, tested: `authorizeUrl`, `tokenRequestBody`, `activitiesUrl`, `streamsUrl`, `callbackDomain`, `parseCallback`, `needsRefresh`, `tokensFromResponse`, `stravaError`, `StravaAuthError`; storage and requests: `loadApp`, `saveApp`, `forgetApp`, `loadTokens`, `disconnect`, `connect`, `listActivities`, `fetchStreams`; `track.ts`: `streamsToTrack`, `stravaActivityType`, `stravaSportLabel` |
 | `src/terrain/sources.ts` | source catalog | `TERRAIN_SOURCES: TerrainSource[]`, `IMAGERY_SOURCES: ImagerySource[]`, `buildTileUrl(source, key): string`, `getTerrainSource(id)`, `getImagerySource(id)`, `sourceCovers(source, bounds \| point)` |
-| `src/terrain/fetch.ts` | fetch + bitmap cache | `createTileFetcher(opts?: {concurrency?, maxEntries?, retryDelayMs?, storedTiles?}): TileFetcher`, `TileFetchError` (`status`, `url`), `isAbortError(e)`, `downloadTile(url, signal?, retryDelayMs?)` (same retry policy), `setStoredTileReader(reader)` + `StoredTileReader` (`covers`, `get`: offline packs read before the network) |
+| `src/terrain/fetch.ts` | fetch + bitmap cache | `createTileFetcher(opts?: {concurrency?, maxEntries?, retryDelayMs?, storedTiles?}): TileFetcher`, `TileFetchError` (`status`, `url`), `isAbortError(e)`, `downloadTile(url, signal?, retryDelayMs?, priority?, retryNetworkErrors?)` (same retry policy), `TileTimeoutError`, `setStoredTileReader(reader)` + `StoredTileReader` (`covers`, `get`: offline packs read before the network) |
 | `src/terrain/demClean.ts` | « Nettoyer le relief en mer » | `removeSeaSpikes`, `clampSeaToZero`, `cleanDem`, `DEFAULT_DEM_CLEAN`, `sameDemClean`, `isValidDemClean`, `withDemCleanDefaults` |
 | `src/terrain/dem.ts` | elevation decoding | `decodeDem(bitmap, encoding, clean?): HeightGrid`, `sampleGrid(grid, u, v): number` (bilinear, NaN-safe) |
 | `src/terrain/heightField.ts` | multi-level height field | `class HeightField { set(key, grid); delete(key); has(key); sampleHeight(lon, lat): number \| undefined }` (deepest tile containing the point; the engine's fallback where no tile of its tree is loaded) |
@@ -214,7 +214,10 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    « Date des photos » (`settings.imageryDate`, `imageryDates.ts`): '' = the latest, `ign:<year>` = the IGN layer
    `ORTHOIMAGERY.ORTHOPHOTOS<year>` (2000–2024, each only the departments flown that year, white elsewhere at every zoom:
    the dated source's `fallback`, the latest photos, is drawn instead in `loadImageryTexture`), `esri:<release>` = the
-   World Imagery Wayback release (`wayback.maptiles.arcgis.com`). `datedImagerySource` gives the engine a source with its own
+   World Imagery Wayback release (`wayback.maptiles.arcgis.com`; no photos over the sea from z14, where it answers a 404
+   without `Access-Control-Allow-Origin` that the browser reports as a network error: a dated source asks without retrying
+   network errors, `retryNetworkErrors: false`, and draws its `fallback`, the latest photos, on a network error or a 404; when
+   the fallback fails too, the tile is incomplete and the engine retries it). `datedImagerySource` gives the engine a source with its own
    id (`ign-ortho@ign:2020`), so a date change reloads the imagery. The dates offered are found on demand at the centre of the
    first track: for IGN the mosaic graphs (WFS `ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE.<period>:graphe_bdortho` for 2000–2023 and
    `…GRAPHE-MOSAIQUAGE:graphe_bdortho` for the latest, 6 requests in a 20 m box: `pva` year and `date_vol` day of the
@@ -229,7 +232,7 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    Exact URLs, max zooms, encoding and CORS support are checked empirically (`docs/sources.md`); `sources.ts` is the single source of truth.
    A source without CORS goes through the Vite proxy (`/tiles/<id>/...`, see `vite.config.ts`).
 2. **Fetch** (`fetch.ts`): `fetch()` + `createImageBitmap`, priority queue, concurrency ~12, deduplication of in-flight requests,
-   LRU ~600 bitmaps (200 on a phone or tablet, "Device budget"), `AbortSignal` support, 3 retries (250 ms, 1 s, 4 s, bypassing the HTTP cache) on network error, 5xx, 429
+   LRU ~600 bitmaps (200 on a phone or tablet, "Device budget"), `AbortSignal` support, each request given up after 30 s (`TILE_REQUEST_TIMEOUT_MS`, `TileTimeoutError`: a stalled connection would hold its slot for minutes), 3 retries (250 ms, 1 s, 4 s, bypassing the HTTP cache) on network error, timeout, 5xx, 429
    and 400 (the IGN Géoplateforme returned bursts of "Layer … unknown" as 400 for valid tiles, with a
    `max-age` of 21 days): a sub-tile that still fails makes its terrain tile's imagery incomplete (next item). Before the
    network, the copy from an offline pack when a pack contains the URL's source (see "Offline packs").
@@ -298,7 +301,9 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      export (`engine.setExporting(true)`) the view waits for every retry: up to `exportMaxLoadAttempts` (8) attempts,
      `exportRetryDelayMs` (1 s) apart, doubling up to `exportMaxRetryDelayMs` (30 s) (1, 2, 4, 8, 16, 30, 30 s: ~1.5 min
      of waits plus the fetcher's own retries, ~2.2 min per tile), fetched at once, counted in `pendingVisibleTiles` until
-     the last attempt; tiles that had given up are tried again at the start. Each failed node keeps why (`node.failure`:
+     the last attempt; tiles that had given up are tried again at the start, and so are the tiles the preview kept with
+     grey patches (`imageryMissing`, unloaded then loaded again: left as they were, the first frame showing one stopped the
+     export without a new try). Each failed node keeps why (`node.failure`:
      host, layer élévation / imagerie, cause such as « HTTP 503 », « erreur réseau (…) », « imagerie incomplète »); the
      selection lists the visible nodes given up on (`missing`) and those still retried (`retrying`), read by
      `viewTileFailures(engine)` for the export's error. A visible tile given up on (or drawn with imagery missing) is
@@ -331,10 +336,11 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      ~2.6 MB a tile (imagery texture 512² with mipmaps ~1.4 MB, its canvas ~1 MB, DEM grid, geometry) = ~310 MB at the cap.
    - **Tiles of the film fetched before its first frame** (`export/tilePreload.ts`, #401). Before the frames of a film,
      `filmTilesToPreload` lists the terrain and imagery tiles with the offline planner (`planOfflineTiles`, corridor
-     `PRELOAD_CORRIDOR_M` = 2 km, the follow camera at its lowest as « Préparer hors ligne », the export's LOD height), the
+     `PRELOAD_CORRIDOR_M` = 2 km, the follow camera at its lowest as « Préparer hors ligne », the export's LOD height, the
+     imagery of the « Date des photos » chosen through `datedImagerySource` as the terrain shows it), the
      tiles wider than the corridor first, then the others by the nearest point of the track, cut at `PRELOAD_MAX_BYTES`
      (estimated with each source's typical tile size: 250 MB phone, 400 MB tablet, 1 GB computer); `preloadTiles` fetches them
-     24 at a time in their order, each server within its `maxRequests` (`maxRequestsFor`: Esri 6, the connections a browser
+     24 at a time in their order, each server within its `maxRequests` (`maxRequestsFor`, the dated source given as `extra`: Esri 6, Wayback 6, the connections a browser
      gives an HTTP/1.1 server; its waiting requests would hold places the relief's could use) (`fetchTileBlob`, a tile of an
      offline pack is skipped, a failure only counted). 8 at once, shared, took a third longer (cold cache, 1080p sample). They go into the browser's
      HTTP cache only (every source sends `Cache-Control`; Esri, refused in offline packs, is fetched like any view): the engine

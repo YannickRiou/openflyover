@@ -80,7 +80,26 @@ export function isNoDataError(error: unknown): boolean {
  */
 function isRetryable(error: unknown): boolean {
   if (error instanceof TileFetchError) return error.status >= 500 || error.status === 429 || error.status === 400
-  return error instanceof TypeError
+  return error instanceof TypeError || error instanceof TileTimeoutError
+}
+
+/**
+ * Longest a tile request may take, answer and body included. A connection that stalls (a server that accepts and never
+ * answers, a network that drops packets without closing) would otherwise hold its fetch slot until the browser gives
+ * up, minutes later, and an export frame would wait for it as long. A tile is a few dozen kilobytes: 30 s is far beyond
+ * a slow mobile network.
+ */
+export const TILE_REQUEST_TIMEOUT_MS = 30_000
+
+/** Thrown when a tile request outlasts `TILE_REQUEST_TIMEOUT_MS`: retried like a network error. */
+export class TileTimeoutError extends Error {
+  readonly url: string
+
+  constructor(url: string) {
+    super(`Tile request timed out after ${TILE_REQUEST_TIMEOUT_MS / 1000} s: ${url}`)
+    this.name = 'TileTimeoutError'
+    this.url = url
+  }
 }
 
 /**
@@ -117,23 +136,48 @@ export const BACKGROUND_PRIORITY = 1_000_000
  * `reload` skips the HTTP cache (a retry must not get a cached error back); `priority` is the network priority hint.
  */
 export async function fetchTileBlob(url: string, signal?: AbortSignal, reload = false, priority: RequestPriority = 'auto'): Promise<Blob> {
-  const response = await fetch(url, reload ? { signal, cache: 'reload', priority } : { signal, priority })
-  if (!response.ok) throw new TileFetchError(url, response.status)
-  // update date of the IGN layers (Etalab licence), shown in « À propos et mises à jour »
-  noteTileLastModified(url, response.headers?.get('Last-Modified'))
-  return response.blob()
+  if (signal?.aborted) throw createAbortError()
+  // the request is aborted by the caller's signal or by the timeout, whichever comes first
+  const controller = new AbortController()
+  const onAbort = () => controller.abort()
+  signal?.addEventListener('abort', onAbort, { once: true })
+  let timedOut = false
+  const timer = setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, TILE_REQUEST_TIMEOUT_MS)
+  try {
+    const init = { signal: controller.signal, priority }
+    const response = await fetch(url, reload ? { ...init, cache: 'reload' } : init)
+    if (!response.ok) throw new TileFetchError(url, response.status)
+    // update date of the IGN layers (Etalab licence), shown in « À propos et mises à jour »
+    noteTileLastModified(url, response.headers?.get('Last-Modified'))
+    return await response.blob()
+  } catch (error) {
+    if (timedOut && !signal?.aborted) throw new TileTimeoutError(url)
+    throw error
+  } finally {
+    clearTimeout(timer)
+    signal?.removeEventListener('abort', onAbort)
+  }
 }
 
 /**
  * `fetchTileBlob` with the retry policy of the fetcher (network errors, 5xx, 429, 400; 3 retries after
  * `retryDelayMs`, ×4 each time, outside the HTTP cache). Shared by the fetcher and the offline packs.
  */
-export async function downloadTile(url: string, signal?: AbortSignal, retryDelayMs = 250, priority: RequestPriority = 'auto'): Promise<Blob> {
+export async function downloadTile(
+  url: string,
+  signal?: AbortSignal,
+  retryDelayMs = 250,
+  priority: RequestPriority = 'auto',
+  retryNetworkErrors = true,
+): Promise<Blob> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await fetchTileBlob(url, signal, attempt > 0, priority)
     } catch (error) {
-      if (signal?.aborted || attempt >= MAX_RETRIES || !isRetryable(error)) throw error
+      if (signal?.aborted || attempt >= MAX_RETRIES || !isRetryable(error) || (!retryNetworkErrors && error instanceof TypeError)) throw error
       if (retryDelayMs > 0) await delay(retryDelayMs * 4 ** attempt, signal)
     }
   }
@@ -253,6 +297,8 @@ interface PendingRequest {
   state: 'queued' | 'inflight' | 'done'
   waiters: Set<Waiter>
   controller: AbortController
+  /** false: a network error is not retried, the caller has a fallback (`fetchBitmap`'s `retryNetworkErrors`) */
+  retryNetworkErrors: boolean
 }
 
 interface HeapEntry {
@@ -334,7 +380,7 @@ export function createTileFetcher(options: TileFetcherOptions = {}): TileFetcher
       }
     }
     const priority = request.priority >= BACKGROUND_PRIORITY ? 'low' : 'auto'
-    return decodeBlob(await downloadTile(request.url, signal, retryDelayMs, priority))
+    return decodeBlob(await downloadTile(request.url, signal, retryDelayMs, priority, request.retryNetworkErrors))
   }
 
   async function run(request: PendingRequest): Promise<void> {
@@ -373,7 +419,7 @@ export function createTileFetcher(options: TileFetcherOptions = {}): TileFetcher
 
   function fetchBitmap(
     url: string,
-    { priority = 0, signal }: { priority?: number; signal?: AbortSignal } = {},
+    { priority = 0, signal, retryNetworkErrors = true }: { priority?: number; signal?: AbortSignal; retryNetworkErrors?: boolean } = {},
   ): Promise<ImageBitmap> {
     if (signal?.aborted) return Promise.reject(createAbortError())
 
@@ -393,6 +439,7 @@ export function createTileFetcher(options: TileFetcherOptions = {}): TileFetcher
           state: 'queued',
           waiters: new Set(),
           controller: new AbortController(),
+          retryNetworkErrors,
         }
         requests.set(url, request)
         queued++

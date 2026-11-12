@@ -32,7 +32,8 @@ describe('« Date des photos »: the setting', () => {
     expect(buildTileUrl(dated, { z: 15, x: 17009, y: 11722 })).toBe(
       'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/17632/15/11722/17009',
     )
-    expect(dated.fallback).toBeUndefined()
+    // where the archive has no photo (the sea, from zoom 14), the latest ones
+    expect(dated.fallback).toBe(esri)
     expect(datedImagerySource(esri, 'ign:2020')).toBe(esri)
   })
 

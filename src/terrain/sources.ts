@@ -251,10 +251,13 @@ export function getImagerySource(id: string): ImagerySource {
  */
 const hostOf = (url: string) => /^https?:\/\/([^/]+)/.exec(url)?.[1] ?? ''
 
-/** Most requests at once to the server of `url`: `maxRequests` of the source it belongs to, no limit otherwise. */
-export function maxRequestsFor(url: string): number {
+/**
+ * Most requests at once to the server of `url`: `maxRequests` of the source it belongs to, no limit otherwise. `extra`:
+ * sources built at run time, on a server of their own (the dated photos, `datedImagerySource`).
+ */
+export function maxRequestsFor(url: string, extra: readonly TileSourceBase[] = []): number {
   const host = hostOf(url)
-  const source = [...TERRAIN_SOURCES, ...IMAGERY_SOURCES].find((s) => s.maxRequests !== undefined && hostOf(s.urlTemplate) === host)
+  const source = [...extra, ...TERRAIN_SOURCES, ...IMAGERY_SOURCES].find((s) => s.maxRequests !== undefined && hostOf(s.urlTemplate) === host)
   return source?.maxRequests ?? Infinity
 }
 
