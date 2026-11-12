@@ -218,6 +218,11 @@ export interface VideoEncodeSession {
    * respects backpressure. The frame is taken before anything is awaited: `source` may be closed once the call returned.
    */
   addFrame(index: number, source?: CanvasImageSource): Promise<void>
+  /**
+   * Only where a frame is a file of its own (the image sequence): frame `index` is the same image as the one just added, so
+   * its bytes are reused instead of being encoded again. Not called for the first frame of a run (nothing to repeat).
+   */
+  repeatFrame?(index: number): Promise<void>
   /** Finalize the file: the blob in memory, null when it was written to the destination. */
   finish(): Promise<{ blob: Blob | null; sizeBytes: number }>
   /** Abort the encoding and drop what was written (a destination file is removed); later calls reject with ExportCanceledError. */

@@ -492,10 +492,13 @@ describe('runExport', () => {
     expect(useExportStore.getState().timings.preloadMs).toBeGreaterThanOrEqual(0)
   })
 
-  it('a computer keeps the wall-time retention (the engine is only reset at the end)', async () => {
+  it('a computer counts the tiles in film frames too (a slow frame must not unload what was prefetched), then goes back to wall time', async () => {
     const setRetention = vi.fn()
-    await exportFilm(destination(), { engine: () => ({ setRetention }) as unknown as TerrainEngine, budget: DESKTOP_BUDGET })
-    expect(setRetention.mock.calls).toEqual([[null]])
+    const { frameCount } = await exportFilm(destination(), { engine: () => ({ setRetention }) as unknown as TerrainEngine, budget: DESKTOP_BUDGET })
+    expect(DESKTOP_BUDGET.exportTileKeepFrames).toBeGreaterThan(0)
+    expect(setRetention).toHaveBeenCalledTimes(frameCount + 1)
+    expect(setRetention.mock.calls[0][0]).toMatchObject({ keepFrames: DESKTOP_BUDGET.exportTileKeepFrames, prefetchKeepFrames: 50 })
+    expect(setRetention.mock.calls.at(-1)).toEqual([null])
   })
 
   it('asks for the next frame\'s tiles right after a frame is drawn, before waiting for the GPU', async () => {

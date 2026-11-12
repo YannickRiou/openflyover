@@ -22,6 +22,20 @@ export function createSequenceEncoder(canvas: OffscreenCanvas, folder: Pick<Writ
   let canceled = false
   let count = 0
   let bytes = 0
+  /** the PNG of the last frame added, for the frames that repeat it (holds): written again, not encoded again */
+  let last: Uint8Array | null = null
+  async function writeFrame(index: number, data: Uint8Array): Promise<void> {
+    const file = await folder.createFile(sequenceFileName(baseName, index))
+    try {
+      await file.write(data, 0)
+      await file.close()
+      bytes += data.length
+      count++
+    } catch (error) {
+      await file.discard().catch(() => undefined)
+      throw error
+    }
+  }
   return {
     codec: { container: 'png', codec: 'png' },
     audioCodec: null,
@@ -33,17 +47,15 @@ export function createSequenceEncoder(canvas: OffscreenCanvas, folder: Pick<Writ
       if (canceled) throw new ExportCanceledError()
       const blob = await canvas.convertToBlob({ type: 'image/png' })
       if (canceled) throw new ExportCanceledError()
-      const file = await folder.createFile(sequenceFileName(baseName, index))
-      try {
-        const data = new Uint8Array(await blob.arrayBuffer())
-        await file.write(data, 0)
-        await file.close()
-        bytes += data.length
-        count++
-      } catch (error) {
-        await file.discard().catch(() => undefined)
-        throw error
-      }
+      const data = new Uint8Array(await blob.arrayBuffer())
+      last = null // not a repeat of the previous one if this write fails
+      await writeFrame(index, data)
+      last = data
+    },
+    async repeatFrame(index) {
+      if (canceled) throw new ExportCanceledError()
+      if (!last) throw new Error('No frame to repeat.')
+      await writeFrame(index, last)
     },
     async finish() {
       if (canceled) throw new ExportCanceledError()

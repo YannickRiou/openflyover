@@ -53,6 +53,27 @@ describe('image sequence', () => {
     expect(await session.finish()).toEqual({ blob: null, sizeBytes: 15 })
   })
 
+  it('writes a repeated frame with the same bytes, without encoding it again', async () => {
+    let encodes = 0
+    const { files, folder } = fixture()
+    const canvas = { convertToBlob: async () => new Blob([new Uint8Array([137, 80, 78, 71, ++encodes])], { type: 'image/png' }) } as unknown as OffscreenCanvas
+    const session = createSequenceEncoder(canvas, folder, 'Tour')
+    await expect(session.repeatFrame!(0)).rejects.toThrow()
+    await session.addFrame(0)
+    await session.repeatFrame!(1)
+    await session.repeatFrame!(2)
+    await session.addFrame(3)
+    expect(encodes).toBe(2)
+    const bytes = (name: string) => [...(files.get(name)?.data ?? [])]
+    expect(bytes('Tour_00002.png')).toEqual(bytes('Tour_00001.png'))
+    expect(bytes('Tour_00003.png')).toEqual(bytes('Tour_00001.png'))
+    expect(bytes('Tour_00004.png')).not.toEqual(bytes('Tour_00001.png'))
+    expect(session.written()).toBe(4)
+    expect(await session.finish()).toEqual({ blob: null, sizeBytes: 20 })
+    await session.cancel()
+    await expect(session.repeatFrame!(4)).rejects.toBeInstanceOf(ExportCanceledError)
+  })
+
   it('canceled: the next frame and the end refuse, what was written stays', async () => {
     const { canvas, files, folder } = fixture()
     const session = createSequenceEncoder(canvas, folder, 'Tour')

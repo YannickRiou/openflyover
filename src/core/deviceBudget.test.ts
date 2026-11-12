@@ -31,7 +31,7 @@ describe('budgetFor', () => {
       memoryWarnBytes: 1.5e9,
       maxResidentTiles: Infinity,
       maxTileLoads: 24,
-      exportTileKeepFrames: 0,
+      exportTileKeepFrames: 12,
       exportPrefetchAhead: [5, 10, 15, 20, 30, 40],
       shadowMapSize: 4096,
       maxTrees: 250_000,
