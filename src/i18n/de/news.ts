@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Neuheiten',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v812.labels.title': "Beschriftungen, die man auf dem Handy lesen kann",
+  'v812.labels.text': "In einem Hochformat-Film, 9:16 oder 4:5, erscheinen die Namen von Gipfeln, Pässen und Seen jetzt von selbst größer, damit man sie auf dem Handy lesen kann. Wenn Sie sie noch größer möchten: „Größe der Beschriftungen“ geht bis ×3.",
   'v811.situation.title': "Filme aus großer Höhe lassen sich bis zum Ende exportieren",
   'v811.situation.text': "Wenn Ihr Film mit einer Ansicht der ganzen Region aus sehr großer Höhe beginnt oder endet, konnte der Export langsamer werden und stehen bleiben. Jetzt läuft er bis zum Ende, auch auf einem einfachen Computer. Das Bild bleibt gleich.",
   'v81.export.title': "Ihre Exporte laufen bis zum Ende",

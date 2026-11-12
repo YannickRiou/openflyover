@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v812.labels.title': "Etiquetas que se leen en el móvil",
+  'v812.labels.text': "En una película vertical, en 9:16 o 4:5, los nombres de cumbres, collados y lagos se ven ahora más grandes por sí solos, para leerse en el móvil. Si los quieres aún más grandes, «Tamaño de las etiquetas» llega hasta ×3.",
   'v811.situation.title': "Las películas vistas desde el cielo se exportan hasta el final",
   'v811.situation.text': "Si tu película empieza o termina con una vista de toda la región, tomada desde muy arriba, la exportación podía ir más lenta y llegar a bloquearse. Ahora llega hasta el final, incluso en un ordenador modesto, y la imagen no cambia.",
   'v81.export.title': "Tus exportaciones llegan hasta el final",

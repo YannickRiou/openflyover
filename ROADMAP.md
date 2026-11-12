@@ -10,6 +10,7 @@ it serves and how it will be checked. The [changelog](CHANGELOG.md) says what ea
 - **8.0.1**: a ridge hides the marker no longer than before 8.0; the « Nouveautés » are in plainer French.
 - **8.1** (November 2026): the export holds on long films and bad networks: tiles that stall give up and are tried again, a
   graphics card reset is recovered, « Annuler » always works, a failed export can resume from the kept frames.
+- **8.1.2**: the 3D labels grow on their own in a vertical film (×1.5 in 9:16) and « Taille des étiquettes » goes up to ×3; new screenshots in the user guide.
 - **8.1.1**: a « situation » opening or closing no longer stalls the export, even on a modest computer; the « Nouveautés » are rewritten in plain words.
 - **Still open**: the 7.0 items below that are not marked done, and the points of « To decide ».
 
