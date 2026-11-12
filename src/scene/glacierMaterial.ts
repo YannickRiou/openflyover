@@ -76,10 +76,6 @@ export function createGlacierMaterial(): MeshStandardMaterial {
     metalness: 0,
     transparent: true,
     depthWrite: false,
-    // a little nearer than the relief it lies on: the coarse levels of detail of the relief do not reach through
-    polygonOffset: true,
-    polygonOffsetFactor: -4,
-    polygonOffsetUnits: -8,
   })
   material.onBeforeCompile = (shader) => {
     shader.vertexShader = vertexHead + after(after(shader.vertexShader, '#include <beginnormal_vertex>', vertexNormal), '#include <begin_vertex>', vertexPosition)

@@ -149,10 +149,6 @@ export function createWaterMaterial(uniforms: Record<string, Uniform>): MeshStan
     metalness: 0,
     transparent: true,
     depthWrite: false,
-    // a little nearer than the relief it lies on: the coarse levels of detail of the relief do not reach through
-    polygonOffset: true,
-    polygonOffsetFactor: -2,
-    polygonOffsetUnits: -4,
   })
   material.onBeforeCompile = (shader) => {
     // the snow line is the terrain's own uniforms, not a copy

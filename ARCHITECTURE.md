@@ -3647,8 +3647,8 @@ exports) gets it from the terrain source of the settings.
   little above the datum is not flooded; it needs no tile (`pieceHeights`), the same on every exaggeration (0 × any factor).
   A **ribbon** takes the height of its middle vertex for its three vertices (the water is level across the river); a sample
   whose tile is not loaded takes that of the nearest known one along the line (`stripHeights`), none known: skipped.
-  A single merged geometry (one draw call), `raycast` neutralized (track picker, camera), `depthWrite` off, a polygon offset
-  (−2, −4) towards the camera.
+  A single merged geometry (one draw call), `raycast` neutralized (track picker, camera), `depthWrite` off. No polygon offset: the canvas uses a logarithmic depth buffer, where
+  the fragment shader writes the depth and the offset has no effect.
 - **Rendering**: `MeshStandardMaterial` (roughness 0.08: sun glint from the `SunLight`, terrain shadows) extended in
   `onBeforeCompile`: normals from four sine waves (23, 9, 4.1 and 1.7 m) animated by the **film time**
   (`playback.timeS`, otherwise `clock.timeAtProgress`), faded out when their wavelength covers fewer than ~8 pixels (no
@@ -3883,8 +3883,8 @@ photo. The glaciers mapped by OpenStreetMap are therefore drawn with the snow lo
 - **Draping** (`GlacierLayer`, before `WaterLayer` in `FlyoverCanvas`): like the water, `engine.sampleHeight` × exaggeration + `GLACIER_LIFT_M` (4 m, not exaggerated:
   at 1.5 m the coarse levels of detail of the relief rose through the ice as hard-edged patches), re-draped (debounced, flushed by the export through `registerDrapeFlush`) on each
   `engine.onChange`. The **normal** of each vertex comes from two more heights, 25 m to the east and to the north (`NORMAL_STEP_M`), so the sun and the terrain's shadows shade the
-  ice like the relief. The **flow** of a glacier (downhill, the mean of its normals) is one attribute per glacier. One merged geometry (one draw call), `raycast` off, `depthWrite` off, a polygon offset
-  (−4, −8), `renderOrder` −1 (drawn before the water: a glacial lake stays water).
+  ice like the relief. The **flow** of a glacier (downhill, the mean of its normals) is one attribute per glacier. One merged geometry (one draw call), `raycast` off, `depthWrite` off, no polygon offset (it has no effect with
+  the logarithmic depth buffer), `renderOrder` −1 (drawn before the water: a glacial lake stays water).
 - **Material** (`src/scene/glacierMaterial.ts`): `MeshStandardMaterial` (roughness 0.85, `receiveShadow`) extended in `onBeforeCompile`, no texture, no time (the export is deterministic).
   The albedo is that of the snow (`SNOW_ALBEDO_GLSL`, linear 0.80, 0.83, 0.88); the light the sky gives (what the shade receives) is multiplied by (0.9, 0.97, 1.1), so the shade is a little bluer.
   **Crevasses**: thin dark lines (the iso-line of a hash noise, `SNOW_NOISE_GLSL` of `snowShader.ts`) of cells 5 m across and 40 m along the flow of the glacier, a second set of 13 m cells, only in
