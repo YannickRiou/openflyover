@@ -47,6 +47,7 @@ const messages: Messages['project'] = {
   'actions.openedWarnings': '{opened}.\n{warnings}',
   'actions.openFailed': '„{fileName}“ kann nicht geöffnet werden: {reason}',
   'actions.closed': 'Projekt „{name}“ geschlossen',
+  'actions.trackRemoved': 'Track „{name}“ entfernt',
   'actions.extraProjects': 'Nur ein Projekt gleichzeitig: {names} nicht geöffnet.',
   'actions.readFailed': 'Die gewählte Datei kann nicht gelesen werden: {error}',
   'actions.chainQuestion': 'Diese {count} Tracks verketten?',

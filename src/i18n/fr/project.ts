@@ -45,6 +45,7 @@ export default {
   'actions.openedWarnings': '{opened}.\n{warnings}',
   'actions.openFailed': "Impossible d'ouvrir « {fileName} » : {reason}",
   'actions.closed': 'Projet « {name} » fermé',
+  'actions.trackRemoved': 'Trace « {name} » retirée',
   'actions.extraProjects': 'Un seul projet à la fois : {names} non ouvert(s).',
   'actions.readFailed': 'Impossible de lire le fichier choisi : {error}',
   'actions.chainQuestion': 'Enchaîner ces {count} traces ?',

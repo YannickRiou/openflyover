@@ -245,11 +245,20 @@ let closingLastTrack = false
 /**
  * The ✕ of a track card. The last track of the project goes with the project, as « Mes projets » of the OpenFlyover menu (the home screen
  * shows, nothing is left to save): the same question when changes would be lost, then « Annuler » in the message puts
- * the track and the project back. The other tracks just go.
+ * the track and the project back. The other tracks go with the same « Annuler ».
  */
 export async function removeTrackOrCloseProject(id: string, ask: () => Promise<CloseAnswer>): Promise<void> {
   const { tracks, projectName, removeTrack } = useAppStore.getState()
-  if (tracks.length !== 1 || tracks[0].id !== id) return removeTrack(id)
+  if (tracks.length !== 1 || tracks[0].id !== id) {
+    // the other tracks just go, with the same « Annuler » as the last one
+    const removed = tracks.find((track) => track.id === id)
+    const putBack = keepProject()
+    removeTrack(id)
+    if (removed && useAppStore.getState().tracks !== tracks) {
+      showUntilTracksChange({ kind: 'success', text: t('project.actions.trackRemoved', { name: removed.name }), action: { label: t('common.undo'), run: () => putBack() } })
+    }
+    return
+  }
   // a second click, while the last write or the answer is awaited, would close (and keep) the project twice
   if (closingLastTrack) return
   closingLastTrack = true

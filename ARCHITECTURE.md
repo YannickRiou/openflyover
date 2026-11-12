@@ -1179,7 +1179,7 @@ The interface and the texts drawn into the films and posters exist in **French**
 - **Pacing** (`src/flyover/pacing.ts`, pure; `settings.pacing` = `keepDuration` and `transitionS`, "Survol" tab): progress
   remains the distance fraction; only the film time → progress mapping changes. It is made of the film's stops (and the
   nights and junction holds), the speed portions and the speed keys (see "Film and timeline"): each stop adds exactly
-  its duration with raised-cosine entry and exit (≤ `transitionS`, 1.5 s by default). Tabulated travel time (constant
+  its duration with raised-cosine entry and exit (≤ `transitionS`, 1.5 s by default; the entry is shortened only by the pause before, the exit only by the pause after, so a recap pause a metre before a junction still eases in and the junction out). Tabulated travel time (constant
   speed per step: exact inverse by bisection). `keepDuration` (default) raises the base speed to keep `flyoverDurationS`
   (stops ≤ 50% of the duration), otherwise the film gets longer. Without stop, portion or key: identical to
   `advanceProgress`. `FlyoverRig` advances the film time (`playback.timeS`; during a pause the progress does not move) and
@@ -2347,7 +2347,7 @@ The format of the file (document fields, units, what each version introduced, th
   the same `closeOpenProject` (same question, shown in place in the track list; disabled during an export or a batch /
   render queue): the home screen and the quit guard then find an empty, unmodified project. « Annuler » in the message
   (`showUntilTracksChange`) puts the project back as it was (`keepProject`, like `keepOpenProject` of the render queue:
-  same objects, media table, project file, saved snapshot, open entry; the undo history stays empty).
+  same objects, media table, project file, saved snapshot, open entry; the undo history stays empty). A track that is not the last goes through `removeTrack` with the same « Annuler » ("Trace « … » retirée", the same `keepProject`).
 - **"modifié" chip + "Par défaut" button** (`ui/ModifiedMarker.tsx`) at the top right of each settings panel: list
   of the panel's `Settings` keys, deep-compared with the values of `DEFAULT_SETTINGS` (`modifiedSettings` /
   `sameValue`, `project/apply.ts`); "Par défaut" resets these keys to default in a single history step (`resetSettings`,
