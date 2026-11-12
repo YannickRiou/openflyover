@@ -38,6 +38,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **The landmarks cache no longer crowds out your settings**: the OpenStreetMap answers kept on the device now stay under 3 million characters in all, the oldest dropped first. When the browser storage is full, a write of your preferences, render queue, history or Strava login first drops that cache, then tries again, instead of failing silently.
 - **A busy Overpass server that answers « 200 » is handled like a busy one**: a response reporting a runtime error (query timed out) is retried once, then the next server is tried, with the « serveur occupé » message if all fail. The time limit now also covers the reading of the answer, so a stalled one no longer freezes the queue.
 - **« Tracer sur la carte » respects the routing servers' limit**: the legs of a hand-drawn route are asked one at a time, at least one second apart for the OpenStreetMap servers (their policy: one request a second), instead of one request per click as fast as you click. A refusal for too many requests (429) leaves that leg straight and no longer sends the same request to the other service.
+- **The files of a PNG sequence are named safely**: the name of the track goes through the same cleaning as a video file name, so « Tour 10/12 » gives `Tour 10-12_00001.png` instead of a path that leaves the chosen folder or a name the system rejects (`sequenceFileName`, `sequencePattern`).
 
 ## 8.0.1 (November 2026)
 

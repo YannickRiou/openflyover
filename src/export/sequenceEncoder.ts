@@ -6,17 +6,21 @@
  */
 import type { WritableFolder } from '../platform/folder'
 import { ExportCanceledError, type VideoEncodeSession } from './encoder'
+import { videoFileName } from './store'
 
 /** Digits of the frame number (99,999 frames: more than an hour at 24 images a second). */
 export const SEQUENCE_DIGITS = 5
 
-/** `<name>_00001.png` for frame `index` (0 for the first). */
+/** The name of the film made safe for a file system, as for a video (« Tour 10/12 » is « Tour 10-12 »). */
+const safeBaseName = (baseName: string) => videoFileName(baseName, '')
+
+/** `<name>_00001.png` for frame `index` (0 for the first); the name has no character a file system rejects. */
 export function sequenceFileName(baseName: string, index: number): string {
-  return `${baseName}_${String(index + 1).padStart(SEQUENCE_DIGITS, '0')}.png`
+  return `${safeBaseName(baseName)}_${String(index + 1).padStart(SEQUENCE_DIGITS, '0')}.png`
 }
 
 /** The pattern a compositor is given for the sequence: `<name>_#####.png`. */
-export const sequencePattern = (baseName: string) => `${baseName}_${'#'.repeat(SEQUENCE_DIGITS)}.png`
+export const sequencePattern = (baseName: string) => `${safeBaseName(baseName)}_${'#'.repeat(SEQUENCE_DIGITS)}.png`
 
 export function createSequenceEncoder(canvas: OffscreenCanvas, folder: Pick<WritableFolder, 'createFile'>, baseName: string): VideoEncodeSession & { readonly written: () => number } {
   let canceled = false
