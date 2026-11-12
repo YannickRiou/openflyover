@@ -184,32 +184,10 @@ export const OUTER_MAX_ZOOM = 11
  */
 export const LOD_STEP = 1.1
 export const MAX_LOD_LEVEL = 28
-/**
- * Most coarsening of the export's level of detail while the camera dives (`setZoomScale`): ×2 is one level of detail, the
- * tiles the next frames would draw anyway are their parents' children.
- */
-export const MAX_ZOOM_SCALE = 2
 /** `enforceTextureBudget` unloads down to this share of the budget, so it does not run again at the next load */
 export const TEXTURE_BUDGET_FLOOR = 0.9
 /** prefetches stop starting loads past this share of `textureBudgetBytes` */
 export const PREFETCH_BUDGET_SHARE = 0.8
-/**
- * Shortest time (s) a level of detail should stay on screen while the camera comes closer: a level the zoom would
- * replace sooner is not loaded, its parent is drawn for those frames (`zoomLodScale`).
- */
-export const ZOOM_LEVEL_MIN_S = 0.5
-
-/**
- * Coarsening of the export's level of detail for a camera whose distance to what it looks at goes from `fromM` to `toM`
- * in `dtS` seconds. The screen size of the ground grows as e^(r t), r = ln(from / to) / dt, so a level of detail lasts
- * ln 2 / r before the next one replaces it; below `ZOOM_LEVEL_MIN_S` the error target is raised so that a level lasts
- * that long, at most `MAX_ZOOM_SCALE` (one level). 1 when the camera holds or moves away.
- */
-export function zoomLodScale(fromM: number, toM: number, dtS: number, minS = ZOOM_LEVEL_MIN_S): number {
-  if (!(fromM > 0 && toM > 0 && dtS > 0) || toM >= fromM) return 1
-  const rate = Math.log(fromM / toM) / dtS
-  return Math.min(MAX_ZOOM_SCALE, Math.max(1, (rate * minS) / Math.LN2))
-}
 /** the preview goes one level finer only when that selection holds within this share of the budget (hysteresis) */
 export const LOD_RELAX_SHARE = 0.9
 /** material colour when a tile has no imagery (neutral grey) */
@@ -738,7 +716,7 @@ export function createTerrainEngine(
   }
 
   /** error target of the selections at the current level of detail (exactly `errorTargetPx` at level 0) */
-  const errorTarget = () => opts.errorTargetPx * LOD_STEP ** lodLevel * zoomScale
+  const errorTarget = () => opts.errorTargetPx * LOD_STEP ** lodLevel
 
   /** true if the selection at `level` holds at most `limit` tiles (`selectionParams` set for this update) */
   function fits(level: number, limit: number): boolean {
@@ -1069,12 +1047,6 @@ export function createTerrainEngine(
     // errorTargetPx and maxZoom are read by the next update()
   }
 
-  /** coarsening of the export's level of detail while the camera comes closer fast (`setZoomScale`) */
-  let zoomScale = 1
-  function setZoomScale(scale: number): void {
-    zoomScale = Math.min(MAX_ZOOM_SCALE, Math.max(1, Number.isFinite(scale) ? scale : 1))
-  }
-
   function setRetention(next: TerrainRetention | null): void {
     // `keepUntil` was stamped on the other clock: start over, the next views and prefetches stamp it again
     if ((next === null) !== (retention === null)) forEachNode(roots, (node) => (node.keepUntil = 0))
@@ -1142,7 +1114,7 @@ export function createTerrainEngine(
 
   buildTree()
 
-  const engine: TerrainEngine = { group, update, sampleHeight, setOptions, onChange, stats, prefetch, setRetention, setZoomScale, setExporting, caches, dispose }
+  const engine: TerrainEngine = { group, update, sampleHeight, setOptions, onChange, stats, prefetch, setRetention, setExporting, caches, dispose }
   failureReaders.set(engine, failures)
   imageryRestorers.set(engine, restoreImagery)
   return engine

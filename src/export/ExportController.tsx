@@ -41,7 +41,7 @@ import { useFilmClock } from '../scene/usePacing'
 import { holdRegion } from '../osm/region'
 import { useWaterStore } from '../osm/store'
 import { useAppStore } from '../state/store'
-import { hostOf, viewTileFailures, zoomLodScale } from '../terrain/engine'
+import { hostOf, viewTileFailures } from '../terrain/engine'
 import { fetchTileBlob, getStoredTileReader } from '../terrain/fetch'
 import { maxRequestsFor } from '../terrain/sources'
 import { ERROR_TARGET_PX, engineAreaFor, engineOptionsFromSettings, usesRegionView } from '../scene/terrainLayerSetup'
@@ -98,8 +98,6 @@ export interface ExportControllerProps {
 
 /** Upcoming frames are prefetched (offsets in the device budget) every PREFETCH_EVERY rendered frames. */
 const PREFETCH_EVERY = 5
-/** how far ahead (s of video) the export looks at the camera to tell how fast it dives (`zoomScaleAt`) */
-const ZOOM_LOOK_S = 0.25
 /** The frame after the one just drawn, prefetched before the wait for the GPU. */
 const NEXT_FRAME = [1] as const
 /**
@@ -701,19 +699,6 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       (settings.water.enabled && useWaterStore.getState().polygons > 0)
     const localFrame = deps.frame()
     const aspect = width / height
-    /**
-     * Coarsening of the level of detail at frame `i` while the camera dives (`zoomLodScale`): its distance to what it looks
-     * at now and `ZOOM_LOOK_S` later, placed without the terrain so the value is the same on every run; 1 across a cut.
-     */
-    const zoomLookFrames = Math.max(1, Math.round(ZOOM_LOOK_S * fps))
-    const zoomScaleAt = (i: number): number => {
-      const j = Math.min(schedule.length - 1, i + zoomLookFrames)
-      if (((globalThis as any).__dbg ?? '').includes('zoom0')) return 1
-      if (j <= i || !path || path.count === 0 || !localFrame || !sameShot(filmClock, times[i], times[j])) return 1
-      const a = filmViewAt(path, filmClock, schedule[i], times[i], localFrame, null, aspect)
-      const b = filmViewAt(path, filmClock, schedule[j], times[j], localFrame, null, aspect)
-      return zoomLodScale(a.position.distanceTo(a.target), b.position.distanceTo(b.target), (j - i) / fps)
-    }
     // most renders per frame: lowered by the quality (qualityTier.ts)
     const { maxSubFrames } = effectiveRender(request.quality, settings.clouds)
     /** the view of the last rendered frame moved with time */
@@ -820,7 +805,6 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         retention.frame = i
         deps.engine()?.setRetention?.(retention)
       }
-      deps.engine()?.setZoomScale?.(zoomScaleAt(i))
       const progress = schedule[i]
       // the renders of an open shutter stay in the shot of the frame: no blend across a cut
       const keep = (t: number) => sameShot(filmClock, t, times[i])

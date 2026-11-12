@@ -316,11 +316,6 @@ export interface TerrainEngine {
    */
   setRetention?(retention: TerrainRetention | null): void
   /**
-   * Video export: the error target is multiplied by `scale` (1 = as set, at most `MAX_ZOOM_SCALE`) while the camera
-   * comes closer so fast that a level of detail would show for a fraction of a second only (`zoomLodScale`).
-   */
-  setZoomScale?(scale: number): void
-  /**
    * Video export: `pendingVisibleTiles` also waits for the retries of failed tiles of the view (fetched at once, after
    * `exportRetryDelayMs`, not last), and tiles that had given up are tried again. `false` at the end of the export.
    */
