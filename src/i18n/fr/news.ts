@@ -2,6 +2,8 @@ export default {
   title: 'Nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v813.export.title': "Les films rapides ne rampent plus à l’export",
+  'v813.export.text': "Un film qui vole vite et près du sol pouvait mettre plusieurs secondes par image à l’export, surtout avec un détail de l’imagerie « Fin » ou « Très fin ». L’application ne demande plus que les photos que l’écran peut montrer, et prépare toujours les images suivantes. Sur un long raid, c’est jusqu’à six fois plus rapide, pour la même image.",
   'v812.labels.title': "Des étiquettes lisibles sur un téléphone",
   'v812.labels.text': "Dans un film vertical, en 9:16 ou en 4:5, les noms des sommets, des cols et des lacs s’affichent maintenant plus grands, d’eux-mêmes, pour se lire sur un téléphone. Si vous les voulez encore plus grands, « Taille des étiquettes » va jusqu’à ×3.",
   'v811.situation.title': "Les films vus du ciel s’exportent jusqu’au bout",

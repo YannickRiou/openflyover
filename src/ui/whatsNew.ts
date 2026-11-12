@@ -21,14 +21,15 @@ export interface NewsVersion {
 
 export const WHATS_NEW: readonly NewsVersion[] = [
   {
-    version: '8.1.2',
+    version: '8.1.3',
     items: [
-      { icon: 'map-pin', get title() { return t('news.v812.labels.title') }, get text() { return t('news.v812.labels.text') } },
+      { icon: 'gauge', get title() { return t('news.v813.export.title') }, get text() { return t('news.v813.export.text') } },
     ],
   },
   {
     version: '8.1',
     items: [
+      { icon: 'map-pin', get title() { return t('news.v812.labels.title') }, get text() { return t('news.v812.labels.text') } },
       { icon: 'video', get title() { return t('news.v81.export.title') }, get text() { return t('news.v81.export.text') } },
       { icon: 'mountain', get title() { return t('news.v811.situation.title') }, get text() { return t('news.v811.situation.text') } },
       { icon: 'gauge', get title() { return t('news.v81.speed.title') }, get text() { return t('news.v81.speed.text') } },

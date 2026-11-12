@@ -3,8 +3,9 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## 8.1.3 (unreleased)
+## 8.1.3 (November 2026)
 
+- **« Nouveautés 8.1.3 »**: fast, low films export without crawling; 8.1.2 is folded into 8.1.
 - **The imagery detail follows the screen**: with « Détail de l'imagerie » on « Fin » or « Très fin », a tile at the deepest zoom of the relief took its finest photos (4 or 16 per tile, a 512 or 1024 px texture) as soon as it appeared, 20 km away, where it covers under 200 px. It now takes the levels the screen shows, by the rule the relief already follows (one more level each time a grid cell doubles on screen past 3 px, `imageryLevels`), and a finer texture as the camera comes closer (`upgradeImagery`); a frame of an export waits for it, the look-ahead fetches it, the plan of the preload lists it (`planFilmTiles`). Measured on a raid flown at 7 km/s, « Très fin », 1080×1920: around frame 320 the film asked 880 photos a frame from a server that takes 6 requests at once, 7 s a frame; now 1.2 s. The preview loads the same way.
 - **The look-ahead of an export no longer stops when the textures reach their budget**: past 80 % of the budget it stopped, and the unloading only went down to 90 %, so it never started again: low over the ground every frame then waited for its own tiles, level after level. The film says what to keep: the tiles the rendered frames left behind go first, then the ones needed the farthest ahead (`neededAt`, `evictTextures`); a coming frame never loses its tiles to a later one.
 - **One queue per server**: the relief and the photos shared 12 requests at once, and a tile needs both: the relief (100 kB a tile) held the photos back. Each server now has its own queue, 12 requests at once or its own limit when it is lower (Esri: 6, unchanged) (`createTileFetcher`).

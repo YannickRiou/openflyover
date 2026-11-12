@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v813.export.title': "Las películas rápidas ya no se arrastran al exportar",
+  'v813.export.text': "Una película que vuela rápido y cerca del suelo podía tardar varios segundos por imagen al exportar, sobre todo con el detalle de las imágenes en «Fino» o «Muy fino». La aplicación ya solo pide las fotos que la pantalla puede mostrar y siempre prepara las imágenes siguientes. En una ruta larga es hasta seis veces más rápido, con la misma imagen.",
   'v812.labels.title': "Etiquetas que se leen en el móvil",
   'v812.labels.text': "En una película vertical, en 9:16 o 4:5, los nombres de cumbres, collados y lagos se ven ahora más grandes por sí solos, para leerse en el móvil. Si los quieres aún más grandes, «Tamaño de las etiquetas» llega hasta ×3.",
   'v811.situation.title': "Las películas vistas desde el cielo se exportan hasta el final",
