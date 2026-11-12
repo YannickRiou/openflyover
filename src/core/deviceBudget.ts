@@ -51,6 +51,12 @@ export interface DeviceBudget {
    * level of detail coarsens to fit. Without it a phone's export grows by ~1.2 tiles per frame until iOS ends the tab.
    */
   maxResidentTiles: number
+  /**
+   * GPU memory (bytes) the imagery textures of the loaded tiles may take (`EngineTuning.textureBudgetBytes`): a dive from
+   * high up kept 2,600 textures, about 4 GB, on a 6 GB card and the export stalled (November 2026). Infinity where
+   * `maxResidentTiles` already bounds them.
+   */
+  tileTextureBytes: number
   /** terrain tiles loading at the same time: each holds its fetches and decode copies (bitmaps, DEM pixels, canvas) */
   maxTileLoads: number
   /**
@@ -85,6 +91,8 @@ export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
   maxVideoBitrate: Infinity,
   memoryWarnBytes: 1.5e9,
   maxResidentTiles: Infinity,
+  // about 700 tiles of 512 px imagery: two or three times what a 4K view draws
+  tileTextureBytes: 1e9,
   maxTileLoads: 24,
   // frames, not 30 s: a slow frame (clouds, a wait for tiles) must not unload what was prefetched 40 frames ahead; memory is not capped here
   exportTileKeepFrames: 12,
@@ -94,7 +102,7 @@ export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
   anisotropy: 16,
 }
 
-const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'exportCloudResolutionScale' | 'exportCloudShadowEvery' | 'maxExportShortSide' | 'maxLodHeightPx' | 'maxVideoBitrate' | 'memoryWarnBytes' | 'maxResidentTiles' | 'maxTileLoads'> = {
+const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'exportCloudResolutionScale' | 'exportCloudShadowEvery' | 'maxExportShortSide' | 'maxLodHeightPx' | 'maxVideoBitrate' | 'memoryWarnBytes' | 'maxResidentTiles' | 'tileTextureBytes' | 'maxTileLoads'> = {
   maxPixelRatio: 2,
   movingPixelRatio: 1.5,
   tileBitmaps: 200,
@@ -143,6 +151,7 @@ export function budgetFor({ coarsePointer, shortSidePx, memoryGb }: DeviceTraits
     memoryWarnBytes: 250e6,
     // the preview holds ~70 tiles; the export (400-500 MB of tiles at most) never needs more
     maxResidentTiles: phone ? 120 : 160,
+    tileTextureBytes: Infinity,
     // an iPhone 12 held ~94 tiles pending at once in a low view: their decode copies pile up before the cap applies
     maxTileLoads: phone ? 6 : 12,
   }

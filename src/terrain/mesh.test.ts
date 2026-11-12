@@ -3,7 +3,7 @@ import { Vector3 } from 'three'
 import type { HeightGrid, TileKey } from '../core/types'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { tileBounds, tileCenter } from '../geo/mercator'
-import { buildTileGeometry, buildTileMesh, meshVertexGrid, sampleTileMeshAt, tileMeshLayout } from './mesh'
+import { buildTileGeometry, buildTileMesh, disposeTileGeometry, meshVertexGrid, sampleTileMeshAt, tileMeshLayout } from './mesh'
 
 /** A z=12 tile over the Mont Blanc massif. */
 const KEY: TileKey = { z: 12, x: 2126, y: 1457 }
@@ -242,5 +242,24 @@ describe('meshVertexGrid', () => {
     for (const [u, v] of [[0.1, 0.2], [0.5, 0.5], [0.93, 0.07], [0.3333, 0.7777]]) {
       expect(sampleTileMeshAt(KEY, vertices, 64, KEY.x + u, KEY.y + v)).toBe(sampleTileMeshAt(KEY, full, 64, KEY.x + u, KEY.y + v))
     }
+  })
+})
+
+describe('shared layout of the tile meshes', () => {
+  it('every tile of the same size shares one triangle list and one set of texture coordinates, kept when a tile goes', () => {
+    const options = { segments: 16, exaggeration: 1, skirtDepthM: 20 }
+    const a = buildTileGeometry(KEY, flatGrid(8, 100), FRAME, options).geometry
+    const b = buildTileGeometry({ ...KEY, x: KEY.x + 1 }, flatGrid(8, 900), FRAME, options).geometry
+    expect(b.index).toBe(a.index)
+    expect(b.getAttribute('uv')).toBe(a.getAttribute('uv'))
+    expect(b.getAttribute('position')).not.toBe(a.getAttribute('position'))
+    const index = a.index
+    const disposed: string[] = []
+    a.addEventListener('dispose', () => disposed.push('a'))
+    disposeTileGeometry(a)
+    expect(disposed).toEqual(['a'])
+    // the other tile still has them
+    expect(b.index).toBe(index)
+    expect(b.index!.count).toBe(tileMeshLayout(16).indexCount)
   })
 })

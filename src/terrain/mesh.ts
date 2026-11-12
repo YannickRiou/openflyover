@@ -73,13 +73,39 @@ export function buildTileGeometry(
   return geometryFromArrays(buildTileMesh(key, grid, frame, opts))
 }
 
+/**
+ * The triangle list and the texture coordinates of a tile mesh depend on its number of segments only: every tile of the
+ * same size shares one copy of each, in memory and on the graphics card (about 140 kB a tile at 64 segments, so 400 MB
+ * for the 3,000 tiles a dive from high up loaded). `disposeTileGeometry` keeps them when a tile goes.
+ */
+const sharedLayouts = new Map<number, { index: BufferAttribute; uv: BufferAttribute }>()
+
+function sharedLayout(index: Uint32Array, uvs: Float32Array): { index: BufferAttribute; uv: BufferAttribute } {
+  // the vertex count names the layout: (segments + 1)² + 4 (segments + 1)
+  let layout = sharedLayouts.get(uvs.length)
+  if (!layout || layout.index.count !== index.length) {
+    layout = { index: new BufferAttribute(index, 1), uv: new BufferAttribute(uvs, 2) }
+    sharedLayouts.set(uvs.length, layout)
+  }
+  return layout
+}
+
+/** Free a tile geometry, but not the triangle list and texture coordinates the other tiles share. */
+export function disposeTileGeometry(geometry: BufferGeometry): void {
+  const layout = sharedLayouts.get((geometry.getAttribute('uv') as BufferAttribute | undefined)?.array.length ?? -1)
+  if (layout && geometry.index === layout.index) geometry.setIndex(null)
+  if (layout && geometry.getAttribute('uv') === layout.uv) geometry.deleteAttribute('uv')
+  geometry.dispose()
+}
+
 /** The `BufferGeometry` of mesh arrays (built here or in a worker), with its bounds. */
 export function geometryFromArrays({ positions, normals, uvs, index, minHeight, maxHeight }: TileMeshArrays): TileGeometryResult {
   const geometry = new BufferGeometry()
+  const shared = sharedLayout(index, uvs)
   geometry.setAttribute('position', new BufferAttribute(positions, 3))
   geometry.setAttribute('normal', new BufferAttribute(normals, 3))
-  geometry.setAttribute('uv', new BufferAttribute(uvs, 2))
-  geometry.setIndex(new BufferAttribute(index, 1))
+  geometry.setAttribute('uv', shared.uv)
+  geometry.setIndex(shared.index)
   geometry.computeBoundingBox()
   geometry.computeBoundingSphere()
   return { geometry, minHeight, maxHeight }
