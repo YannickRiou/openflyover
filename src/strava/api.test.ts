@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   StravaAuthError,
+  createApiPacer,
   activitiesUrl,
   authorizeUrl,
   callbackDomain,
@@ -118,5 +119,23 @@ describe('stravaError', () => {
     expect(stravaError(404, null, 'api').message).toBe('Activité introuvable sur Strava.')
     expect(stravaError(403, null, 'api').message).toMatch(/refuse l’accès/)
     expect(stravaError(503, null, 'api').message).toMatch(/HTTP 503/)
+  })
+})
+
+describe('createApiPacer', () => {
+  it('lets the limit through at once, then waits for the oldest request to leave the window', async () => {
+    let t = 0
+    const sleeps: number[] = []
+    const pace = createApiPacer(3, 1000, { now: () => t, sleep: async (ms) => void (sleeps.push(ms), (t += ms)) })
+    for (const at of [0, 100, 200]) {
+      t = at
+      await pace()
+    }
+    expect(sleeps).toEqual([])
+    t = 300
+    await pace()
+    // the 4th waits until the first (at 0) is 1000 ms old
+    expect(sleeps).toEqual([700])
+    expect(t).toBe(1000)
   })
 })

@@ -107,6 +107,17 @@ AddType application/manifest+json .webmanifest
   public URLs (`/samples/`, `/favicon.svg`, textures, `/oauth-callback.html`) from `import.meta.env.BASE_URL`, and Vite
   rewrites the others (`/fonts/` in `src/ui/fonts.css`, `index.html`).
 - If you add a strict `Content-Security-Policy`, allow `worker-src blob:`: a hidden tab then waits for tiles on the timer of a small inline worker. Without it the export still works, but keeps one processor core busy while it waits in the background.
+- The site ships **without** a `Content-Security-Policy` (a `<meta>` tag would also apply to `npm run dev`, whose inline scripts it would block). Sending one as a header is recommended: the Strava application's secret and tokens are kept in the browser's `localStorage`, which any script running on the page could read, and a strict policy is what keeps foreign scripts out. A policy that fits the app (the same hosts as the desktop application, `src-tauri/tauri.conf.json`, plus Strava):
+
+  ```
+  default-src 'self'; script-src 'self' 'sha256-<hash of the inline script of index.html>'; style-src 'self' 'unsafe-inline';
+  font-src 'self' data:; media-src 'self' blob:; worker-src 'self' blob:; base-uri 'self'; form-action 'self'; frame-ancestors 'none';
+  img-src 'self' data: blob: https://tiles.mapterhorn.com https://s3.amazonaws.com/elevation-tiles-prod/ https://data.geopf.fr https://wmts.geo.admin.ch https://services.arcgisonline.com https://wayback.maptiles.arcgis.com https://mapsneu.wien.gv.at https://cyberjapandata.gsi.go.jp https://basemap.nationalmap.gov https://*.tile.opentopomap.org;
+  connect-src 'self' blob: data: https://tiles.mapterhorn.com https://s3.amazonaws.com/elevation-tiles-prod/ https://data.geopf.fr https://wmts.geo.admin.ch https://services.arcgisonline.com https://wayback.maptiles.arcgis.com https://mapsneu.wien.gv.at https://cyberjapandata.gsi.go.jp https://basemap.nationalmap.gov https://*.tile.opentopomap.org https://metadata.maptiles.arcgis.com https://s3-us-west-2.amazonaws.com/config.maptiles.arcgis.com/ https://archive-api.open-meteo.com https://api.open-meteo.com https://overpass-api.de https://maps.mail.ru https://www.strava.com https://routing.openstreetmap.de
+  ```
+
+  (one line in the header). The hash is the one of the small script in `dist/index.html` (the dark-theme and iOS lines before the first paint); a new release can change it, so compute it again from the built file: copy the text between the two `<script>` tags (the one without `src`) into a file `inline.js`, then run `openssl dgst -sha256 -binary inline.js | base64`. If you use your own map, landmark or weather servers ([self-hosting](self-hosting.md)), replace the matching hosts. `frame-ancestors` only works as a header, not in a `<meta>` tag.
+- **On the desktop application** the Strava identifiers and tokens are in the web view's `localStorage` in the application's own data folder (no system keychain is used yet): anyone who can read your user profile can read them. Disconnect from Strava in the app to forget the tokens, and revoke the application's access from your Strava account if the computer is shared.
 - A public site remains subject to the terms of the sources ([README, "Data sources"](../README.md#data-sources)).
 - A long video takes a lot of memory (about twice its size) where it cannot be written directly to disk (Firefox,
   Safari); Chrome, Edge and the desktop application write it as the export progresses.
@@ -127,7 +138,7 @@ It has been run on Windows. The macOS and Linux installers are built on GitHub; 
 ### Prerequisites
 
 - Node.js 24 and the website dependencies (`npm ci`);
-- stable Rust (<https://rustup.rs>), 1.77.2 or later;
+- stable Rust (<https://rustup.rs>), 1.95 or later;
 - the system libraries, depending on the platform:
 
 | System | To install | Web engine |

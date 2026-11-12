@@ -3,7 +3,7 @@ export default {
   'empty.pitch': 'Transformez une trace GPS en film de survol en 3D, avec le relief, la météo du jour et votre musique.',
   'empty.pointFree': 'Gratuit et libre',
   'empty.pointNoAccount': 'Sans compte',
-  'empty.pointLocal': 'Tout reste sur votre appareil',
+  'empty.pointLocal': 'Votre trace ne quitte jamais votre appareil',
   'empty.news': 'Nouveau en {version}',
   'empty.links': 'Liens',
   'empty.download': 'Appli de bureau (Windows, macOS, Linux)',

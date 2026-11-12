@@ -102,7 +102,11 @@ self.addEventListener('fetch', (event) => {
   const path = local(request.url)
   // another origin (tiles, weather, Overpass, Strava) or outside the scope: the network, untouched
   if (path === null) return
-  if (request.method === 'POST' && path === 'share-target') return event.respondWith(receiveShare(request))
+  if (request.method === 'POST' && path === 'share-target') {
+    // the share sheet of the system posts from no site; a form on another site must not fill the share cache
+    const site = request.headers.get('Sec-Fetch-Site')
+    return event.respondWith(site === 'cross-site' ? Response.redirect(new URL('./', scope()).href, 303) : receiveShare(request))
+  }
   if (request.method !== 'GET') return
   const name = path.split(/[?#]/)[0]
   if (request.mode === 'navigate' && (name === '' || name === 'index.html')) {

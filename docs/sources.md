@@ -19,7 +19,7 @@ sources were checked.
 | Open-Meteo | historical weather, forecast for an upcoming outing | `archive-api.open-meteo.com`, `api.open-meteo.com` | "Données météo : Open-Meteo.com (CC BY 4.0)" |
 | OpenStreetMap (Overpass API) | landmarks, water (the sea, lakes, rivers and streams, reflective) | `overpass-api.de`, fallback `maps.mail.ru` | "© contributeurs OpenStreetMap (ODbL)" |
 | IGN Géoplateforme, route service | route drawn by hand along the paths, walkers in France | `data.geopf.fr/navigation/itineraire` (`bdtopo-pgr`, pedestrian) | "Sentiers : IGN (BD TOPO) en France, OpenStreetMap ailleurs." |
-| OpenStreetMap routing (FOSSGIS OSRM) | route drawn by hand along the paths: bikes, and walkers outside the IGN's coverage | `routing.openstreetmap.de/routed-foot`, `routed-bike` | same line; one request per leg and per click (the policy asks for at most one per second) |
+| OpenStreetMap routing (FOSSGIS OSRM) | route drawn by hand along the paths: bikes, and walkers outside the IGN's coverage | `routing.openstreetmap.de/routed-foot`, `routed-bike` | same line; one request per leg and per click, sent one at a time and at least one second apart (`pacedFetchJson`; the policy asks for at most one per second); a 429 leaves the leg straight, the other service is not asked in its place |
 
 The service worker of the website (installable app) caches only the app's own files: it never stores a tile, a weather
 answer, an Overpass answer nor a Strava call, so third-party data is kept only where its terms are checked (offline
@@ -483,7 +483,7 @@ Rate limiting per IP: `/api/status` announces "Rate limit: 2" (two concurrent sl
 server is overloaded (HTML body "Dispatcher_Client::request_read_and_idx::timeout / rate_limited"). Patterns considered abusive: repeated
 identical requests, sweeping boxes to scrape the planet, a production application using it as its backbone. Hence, here: **a single
 request per track** (all types, 3 km corridor), sent alone (queue), cached 30 days in `localStorage` by
-request fingerprint, a single retry after `Retry-After` (otherwise 15 s) on 429 / 504, then the other instance; changing the types or the
+request fingerprint (3 million characters at most in all, the oldest entries dropped first; a full storage drops this cache before it loses the preferences), a single retry after `Retry-After` (otherwise 15 s) on 429 / 502 / 503 / 504 (or on a 200 whose `remark` reports a runtime error), then the other instance; changing the types or the
 distance does not send a new request (local filtering).
 
 | Item checked | Result |

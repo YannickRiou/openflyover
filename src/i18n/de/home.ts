@@ -5,7 +5,7 @@ const messages: Messages['home'] = {
   'empty.pitch': 'Machen Sie aus einem GPS-Track einen 3D-Überflugfilm, mit dem Relief, dem Wetter des Tages und Ihrer Musik.',
   'empty.pointFree': 'Kostenlos und quelloffen',
   'empty.pointNoAccount': 'Ohne Konto',
-  'empty.pointLocal': 'Alles bleibt auf Ihrem Gerät',
+  'empty.pointLocal': 'Ihre Strecke verlässt nie Ihr Gerät',
   'empty.news': 'Neu in {version}',
   'empty.links': 'Links',
   'empty.download': 'Desktop-App (Windows, macOS, Linux)',

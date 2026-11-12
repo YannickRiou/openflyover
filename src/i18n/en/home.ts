@@ -5,7 +5,7 @@ const messages: Messages['home'] = {
   'empty.pitch': 'Turn a GPS track into a 3D flyover film, with the relief, the weather of the day and your music.',
   'empty.pointFree': 'Free and open source',
   'empty.pointNoAccount': 'No account',
-  'empty.pointLocal': 'Everything stays on your device',
+  'empty.pointLocal': 'Your track never leaves your device',
   'empty.news': 'New in {version}',
   'empty.links': 'Links',
   'empty.download': 'Desktop app (Windows, macOS, Linux)',

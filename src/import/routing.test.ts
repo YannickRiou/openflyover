@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ignCovers, ignUrl, joinLegs, osmUrl, parseRoute, routeLeg } from './routing'
+import { OSRM_MIN_GAP_MS, RouteHttpError, ignCovers, ignUrl, joinLegs, osmUrl, pacedFetchJson, parseRoute, routeLeg } from './routing'
 
 const A = { lon: 6.8652, lat: 45.8326 }
 const B = { lon: 6.88, lat: 45.85 }
@@ -63,6 +63,38 @@ describe('routeLeg', () => {
     const controller = new AbortController()
     controller.abort()
     await expect(routeLeg(A, B, 'bike', vi.fn().mockRejectedValue(new DOMException('aborted', 'AbortError')), controller.signal)).rejects.toThrow()
+  })
+})
+
+describe('429 and pacing', () => {
+  const a = { lon: 6.8, lat: 45.9 }
+  const b = { lon: 6.9, lat: 45.95 }
+  it('does not ask OpenStreetMap after a 429 from the IGN', async () => {
+    const fetchJson = vi.fn(async () => {
+      throw new RouteHttpError(429)
+    })
+    expect(await routeLeg(a, b, 'foot', fetchJson)).toBeNull()
+    expect(fetchJson).toHaveBeenCalledTimes(1)
+  })
+
+  it('spaces the OSRM requests by a second, one at a time, and never waits for the IGN', async () => {
+    let t = 0
+    const sleeps: number[] = []
+    const clock = { now: () => t, sleep: async (ms: number) => void (sleeps.push(ms), (t += ms)) }
+    const starts: string[] = []
+    const paced = pacedFetchJson(async (url) => void starts.push(url), clock)
+    await Promise.all([paced(osmUrl('bike', a, b)), paced(osmUrl('bike', b, a)), paced(ignUrl(a, b)), paced(osmUrl('foot', a, b))])
+    expect(starts).toHaveLength(4)
+    expect(sleeps).toEqual([1000, 1000])
+    expect(OSRM_MIN_GAP_MS).toBe(1000)
+  })
+
+  it('drops an aborted request without sending it', async () => {
+    const ctrl = new AbortController()
+    ctrl.abort()
+    const fetchJson = vi.fn(async () => ({}))
+    await expect(pacedFetchJson(fetchJson)(osmUrl('bike', a, b), ctrl.signal)).rejects.toBeDefined()
+    expect(fetchJson).not.toHaveBeenCalled()
   })
 })
 

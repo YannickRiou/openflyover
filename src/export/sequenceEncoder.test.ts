@@ -39,6 +39,13 @@ describe('image sequence', () => {
     expect(SEQUENCE_DIGITS).toBe(5)
   })
 
+  it('makes the name safe for a file system, as for a video', () => {
+    expect(sequenceFileName('Tour 10/12', 0)).toBe('Tour 10-12_00001.png')
+    expect(sequenceFileName('A:B', 1)).toBe('A-B_00002.png')
+    expect(sequencePattern('A:B')).toBe('A-B_#####.png')
+    expect(sequenceFileName('///', 0)).toBe('openflyover_00001.png')
+  })
+
   it('writes each frame as a PNG in its own file, closed, and counts the bytes', async () => {
     const { canvas, files, folder } = fixture()
     const session = createSequenceEncoder(canvas, folder, 'Tour')

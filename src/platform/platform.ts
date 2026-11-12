@@ -350,7 +350,14 @@ export function droppedFiles(dataTransfer: DataTransfer | null | undefined): Fil
   return Array.from(dataTransfer?.files ?? [])
 }
 
-/** `storage` (localStorage) behind a store that never throws; values it refuses (missing, blocked, full) stay in memory. */
+/** Keys a full storage may drop to make room for the others (the OpenStreetMap cache: it is fetched again if lost). */
+export const EVICTABLE_KEY_PREFIX = 'openflyover.osm.'
+
+/**
+ * `storage` (localStorage) behind a store that never throws; values it refuses (missing, blocked, full) stay in memory.
+ * A write refused because the storage is full first drops the evictable cache (`EVICTABLE_KEY_PREFIX`), then retries once,
+ * so that the preferences, the queue or the Strava login are not lost to a cache.
+ */
 export function keyValueStore(
   storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem' | 'key' | 'length'> | null,
 ): KeyValueStore {
@@ -375,7 +382,24 @@ export function keyValueStore(
           return true
         }
       } catch {
-        // full or blocked: memory below
+        // full or blocked: make room by dropping the cache, then memory below
+        if (storage && !key.startsWith(EVICTABLE_KEY_PREFIX)) {
+          try {
+            const cache: string[] = []
+            for (let i = 0; i < storage.length; i++) {
+              const k = storage.key(i)
+              if (k?.startsWith(EVICTABLE_KEY_PREFIX)) cache.push(k)
+            }
+            if (cache.length > 0) {
+              for (const k of cache) storage.removeItem(k)
+              storage.setItem(key, value)
+              memory.delete(key)
+              return true
+            }
+          } catch {
+            // still refused
+          }
+        }
       }
       memory.set(key, value)
       return false

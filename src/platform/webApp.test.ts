@@ -272,6 +272,29 @@ describe('service worker', () => {
     }
   })
 
+  it('refuses a share posted from another site, and keeps the shares of the system', async () => {
+    const post = (site: string | null) => {
+      const { listeners, deleted } = load()
+      const request = {
+        url: 'https://example.org/openflyover/share-target',
+        method: 'POST',
+        headers: new Headers(site ? { 'Sec-Fetch-Site': site } : {}),
+        formData: vi.fn(() => Promise.resolve(new FormData())),
+      }
+      const answer = new Promise<Response>((resolve) => listeners.fetch({ request, respondWith: (p: Promise<Response>) => resolve(p) }))
+      return { answer, request, deleted }
+    }
+    const foreign = post('cross-site')
+    expect((await foreign.answer).headers.get('Location')).toBe('https://example.org/openflyover/')
+    expect(foreign.request.formData).not.toHaveBeenCalled()
+    expect(foreign.deleted).toEqual([])
+    for (const site of ['none', 'same-origin', null]) {
+      const own = post(site)
+      expect((await own.answer).headers.get('Location')).toBe('https://example.org/openflyover/?partage')
+      expect(own.request.formData).toHaveBeenCalled()
+    }
+  })
+
   it('tells the page whether it precaches a file (the page then knows it runs this build)', async () => {
     const { listeners } = load()
     const answers: unknown[] = []

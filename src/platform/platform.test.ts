@@ -201,6 +201,18 @@ describe('keyValueStore', () => {
     expect(storage.map.get('b')).toBe('3')
   })
 
+  it('drops the OpenStreetMap cache, not the other keys, to store a value a full storage refused', () => {
+    const storage = mapStorage(3)
+    const store = keyValueStore(storage)
+    store.set('openflyover.prefs', 'p')
+    store.set('openflyover.osm.v1.a', 'x')
+    store.set('openflyover.osm.v1.b', 'y')
+    expect(store.set('openflyover.queue', 'q')).toBe(true)
+    expect([...storage.map.keys()].sort()).toEqual(['openflyover.prefs', 'openflyover.queue'])
+    // the cache itself does not evict itself here (the OSM code trims its own entries)
+    expect(store.set('openflyover.osm.v1.c', 'z')).toBe(true)
+  })
+
   it('lists the keys with a prefix, stored or in memory', () => {
     const storage = mapStorage(2)
     const store = keyValueStore(storage)

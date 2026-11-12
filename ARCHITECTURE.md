@@ -2669,8 +2669,8 @@ exports) gets it from the terrain source of the settings.
   `OsmFeature.area`, with the raw `population` tag). The `around:` form on a
   polyline exceeds the public server's timeout; the distance to the track is computed locally, so changing the types or the
   distance never triggers a new request. Queue (one request at a time, kept at one on purpose: `docs/sources.md`; first come first served, except `urgent` queries (the region's) which go before the ones still waiting; `onStart` tells a caller when its request is really sent), memory cache (the 32 most recently used, `MEMORY_CACHE_ENTRIES`) +
-  `getPlatform().storage` for 30 days per request fingerprint, one retry on 429 / 504 (`Retry-After`, otherwise 15 s) then the other instance; a 200 response carrying an
-  error `remark` (timeout exceeded) is an error. Each fetch is aborted after `QUERY_TIMEOUT_S` + 10 s (4.1: a server that never answers no longer holds the queue; the next endpoint is tried; the body is not covered).
+  `getPlatform().storage` for 30 days per request fingerprint, one retry on 429 / 502 / 503 / 504 (`Retry-After`, otherwise 15 s) then the other instance; a 200 response carrying an
+  error `remark` (timeout exceeded) is read as a 504 (`overpassElements`): same retry, then the next endpoint. Each fetch, body included, is aborted after `QUERY_TIMEOUT_S` + 10 s (a server that never answers, or a stalled body, no longer holds the queue; the next endpoint is tried). The persistent cache keeps under `MAX_CACHE_TOTAL_CHARS` (oldest entries dropped first), and `keyValueStore` drops the `openflyover.osm.` entries when a write of another key is refused (`EVICTABLE_KEY_PREFIX`).
 - **Pure post-processing** (`src/osm/landmarks.ts`): projection onto the path → distance and offset, filter by type and distance
   (`settings.landmarks`, default summits + passes + huts + lakes + places (cities, villages, hamlets) within 1.5 km;
   `settings.landmarks.places { city, village, hamlet }` filters the places, « Villes » = city + town), elevation from `ele`
@@ -4419,9 +4419,9 @@ JavaScript.
   fallback), the export fails with a message.
 - **Frames**: the export compositor draws each frame into a 2D canvas; `getImageData` → raw RGBA as the binary
   body of `invoke` (no JSON; 8.3 MB at 1080p, negligible next to the render). Back-pressure: `video_frame`
-  writes to ffmpeg's standard input and only replies once the pipe has taken the frame; size checked.
+  writes to ffmpeg's standard input and only replies once the pipe has taken the frame; size checked. The pipe is taken out of the session for the write, so the lock on the sessions is free meanwhile: `video_cancel` and `video_finish` (and a second encoding) never wait for a full pipe, and a cancel kills ffmpeg, which ends the write.
 - **Sound**: the film mix (`mixFilmAudio`, see "Video export") is converted to interleaved 16-bit WAV (`wavFile`)
-  and passed before opening (`video_sound`), as ffmpeg's second input, encoded as AAC 192 kbit/s (Opus in WebM); temporary file
+  and passed before opening (`video_sound`: a new file in the temporary folder, random name, `create_new` so that a link left at that name is never followed), as ffmpeg's second input, encoded as AAC 192 kbit/s (Opus in WebM); temporary file
   deleted at the end of the session (success, failure, cancel) or if `video_open` fails.
 - **Errors**: ffmpeg runs with `-loglevel error`; if it stops (write refused on its input) or ends in
   failure, the command returns "ffmpeg a échoué :" and its last three error lines, and deletes the partial
@@ -4440,7 +4440,7 @@ JavaScript.
   (`nativeEncoder.test.ts`); GPU probe without a GPU (both fail, `libx264` kept). To be checked on a Linux desktop
   (`cargo test`, real export, NVENC / VAAPI): the manual checks of `docs/handbook/index.html`.
 - **Machine load** (`src-tauri/src/system.rs`): read-only command `system_stats` → used / total RAM and CPU %, for the
-  performance readout behind the status bar's ⓘ button (`sysinfo` 0.36, the last release for `rust-version` 1.77, `system` feature only;
+  performance readout behind the status bar's ⓘ button (`sysinfo` 0.40 (needs Rust 1.95, the `rust-version`), `system` feature only;
   permission `allow-system-stats` in `capabilities/default.json`).
 
 ## Offline packs (phase 6)
@@ -4567,7 +4567,7 @@ bug 300782, October 2025): the device budget below is conservative, to be measur
   message says « Pour installer OpenFlyover : touchez Partager, puis « Sur l'écran d'accueil ». » (toast, « Compris »).
 - **Files in**: Android (installed app): `share_target` (POST, multipart, field `tracks`, `.gpx`, `.fit` and the MIME
   types apps use, `application/octet-stream` included: Garmin and Komoot share FIT / GPX under it). The worker answers
-  the POST to `share-target`: files kept in the `openflyover-share` cache, then a 303 to `./?partage`; the page
+  the POST to `share-target` (refused with a 303 to `./` when `Sec-Fetch-Site` is `cross-site`): files kept in the `openflyover-share` cache, then a 303 to `./?partage`; the page
   (`takeSharedFiles`) reads them, empties the cache, removes the query and opens them as « Ouvrir » does. A name
   without extension gets one from the content (`sharedFileName`: ".FIT" at byte 8, `<gpx`). iOS has no share target:
   the file picker. On iOS, the track picker has no `accept` filter (`pickerAccept`): Safari greys out `.gpx` / `.fit`

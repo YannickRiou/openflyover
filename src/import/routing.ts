@@ -21,6 +21,57 @@ export function ignCovers(a: LonLat, b: LonLat): boolean {
   return [a, b].every((p) => p.lon >= IGN_BOX.west && p.lon <= IGN_BOX.east && p.lat >= IGN_BOX.south && p.lat <= IGN_BOX.north)
 }
 
+/** An HTTP error answer of a routing service (`status`), as `FetchJson` rejects it. */
+export class RouteHttpError extends Error {
+  readonly status: number
+  constructor(status: number) {
+    super(`HTTP ${status}`)
+    this.name = 'RouteHttpError'
+    this.status = status
+  }
+}
+
+/** Least time between two requests to the FOSSGIS servers (their usage policy: one request per second, docs/sources.md). */
+export const OSRM_MIN_GAP_MS = 1000
+
+const isOsrmUrl = (url: string) => url.startsWith('https://routing.openstreetmap.de/')
+
+/**
+ * `fetchJson` made polite: the requests go one at a time in the order asked, and two requests to the FOSSGIS servers
+ * are at least `OSRM_MIN_GAP_MS` apart (the clicks of a drawing come faster). An aborted request leaves the line without being sent.
+ */
+export function pacedFetchJson(
+  fetchJson: FetchJson,
+  clock: { now(): number; sleep(ms: number, signal?: AbortSignal): Promise<void> } = {
+    now: () => Date.now(),
+    sleep: (ms, signal) =>
+      new Promise((resolve, reject) => {
+        const timer = setTimeout(resolve, ms)
+        signal?.addEventListener('abort', () => {
+          clearTimeout(timer)
+          reject(signal.reason)
+        })
+      }),
+  },
+): FetchJson {
+  let tail: Promise<unknown> = Promise.resolve()
+  let lastOsrmAt = -Infinity
+  return (url, signal) => {
+    const run = async () => {
+      signal?.throwIfAborted()
+      if (isOsrmUrl(url)) {
+        const wait = lastOsrmAt + OSRM_MIN_GAP_MS - clock.now()
+        if (wait > 0) await clock.sleep(wait, signal)
+        lastOsrmAt = clock.now()
+      }
+      return fetchJson(url, signal)
+    }
+    const result = tail.then(run, run)
+    tail = result.catch(() => undefined)
+    return result
+  }
+}
+
 const coords = (p: LonLat) => `${p.lon.toFixed(6)},${p.lat.toFixed(6)}`
 
 /** IGN Géoplateforme: shortest pedestrian route on BD TOPO, geometry as GeoJSON, no steps. */
@@ -55,7 +106,10 @@ export function parseRoute(json: unknown): LonLat[] | null {
   return lineOf(json.geometry)
 }
 
-/** The routed line from `from` to `to` along the paths, or null when no service finds one. Never rejects (an aborted call rejects). */
+/**
+ * The routed line from `from` to `to` along the paths, or null when no service finds one. Never rejects (an aborted call rejects).
+ * A refusal for too many requests (429) stops there: the next service is not asked to make up for it.
+ */
 export async function routeLeg(from: LonLat, to: LonLat, profile: RouteProfile, fetchJson: FetchJson, signal?: AbortSignal): Promise<LonLat[] | null> {
   const urls = [...(profile === 'foot' && ignCovers(from, to) ? [ignUrl(from, to)] : []), osmUrl(profile, from, to)]
   for (const url of urls) {
@@ -64,6 +118,7 @@ export async function routeLeg(from: LonLat, to: LonLat, profile: RouteProfile, 
       if (line) return line
     } catch (error) {
       if (signal?.aborted) throw error
+      if (error instanceof RouteHttpError && error.status === 429) return null
     }
   }
   return null

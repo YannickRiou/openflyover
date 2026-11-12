@@ -185,6 +185,7 @@ itself while they use the app; knowing them is also useful to decide whether you
 | Imagery (IGN, swisstopo, Esri, basemap.at, GSI, USGS, OpenTopoMap) | the map draped on the relief | the same | yes (the visitor picks one, a default is chosen by country) |
 | Overpass (`overpass-api.de`, then `maps.mail.ru`) | landmarks, water, the region | a box around the track (no track points) | no: without it there are no labels |
 | Open-Meteo | the weather of the outing | about ten places along the track, rounded to ~1 km, and the dates | no: without it there is no weather |
+| Routing (`data.geopf.fr/navigation`, `routing.openstreetmap.de`) | « Tracer sur la carte »: the line between two clicked points along the paths | the two points of each leg (IGN for walkers in France, OpenStreetMap elsewhere and for bikes) | no: without it the legs stay straight |
 | Strava | the import | the visitor's own credentials, to Strava only | no |
 
 There is no analytics, no tracking and no advertising in the site, and nothing is stored on your server. The browser
