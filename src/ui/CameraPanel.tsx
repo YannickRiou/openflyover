@@ -285,11 +285,13 @@ export function CameraPanel() {
         {!bilan && camera.style !== 'free' && SLIDERS.filter(({ unusedIn }) => !unusedIn?.includes(camera.style)).map(({ key, label, tip, format, min }) => {
           // the view from above is at 70° at least: the lower half of the slider changes nothing there
           const range = key === 'pitchDeg' && camera.style === 'top' ? { ...CAMERA_RANGES[key], min: Math.max(CAMERA_RANGES[key].min, TOP_MIN_PITCH_DEG) } : CAMERA_RANGES[key]
-          const value = format(camera[key], autoTurnM)
+          // what the film uses: the view from above is never lower than its minimum, whatever the saved value
+          const used = key === 'pitchDeg' && camera.style === 'top' ? Math.max(camera.pitchDeg, TOP_MIN_PITCH_DEG) : camera[key]
+          const value = format(used, autoTurnM)
           return (
             <SettingRow key={key} label={label} value={value} paths={[`camera.${key}`]} min={min}>
               {/* a double click goes back to the value of the height chosen above, not to that of the default camera */}
-              <RangeField label={label} tip={tip} {...range} value={camera[key]} defaultValue={key === 'distance' || key === 'pitchDeg' ? CAMERA_HEIGHTS[height.index][key] : undefined} format={() => value} onChange={(v) => update({ [key]: v })} />
+              <RangeField label={label} tip={tip} {...range} value={used} defaultValue={key === 'distance' || key === 'pitchDeg' ? CAMERA_HEIGHTS[height.index][key] : undefined} format={() => value} onChange={(v) => update({ [key]: v })} />
             </SettingRow>
           )
         })}

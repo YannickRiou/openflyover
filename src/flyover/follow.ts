@@ -38,7 +38,8 @@ export function filmFollowOf(tracks: readonly Track[], race: RaceSettings, smoot
     if (racers.length === 0) return null
     if (camera === 'ensemble') return { path: lead.path, progress, group: racers }
     const ranked = rankRacers(racers)
-    const ahead = ranked.find((r) => !r.finished) ?? ranked[0]
+    // the racer ahead, the first finisher included: the camera waits at the finish for the others, it does not cut to one still racing
+    const ahead = ranked[0]
     return { path: built.tracks[ahead.index].path, progress: ahead.fraction, markerOnFilm: true }
   }
 }

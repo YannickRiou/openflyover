@@ -239,7 +239,13 @@ describe('filmFollowOf', () => {
     expect(ahead.markerOnFilm).toBe(true)
     expect(ahead.path).toBe(trackPathOf(v))
     expect(ahead.progress).toBeCloseTo(0.5, 12)
-    // once it has finished, the first one still racing
+    // the leader that finishes keeps the camera at the finish while the others arrive: no cut to a racer still on the way
+    const [slow, quick] = [track('S', 45, DAY1, 5), track('Q', 45.1, DAY1, 3)]
+    const timed = { ...race, sync: 'elapsed' as const, camera: 'tete' as const }
+    const waiting = filmFollowOf([slow, quick], timed, 0)!
+    expect(waiting(0.4)!.path).toBe(trackPathOf(quick))
+    expect(waiting(0.75)).toMatchObject({ path: trackPathOf(quick), progress: 1, markerOnFilm: true })
+    expect(waiting(1)!.path).toBe(trackPathOf(quick))
     expect(filmFollowOf([v, u], { ...race, camera: 'tete' }, 0)!(1)!.path).toBe(trackPathOf(v))
     const all = filmFollowOf([u, v], { ...race, camera: 'ensemble' }, 0)!(0.5)!
     expect(all.path).toBe(trackPathOf(u))

@@ -3905,7 +3905,7 @@ photo. The glaciers mapped by OpenStreetMap are therefore drawn with the snow lo
   marker placed by `raceAt(race, progress)`, a pure function. Setting `settings.race { enabled, sync, camera? }`,
   « En parallèle » in the « Plusieurs traces » block of the track list (from two tracks, see "Several tracks").
 - Camera (« Caméra sur », `camera`, absent = `'premiere'`: the first track, as before): `'tete'` the racer ahead
-  (`rankRacers`; once it has finished, the first one still racing), a cut when the lead changes; `'ensemble'` the
+  (`rankRacers`; the first finisher keeps the camera at the finish while the others arrive), a cut when the lead changes; `'ensemble'` the
   first track's flight view moved to the centre of all the racers and pulled back until their spread fits the frame
   (`framedGroup`, × `GROUP_FRAMING_MARGIN` = 1.4, never nearer than the flight view: continuous). Another track chosen
   in the list is made the first one (`flyTrack`). The film's marker stays on the first track
