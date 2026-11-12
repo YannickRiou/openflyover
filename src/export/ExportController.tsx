@@ -806,7 +806,6 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         deps.engine()?.setRetention?.(retention)
       }
       const progress = schedule[i]
-      const state = filmClock.stateAt(times[i])
       // the renders of an open shutter stay in the shot of the frame: no blend across a cut
       const keep = (t: number) => sameShot(filmClock, t, times[i])
       // fewer renders when the view barely moves over the shutter (ARCHITECTURE.md, « Objectif »); the placements are
