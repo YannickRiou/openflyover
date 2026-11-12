@@ -30,7 +30,6 @@ export const WHATS_NEW: readonly NewsVersion[] = [
     version: '8.1',
     items: [
       { icon: 'video', get title() { return t('news.v81.export.title') }, get text() { return t('news.v81.export.text') } },
-      { icon: 'rotate-ccw', get title() { return t('news.v81.resume.title') }, get text() { return t('news.v81.resume.text') } },
       { icon: 'gauge', get title() { return t('news.v81.speed.title') }, get text() { return t('news.v81.speed.text') } },
       { icon: 'moon', get title() { return t('news.v81.days.title') }, get text() { return t('news.v81.days.text') } },
     ],
@@ -55,75 +54,56 @@ export const WHATS_NEW: readonly NewsVersion[] = [
     version: '7.1',
     items: [
       { icon: 'moon', get title() { return t('news.v71.nights.title') }, get text() { return t('news.v71.nights.text') } },
-      { icon: 'crosshair', get title() { return t('news.v71.dayCards.title') }, get text() { return t('news.v71.dayCards.text') } },
     ],
   },
   {
     version: '7.0',
     items: [
       { icon: 'route', get title() { return t('news.v70.activity.title') }, get text() { return t('news.v70.activity.text') } },
-      { icon: 'gauge', get title() { return t('news.v70.target.title') }, get text() { return t('news.v70.target.text') } },
-      { icon: 'rotate-ccw', get title() { return t('news.v70.resume.title') }, get text() { return t('news.v70.resume.text') } },
+      { icon: 'rotate-ccw', get title() { return t('news.v70.export.title') }, get text() { return t('news.v70.export.text') } },
       { icon: 'folder-open', get title() { return t('news.v70.projects.title') }, get text() { return t('news.v70.projects.text') } },
     ],
   },
   {
     version: '6.0',
     items: [
-      { icon: 'square', get title() { return t('news.v60.titlebar.title') }, get text() { return t('news.v60.titlebar.text') } },
-      { icon: 'info', get title() { return t('news.v60.status.title') }, get text() { return t('news.v60.status.text') } },
-      { icon: 'layers', get title() { return t('news.v60.groups.title') }, get text() { return t('news.v60.groups.text') } },
-      { icon: 'sliders-horizontal', get title() { return t('news.v60.summary.title') }, get text() { return t('news.v60.summary.text') } },
-      { icon: 'route', get title() { return t('news.v60.headings.title') }, get text() { return t('news.v60.headings.text') } },
-      { icon: 'image', get title() { return t('news.v60.pictures.title') }, get text() { return t('news.v60.pictures.text') } },
+      { icon: 'square', get title() { return t('news.v60.window.title') }, get text() { return t('news.v60.window.text') } },
+      { icon: 'sliders-horizontal', get title() { return t('news.v60.panels.title') }, get text() { return t('news.v60.panels.text') } },
       { icon: 'clapperboard', get title() { return t('news.v60.camera.title') }, get text() { return t('news.v60.camera.text') } },
-      { icon: 'plus', get title() { return t('news.v60.lanes.title') }, get text() { return t('news.v60.lanes.text') } },
-      { icon: 'map-pin', get title() { return t('news.v60.stops.title') }, get text() { return t('news.v60.stops.text') } },
-      { icon: 'clapperboard', get title() { return t('news.v60.clips.title') }, get text() { return t('news.v60.clips.text') } },
-      { icon: 'info', get title() { return t('news.v60.menu.title') }, get text() { return t('news.v60.menu.text') } },
+      { icon: 'plus', get title() { return t('news.v60.timeline.title') }, get text() { return t('news.v60.timeline.text') } },
     ],
   },
   {
     version: '5.0',
     items: [
-      { icon: 'maximize', get title() { return t('news.v50.margins.title') }, get text() { return t('news.v50.margins.text') } },
       { icon: 'sliders-horizontal', get title() { return t('news.v50.modes.title') }, get text() { return t('news.v50.modes.text') } },
-      { icon: 'cloud-sun', get title() { return t('news.v50.ambiance.title') }, get text() { return t('news.v50.ambiance.text') } },
-      { icon: 'maximize', get title() { return t('news.v50.layout.title') }, get text() { return t('news.v50.layout.text') } },
+      { icon: 'maximize', get title() { return t('news.v50.formats.title') }, get text() { return t('news.v50.formats.text') } },
       { icon: 'gauge', get title() { return t('news.v50.tiles.title') }, get text() { return t('news.v50.tiles.text') } },
       { icon: 'image', get title() { return t('news.v50.vivid.title') }, get text() { return t('news.v50.vivid.text') } },
-      { icon: 'maximize', get title() { return t('news.v50.phoneFormat.title') }, get text() { return t('news.v50.phoneFormat.text') } },
     ],
   },
   {
     version: '4.7',
     items: [
       { icon: 'spline', get title() { return t('news.v47.draw.title') }, get text() { return t('news.v47.draw.text') } },
-      { icon: 'sparkles', get title() { return t('news.v47.comet.title') }, get text() { return t('news.v47.comet.text') } },
-      { icon: 'layers', get title() { return t('news.v47.contours.title') }, get text() { return t('news.v47.contours.text') } },
-      { icon: 'clapperboard', get title() { return t('news.v47.tilt.title') }, get text() { return t('news.v47.tilt.text') } },
-      { icon: 'gauge', get title() { return t('news.v47.value.title') }, get text() { return t('news.v47.value.text') } },
-      { icon: 'layers', get title() { return t('news.v47.ribbon.title') }, get text() { return t('news.v47.ribbon.text') } },
+      { icon: 'sparkles', get title() { return t('news.v47.story.title') }, get text() { return t('news.v47.story.text') } },
       { icon: 'navigation', get title() { return t('news.v47.models.title') }, get text() { return t('news.v47.models.text') } },
-      { icon: 'map-pin', get title() { return t('news.v47.summits.title') }, get text() { return t('news.v47.summits.text') } },
-      { icon: 'sliders-horizontal', get title() { return t('news.v47.search.title') }, get text() { return t('news.v47.search.text') } },
-      { icon: 'circle-help', get title() { return t('news.v47.tour.title') }, get text() { return t('news.v47.tour.text') } },
+      { icon: 'map-pin', get title() { return t('news.v47.stops.title') }, get text() { return t('news.v47.stops.text') } },
+      { icon: 'circle-help', get title() { return t('news.v47.help.title') }, get text() { return t('news.v47.help.text') } },
     ],
   },
   {
     version: '4.6',
     items: [
       { icon: 'moon', get title() { return t('news.v46.nights.title') }, get text() { return t('news.v46.nights.text') } },
-      { icon: 'image', get title() { return t('news.v46.stage.title') }, get text() { return t('news.v46.stage.text') } },
+      { icon: 'image', get title() { return t('news.v46.capture.title') }, get text() { return t('news.v46.capture.text') } },
       { icon: 'map-pin', get title() { return t('news.v46.places.title') }, get text() { return t('news.v46.places.text') } },
     ],
   },
   {
     version: '4.5',
     items: [
-      { icon: 'clapperboard', get title() { return t('news.v45.camera.title') }, get text() { return t('news.v45.camera.text') } },
-      { icon: 'map-pin', get title() { return t('news.v45.marker.title') }, get text() { return t('news.v45.marker.text') } },
-      { icon: 'sparkles', get title() { return t('news.v45.records.title') }, get text() { return t('news.v45.records.text') } },
+      { icon: 'clapperboard', get title() { return t('news.v45.alive.title') }, get text() { return t('news.v45.alive.text') } },
       { icon: 'plane', get title() { return t('news.v45.flight.title') }, get text() { return t('news.v45.flight.text') } },
     ],
   },
@@ -137,14 +117,9 @@ export const WHATS_NEW: readonly NewsVersion[] = [
   {
     version: '4.3',
     items: [
-      { icon: 'gauge', get title() { return t('news.v43.preview.title') }, get text() { return t('news.v43.preview.text') } },
-      { icon: 'gauge', get title() { return t('news.v43.quiet.title') }, get text() { return t('news.v43.quiet.text') } },
+      { icon: 'gauge', get title() { return t('news.v43.gentle.title') }, get text() { return t('news.v43.gentle.text') } },
       { icon: 'circle-help', get title() { return t('news.v43.guide.title') }, get text() { return t('news.v43.guide.text') } },
     ],
-  },
-  {
-    version: '4.2.1',
-    items: [{ icon: 'image', get title() { return t('news.v421.photos.title') }, get text() { return t('news.v421.photos.text') } }],
   },
   {
     version: '4.2',
@@ -152,14 +127,14 @@ export const WHATS_NEW: readonly NewsVersion[] = [
       { icon: 'map-pin', get title() { return t('news.v42.records.title') }, get text() { return t('news.v42.records.text') } },
       { icon: 'route', get title() { return t('news.v42.tools.title') }, get text() { return t('news.v42.tools.text') } },
       { icon: 'route', get title() { return t('news.v42.bilan.title') }, get text() { return t('news.v42.bilan.text') } },
+      { icon: 'image', get title() { return t('news.v42.photos.title') }, get text() { return t('news.v42.photos.text') } },
     ],
   },
   {
     version: '4.1',
     items: [
-      { icon: 'cloud-sun', get title() { return t('news.v41.glaciers.title') }, get text() { return t('news.v41.glaciers.text') } },
-      { icon: 'gauge', get title() { return t('news.v41.speed.title') }, get text() { return t('news.v41.speed.text') } },
       { icon: 'cloud-sun', get title() { return t('news.v41.ice.title') }, get text() { return t('news.v41.ice.text') } },
+      { icon: 'gauge', get title() { return t('news.v41.speed.title') }, get text() { return t('news.v41.speed.text') } },
       { icon: 'clapperboard', get title() { return t('news.v41.auto.title') }, get text() { return t('news.v41.auto.text') } },
       { icon: 'type', get title() { return t('news.v41.credits.title') }, get text() { return t('news.v41.credits.text') } },
     ],
@@ -169,18 +144,8 @@ export const WHATS_NEW: readonly NewsVersion[] = [
     items: [
       { icon: 'clapperboard', get title() { return t('news.v40.auto.title') }, get text() { return t('news.v40.auto.text') } },
       { icon: 'download', get title() { return t('news.v40.queue.title') }, get text() { return t('news.v40.queue.text') } },
-      { icon: 'cloud-sun', get title() { return t('news.v40.snow.title') }, get text() { return t('news.v40.snow.text') } },
-      { icon: 'map', get title() { return t('news.v40.forests.title') }, get text() { return t('news.v40.forests.text') } },
-      { icon: 'map', get title() { return t('news.v40.water.title') }, get text() { return t('news.v40.water.text') } },
+      { icon: 'map', get title() { return t('news.v40.nature.title') }, get text() { return t('news.v40.nature.text') } },
     ],
-  },
-  {
-    version: '3.3.2',
-    items: [{ icon: 'map-pin', get title() { return t('news.v332.landmarks.title') }, get text() { return t('news.v332.landmarks.text') } }],
-  },
-  {
-    version: '3.3.1',
-    items: [{ icon: 'route', get title() { return t('news.v331.recap.title') }, get text() { return t('news.v331.recap.text') } }],
   },
   {
     version: '3.3',
@@ -188,43 +153,26 @@ export const WHATS_NEW: readonly NewsVersion[] = [
       { icon: 'route', get title() { return t('news.v33.stages.title') }, get text() { return t('news.v33.stages.text') } },
       { icon: 'type', get title() { return t('news.v33.titles.title') }, get text() { return t('news.v33.titles.text') } },
       { icon: 'sliders-horizontal', get title() { return t('news.v33.clear.title') }, get text() { return t('news.v33.clear.text') } },
+      { icon: 'map-pin', get title() { return t('news.v33.landmarks.title') }, get text() { return t('news.v33.landmarks.text') } },
     ],
-  },
-  {
-    version: '3.2.2',
-    items: [
-      { icon: 'gauge', get title() { return t('news.v322.counters.title') }, get text() { return t('news.v322.counters.text') } },
-      { icon: 'type', get title() { return t('news.v322.cards.title') }, get text() { return t('news.v322.cards.text') } },
-      { icon: 'sliders-horizontal', get title() { return t('news.v322.tidy.title') }, get text() { return t('news.v322.tidy.text') } },
-      { icon: 'rotate-ccw', get title() { return t('news.v322.reset.title') }, get text() { return t('news.v322.reset.text') } },
-    ],
-  },
-  {
-    version: '3.2.1',
-    items: [{ icon: 'type', get title() { return t('news.v321.panel.title') }, get text() { return t('news.v321.panel.text') } }],
   },
   {
     version: '3.2',
     items: [
-      { icon: 'type', get title() { return t('news.v32.end.title') }, get text() { return t('news.v32.end.text') } },
-      { icon: 'type', get title() { return t('news.v32.title.title') }, get text() { return t('news.v32.title.text') } },
+      { icon: 'type', get title() { return t('news.v32.cards.title') }, get text() { return t('news.v32.cards.text') } },
       { icon: 'route', get title() { return t('news.v32.fix.title') }, get text() { return t('news.v32.fix.text') } },
+      { icon: 'gauge', get title() { return t('news.v32.counters.title') }, get text() { return t('news.v32.counters.text') } },
+      { icon: 'rotate-ccw', get title() { return t('news.v32.tidy.title') }, get text() { return t('news.v32.tidy.text') } },
     ],
   },
   {
     version: '3.1',
     items: [
-      { icon: 'video', get title() { return t('news.v31.free.title') }, get text() { return t('news.v31.free.text') } },
       { icon: 'image', get title() { return t('news.v31.dates.title') }, get text() { return t('news.v31.dates.text') } },
+      { icon: 'orbit', get title() { return t('news.v31.free.title') }, get text() { return t('news.v31.free.text') } },
       { icon: 'cloud-sun', get title() { return t('news.v31.wind.title') }, get text() { return t('news.v31.wind.text') } },
-      { icon: 'orbit', get title() { return t('news.v31.orbit.title') }, get text() { return t('news.v31.orbit.text') } },
-      { icon: 'layers', get title() { return t('news.v31.imagery.title') }, get text() { return t('news.v31.imagery.text') } },
-      { icon: 'info', get title() { return t('news.v31.home.title') }, get text() { return t('news.v31.home.text') } },
+      { icon: 'layers', get title() { return t('news.v31.home.title') }, get text() { return t('news.v31.home.text') } },
     ],
-  },
-  {
-    version: '3.0.1',
-    items: [{ icon: 'type', get title() { return t('news.v301.cards.title') }, get text() { return t('news.v301.cards.text') } }],
   },
   {
     version: '3.0',
@@ -234,21 +182,13 @@ export const WHATS_NEW: readonly NewsVersion[] = [
       { icon: 'type', get title() { return t('news.v30.cards.title') }, get text() { return t('news.v30.cards.text') } },
       { icon: 'move-horizontal', get title() { return t('news.v30.timeline.title') }, get text() { return t('news.v30.timeline.text') } },
       { icon: 'download', get title() { return t('news.v30.export.title') }, get text() { return t('news.v30.export.text') } },
-      { icon: 'volume-2', get title() { return t('news.v30.sound.title') }, get text() { return t('news.v30.sound.text') } },
-      { icon: 'plus', get title() { return t('news.v30.more.title') }, get text() { return t('news.v30.more.text') } },
     ],
   },
   {
-    version: '2.4.1',
-    items: [{ icon: 'video', get title() { return t('news.v241.camera.title') }, get text() { return t('news.v241.camera.text') } }],
-  },
-  {
     version: '2.4',
-    items: [{ icon: 'video', get title() { return t('news.v24.camera.title') }, get text() { return t('news.v24.camera.text') } }],
-  },
-  {
-    version: '2.3.2',
-    items: [{ icon: 'spline', get title() { return t('news.v232.track.title') }, get text() { return t('news.v232.track.text') } }],
+    items: [
+      { icon: 'video', get title() { return t('news.v24.camera.title') }, get text() { return t('news.v24.camera.text') } },
+    ],
   },
   {
     version: '2.3',
@@ -264,24 +204,23 @@ export const WHATS_NEW: readonly NewsVersion[] = [
     items: [
       { icon: 'map-pin', get title() { return t('news.v22.landmarks.title') }, get text() { return t('news.v22.landmarks.text') } },
       { icon: 'diamond', get title() { return t('news.v22.keys.title') }, get text() { return t('news.v22.keys.text') } },
-      { icon: 'sliders-horizontal', get title() { return t('news.v22.keysFollow.title') }, get text() { return t('news.v22.keysFollow.text') } },
       { icon: 'route', get title() { return t('news.v22.route.title') }, get text() { return t('news.v22.route.text') } },
-      { icon: 'navigation', get title() { return t('news.v22.figurine.title') }, get text() { return t('news.v22.figurine.text') } },
-      { icon: 'satellite', get title() { return t('news.v22.imagery.title') }, get text() { return t('news.v22.imagery.text') } },
       { icon: 'plus', get title() { return t('news.v22.more.title') }, get text() { return t('news.v22.more.text') } },
     ],
   },
   {
     version: '2.1',
     items: [
-      { icon: 'download', get title() { return t('news.v21.update.title') }, get text() { return t('news.v21.update.text') } },
       { icon: 'type', get title() { return t('news.v21.languages.title') }, get text() { return t('news.v21.languages.text') } },
       { icon: 'cloud-sun', get title() { return t('news.v21.weather.title') }, get text() { return t('news.v21.weather.text') } },
+      { icon: 'download', get title() { return t('news.v21.update.title') }, get text() { return t('news.v21.update.text') } },
     ],
   },
   {
     version: '2.0',
-    items: [{ icon: 'layers', get title() { return t('news.v20.interface.title') }, get text() { return t('news.v20.interface.text') } }],
+    items: [
+      { icon: 'layers', get title() { return t('news.v20.interface.title') }, get text() { return t('news.v20.interface.text') } },
+    ],
   },
 ]
 
