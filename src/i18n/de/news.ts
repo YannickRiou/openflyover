@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Neuheiten',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v811.situation.title': "„Situation“-Ansichten lassen sich auf jedem Computer exportieren",
+  'v811.situation.text': "Eine Eröffnung oder ein Abschluss aus großer Höhe blockiert den Export nicht mehr, auch auf einem bescheidenen Computer. Das Bild bleibt gleich, beim Abstieg braucht es bis zu siebenmal weniger Speicher.",
   'v81.export.title': "Ihre Exporte laufen bis zum Ende",
   'v81.export.text': "Ein Export bricht nicht mehr über einem Meer ohne datierte Luftbilder ab, bleibt nicht mehr auf einem Bild stehen und übersteht einen kurzen Ausfall des Netzes oder der Grafikkarte. Bricht er doch ab, sagt die Meldung warum.",
   'v81.resume.title': "Dort weitermachen, wo der Export stehen blieb",

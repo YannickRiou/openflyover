@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v811.situation.title': "Las vistas «situación» se exportan en cualquier ordenador",
+  'v811.situation.text': "Una apertura o un cierre visto desde muy alto ya no bloquea la exportación, incluso en un ordenador modesto. La imagen es la misma, con hasta siete veces menos memoria durante el descenso.",
   'v81.export.title': "Tus exportaciones llegan al final",
   'v81.export.text': "Una exportación ya no se detiene sobre un mar sin fotos fechadas, ya no se queda congelada en una imagen y aguanta un corte breve de la red o de la tarjeta gráfica. Si aun así se detiene, el mensaje te dice por qué.",
   'v81.resume.title': "Retoma donde se detuvo la exportación",

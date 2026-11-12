@@ -217,8 +217,8 @@ export function planFilmTiles(input: FilmTilePlanInput): FilmTiles {
   for (const [node, firstS] of nodes) {
     add(buildTileUrl(terrain, node.key), terrainBytes, firstS)
     if (!imagery) continue
-    // the finer imagery levels only at the deepest zoom of the tile, as the engine draws them (`imageryOffsetOf`)
-    const offset = node.key.z >= zoomLimit(node, params) ? input.imageryZoomOffset : 0
+    // the finer imagery levels only at the deepest zoom of the relief, as the engine draws them (`imageryOffsetOf`)
+    const offset = node.key.z >= params.maxZoom ? input.imageryZoomOffset : 0
     for (const op of planImagerySubtiles(node.key, imagery, offset).tiles) {
       add(buildTileUrl(imagery, op.key), imageryBytes, firstS, imagery.fallback ? buildTileUrl(imagery.fallback, op.key) : undefined)
     }

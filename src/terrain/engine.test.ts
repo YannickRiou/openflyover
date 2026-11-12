@@ -1057,6 +1057,31 @@ describe('tile budget', () => {
     }
   })
 
+  it('past the texture budget, unloads the tiles no frame draws, never those of the current view (a computer)', async () => {
+    const TEXTURE_BYTES = (512 * 512 * 4 * 4) / 3
+    const views = async (tuning: Partial<EngineTuning>) => {
+      const deps = createFakeDeps()
+      deps.loadImageryTexture = vi.fn(async () => new Texture({ width: 512, height: 512 } as unknown as HTMLCanvasElement))
+      const engine = engineWith(deps, { maxZoom: ROOT_ZOOM + 2 }, { unloadAfterMs: 1e9, ...tuning })
+      let drawn = new Set<string>()
+      for (const x of [-8000, 0, 8000]) {
+        const camera = cameraAt(x, 0, 3000)
+        for (let i = 0; i < 4; i++) {
+          engine.update(camera, 1000)
+          await flush()
+        }
+        drawn = names(engine, true)
+      }
+      return { engine, drawn, loaded: names(engine) }
+    }
+    const free = await views({})
+    const budget = (free.drawn.size + 2) * TEXTURE_BYTES
+    const bounded = await views({ textureBudgetBytes: budget })
+    expect(bounded.drawn).toEqual(free.drawn)
+    expect(bounded.loaded.size).toBeLessThan(free.loaded.size)
+    expect(bounded.engine.stats.loadedTiles * TEXTURE_BYTES).toBeLessThanOrEqual(budget + ROOT_KEYS.length * TEXTURE_BYTES)
+  })
+
   it('keeps nothing but the current view and the roots with a cap of zero', async () => {
     const free = await threeViews({})
     const { engine, drawn, loaded } = await threeViews({ maxResidentTiles: 0 })

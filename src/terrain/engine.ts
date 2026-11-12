@@ -29,7 +29,7 @@ import { errorMessage } from '../core/errors'
 import { BACKGROUND_PRIORITY, TILE_REQUEST_TIMEOUT_MS, TileFetchError, TileTimeoutError, createTileFetcher, isAbortError, isNoDataError } from './fetch'
 import { HeightField } from './heightField'
 import { loadImageryTexture as defaultLoadImageryTexture } from './imagery'
-import { buildTileGeometry, geometryFromArrays, sampleTileMeshAt, type TileMeshArrays } from './mesh'
+import { buildTileGeometry, disposeTileGeometry, geometryFromArrays, meshVertexGrid, sampleTileMeshAt, type TileMeshArrays } from './mesh'
 import {
   TileNode,
   countSelection,
@@ -39,7 +39,6 @@ import {
   forEachNode,
   selectTiles,
   updateCameraState,
-  zoomLimit,
   type QuadtreeContext,
   type SelectionParams,
   type TileFailureCause,
@@ -126,6 +125,12 @@ export interface EngineTuning {
   /** wait (ms) before the first retry during a video export, doubled after each failure up to `exportMaxRetryDelayMs` */
   exportRetryDelayMs: number
   exportMaxRetryDelayMs: number
+  /**
+   * GPU memory (bytes) the imagery textures of the loaded tiles may take before the tiles no frame is drawing are
+   * unloaded, the least needed first (`enforceTextureBudget`); prefetches stop at 80 % of it. The view itself is never
+   * coarsened for it. Infinity: no budget (phones and tablets have `maxResidentTiles`).
+   */
+  textureBudgetBytes: number
   /** share of `maxConcurrentLoads` that prefetches may use (the rest stays free for the current view) */
   prefetchLoadShare: number
   /** skirt depth as a fraction of the tile ground size */
@@ -142,6 +147,7 @@ export const DEFAULT_TUNING: Readonly<EngineTuning> = {
   // 5 rendered frames (the export prefetches every 5) waiting the full 5 s each
   prefetchKeepMs: 30_000,
   maxResidentTiles: deviceBudget().maxResidentTiles,
+  textureBudgetBytes: deviceBudget().tileTextureBytes,
   sweepEveryFrames: 30,
   rebuildsPerFrame: 4,
   // 400 on a computer, fewer on a phone (core/deviceBudget.ts)
@@ -178,6 +184,10 @@ export const OUTER_MAX_ZOOM = 11
  */
 export const LOD_STEP = 1.1
 export const MAX_LOD_LEVEL = 28
+/** `enforceTextureBudget` unloads down to this share of the budget, so it does not run again at the next load */
+export const TEXTURE_BUDGET_FLOOR = 0.9
+/** prefetches stop starting loads past this share of `textureBudgetBytes` */
+export const PREFETCH_BUDGET_SHARE = 0.8
 /** the preview goes one level finer only when that selection holds within this share of the budget (hysteresis) */
 export const LOD_RELAX_SHARE = 0.9
 /** material colour when a tile has no imagery (neutral grey) */
@@ -344,14 +354,16 @@ export function createTerrainEngine(
   }
 
   /**
-   * Imagery levels drawn finer than a tile's own (« Détail de l'imagerie »): only on a tile at its deepest zoom
-   * (`zoomLimit`). Any other tile is drawn only while its grid cells look under `errorTargetPx` (3 px): its own level
+   * Imagery levels drawn finer than a tile's own (« Détail de l'imagerie »): only on a tile at the deepest zoom of the
+   * relief (`maxZoom`), not on one only held back by the outer zoom of a « situation » view (`zoomLimit`, OUTER_MAX_ZOOM):
+   * that landscape is seen from afar, and its finer imagery made each of those tiles 4 (« Fin ») or 16 (« Très fin »)
+   * times heavier for nothing, enough to fill a 6 GB graphics card during the descent of a 400 km opening (November 2026). Any other tile is drawn only while its grid cells look under `errorTargetPx` (3 px): its own level
    * already gives more than one image pixel per screen pixel (256 px over 64 cells), a finer one would be averaged away.
    * At the deepest zoom the cells grow on screen as the camera comes closer, and the finer level shows. Measured on three
    * 1080p views: the same image as the setting on every tile (PSNR ≥ 49 dB), about 60 % fewer imagery tiles.
    */
   function imageryOffsetOf(node: TileNode): number {
-    return node.key.z >= zoomLimit(node, { ...selectionParams, maxZoom: opts.maxZoom, detailArea: opts.detailArea }) ? opts.imageryZoomOffset : 0
+    return node.key.z >= opts.maxZoom ? opts.imageryZoomOffset : 0
   }
 
   /** the browser says the network is down (`navigator.onLine`); unknown counts as online */
@@ -419,6 +431,7 @@ export function createTerrainEngine(
         try {
           // the last attempt keeps what arrived: grey where the imagery is missing, counted by the export
           finishLoad(node, dem, texture)
+          countTexture(node, texture)
           node.imageryMissing = imageryFailed
           if (imageryFailed) node.failure = imageryFailure()
         } catch (error) {
@@ -464,9 +477,10 @@ export function createTerrainEngine(
     node.setGeometryBounds(result.geometry)
     group.add(mesh)
 
-    node.grid = grid
     node.setHeightRangeFromGrid(grid)
     rememberGrid(node.key, grid)
+    // the full elevation tile goes to the height field (bounded); the tile keeps the heights of its mesh vertices only
+    node.grid = meshVertexGrid(grid, opts.segments)
     node.state = 'ready'
     node.failedAttempts = 0
     node.failure = undefined
@@ -555,9 +569,20 @@ export function createTerrainEngine(
     })
   }
 
+  /** GPU bytes of each loaded tile's imagery texture (mipmaps included), and their sum (`textureBudgetBytes`) */
+  const textureBytes = new WeakMap<TileNode, number>()
+  let totalTextureBytes = 0
+  function countTexture(node: TileNode, texture: Texture | undefined): void {
+    const image = texture?.image as { width?: number; height?: number } | null | undefined
+    const bytes = image?.width && image.height ? (image.width * image.height * 4 * 4) / 3 : 0
+    totalTextureBytes += bytes - (textureBytes.get(node) ?? 0)
+    textureBytes.set(node, bytes)
+  }
+
   /** Free GPU resources and cached grid of one node; the node stays in the tree. */
   function unloadNode(node: TileNode): void {
     cancelLoad(node)
+    countTexture(node, undefined)
     if (node.mesh) {
       group.remove(node.mesh)
       node.mesh.material.dispose()
@@ -565,7 +590,7 @@ export function createTerrainEngine(
       changed = true
     }
     if (node.geometry) {
-      node.geometry.dispose()
+      disposeTileGeometry(node.geometry)
       node.geometry = undefined
     }
     if (node.texture) {
@@ -658,6 +683,25 @@ export function createTerrainEngine(
    * the tiles the current selection did not visit (so neither a drawn tile, a shadow caster nor an ancestor of one),
    * least recently visited first. Roots stay, like in the sweep. The view itself fits through `solveLodLevel`.
    */
+  /**
+   * Past `textureBudgetBytes`, unload the tiles this frame does not draw, the least needed first: the ones the retention
+   * no longer keeps for a coming frame (`keepUntil`), then the least recently visited. During a dive the coarse levels
+   * left behind go first; a prefetched tile goes only when nothing else is left, and is loaded again when its frame comes.
+   */
+  function enforceTextureBudget(): void {
+    const budget = cfg.textureBudgetBytes
+    if (!(totalTextureBytes > budget)) return
+    const evictable: TileNode[] = []
+    forEachNode(roots, (node) => {
+      if (node.state === 'ready' && node.parent !== undefined && node.lastVisitedFrame !== frame && !node.mesh?.visible) evictable.push(node)
+    })
+    evictable.sort((a, b) => a.keepUntil - b.keepUntil || leastRecent(a, b))
+    const target = budget * TEXTURE_BUDGET_FLOOR
+    for (let i = 0; i < evictable.length && totalTextureBytes > target; i++) {
+      if (!hasRenderedDescendant(evictable[i])) unloadNode(evictable[i])
+    }
+  }
+
   function enforceCap(reserve: number): void {
     const cap = cfg.maxResidentTiles - reserve
     if (readyCount + loadingCount <= cap) return
@@ -726,7 +770,7 @@ export function createTerrainEngine(
     dirtyCount--
     if (!node.grid || !node.mesh) return
     const result = buildGeometryFor(node, node.grid)
-    node.geometry?.dispose()
+    if (node.geometry) disposeTileGeometry(node.geometry)
     node.geometry = result.geometry
     node.mesh.geometry = result.geometry
     node.setGeometryBounds(result.geometry)
@@ -755,7 +799,7 @@ export function createTerrainEngine(
         node.dirty = false
         dirtyCount--
         const result = geometryFromArrays(arrays)
-        node.geometry?.dispose()
+        if (node.geometry) disposeTileGeometry(node.geometry)
         node.geometry = result.geometry
         node.mesh.geometry = result.geometry
         node.setGeometryBounds(result.geometry)
@@ -878,6 +922,7 @@ export function createTerrainEngine(
     // Loads, highest priority first, within the concurrency budget; room is made for them under the cap first.
     const toLoad = selection.toLoad
     enforceCap(Math.max(0, Math.min(toLoad.length, cfg.maxConcurrentLoads - loadingCount)))
+    enforceTextureBudget()
     let started = 0
     for (let i = 0; i < toLoad.length && loadingCount < cfg.maxConcurrentLoads; i++) {
       // an export: the children outside the view (priority < 0) are fetched after the look-ahead, not before it
@@ -928,7 +973,11 @@ export function createTerrainEngine(
     // only what that camera would draw (priority >= 0, sorted first), never its off-screen children; none past the cap
     for (
       let i = 0;
-      i < toLoad.length && inFlight() < limit && readyCount + loadingCount < cfg.maxResidentTiles && toLoad[i].priority >= 0;
+      i < toLoad.length &&
+      inFlight() < limit &&
+      readyCount + loadingCount < cfg.maxResidentTiles &&
+      !(totalTextureBytes > cfg.textureBudgetBytes * PREFETCH_BUDGET_SHARE) &&
+      toLoad[i].priority >= 0;
       i++
     ) {
       startLoad(toLoad[i], PREFETCH_RANK + i)

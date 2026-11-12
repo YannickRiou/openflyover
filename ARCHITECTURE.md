@@ -268,12 +268,25 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
 4. **Imagery** (`imagery.ts`): for the terrain tile (z,x,y) and `zoomOffset = k`, fetch the `2^k × 2^k` sub-tiles
    at z+k and draw them into a `tileSize·2^k` canvas → `CanvasTexture` (sRGB, mipmaps, anisotropy of the device budget: 16 on a computer, 4 on a phone or tablet; three clamps it to the graphics card's maximum). A cached bitmap is probed for a blank tile once (`WeakMap`), and a tile with nothing to draw gets no texture (grey colour, no canvas).
    If z+k > the source's maxZoom: take the deepest available tile and crop it.
-   The engine asks for `k` = « Détail de l'imagerie » only on a tile at its deepest zoom (`zoomLimit`), `k` = 0 on the
-   others (`imageryOffsetOf`): a tile that can still split is drawn only while its 64 grid cells look under 3 px, so its
+   The engine asks for `k` = « Détail de l'imagerie » only on a tile at the deepest zoom of the relief (`maxZoom`), `k` = 0 on the
+   others (`imageryOffsetOf`), including the landscape of a « situation » view held at `OUTER_MAX_ZOOM` (seen from afar, its
+   finer imagery made each of those tiles 4 or 16 times heavier for nothing): a tile that can still split is drawn only while its 64 grid cells look under 3 px, so its
    own 256 px give at least 4/3 image pixels per screen pixel and a finer level is averaged away by the mipmaps; at the
    deepest zoom the cells grow as the camera comes closer and the finer level shows. Measured on the sample, three 1080p
    views: the same image as `k` on every tile (PSNR 49 dB to identical, same fine detail), 59 % fewer Esri tiles over a
-   1080p export; « Normal » (`k` = 0 everywhere) loses 15–39 % of the fine detail. The offline and preload plan
+   1080p export; « Normal » (`k` = 0 everywhere) loses 15–39 % of the fine detail.
+   **Memory of the loaded tiles** (8.1.1, after a 400 km « situation » opening stalled an export on a 6 GB graphics card:
+   about 3,000 tiles, 2,600 textures, 5 GB of buffers in the page). A loaded tile keeps only the heights of its mesh
+   vertices (`meshVertexGrid`: 65 × 65 doubles, 33 kB, instead of its 512 × 512 elevation tile, 1 MB; `HeightGrid.vertices`,
+   which `sampleGrid` reads as they are, so the mesh and `sampleTileMeshAt` give exactly the same values); the full tile goes
+   to the bounded height field. All tile meshes of the same size share one triangle list and one set of texture
+   coordinates (`geometryFromArrays`, `disposeTileGeometry` keeps them when a tile goes). On a computer the imagery
+   textures have a budget (`tileTextureBytes`: 1 GB from 8 GB of memory, 600 MB at 6, 400 MB at 4 or less, from
+   `navigator.deviceMemory`): past it `enforceTextureBudget` unloads the tiles this frame does not draw, those no coming
+   frame keeps (`keepUntil`) first, and prefetches stop at 80 %; the view itself is never coarsened. Measured on that raid,
+   1080×1920 at 30 i/s, GTX 1060: 8.1.0 peaked at 5.1 GB of page memory and crawled through the opening; with these changes
+   the whole film (2,325 frames) is exported in 24 min 52 at 1.5 GB at most, and in 28 min 14 at 743 MB at most with the
+   budget of a 4 GB computer, no frame at the timeout. The offline and preload plan
    (`planOfflineTiles`) asks for the same levels.
    Each sub-tile is drawn as soon as it arrives (the fetcher's LRU closes evicted bitmaps: one that waited for its
    siblings could no longer be drawn; a closed one is asked for once more). A **plain white sub-tile** of a regional source
@@ -349,7 +362,7 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
     plan walks a scratch tree (`createRootNodes` of the engine's area, `TileNode`) with the engine's own rules:
     `engineAreaFor` (the larger area and `detailArea` of an opening or closing « situation », beyond which zoom stops at
     `OUTER_MAX_ZOOM`), the frustum of the real aspect and lens, `screenSpaceError` at the export's LOD height against
-    `ERROR_TARGET_PX`, and the imagery detail offset only on a tile at its deepest zoom (`zoomLimit`, as `imageryOffsetOf`);
+    `ERROR_TARGET_PX`, and the imagery detail offset only on a tile at the deepest zoom of the relief (as `imageryOffsetOf`);
     the imagery is the one of the « Date des photos » chosen (`engineOptionsFromSettings`), `planImagerySubtiles` gives its
     URLs. A tile's bounding sphere spans the heights the preview already loaded under it (`heightRange` over
     `engine.sampleHeight` at 9 points, ± 60 m + 10 % of its width), where the engine has tight spheres too; where no height
@@ -4628,6 +4641,7 @@ Chromium (SwiftShader, DPR 2): « Complète » 2 while playing; « Légère » 1
 | decoded tile bitmaps (LRU) | `createTileFetcher` | 600 | 200 | 200 | 120 |
 | height grids (256 px equivalents) | `DEFAULT_TUNING.heightCacheEntries` | 400 | 160 | 160 | 100 |
 | terrain tiles loaded or loading (LOD gives way past it) / loading at once | `DEFAULT_TUNING.maxResidentTiles` / `maxConcurrentLoads` | unbounded / 24 | 160 / 12 | 120 / 6 | 90 / as the device |
+| imagery textures of the loaded tiles (off-view tiles unloaded past it) | `DEFAULT_TUNING.textureBudgetBytes` | 1 GB (600 MB at 6 GB, 400 MB at 4 GB or less) | unbounded | unbounded | unbounded |
 | finest imagery (zoom offset) | `engineOptionsFromSettings`, offline packs (`packImageryLevel`) | « Très fin » (2) | « Fin » (1) | « Fin » (1) | « Fin » |
 | preview clouds: resolution, still frames | `CloudsLayer`, `CLOUD_SETTLE_FRAMES` | 1, 32 | 0.5, 16 | 0.5, 16 | 0.5, 16 |
 | sea of clouds by default | `DEFAULT_CLOUDS.seaRender` | volume | « Nappe » | « Nappe » | « Nappe » |

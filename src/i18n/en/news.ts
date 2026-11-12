@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'What’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v811.situation.title': "“Situation” views export on every computer",
+  'v811.situation.text': "An opening or closing seen from very high up no longer stalls the export, even on a modest computer. The picture is the same, with up to seven times less memory during the descent.",
   'v81.export.title': "Your exports get to the end",
   'v81.export.text': "An export no longer stops over a sea without dated photos, no longer freezes on a frame, and gets through a short network or graphics card outage. If it does stop, the message tells you why.",
   'v81.resume.title': "Pick up where the export stopped",

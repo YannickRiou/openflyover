@@ -3,7 +3,7 @@ import { DEFAULT_VIDEO_SETTINGS, exportDeviceNote, exportLodHeight, exportResolu
 import { CLOUD_SETTLE_FRAMES } from '../scene/renderOnDemand'
 import { DEFAULT_TUNING } from '../terrain/engine'
 import { DEFAULT_CLOUDS } from '../weather/sceneClouds'
-import { DESKTOP_BUDGET, budgetFor, canvasAntialias, deviceBudget, readDeviceTraits } from './deviceBudget'
+import { DESKTOP_BUDGET, budgetFor, canvasAntialias, desktopTextureBudget, deviceBudget, readDeviceTraits } from './deviceBudget'
 
 const scope = (coarse: boolean, width: number, height: number, deviceMemory?: number) => ({
   matchMedia: (query: string) => ({ matches: coarse && query === '(pointer: coarse)' }),
@@ -30,6 +30,7 @@ describe('budgetFor', () => {
       maxVideoBitrate: Infinity,
       memoryWarnBytes: 1.5e9,
       maxResidentTiles: Infinity,
+      tileTextureBytes: 1e9,
       maxTileLoads: 24,
       exportTileKeepFrames: 12,
       exportPrefetchAhead: [5, 10, 15, 20, 30, 40],
@@ -37,8 +38,8 @@ describe('budgetFor', () => {
       maxTrees: 250_000,
       anisotropy: 16,
     })
-    // a laptop with little memory is still a computer
-    expect(budgetFor({ coarsePointer: false, shortSidePx: 768, memoryGb: 2 })).toEqual(DESKTOP_BUDGET)
+    // a laptop with little memory is still a computer, with a smaller budget for the tile textures only
+    expect(budgetFor({ coarsePointer: false, shortSidePx: 768, memoryGb: 2 })).toEqual({ ...DESKTOP_BUDGET, tileTextureBytes: 400e6 })
   })
 
   it('lowers the limits of a phone', () => {
@@ -59,6 +60,7 @@ describe('budgetFor', () => {
       maxVideoBitrate: 8e6,
       memoryWarnBytes: 250e6,
       maxResidentTiles: 120,
+      tileTextureBytes: Infinity,
       maxTileLoads: 6,
       exportTileKeepFrames: 6,
       exportPrefetchAhead: [5, 10, 20],
@@ -148,5 +150,14 @@ describe('where the limits live (computer)', () => {
     expect(exportDeviceNote('desktop')).toBeNull()
     expect(exportDeviceNote('phone')).toMatch(/économise la mémoire/)
     expect(exportDeviceNote('tablet')).toBe(exportDeviceNote('phone'))
+  })
+
+  it('gives a computer with less memory a smaller tile texture budget', () => {
+    expect(desktopTextureBudget(undefined)).toBe(1e9)
+    expect(desktopTextureBudget(8)).toBe(1e9)
+    expect(desktopTextureBudget(6)).toBe(600e6)
+    expect(desktopTextureBudget(4)).toBe(400e6)
+    expect(desktopTextureBudget(2)).toBe(400e6)
+    expect(budgetFor({ coarsePointer: false, shortSidePx: 1080, memoryGb: 4 }).tileTextureBytes).toBe(400e6)
   })
 })

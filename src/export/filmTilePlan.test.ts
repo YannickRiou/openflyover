@@ -79,6 +79,19 @@ describe('planFilmTiles', () => {
     expect(terrainKeys(plain.urls).every((k) => boundsIntersect(tileBounds(k), base.area))).toBe(true)
   })
 
+  it('the landscape of a region view, held at the outer zoom, keeps its own imagery level even with « Très fin »', () => {
+    const region = engineAreaFor(bounds, true)
+    const high: FilmPose = { timeS: 0, position: frame.toLocal(6.87, 45.92, 400_000), target: frame.toLocal(6.87, 45.92 - 0.045, 1500) }
+    // lower in the descent, looking over the landscape: the outer tiles reach the outer zoom
+    const lower: FilmPose = { timeS: 0, position: frame.toLocal(6.87, 45.92, 30_000), target: frame.toLocal(6.87, 45.0, 1500) }
+    const plan = planFilmTiles({ ...base, ...region, imageryZoomOffset: 2, poses: [high, lower], camera: { ...lens, far: 2e6 } })
+    const imageryKeys = plan.urls.filter((u) => u.includes('arcgis')).map(keyOf)
+    const outside = imageryKeys.filter((k) => !boundsIntersect(tileBounds(k), region.detailArea!))
+    expect(outside.length).toBeGreaterThan(0)
+    // an outer tile at z11 is drawn with its own z11 imagery: no 4 × 4 sub-tiles at z13
+    expect(Math.max(...outside.map((k) => k.z))).toBeLessThanOrEqual(OUTER_MAX_ZOOM)
+  })
+
   it('the corridor follows the aspect: a landscape frame is wider than a portrait one', () => {
     const wide = planFilmTiles({ ...base, aspect: 16 / 9 })
     const tall = planFilmTiles({ ...base, aspect: 9 / 16 })

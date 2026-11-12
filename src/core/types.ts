@@ -200,7 +200,14 @@ export interface ImagerySource extends TileSourceBase {
 export interface HeightGrid {
   width: number
   height: number
-  data: Float32Array
+  /** Float64 for the heights at the mesh vertices (`vertices`): the exact doubles the full grid gave there */
+  data: Float32Array | Float64Array
+  /**
+   * The grid holds only the heights at the vertices of a tile mesh of this many segments a side ((vertices + 1)² values,
+   * vertex i at u = i / vertices, `meshVertexGrid`): what a loaded tile keeps, since its mesh and the heights read on it
+   * (`sampleTileMeshAt`) only ever sample those points. `sampleGrid` returns them as they are.
+   */
+  vertices?: number
 }
 
 // ---------------------------------------------------------------------------

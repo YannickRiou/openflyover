@@ -3,7 +3,7 @@ import { Vector3 } from 'three'
 import type { HeightGrid, TileKey } from '../core/types'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { tileBounds, tileCenter } from '../geo/mercator'
-import { buildTileGeometry, sampleTileMeshAt, tileMeshLayout } from './mesh'
+import { buildTileGeometry, buildTileMesh, disposeTileGeometry, meshVertexGrid, sampleTileMeshAt, tileMeshLayout } from './mesh'
 
 /** A z=12 tile over the Mont Blanc massif. */
 const KEY: TileKey = { z: 12, x: 2126, y: 1457 }
@@ -215,5 +215,51 @@ describe('sampleTileMeshAt', () => {
     expect(at(0.75, 0.75)).toBeCloseTo(0, 3)
     // on the edge west of the peak, a quarter of a cell from it
     expect(at(0.375, 0.5)).toBeCloseTo(675, 1)
+  })
+})
+
+describe('meshVertexGrid', () => {
+  /** a rough 512 px relief with a few nodata pixels */
+  const size = 512
+  const data = new Float32Array(size * size)
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) data[y * size + x] = 1500 + 400 * Math.sin(x / 13) * Math.cos(y / 17) + ((x * 7 + y * 3) % 11)
+  data[5] = Number.NaN
+  data[size * 300 + 200] = Number.NaN
+  const full: HeightGrid = { width: size, height: size, data }
+  const vertices = meshVertexGrid(full, 64)
+
+  it('keeps 65 × 65 heights instead of the 512 × 512 tile', () => {
+    expect(vertices.data.length).toBe(65 * 65)
+    expect(vertices.vertices).toBe(64)
+  })
+
+  it('gives exactly the same mesh and the same heights read on it', () => {
+    const options = { segments: 64, exaggeration: 1.2, skirtDepthM: 30 }
+    const a = buildTileMesh(KEY, full, FRAME, options)
+    const b = buildTileMesh(KEY, vertices, FRAME, options)
+    expect(Array.from(b.positions)).toEqual(Array.from(a.positions))
+    expect(Array.from(b.normals)).toEqual(Array.from(a.normals))
+    for (const [u, v] of [[0.1, 0.2], [0.5, 0.5], [0.93, 0.07], [0.3333, 0.7777]]) {
+      expect(sampleTileMeshAt(KEY, vertices, 64, KEY.x + u, KEY.y + v)).toBe(sampleTileMeshAt(KEY, full, 64, KEY.x + u, KEY.y + v))
+    }
+  })
+})
+
+describe('shared layout of the tile meshes', () => {
+  it('every tile of the same size shares one triangle list and one set of texture coordinates, kept when a tile goes', () => {
+    const options = { segments: 16, exaggeration: 1, skirtDepthM: 20 }
+    const a = buildTileGeometry(KEY, flatGrid(8, 100), FRAME, options).geometry
+    const b = buildTileGeometry({ ...KEY, x: KEY.x + 1 }, flatGrid(8, 900), FRAME, options).geometry
+    expect(b.index).toBe(a.index)
+    expect(b.getAttribute('uv')).toBe(a.getAttribute('uv'))
+    expect(b.getAttribute('position')).not.toBe(a.getAttribute('position'))
+    const index = a.index
+    const disposed: string[] = []
+    a.addEventListener('dispose', () => disposed.push('a'))
+    disposeTileGeometry(a)
+    expect(disposed).toEqual(['a'])
+    // the other tile still has them
+    expect(b.index).toBe(index)
+    expect(b.index!.count).toBe(tileMeshLayout(16).indexCount)
   })
 })
