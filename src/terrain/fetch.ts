@@ -177,7 +177,7 @@ export async function downloadTile(
     try {
       return await fetchTileBlob(url, signal, attempt > 0, priority)
     } catch (error) {
-      if (signal?.aborted || attempt >= MAX_RETRIES || !isRetryable(error) || (!retryNetworkErrors && error instanceof TypeError)) throw error
+      if (signal?.aborted || attempt >= MAX_RETRIES || !isRetryable(error) || (!retryNetworkErrors && error instanceof TypeError && attempt >= 1)) throw error
       if (retryDelayMs > 0) await delay(retryDelayMs * 4 ** attempt, signal)
     }
   }
@@ -297,7 +297,7 @@ interface PendingRequest {
   state: 'queued' | 'inflight' | 'done'
   waiters: Set<Waiter>
   controller: AbortController
-  /** false: a network error is not retried, the caller has a fallback (`fetchBitmap`'s `retryNetworkErrors`) */
+  /** false: a network error is retried once only, the caller has a fallback (`fetchBitmap`'s `retryNetworkErrors`) */
   retryNetworkErrors: boolean
 }
 

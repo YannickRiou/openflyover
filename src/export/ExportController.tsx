@@ -24,7 +24,7 @@ import type { FilmClock } from '../film/clock'
 import { pinsMoveWithTime } from '../film/photoPins'
 import { CAMERA_FOV_DEG } from '../flyover/cameraSettings'
 import { filmViewMovesWithTime, lookAtView, overviewView } from '../flyover/filmCamera'
-import { filmTrackOf } from '../flyover/sequence'
+import { filmTrackOf, playsBilan } from '../flyover/sequence'
 import { smoothedTrackPath } from '../flyover/smooth'
 import { junctionBlendAt, nightAt } from '../flyover/sun'
 import { loadOverlayFonts } from '../overlay/assets'
@@ -41,13 +41,10 @@ import { useFilmClock } from '../scene/usePacing'
 import { holdRegion } from '../osm/region'
 import { useWaterStore } from '../osm/store'
 import { useAppStore } from '../state/store'
-import { viewTileFailures } from '../terrain/engine'
+import { hostOf, viewTileFailures } from '../terrain/engine'
 import { fetchTileBlob, getStoredTileReader } from '../terrain/fetch'
-import { getImagerySource, getTerrainSource, maxRequestsFor } from '../terrain/sources'
-import { datedImagerySource } from '../terrain/imageryDates'
-import { autoDistanceM } from '../flyover/camera'
-import { trackPathOf } from '../flyover/path'
-import { packImageryLevel } from '../offline/plan'
+import { maxRequestsFor } from '../terrain/sources'
+import { ERROR_TARGET_PX, engineAreaFor, engineOptionsFromSettings, usesRegionView } from '../scene/terrainLayerSetup'
 import {
   DEFAULT_SETTLE,
   REPLACE_EPSILON,
@@ -79,7 +76,9 @@ import { compositorAttributes, createExportEncoder } from './nativeEncoder'
 import { isExportStep, setExportProbe, writeBreadcrumb } from './guard'
 import { effectiveRender } from './qualityTier'
 import { DEFAULT_ENCODING, VIDEO_CODEC_CHOICES, buildFrameSchedule, buildFrameTimes, exportLodHeight, type VideoCodecChoice } from './schedule'
-import { PRELOAD_MAX_BYTES, dataSaverOn, filmTilesToPreload, preloadTiles } from './tilePreload'
+import { planFilmTiles, sampleFilmPoses } from './filmTilePlan'
+import type { FilmPose } from './filmTilePlan'
+import { PRELOAD_ALONGSIDE_CONCURRENCY, PRELOAD_MAX_BYTES, dataSaverOn, preloadTiles } from './tilePreload'
 import {
   EMPTY_TIMINGS,
   REPORT_INTERVAL_MS,
@@ -501,6 +500,9 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
 
   /** film time set with every progress (a still keeps the current one) */
   let frameTimeS = saved.timeS
+  /** the tiles of the film fetched alongside the frames (`preloadTiles`), stopped once the film is rendered (`filmDone`) */
+  let preloadRun: Promise<void> | null = null
+  let filmDone = false
   /** re-drapes that ran since the last breadcrumb */
   let drapes = 0
   const frameDeps = {
@@ -721,37 +723,72 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     if (deps.engine() && !dataSaver && !request.probe) {
       const p0 = performance.now()
       const app = useAppStore.getState()
-      // the photos of the date chosen, as the terrain shows them (terrainLayerSetup.ts): the latest ones would fill the
-      // cache with tiles no frame asks for
-      const imagery = datedImagerySource(getImagerySource(settings.imagerySourceId), settings.imageryDate)
-      const preload = app.bounds && app.tracks.length > 0 ? filmTilesToPreload({
-        points: app.tracks.flatMap((tr) => tr.segments.flatMap((sg) => sg.points)),
-        bounds: app.bounds,
-        terrain: getTerrainSource(settings.terrainSourceId),
-        imagery,
-        imageryZoomOffset: packImageryLevel(settings.imageryZoomOffset).zoomOffset,
-        // the follow camera at its lowest, as « Préparer hors ligne » (OfflinePanel)
-        cameraHeightM: Math.min(...app.tracks.map((tr) => autoDistanceM(trackPathOf(tr)))) * settings.camera.distance * Math.sin((settings.camera.pitchDeg * Math.PI) / 180),
-        viewportHeightPx: lodHeight,
-        maxBytes: PRELOAD_MAX_BYTES[deviceBudget().kind],
-      }) : null
+      // what the engine asks for (terrainLayerSetup.ts): the photos of the date chosen, the area of the opening and
+      // closing views, the imagery detail; the latest photos would fill the cache with tiles no frame asks for
+      const engineOptions = engineOptionsFromSettings(settings)
+      const { imagery } = engineOptions
+      const regionView = usesRegionView(settings.film) || playsBilan(settings.race, app.tracks.length)
+      const exportCamera = deps.get().camera as PerspectiveCamera
+      const filmPosesToPreload = (frame: LocalFrame, camera: PerspectiveCamera): FilmPose[] => {
+        if (fixedView) {
+          // a still of the view as it is, or of the overview
+          const view = overview && framing && framing.count > 0 ? overviewView(framing, frame, null, settings.exaggeration, aspect, FROM_SOUTH) : null
+          const position = view?.position ?? camera.position.clone()
+          const target = view?.target ?? position.clone().add(camera.getWorldDirection(new Vector3()).multiplyScalar(1000))
+          return [{ timeS: 0, position, target }]
+        }
+        if (!path || path.count === 0) return []
+        // the camera of the film without terrain, as the shutter samples it (`adaptiveShutterSamples` below)
+        const filmTimes = request.still ? [filmClock.timeAtProgress(schedule[0])] : times
+        return sampleFilmPoses(filmTimes, schedule, (progress, timeS) => filmViewAt(path, filmClock, progress, timeS, frame, null, aspect), (x, y) => sameShot(filmClock, x, y))
+      }
+      const poses = app.bounds && localFrame && exportCamera.isPerspectiveCamera ? filmPosesToPreload(localFrame, exportCamera) : []
+      const elevations = app.tracks.flatMap((tr) => tr.segments.flatMap((sg) => sg.points.map((pt) => pt.ele))).filter((e): e is number => e !== undefined && Number.isFinite(e))
+      const preload =
+        app.bounds && localFrame && poses.length > 0
+          ? planFilmTiles({
+              poses,
+              frame: localFrame,
+              ...engineAreaFor(app.bounds, regionView),
+              terrain: engineOptions.terrain,
+              imagery,
+              imageryZoomOffset: engineOptions.imageryZoomOffset,
+              exaggeration: engineOptions.exaggeration,
+              camera: exportCamera,
+              aspect,
+              viewportHeightPx: lodHeight,
+              errorTargetPx: ERROR_TARGET_PX,
+              // the relief the preview already loaded (the coarse tiles cover the area): tiles as tight as the engine's
+              heightAt: (lon, lat) => deps.engine()?.sampleHeight(lon, lat),
+              trackMinM: elevations.length > 0 ? elevations.reduce((a, b) => Math.min(a, b)) : undefined,
+              trackMaxM: elevations.length > 0 ? elevations.reduce((a, b) => Math.max(a, b)) : undefined,
+              maxBytes: PRELOAD_MAX_BYTES[deviceBudget().kind],
+            })
+          : null
+      timings.preloadMs = performance.now() - p0
       if (preload && preload.urls.length > 0) {
+        writeBreadcrumb(`export : plan de ${preload.poses} vues en ${Math.round(preload.planMs)} ms`)
         writeBreadcrumb(`export : préchargement de ${preload.urls.length} tuiles sur ${preload.planned}`)
-        let reportedAt = -Infinity
-        const { failed } = await preloadTiles(preload.urls, {
-          download: deps.preloadTile ?? ((url) => fetchTileBlob(url)),
-          maxRequestsOf: (url) => maxRequestsFor(url, [imagery]),
+        // fetched while the frames render, a little ahead of them in film time, at a low network priority and with half of
+        // each server's connections: the render's own requests go first. Measured on the sample (1080×1920, 12 s, cold
+        // cache, GTX 1060): fetched before the first frame, 157 s of waiting for a render of 119 s; alongside it, no wait
+        const neededAt = new Map(preload.urls.map((url, k) => [url, preload.times[k]]))
+        preloadRun = preloadTiles(preload.urls, {
+          download: deps.preloadTile ?? ((url) => fetchTileBlob(url, undefined, false, 'low')),
+          maxRequestsOf: (url) => Math.max(1, Math.floor(maxRequestsFor(url, [imagery]) / 2)),
+          concurrency: PRELOAD_ALONGSIDE_CONCURRENCY,
+          fallbackOf: (url) => preload.fallbacks.get(url),
           stored: getStoredTileReader(),
-          isCanceled,
-          onProgress: (done, total) => {
-            if (done < total && performance.now() - reportedAt < REPORT_INTERVAL_MS) return
-            reportedAt = performance.now()
-            exportStore().reportTiles(done, total)
-          },
+          isCanceled: () => isCanceled() || filmDone,
+          // the render is past it: the engine has asked for it already
+          skip: (url) => frameTimeS !== null && (neededAt.get(url) ?? Infinity) < frameTimeS,
+        }).then(({ done, failed, failedUrls, retried, recovered }) => {
+          writeBreadcrumb(`export : préchargement ${done} / ${preload.urls.length} en ${((performance.now() - p0) / 1000).toFixed(1)} s (${failed} échecs)`)
+          if (retried > 0) writeBreadcrumb(`export : ${retried} tuiles reprises, ${recovered} reçues`)
+          const byHost = new Map<string, number>()
+          for (const url of failedUrls) byHost.set(hostOf(url), (byHost.get(hostOf(url)) ?? 0) + 1)
+          for (const [host, count] of [...byHost].sort((x, y) => y[1] - x[1]).slice(0, 3)) writeBreadcrumb(`export : échecs ${host} ×${count}`)
         })
-        if (isCanceled()) throw new ExportCanceledError()
-        timings.preloadMs = performance.now() - p0
-        writeBreadcrumb(`export : tuiles préchargées en ${(timings.preloadMs / 1000).toFixed(1)} s (${failed} échecs)`)
       }
     }
     // the 3D models of the markers are there before the first frame (not their stand-ins)
@@ -941,6 +978,9 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     const resumeFrom = kept && resumeRun ? await storedResumeFrame().catch(() => null) : null
     await abandon(error, request, session, isCanceled(), resumeFrom)
   } finally {
+    // the tiles still being fetched ahead are no longer needed (their requests in flight end by themselves)
+    filmDone = true
+    void preloadRun?.catch(() => undefined)
     gpu.dispose()
     gpuTimer?.dispose()
     setExportProbe(null)

@@ -216,12 +216,14 @@ describe('createTileFetcher', () => {
     expect(fetcher.stats.failed).toBe(0)
   })
 
-  it('does not retry a network error when asked not to (the caller has a fallback)', async () => {
+  it('retries a network error once only when asked (the caller has a fallback)', async () => {
     const fetcher = createTileFetcher({ retryDelayMs: 0 })
     const promise = fetcher.fetchBitmap('u', { retryNetworkErrors: false })
     pending[0].d.reject(new TypeError('Failed to fetch'))
+    await flush()
+    pending[1].d.reject(new TypeError('Failed to fetch'))
     await expect(promise).rejects.toBeInstanceOf(TypeError)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('gives up after three retries of a network error', async () => {

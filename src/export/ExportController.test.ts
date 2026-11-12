@@ -308,7 +308,7 @@ describe('runExport', () => {
     const original = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
     Object.defineProperty(globalThis, 'navigator', { value: { connection: { saveData: true } }, configurable: true })
     try {
-      await exportFilm(destination(), { engine: () => engine as unknown as TerrainEngine, budget: DESKTOP_BUDGET, preloadTile })
+      await exportFilm(destination(), { engine: () => engine as unknown as TerrainEngine, frame: () => createLocalFrame(6.78, 45.85), budget: DESKTOP_BUDGET, preloadTile })
     } finally {
       if (original) Object.defineProperty(globalThis, 'navigator', original)
       else delete (globalThis as { navigator?: unknown }).navigator
@@ -460,7 +460,7 @@ describe('runExport', () => {
     }
   })
 
-  it('fetches the tiles of the whole film before its first frame, counts that time apart and reports it as tiles', async () => {
+  it('fetches the tiles of the film alongside its frames, at a low priority, and passes over those the render is past', async () => {
     const track = buildTrack({
       name: 'test',
       source: 'gpx',
@@ -469,25 +469,27 @@ describe('runExport', () => {
     const { tracks, bounds } = useAppStore.getState()
     useAppStore.setState({ tracks: [track], bounds: track.bounds })
     const events: string[] = []
-    const preloadTile = vi.fn(async () => void events.push('preload'))
+    // a tile takes a while to come: the frames do not wait for them
+    const preloadTile = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      events.push('preload')
+    })
     vi.mocked(renderSettledFrame).mockImplementation(async () => {
       events.push('frame')
       return 'complete'
     })
-    const reported: number[] = []
-    const unsubscribe = useExportStore.subscribe((s) => s.tiles && reported.push(s.tiles.done))
     const engine = { prefetch: () => 0, update: vi.fn(), sampleHeight: () => 0, onChange: () => () => {}, stats: { pendingTiles: 0, pendingVisibleTiles: 0 } }
     try {
-      await exportFilm(destination(), { engine: () => engine as unknown as TerrainEngine, budget: DESKTOP_BUDGET, preloadTile })
+      await exportFilm(destination(), { engine: () => engine as unknown as TerrainEngine, frame: () => createLocalFrame(6.78, 45.85), budget: DESKTOP_BUDGET, preloadTile })
     } finally {
-      unsubscribe()
       useAppStore.setState({ tracks, bounds })
       vi.mocked(renderSettledFrame).mockReset()
       vi.mocked(renderSettledFrame).mockResolvedValue('complete')
     }
-    expect(preloadTile.mock.calls.length).toBeGreaterThan(10)
-    expect(events.indexOf('frame')).toBe(preloadTile.mock.calls.length)
-    expect(reported.at(-1)).toBe(preloadTile.mock.calls.length)
+    // the first frame does not wait for the preload: frames and tiles interleave
+    expect(preloadTile.mock.calls.length).toBeGreaterThan(0)
+    expect(events.indexOf('frame')).toBeLessThan(events.indexOf('preload'))
+    expect(preloadTile).toHaveBeenCalledWith(expect.stringMatching(/^https:/))
     expect(useExportStore.getState().phase).toBe('done')
     expect(useExportStore.getState().timings.preloadMs).toBeGreaterThanOrEqual(0)
   })

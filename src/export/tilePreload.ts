@@ -3,25 +3,19 @@
  * for at full speed, in the order the film needs them, so that the render waits for the graphics card rather than for
  * the network. They only go into the browser's HTTP cache (every source sends `Cache-Control`; Esri may not go into an
  * offline pack, `offline/policy.ts`): nothing is stored apart, and the render still asks the engine for each tile, so a
- * tile the cache dropped is simply fetched again. The list is the offline planner's (`planOfflineTiles`) along a
- * corridor of the track, cut at a size the device's cache can hold.
+ * tile the cache dropped is simply fetched again. The list comes from the camera of the film (`filmTilePlan.ts`), cut at
+ * a size the device's cache can hold. A dated tile that is missing is asked for from the latest photos, as the engine
+ * draws it, and the tiles that failed are asked once more at the end.
  */
 import type { DeviceKind } from '../core/deviceBudget'
-import type { LonLat, TileKey } from '../core/types'
-import { tileCenter, tileGroundSizeM } from '../geo/mercator'
-import { offlinePolicy } from '../offline/policy'
-import { planOfflineTiles } from '../offline/plan'
-import type { OfflinePlanInput } from '../offline/plan'
 import type { StoredTileReader } from '../terrain/fetch'
 
-/** width of the corridor of the track whose fine tiles are fetched (metres, as the narrowest offline pack) */
-export const PRELOAD_CORRIDOR_M = 2_000
 /** requests at once, all servers together (each one within its own `maxRequests`, see `preloadTiles`) */
 export const PRELOAD_CONCURRENCY = 24
+/** requests at once of the preload that runs alongside the render (the render's own requests come first) */
+export const PRELOAD_ALONGSIDE_CONCURRENCY = 12
 /** most bytes fetched ahead (estimated): about what the HTTP cache of the device keeps without dropping the first ones */
 export const PRELOAD_MAX_BYTES: Record<DeviceKind, number> = { phone: 250e6, tablet: 400e6, desktop: 1e9 }
-/** points of the track the order is taken from (the nearest one gives a tile its place in the film) */
-const ORDER_POINTS = 500
 
 /**
  * The browser's data saver is on (`navigator.connection.saveData`: Android Chrome, Edge): the tiles are then fetched by
@@ -37,60 +31,8 @@ export function dataSaverOn(scope: DataSaverScope = globalThis as DataSaverScope
   }
 }
 
-export interface FilmTiles {
-  /** URLs to fetch, in the order the film needs them */
-  urls: string[]
-  /** tiles of the whole plan (more than `urls` when it was cut at the size) */
-  planned: number
-  /** estimated size of `urls` (bytes) */
-  estimatedBytes: number
-}
-
-/** Index of the point of `points` nearest to `p` (flat distance, metres per degree of longitude scaled at `p`). */
-function nearestIndex(points: readonly LonLat[], p: LonLat): number {
-  const kx = Math.cos((p.lat * Math.PI) / 180)
-  let best = 0
-  let bestD = Infinity
-  for (let i = 0; i < points.length; i++) {
-    const dx = (points[i].lon - p.lon) * kx
-    const dy = points[i].lat - p.lat
-    const d = dx * dx + dy * dy
-    if (d < bestD) {
-      bestD = d
-      best = i
-    }
-  }
-  return best
-}
-
-/**
- * The tiles to fetch before the film: the coarse ones first (wider than the corridor: the landscape, the opening and
- * closing shots, coarsest first), then the fine ones in the order the track passes them, cut once `maxBytes` (estimated
- * with the typical tile size of each source) is reached.
- */
-export function filmTilesToPreload(input: Omit<OfflinePlanInput, 'corridorM'> & { maxBytes: number }): FilmTiles {
-  const plan = planOfflineTiles({ ...input, corridorM: PRELOAD_CORRIDOR_M })
-  const step = Math.max(1, Math.ceil(input.points.length / ORDER_POINTS))
-  const along = input.points.filter((_, i) => i % step === 0)
-  const rank = (key: TileKey | undefined) => {
-    if (!key) return Infinity
-    if (tileGroundSizeM(key) > PRELOAD_CORRIDOR_M) return key.z - 100
-    return along.length > 0 ? nearestIndex(along, tileCenter(key)) : 0
-  }
-  const ranked = plan.tiles.map((tile) => ({ tile, rank: rank(tile.key) })).sort((a, b) => a.rank - b.rank)
-  const urls: string[] = []
-  let estimatedBytes = 0
-  for (const { tile } of ranked) {
-    const bytes = offlinePolicy(tile.sourceId).typicalTileBytes
-    if (estimatedBytes + bytes > input.maxBytes) break
-    estimatedBytes += bytes
-    urls.push(tile.url)
-  }
-  return { urls, planned: plan.tiles.length, estimatedBytes }
-}
-
 export interface PreloadDeps {
-  /** fetch a tile (into the HTTP cache); a failure is only counted, the render will ask again */
+  /** fetch a tile (into the HTTP cache); a failure is retried once at the end, then only counted: the render will ask again */
   download(url: string): Promise<unknown>
   /** offline packs: a tile they hold is not fetched */
   stored?: StoredTileReader | null
@@ -99,14 +41,47 @@ export interface PreloadDeps {
   concurrency?: number
   /** most requests at once to the server of a URL (`maxRequestsFor`); none: no limit but `concurrency` */
   maxRequestsOf?(url: string): number
+  /**
+   * The same tile of the latest photos for a tile of dated photos (`FilmTiles.fallbacks`): fetched when the dated tile
+   * fails (the year did not fly there: a 404, or a network error where the archive hides its 404), as the engine draws it.
+   * It takes the place of the dated tile, whatever its server.
+   */
+  fallbackOf?(url: string): string | undefined
+  /** this URL is no longer worth fetching (the render is past the time it is needed): passed over */
+  skip?(url: string): boolean
+}
+
+export interface PreloadResult {
+  done: number
+  /** tiles that failed after the second try, and their URLs (for the breadcrumb) */
+  failed: number
+  failedUrls: string[]
+  /** tiles that failed once and were asked for again, and how many of them came the second time */
+  retried: number
+  recovered: number
 }
 
 /**
- * Fetch `urls`, `concurrency` at a time, in their order, until the end or a cancel. A server at its `maxRequestsOf` is
- * skipped meanwhile: its requests would only wait for the browser's connections (6 to an HTTP/1.1 server), holding
- * places the other servers' tiles could use (the relief behind Esri's imagery).
+ * Fetch `urls`, `concurrency` at a time, in their order, until the end or a cancel; then once more those that failed. A
+ * server at its `maxRequestsOf` is skipped meanwhile: its requests would only wait for the browser's connections (6 to an
+ * HTTP/1.1 server), holding places the other servers' tiles could use (the relief behind Esri's imagery).
  */
-export async function preloadTiles(urls: readonly string[], deps: PreloadDeps): Promise<{ done: number; failed: number }> {
+export async function preloadTiles(urls: readonly string[], deps: PreloadDeps): Promise<PreloadResult> {
+  const first = await preloadPass(urls, deps, true)
+  if (first.failedUrls.length === 0 || deps.isCanceled()) {
+    return { done: first.done, failed: first.failedUrls.length, failedUrls: first.failedUrls, retried: 0, recovered: 0 }
+  }
+  const second = await preloadPass(first.failedUrls, deps, false)
+  return {
+    done: first.done,
+    failed: second.failedUrls.length,
+    failedUrls: second.failedUrls,
+    retried: first.failedUrls.length,
+    recovered: first.failedUrls.length - second.failedUrls.length,
+  }
+}
+
+async function preloadPass(urls: readonly string[], deps: PreloadDeps, report: boolean): Promise<{ done: number; failedUrls: string[] }> {
   const limit = Math.max(1, deps.concurrency ?? PRELOAD_CONCURRENCY)
   /** the URLs of each server, in order, and how many of them are being fetched */
   const servers = new Map<string, { indices: number[]; next: number; running: number; max: number }>()
@@ -118,13 +93,20 @@ export async function preloadTiles(urls: readonly string[], deps: PreloadDeps): 
   })
   let running = 0
   let done = 0
-  let failed = 0
+  const failedUrls: string[] = []
   const fetchOne = async (url: string) => {
     try {
       const held = deps.stored?.covers(url) ? await deps.stored.get(url) : null
-      if (!held) await deps.download(url)
+      if (held) return
+      try {
+        await deps.download(url)
+      } catch (error) {
+        const fallback = deps.fallbackOf?.(url)
+        if (!fallback || deps.isCanceled()) throw error
+        await deps.download(fallback)
+      }
     } catch {
-      failed++
+      failedUrls.push(url)
     }
   }
   await new Promise<void>((resolve) => {
@@ -138,13 +120,17 @@ export async function preloadTiles(urls: readonly string[], deps: PreloadDeps): 
         if (!pick) break
         const server = pick
         const url = urls[server.indices[server.next++]]
+        if (deps.skip?.(url)) {
+          done++
+          continue
+        }
         server.running++
         running++
         void fetchOne(url).then(() => {
           server.running--
           running--
           done++
-          deps.onProgress?.(done, urls.length)
+          if (report) deps.onProgress?.(done, urls.length)
           pump()
         })
       }
@@ -152,5 +138,5 @@ export async function preloadTiles(urls: readonly string[], deps: PreloadDeps): 
     }
     pump()
   })
-  return { done, failed }
+  return { done, failedUrls }
 }
