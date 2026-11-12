@@ -56,6 +56,9 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **An export error is told once**: in the panel, with its « Reprendre » and report buttons, no longer a second time as a toast. « Son » and « Volume » that disappear for a PNG sequence or « Habillage seul » now say why
 - **The news quote each language's own labels**, a unique key for each item of the « Nouveautés » list, the dead texts removed, and a language whose file cannot be loaded at start-up no longer stays selected in the menu while the screen is in French
 - **Lint**: the false positives of the 3D scene (mutating three.js objects in `useFrame`) are off for `src/scene`, and `TopBar` no longer sets state in its effect needlessly
+- **Documentation and repository upkeep**: the release procedure of the handbook says that a pull request from a `release/X.Y.Z` branch is tagged and built on its own; `ARCHITECTURE.md` and the roadmap name the current code and versions; the README no longer quotes a test count; the `.claude/` folder is ignored by version control.
+- **Faster security check, pinned signing job**: `cargo-audit` is restored from a monthly cache instead of being compiled at every run, and the actions of the installer job that holds the signing keys are pinned by commit.
+- **Two unused dependencies removed from `package.json`**: `@react-aria/ssr` and `@react-aria/utils` (no import in the code; HeroUI installs them itself, at the same versions). Two unused constants are removed.
 
 ## 8.0.1 (November 2026)
 
