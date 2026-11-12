@@ -13,9 +13,9 @@ export interface DeviceBudget {
   maxPixelRatio: number
   /** same while the film plays */
   movingPixelRatio: number
-  /** decoded tile bitmaps kept by the fetcher (256 px: ~256 KB each) */
+  /** decoded tile bitmaps kept by the fetcher (256 px: ~256 KB each, 512 px: ~1 MB each) */
   tileBitmaps: number
-  /** height grids kept by the terrain engine, in 256 px tiles (~256 KB each) */
+  /** height grids kept by the terrain engine, in 512 px tiles (~1 MB each) */
   heightGrids: number
   /** finest imagery (`imageryZoomOffset`: texture of 256 × 2^k px per terrain tile) */
   maxImageryZoomOffset: 0 | 1 | 2
