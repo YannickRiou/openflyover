@@ -610,6 +610,15 @@ describe('placing a photo on the track', () => {
     expect(photoFilmTime(path, clock, { lon: 6.81, lat: 45.9, timeMs: T0 + 14 * MIN })).toBe(at(path.dist[3]))
   })
 
+  it('a photo at the end of the track is placed at the end of the flight, before the closing shot', () => {
+    const closed = buildFilmClock({ ...input, closing: { style: 'descente', durationS: 5 } })
+    const endS = closed.openingS + closed.flightS
+    const last = path.count - 1
+    expect(photoFilmTime(path, closed, { lon: path.lon[last], lat: path.lat[last], timeMs: path.time[last] })).toBeCloseTo(endS, 1)
+    expect(closed.timeAtProgress(1)).toBeGreaterThan(endS)
+    expect(closed.flightTimeAtProgress(1)).toBeCloseTo(endS, 6)
+  })
+
   it('else at the point recorded at the capture time; nothing far from the track or outside the outing', () => {
     expect(photoFilmTime(path, clock, { timeMs: T0 + 2.5 * MIN })).toBe(at(path.dist[1] / 2))
     expect(photoFilmTime(path, clock, { lon: 7.5, lat: 45.9 })).toBeUndefined()
