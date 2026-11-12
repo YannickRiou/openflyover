@@ -341,21 +341,38 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      a tie; roots stay), and `prefetch` starts nothing. The tiles of the current selection (drawn, shadow casters, their
      ancestors) are never evicted. A computer counts frames the same way but sets no cap. Estimate behind 120:
      ~2.6 MB a tile (imagery texture 512² with mipmaps ~1.4 MB, its canvas ~1 MB, DEM grid, geometry) = ~310 MB at the cap.
-   - **Tiles of the film fetched before its first frame** (`export/tilePreload.ts`, #401). Before the frames of a film,
-     `filmTilesToPreload` lists the terrain and imagery tiles with the offline planner (`planOfflineTiles`, corridor
-     `PRELOAD_CORRIDOR_M` = 2 km, the follow camera at its lowest as « Préparer hors ligne », the export's LOD height, the
-     imagery of the « Date des photos » chosen through `datedImagerySource` as the terrain shows it), the
-     tiles wider than the corridor first, then the others by the nearest point of the track, cut at `PRELOAD_MAX_BYTES`
-     (estimated with each source's typical tile size: 250 MB phone, 400 MB tablet, 1 GB computer); `preloadTiles` fetches them
-     24 at a time in their order, each server within its `maxRequests` (`maxRequestsFor`, the dated source given as `extra`: Esri 6, Wayback 6, the connections a browser
-     gives an HTTP/1.1 server; its waiting requests would hold places the relief's could use) (`fetchTileBlob`, a tile of an
-     offline pack is skipped, a failure only counted). 8 at once, shared, took a third longer (cold cache, 1080p sample). They go into the browser's
-     HTTP cache only (every source sends `Cache-Control`; Esri, refused in offline packs, is fetched like any view): the engine
-     still asks for each tile during the render and finds it there, or fetches it again. The panel shows « Préparation des
-     tuiles du film : n / N » (`reportTiles`), its time is `timings.preloadMs` (« préchargement des tuiles » in the split) and
-     the remaining time starts at the first frame (`startedAt` set again there, after the soundtrack, the encoder and the
-     tiles, all made once). The panel's « ≈ x s / image » is that same pace (`etaS` over the frames left), so the two agree.
-   - **Data saver**: with `navigator.connection.saveData` (`dataSaverOn`: Android Chrome, Edge; Safari, hence an iPhone and
+   - **Tiles of the film fetched alongside its frames** (`export/filmTilePlan.ts` and `export/tilePreload.ts`, #401).
+    Before the first frame, `planFilmTiles` lists the terrain and imagery tiles the engine will ask for, from the camera
+    of the film. `sampleFilmPoses` places the camera without terrain (`filmViewAt(…, null, aspect)`, as the shutter does)
+    every `POSE_STEP_S` (0.4 s) of film time, at the first and last frame and at every cut (`sameShot`). For each pose the
+    plan walks a scratch tree (`createRootNodes` of the engine's area, `TileNode`) with the engine's own rules:
+    `engineAreaFor` (the larger area and `detailArea` of an opening or closing « situation », beyond which zoom stops at
+    `OUTER_MAX_ZOOM`), the frustum of the real aspect and lens, `screenSpaceError` at the export's LOD height against
+    `ERROR_TARGET_PX`, and the imagery detail offset only on a tile at its deepest zoom (`zoomLimit`, as `imageryOffsetOf`);
+    the imagery is the one of the « Date des photos » chosen (`engineOptionsFromSettings`), `planImagerySubtiles` gives its
+    URLs. A tile's bounding sphere spans the heights the preview already loaded under it (`heightRange` over
+    `engine.sampleHeight` at 9 points, ± 60 m + 10 % of its width), where the engine has tight spheres too; where no height
+    is known yet, the track's range (300 m below, 1500 m above). A tile is needed at the first pose that sees it
+    (`FilmTiles.times`); the list is ordered by that film time, the coarser tile first, cut at `PRELOAD_MAX_BYTES`
+    (estimated with each source's typical tile size: 250 MB phone, 400 MB tablet, 1 GB computer). Not modelled: the
+    coarser level of detail a phone takes under its tile cap, the camera raised over the relief, the culled siblings the
+    engine loads at low priority, an engine area kept from an earlier, larger track (`resolveEngineArea`). 0.4 to 0.7 s
+    for 450 poses on a 100 km track in Node.
+    `preloadTiles` fetches the list **while the frames render**, not before: `PRELOAD_ALONGSIDE_CONCURRENCY` (12) at once,
+    each server at half of its `maxRequests` (`maxRequestsFor`, the dated source given as `extra`: Esri and Wayback 6, so
+    3), `fetchTileBlob` at the `low` network priority, so the engine's requests for the frame go first; a URL whose film
+    time the render is past is passed over (`skip`), and the run stops with the film (`filmDone`). A tile of an offline
+    pack is not fetched. A dated tile that fails (a 404 the browser cannot read, or a network error) is asked for from the
+    latest photos (`FilmTiles.fallbacks`), as the engine draws it; the failures are asked once more at the end, those left
+    are counted by server in the breadcrumbs (« échecs hôte ×n »). The tiles only go into the browser's HTTP cache; the
+    engine still asks for each one and finds it there, or fetches it again. `timings.preloadMs` is the planning time.
+    Measured (a script outside the repository: headless Chrome on the GTX 1060, cold profile, the sample in 1080×1920, 12 s at
+    10 i/s, 120 renders, responses counted with `fromCache`): fetched before the first frame, the full list covered 92 % of
+    the render's requests but cost 157 s of waiting, 276 s in all; the old corridor list 35 s and 34 % covered, 142 s in
+    all; alongside the frames, 118 and 121 s in all. The page cannot tell a cached tile from a fetched one: the timing of a
+    cross-origin resource (`deliveryType`, `transferSize`) is hidden without `Timing-Allow-Origin`, and the time to headers
+    is unreliable while the page renders (a count tried that way said 35 % where the browser said 92 %).
+  - **Data saver**: with `navigator.connection.saveData` (`dataSaverOn`: Android Chrome, Edge; Safari, hence an iPhone and
      Chrome on it, does not tell) the preload is skipped, the frames fetch the tiles they need (breadcrumb « préchargement
      ignoré »).
    - **The cap is hard: the level of detail gives way** (phone, tablet). A low view looking at the horizon in a portrait

@@ -1,54 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getImagerySource, getTerrainSource } from '../terrain/sources'
-import { dataSaverOn, filmTilesToPreload, preloadTiles } from './tilePreload'
-
-/** A track of 10 km going south from Chamonix. */
-const points = Array.from({ length: 101 }, (_, i) => ({ lon: 6.87, lat: 45.92 - i * 0.0009 }))
-const bounds = { west: 6.87, east: 6.87, south: 45.92 - 100 * 0.0009, north: 45.92 }
-const input = {
-  points,
-  bounds,
-  terrain: getTerrainSource('mapterhorn'),
-  imagery: getImagerySource('arcgis-world-imagery'),
-  imageryZoomOffset: 0,
-  cameraHeightM: 300,
-  viewportHeightPx: 1080,
-  maxBytes: Infinity,
-}
-/** z/x/y of a Mapterhorn or Esri URL (Esri puts the row before the column) */
-const keyOf = (url: string) => {
-  const m = /\/(\d+)\/(\d+)\/(\d+)(?:\.\w+)?$/.exec(url)!
-  return url.includes('arcgis') ? { z: +m[1], y: +m[2], x: +m[3] } : { z: +m[1], x: +m[2], y: +m[3] }
-}
-
-describe('filmTilesToPreload', () => {
-  it('lists the terrain and the imagery, Esri included (fetched, never stored), the coarse tiles first and the fine ones along the track', () => {
-    const { urls, planned } = filmTilesToPreload(input)
-    expect(urls).toHaveLength(planned)
-    expect(urls.some((u) => u.includes('mapterhorn'))).toBe(true)
-    expect(urls.some((u) => u.includes('arcgis'))).toBe(true)
-    // the deepest terrain tiles come in the order the track goes south: the first ones are north of the last ones
-    // (the tiles before the start of the track all take its first point: a tie)
-    const terrain = urls.filter((u) => u.includes('mapterhorn')).map(keyOf)
-    const deepest = Math.max(...terrain.map((k) => k.z))
-    const rows = terrain.filter((k) => k.z === deepest).map((k) => k.y)
-    const mean = (list: number[]) => list.reduce((a, b) => a + b, 0) / list.length
-    const quarter = Math.floor(rows.length / 4)
-    expect(mean(rows.slice(0, quarter))).toBeLessThan(mean(rows.slice(-quarter)))
-    // a coarse tile never comes after a fine one
-    const zooms = terrain.map((k) => k.z)
-    expect(zooms.indexOf(deepest)).toBeGreaterThan(zooms.lastIndexOf(Math.min(...zooms)))
-  })
-
-  it('stops at the size the device keeps, the start of the film first', () => {
-    const all = filmTilesToPreload(input)
-    const cut = filmTilesToPreload({ ...input, maxBytes: all.estimatedBytes / 4 })
-    expect(cut.planned).toBe(all.planned)
-    expect(cut.urls.length).toBeLessThan(all.urls.length)
-    expect(cut.estimatedBytes).toBeLessThanOrEqual(all.estimatedBytes / 4)
-    expect(all.urls.slice(0, cut.urls.length)).toEqual(cut.urls)
-  })
-})
+import { dataSaverOn, preloadTiles } from './tilePreload'
 
 describe('dataSaverOn', () => {
   it('is the browser\'s data saver, false where the browser does not tell (Safari) or reads fail', () => {
@@ -81,7 +32,7 @@ describe('preloadTiles', () => {
       onProgress: (done) => progress.push(done),
       concurrency: 4,
     })
-    expect(result).toEqual({ done: 20, failed: 1 })
+    expect(result).toMatchObject({ done: 20, failed: 1, failedUrls: ['https://t/7'], retried: 1, recovered: 0 })
     expect(most).toBe(4)
     expect(fetched).toHaveLength(18)
     expect(fetched).not.toContain('https://t/3')
@@ -105,10 +56,60 @@ describe('preloadTiles', () => {
       concurrency: 6,
       maxRequestsOf: (url) => (url.includes('slow') ? 2 : Infinity),
     })
-    expect(result).toEqual({ done: 40, failed: 0 })
+    expect(result).toMatchObject({ done: 40, failed: 0, retried: 0 })
     expect(most.slow).toBe(2)
     expect(most.fast).toBe(4)
     expect(most.all).toBe(6)
+  })
+
+  it('asks the latest photos for a dated tile that fails, and counts a failure only when both fail', async () => {
+    const urls = ['https://dated/1', 'https://dated/2', 'https://dated/3', 'https://plain/4']
+    const asked: string[] = []
+    const result = await preloadTiles(urls, {
+      download: async (url) => {
+        asked.push(url)
+        // dated tiles 1 and 3 do not exist, and neither does the latest photo of 3
+        if (url === 'https://dated/1' || url === 'https://dated/3' || url === 'https://latest/3') throw new Error('404')
+      },
+      fallbackOf: (url) => (url.startsWith('https://dated/') ? url.replace('dated', 'latest') : undefined),
+      isCanceled: () => false,
+      concurrency: 1,
+    })
+    expect(asked).toContain('https://latest/1')
+    expect(asked).not.toContain('https://latest/2')
+    expect(result.failedUrls).toEqual(['https://dated/3'])
+  })
+
+  it('asks once more at the end for the tiles that failed, and reports those that still fail', async () => {
+    const urls = Array.from({ length: 6 }, (_, i) => `https://t/${i}`)
+    const calls = new Map<string, number>()
+    const result = await preloadTiles(urls, {
+      download: async (url) => {
+        const n = (calls.get(url) ?? 0) + 1
+        calls.set(url, n)
+        // 1 fails once (a hiccup), 4 always
+        if ((url.endsWith('/1') && n === 1) || url.endsWith('/4')) throw new Error('503')
+      },
+      isCanceled: () => false,
+      concurrency: 2,
+    })
+    expect(calls.get('https://t/1')).toBe(2)
+    expect(calls.get('https://t/4')).toBe(2)
+    expect(calls.get('https://t/0')).toBe(1)
+    expect(result).toMatchObject({ done: 6, retried: 2, recovered: 1, failed: 1, failedUrls: ['https://t/4'] })
+  })
+
+  it('does not retry once the export is canceled', async () => {
+    let calls = 0
+    const result = await preloadTiles(['https://t/1'], {
+      download: async () => {
+        calls++
+        throw new Error('503')
+      },
+      isCanceled: () => calls >= 1,
+    })
+    expect(calls).toBe(1)
+    expect(result.retried).toBe(0)
   })
 
   it('stops asking once the export is canceled', async () => {
@@ -117,5 +118,13 @@ describe('preloadTiles', () => {
     const result = await preloadTiles(urls, { download: async () => void calls++, isCanceled: () => calls >= 5, concurrency: 1 })
     expect(calls).toBe(5)
     expect(result.done).toBe(5)
+  })
+
+  it('passes over the tiles the render is already past', async () => {
+    const urls = Array.from({ length: 10 }, (_, i) => `https://t/${i}`)
+    const fetched: string[] = []
+    const result = await preloadTiles(urls, { download: async (url) => void fetched.push(url), isCanceled: () => false, skip: (url) => Number(url.slice(10)) < 4 })
+    expect(fetched).toEqual(urls.slice(4))
+    expect(result.done).toBe(10)
   })
 })
