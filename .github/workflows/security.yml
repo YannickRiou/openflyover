@@ -45,8 +45,17 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo install cargo-audit --locked
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      # cargo-audit is compiled once a month, then restored from the cache (compiling it took minutes at every run)
+      - id: month
+        run: echo "value=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - id: audit-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/bin/cargo-audit
+          key: cargo-audit-${{ runner.os }}-${{ steps.month.outputs.value }}
+      - if: steps.audit-cache.outputs.cache-hit != 'true'
+        run: cargo install cargo-audit --locked
       - run: cargo audit
         working-directory: src-tauri
 
