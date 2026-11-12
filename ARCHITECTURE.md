@@ -224,7 +224,7 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    flight; « YYYY-01-01 » = year only; a dated layer may also answer 404 where the year did not fly: the fallback too), and for Esri the tilemap of the newest release, whose `select` names the
    release the tile last changed in, walked back (about 20 requests of 116 B in the Alps) plus one metadata query per
    version for the day the photo was taken (`SRC_DATE2`, layer « 1.2m Resolution Metadata »). Kept for the session. The
-   poster's flat map and the offline packs keep the latest photos.
+   poster's flat map keeps the latest photos; an offline pack keeps the photos of the date (see "Offline packs").
    The picker groups them (`groupImagerySources`): photos, then maps (`map: true`), the sources covering the centre of the first
    track first (regional before worldwide), then « Ne couvrent pas la trace ». Covering = inside the `coverage` box and, for IGN
    and swisstopo, inside their country's `outline` (`geo/outlines.ts`, Natural Earth 1:50m simplified to 1.5–2 km, 1.5 km of
@@ -4467,7 +4467,10 @@ of a flyover of the loaded tracks; the view and the export then read them withou
 - **Policy** (`policy.ts`): one decision per source, reasons and links in `docs/sources.md`; a source missing from the
   table is refused. OpenTopoMap and swisstopo (photos and map) are allowed for personal use
   (`personalUse`, warning in the panel) with a low limit. Esri World Imagery is refused (its terms forbid offline
-  copies). A refused imagery source does not prevent the pack: it
+  copies), at every date (the Wayback releases). A dated source (`ign-ortho@ign:2020`) follows the decision, limit and
+  tile size of its source (`offlinePolicy` reads the id before `@`): the panel plans the photos of the chosen date
+  (`datedImagerySource`), the ones the film asks for; the latest photos the film draws where the year did not fly
+  (`fallback`) are not stored and come from the network. A refused imagery source does not prevent the pack: it
   then only contains the terrain, and the imagery stays online. Limit per day and per device: Mapterhorn 20,000,
   IGN 50,000 (all layers), swisstopo 10,000, OpenTopoMap 2,000; AWS unlimited.
 - **Download** (`download.ts`): 4 requests at a time, `downloadTile` retries (the fetcher's), tiles already

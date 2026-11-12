@@ -9,6 +9,7 @@ import { CORRIDOR_WIDTHS_M, MAX_PACK_TILES, packImageryLevel, planOfflineTiles }
 import { cancelPack, deletePack, pausePack, preparePack, resumePack, useOfflineStore } from '../offline/store'
 import { getPlatform } from '../platform'
 import { useAppStore } from '../state/store'
+import { datedImagerySource } from '../terrain/imageryDates'
 import { getImagerySource, getTerrainSource } from '../terrain/sources'
 import { formatBytes, formatNumber } from './format'
 import { showToast } from './toast'
@@ -24,6 +25,7 @@ export function OfflinePanel() {
   const bounds = useAppStore((s) => s.bounds)
   const terrainSourceId = useAppStore((s) => s.settings.terrainSourceId)
   const imagerySourceId = useAppStore((s) => s.settings.imagerySourceId)
+  const imageryDate = useAppStore((s) => s.settings.imageryDate)
   const imageryZoomOffset = useAppStore((s) => s.settings.imageryZoomOffset)
   const camera = useAppStore((s) => s.settings.camera)
   const { packs, job, usage } = useOfflineStore()
@@ -31,7 +33,8 @@ export function OfflinePanel() {
   const canStore = getPlatform().tileCache !== null
 
   const terrain = getTerrainSource(terrainSourceId)
-  const imagery = getImagerySource(imagerySourceId)
+  // the photos of the chosen date, as the film draws them (the latest ones as a fallback are not stored)
+  const imagery = useMemo(() => datedImagerySource(getImagerySource(imagerySourceId), imageryDate), [imagerySourceId, imageryDate])
   const terrainPolicy = offlinePolicy(terrain.id)
   const imageryPolicy = offlinePolicy(imagery.id)
   const imageryLevel = packImageryLevel(imageryZoomOffset)
