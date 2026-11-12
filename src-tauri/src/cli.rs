@@ -64,7 +64,16 @@ pub fn prepare(request: CliRender) -> Result<CliRender, String> {
 pub fn absolute(path: &Path) -> std::io::Result<PathBuf> {
     let full = std::fs::canonicalize(path)?;
     // canonicalize gives \\?\C:\… on Windows: the webview and the fs plugin expect C:\…
-    Ok(PathBuf::from(full.to_string_lossy().trim_start_matches(r"\\?\")))
+    Ok(PathBuf::from(strip_verbatim(&full.to_string_lossy())))
+}
+
+/// `\\?\C:\dir` → `C:\dir`, and `\\?\UNC\server\share` → `\\server\share` (not `UNC\server\share`).
+fn strip_verbatim(path: &str) -> String {
+    if let Some(unc) = path.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{unc}")
+    } else {
+        path.strip_prefix(r"\\?\").unwrap_or(path).to_string()
+    }
 }
 
 /// Release builds on Windows have no console (windows_subsystem): borrow the one of the calling terminal so the
@@ -151,6 +160,13 @@ mod tests {
 
     fn args(list: &[&str]) -> Vec<String> {
         list.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn strips_the_verbatim_prefix_of_windows_paths() {
+        assert_eq!(strip_verbatim(r"\\?\C:\Traces\été"), r"C:\Traces\été");
+        assert_eq!(strip_verbatim(r"\\?\UNC\serveur\partage\traces"), r"\\serveur\partage\traces");
+        assert_eq!(strip_verbatim("/home/moi/traces"), "/home/moi/traces");
     }
 
     #[test]

@@ -46,6 +46,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Desktop: cancelling an encoding no longer waits for a frame**: the Rust side held the lock on the encodings while writing a frame to ffmpeg, so « Annuler », the end of the film or a second encoding waited until ffmpeg had read it. The pipe is taken out of the lock for the write.
 - **Desktop: the soundtrack is written to a file only the app creates**: the temporary WAV now has a random name and is created only if it does not exist yet, so a link left at the expected name in the temporary folder is never followed. A failed write removes the file.
 - **Desktop: the Rust version is the real one**: `rust-version` is 1.95 (what `sysinfo` 0.40 needs) instead of 1.77.2, with the comment and the guides corrected.
+- **Command line: a render folder on a network share works**: `--rendu \\serveur\partage\traces` came out as `UNC\serveur\partage\traces`. The `\\?\UNC\` prefix that Windows gives is now turned into `\\`, and `\\?\C:\` into `C:\` as before.
 
 ## 8.0.1 (November 2026)
 
