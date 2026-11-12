@@ -401,6 +401,13 @@ export function registerDrapeFlush(flush: DrapeFlush): () => void {
   }
 }
 
+let drapesOnHold = false
+/** A video export holds the timed re-drapes (`DebounceOptions.hold`): they run once per frame, at `flushDrapes`. */
+export function holdDrapes(on: boolean): void {
+  drapesOnHold = on
+}
+export const drapesHeld = (): boolean => drapesOnHold
+
 /** Run every pending re-drape now; true when at least one ran (the scene must be rendered again). */
 export function flushDrapes(): boolean {
   let flushed = false

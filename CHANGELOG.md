@@ -3,6 +3,14 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 8.1.3 (unreleased)
+
+- **The imagery detail follows the screen**: with « Détail de l'imagerie » on « Fin » or « Très fin », a tile at the deepest zoom of the relief took its finest photos (4 or 16 per tile, a 512 or 1024 px texture) as soon as it appeared, 20 km away, where it covers under 200 px. It now takes the levels the screen shows, by the rule the relief already follows (one more level each time a grid cell doubles on screen past 3 px, `imageryLevels`), and a finer texture as the camera comes closer (`upgradeImagery`); a frame of an export waits for it, the look-ahead fetches it, the plan of the preload lists it (`planFilmTiles`). Measured on a raid flown at 7 km/s, « Très fin », 1080×1920: around frame 320 the film asked 880 photos a frame from a server that takes 6 requests at once, 7 s a frame; now 1.2 s. The preview loads the same way.
+- **The look-ahead of an export no longer stops when the textures reach their budget**: past 80 % of the budget it stopped, and the unloading only went down to 90 %, so it never started again: low over the ground every frame then waited for its own tiles, level after level. The film says what to keep: the tiles the rendered frames left behind go first, then the ones needed the farthest ahead (`neededAt`, `evictTextures`); a coming frame never loses its tiles to a later one.
+- **One queue per server**: the relief and the photos shared 12 requests at once, and a tile needs both: the relief (100 kB a tile) held the photos back. Each server now has its own queue, 12 requests at once or its own limit when it is lower (Esri: 6, unchanged) (`createTileFetcher`).
+- **During an export the water, the tracks and the labels are draped once per frame**: every tile that arrived started a timer that draped all of them again, several times per frame, on the thread the tiles need to be decoded and handed over (4 % of it idle while a frame waited). The timers are held, the drape runs at the end of the frame's wait (`holdDrapes`, `DebounceOptions.hold`); the views of the frames ahead are also computed twice a second instead of ten times.
+- **Measured on the same raid to the end** (540 km in 77 s, 1,860 frames, Esri « Très fin », high-resolution relief, weather, 1080×1920, GTX 1060, cold cache): 26 min 52, no frame late, 0.8 GB of textures and 0.9 GB of page memory at most; 8.1.2 was at frame 329 after 7 minutes, then at 7 s a frame. Half of the time left is the wait for the photos, at the pace the server gives them (80,000 requests); the other half is the render.
+
 ## 8.1.2 (November 2026)
 
 - **« Nouveautés 8.1.2 »**: labels you can read on a phone; 8.1.1 is folded into 8.1.

@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { BufferAttribute, BufferGeometry, Mesh, Vector3 } from 'three'
 import type { LocalFrame, TerrainEngine, Track } from '../core/types'
-import { registerDrapeFlush } from '../export/store'
+import { registerDrapeFlush, drapesHeld } from '../export/store'
 import { fetchTrackGlacier, type GlacierPolygon } from '../osm/glacier'
 import { useGlacierStore } from '../osm/store'
 import { playsBilan } from '../flyover/sequence'
@@ -184,7 +184,7 @@ export function GlacierLayer() {
   )
   useEffect(() => drape(engine, exaggeration), [drape, engine, exaggeration])
 
-  const redrape = useDebouncedCallback(drape, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS)
+  const redrape = useDebouncedCallback(drape, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS, drapesHeld)
   useEffect(() => {
     if (!engine) return
     const unsubscribe = engine.onChange(() => redrape(engine, exaggeration))

@@ -22,6 +22,13 @@ export interface DebounceOptions {
    * Without it a steady stream of calls (one per frame, say) starves the trailing call forever.
    */
   maxWaitMs?: number
+  /**
+   * While it answers true, a due invocation does not run: it stays pending until `flush()` (or until a later call's
+   * timer finds it false). A video export holds the re-drapes this way: the relief changes with every tile that arrives,
+   * and each timer redid the whole drape (water, tracks, labels) several times per frame, on the thread the tiles need
+   * to be decoded and handed over; one drape per frame, at the flush, is all the picture shows.
+   */
+  hold?: () => boolean
 }
 
 /**
@@ -33,7 +40,9 @@ export function createDebounced<A extends unknown[]>(
   delayMs: number,
   options: DebounceOptions = {},
 ): Debounced<A> {
-  const { maxWaitMs } = options
+  const { maxWaitMs, hold } = options
+  /** the invocation was due while held: it waits for `flush()` or the next call */
+  let held = false
   let timer: ReturnType<typeof setTimeout> | null = null
   let maxTimer: ReturnType<typeof setTimeout> | null = null
   let pendingArgs: A | null = null
@@ -45,8 +54,13 @@ export function createDebounced<A extends unknown[]>(
     maxTimer = null
   }
 
-  const fire = () => {
+  const fire = (forced = false) => {
     clearTimers()
+    if (!forced && hold?.()) {
+      held = true
+      return
+    }
+    held = false
     const args = pendingArgs
     pendingArgs = null
     if (args) fn(...args)
@@ -55,19 +69,20 @@ export function createDebounced<A extends unknown[]>(
   const debounced = ((...args: A) => {
     pendingArgs = args
     if (timer !== null) clearTimeout(timer)
-    timer = setTimeout(fire, delayMs)
-    if (maxWaitMs !== undefined && maxTimer === null) maxTimer = setTimeout(fire, maxWaitMs)
+    timer = setTimeout(() => fire(), delayMs)
+    if (maxWaitMs !== undefined && maxTimer === null) maxTimer = setTimeout(() => fire(), maxWaitMs)
   }) as Debounced<A>
 
   debounced.cancel = () => {
     clearTimers()
     pendingArgs = null
+    held = false
   }
   debounced.flush = () => {
-    if (timer === null) return
-    fire()
+    if (timer === null && !held) return
+    fire(true)
   }
-  debounced.isPending = () => timer !== null
+  debounced.isPending = () => timer !== null || held
 
   return debounced
 }
@@ -83,10 +98,11 @@ export function useDebouncedCallback<A extends unknown[]>(
   callback: (...args: A) => void,
   delayMs: number,
   maxWaitMs?: number,
+  hold?: () => boolean,
 ): Debounced<A> {
   const debounced = useMemo(
-    () => createDebounced<A>(callback, delayMs, { maxWaitMs }),
-    [callback, delayMs, maxWaitMs],
+    () => createDebounced<A>(callback, delayMs, { maxWaitMs, hold }),
+    [callback, delayMs, maxWaitMs, hold],
   )
 
   useEffect(() => () => debounced.cancel(), [debounced])

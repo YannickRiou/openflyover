@@ -37,6 +37,7 @@ import {
   createRootNodes,
   createSelectionResult,
   forEachNode,
+  imageryLevels,
   selectTiles,
   updateCameraState,
   type QuadtreeContext,
@@ -354,16 +355,16 @@ export function createTerrainEngine(
   }
 
   /**
-   * Imagery levels drawn finer than a tile's own (« Détail de l'imagerie »): only on a tile at the deepest zoom of the
-   * relief (`maxZoom`), not on one only held back by the outer zoom of a « situation » view (`zoomLimit`, OUTER_MAX_ZOOM):
-   * that landscape is seen from afar, and its finer imagery made each of those tiles 4 (« Fin ») or 16 (« Très fin »)
-   * times heavier for nothing, enough to fill a 6 GB graphics card during the descent of a 400 km opening (November 2026). Any other tile is drawn only while its grid cells look under `errorTargetPx` (3 px): its own level
+   * Imagery levels drawn finer than a tile's own (« Détail de l'imagerie »), for the view that last selected it (`sse`):
+   * only on a tile at the deepest zoom of the relief (`maxZoom`), and only as many as the screen shows (`imageryLevels`).
+   * Not on a tile only held back by the outer zoom of a « situation » view (`zoomLimit`, OUTER_MAX_ZOOM): that landscape
+   * is seen from afar. Any other tile is drawn only while its grid cells look under `errorTargetPx` (3 px): its own level
    * already gives more than one image pixel per screen pixel (256 px over 64 cells), a finer one would be averaged away.
-   * At the deepest zoom the cells grow on screen as the camera comes closer, and the finer level shows. Measured on three
-   * 1080p views: the same image as the setting on every tile (PSNR ≥ 49 dB), about 60 % fewer imagery tiles.
+   * At the deepest zoom the cells grow on screen as the camera comes closer: the tile then takes a finer texture
+   * (`upgradeImagery`), never a coarser one.
    */
   function imageryOffsetOf(node: TileNode): number {
-    return node.key.z >= opts.maxZoom ? opts.imageryZoomOffset : 0
+    return node.key.z >= opts.maxZoom ? imageryLevels(node.sse, errorTarget(), opts.imageryZoomOffset) : 0
   }
 
   /** the browser says the network is down (`navigator.onLine`); unknown counts as online */
@@ -397,12 +398,14 @@ export function createTerrainEngine(
     })
 
     const wantsImagery = !imagery.coverage || boundsIntersect(imagery.coverage, node.bounds)
+    const offset = imageryOffsetOf(node)
+    node.imageryOffset = offset
     // an imagery failure is a transient failure of the node too (below): the parent keeps its imagery meanwhile
     let imageryFailed = false
     let imageryError: unknown
     const texturePromise: Promise<Texture | undefined> = wantsImagery
       ? io
-          .loadImageryTexture(node.key, imagery, io.fetcher, { zoomOffset: imageryOffsetOf(node), signal, priority: rank })
+          .loadImageryTexture(node.key, imagery, io.fetcher, { zoomOffset: offset, signal, priority: rank })
           .catch((error: unknown) => {
             if (!isAbortError(error)) {
               imageryFailed = true
@@ -513,6 +516,13 @@ export function createTerrainEngine(
   /** Cancel an in-flight load; stale results are ignored through `loadToken`. */
   function cancelLoad(node: TileNode): void {
     node.loadToken++
+    if (node.imageryUpgrade) {
+      node.imageryUpgrade.controller.abort()
+      node.imageryUpgrade = undefined
+      upgradingCount--
+    }
+    node.upgradeFailures = 0
+    node.upgradeRetryAt = 0
     if (node.abortController) {
       node.abortController.abort()
       node.abortController = undefined
@@ -548,7 +558,7 @@ export function createTerrainEngine(
       material.needsUpdate = true
       node.imageryMissing = true
       changed = true
-      io.loadImageryTexture(node.key, imagery, io.fetcher, { zoomOffset: imageryOffsetOf(node), priority: 0 }).then(
+      io.loadImageryTexture(node.key, imagery, io.fetcher, { zoomOffset: node.imageryOffset, priority: 0 }).then(
         (fresh) => {
           // the tile went away (or the engine was rebuilt) while the imagery was coming
           if (disposed || node.texture !== stale) {
@@ -567,6 +577,60 @@ export function createTerrainEngine(
         () => {},
       )
     })
+  }
+
+  /** finer textures on their way (`upgradeImagery`) */
+  let upgradingCount = 0
+
+  /**
+   * A drawn tile at the deepest zoom whose cells grew on screen (`imageryOffsetOf` above what its texture holds): true
+   * while a finer texture is still to come, started here at fetch rank `rank` unless `start` is false or one is on its
+   * way. The tile keeps its texture meanwhile, and for good when every attempt failed: the picture is whole, only less
+   * sharp there.
+   */
+  function upgradeImagery(node: TileNode, rank: number, start: boolean): boolean {
+    const wanted = imageryOffsetOf(node)
+    if (wanted <= node.imageryOffset || !node.texture || !node.mesh || node.imageryMissing) return false
+    if (node.upgradeFailures >= attemptLimit()) return false
+    const running = node.imageryUpgrade
+    if (running && running.offset >= wanted) return true
+    if (!start || now() < node.upgradeRetryAt) return true
+    running?.controller.abort()
+    if (!running) upgradingCount++
+    const controller = new AbortController()
+    const upgrade = { offset: wanted, controller }
+    node.imageryUpgrade = upgrade
+    const stale = node.texture
+    const material = node.mesh.material
+    const settle = (fresh: Texture | undefined, failed: boolean) => {
+      if (node.imageryUpgrade !== upgrade || disposed) {
+        if (fresh) disposeTexture(fresh)
+        return
+      }
+      node.imageryUpgrade = undefined
+      upgradingCount--
+      if (failed || !fresh || fresh.userData.incomplete === true || node.texture !== stale) {
+        if (fresh) disposeTexture(fresh)
+        node.upgradeFailures++
+        node.upgradeRetryAt = now() + retryDelay(node.upgradeFailures)
+        return
+      }
+      material.map = fresh
+      material.needsUpdate = true
+      node.texture = fresh
+      node.imageryOffset = wanted
+      node.upgradeFailures = 0
+      disposeTexture(stale)
+      countTexture(node, fresh)
+      changed = true
+    }
+    io.loadImageryTexture(node.key, opts.imagery, io.fetcher, { zoomOffset: wanted, signal: controller.signal, priority: rank }).then(
+      (fresh) => settle(fresh, false),
+      (error: unknown) => {
+        if (!isAbortError(error)) settle(undefined, true)
+      },
+    )
+    return true
   }
 
   /** GPU bytes of each loaded tile's imagery texture (mipmaps included), and their sum (`textureBudgetBytes`) */
@@ -607,6 +671,7 @@ export function createTerrainEngine(
     node.state = 'empty'
     node.noData = false
     node.imageryMissing = false
+    node.imageryOffset = 0
     node.failure = undefined
     node.resetBounds()
   }
@@ -691,12 +756,27 @@ export function createTerrainEngine(
   function enforceTextureBudget(): void {
     const budget = cfg.textureBudgetBytes
     if (!(totalTextureBytes > budget)) return
+    evictTextures(budget * TEXTURE_BUDGET_FLOOR)
+  }
+
+  /**
+   * Unload tiles this frame does not draw until the textures weigh `target` at most, the least needed first. During an
+   * export the film says which: the tiles the frames already rendered left behind first, then the ones needed the
+   * farthest ahead (`neededAt`), so the frames about to be rendered keep theirs. `laterThan`: only the left-behind tiles
+   * and those needed after that film frame (room for a look-ahead is never taken from an earlier frame's tiles). The
+   * preview has no such order: the tiles its retention no longer keeps first (`keepUntil`), then the least recently visited.
+   */
+  function evictTextures(target: number, laterThan = -Infinity): void {
+    const viewFrame = retention ? retention.frame : undefined
+    const past = (node: TileNode) => viewFrame !== undefined && node.neededAt < viewFrame
     const evictable: TileNode[] = []
     forEachNode(roots, (node) => {
-      if (node.state === 'ready' && node.parent !== undefined && node.lastVisitedFrame !== frame && !node.mesh?.visible) evictable.push(node)
+      if (node.state !== 'ready' || node.parent === undefined || node.lastVisitedFrame === frame || node.mesh?.visible) return
+      if (viewFrame !== undefined && !past(node) && node.neededAt <= laterThan) return
+      evictable.push(node)
     })
-    evictable.sort((a, b) => a.keepUntil - b.keepUntil || leastRecent(a, b))
-    const target = budget * TEXTURE_BUDGET_FLOOR
+    if (viewFrame === undefined) evictable.sort((a, b) => a.keepUntil - b.keepUntil || leastRecent(a, b))
+    else evictable.sort((a, b) => Number(past(b)) - Number(past(a)) || (past(a) ? a.neededAt - b.neededAt : b.neededAt - a.neededAt) || leastRecent(a, b))
     for (let i = 0; i < evictable.length && totalTextureBytes > target; i++) {
       if (!hasRenderedDescendant(evictable[i])) unloadNode(evictable[i])
     }
@@ -898,6 +978,8 @@ export function createTerrainEngine(
     selectionParams.exporting = exporting
     selectionParams.now = now()
     selectionParams.keepUntil = retention ? retention.frame + retention.keepFrames : selectionParams.now + cfg.unloadAfterMs
+    selectionParams.neededAt = retention?.frame
+    selectionParams.viewFrame = retention?.frame
     solveLodLevel()
     selectionParams.errorTargetPx = errorTarget()
     selectTiles(roots, cameraState, selectionParams, selection)
@@ -908,11 +990,14 @@ export function createTerrainEngine(
     hideAll(rendered)
     hideAll(casters)
     const toRender = selection.toRender
+    let upgradesPending = 0
     for (let i = 0; i < toRender.length; i++) {
       const node = toRender[i]
       if (node.mesh) {
         node.mesh.visible = true
         rendered.push(node)
+        // the view is final once its near tiles have the imagery level the screen shows
+        if (node.key.z >= opts.maxZoom && upgradeImagery(node, i, upgradingCount < cfg.maxConcurrentLoads || node.imageryUpgrade !== undefined)) upgradesPending++
       }
     }
     for (let i = 0; i < roots.length; i++) collectCasters(roots[i])
@@ -933,7 +1018,7 @@ export function createTerrainEngine(
     if (dirtyCount > 0) rebuildDirty()
     if (frame % cfg.sweepEveryFrames === 0) sweep()
 
-    refreshStats(loadingCount + (toLoad.length - started), selection.pendingVisible, selection.missingVisible)
+    refreshStats(loadingCount + (toLoad.length - started) + upgradesPending, selection.pendingVisible + upgradesPending, selection.missingVisible)
     flushChange()
   }
 
@@ -953,7 +1038,7 @@ export function createTerrainEngine(
     return prefetchLoads.size
   }
 
-  function prefetch(camera: PerspectiveCamera, viewportHeightPx: number): number {
+  function prefetch(camera: PerspectiveCamera, viewportHeightPx: number, atFrame?: number): number {
     if (disposed) return 0
     updateCameraState(prefetchCameraState, camera, viewportHeightPx)
     selectionParams.errorTargetPx = errorTarget()
@@ -962,6 +1047,8 @@ export function createTerrainEngine(
     selectionParams.frame = frame + 0.5 // after the view of this frame: a tile ahead outlasts one behind in the cap's order
     selectionParams.now = now()
     selectionParams.keepUntil = retention ? retention.frame + retention.prefetchKeepFrames : selectionParams.now + cfg.prefetchKeepMs
+    selectionParams.neededAt = retention ? (atFrame ?? retention.frame + 1) : undefined
+    selectionParams.viewFrame = retention?.frame
     selectTiles(roots, prefetchCameraState, selectionParams, prefetchSelection)
     const limit = Math.max(1, Math.floor(cfg.maxConcurrentLoads * cfg.prefetchLoadShare))
     const toLoad = prefetchSelection.toLoad
@@ -970,6 +1057,10 @@ export function createTerrainEngine(
     // otherwise starve it exactly when it matters); the fetcher still serves the view first (rank) within its own
     // connection limit. The preview: the look-ahead only uses what the view leaves of the budget.
     const inFlight = () => (exporting ? prefetchLoadsInFlight() : loadingCount)
+    // an export: room for this coming frame is made from what the rendered frames left behind, then from the tiles of
+    // frames farther ahead than this one. The look-ahead only stops when everything loaded is needed sooner
+    const gate = cfg.textureBudgetBytes * PREFETCH_BUDGET_SHARE
+    if (retention && atFrame !== undefined && totalTextureBytes > gate && toLoad.length > 0) evictTextures(gate * TEXTURE_BUDGET_FLOOR, atFrame)
     // only what that camera would draw (priority >= 0, sorted first), never its off-screen children; none past the cap
     for (
       let i = 0;
@@ -983,6 +1074,12 @@ export function createTerrainEngine(
       startLoad(toLoad[i], PREFETCH_RANK + i)
       if (exporting && toLoad[i].state === 'loading') prefetchLoads.add(toLoad[i])
       started++
+    }
+    // the finer imagery that camera will show on the tiles already there
+    const ahead = prefetchSelection.toRender
+    for (let i = 0; i < ahead.length && upgradingCount < limit && !(totalTextureBytes > cfg.textureBudgetBytes * PREFETCH_BUDGET_SHARE); i++) {
+      const node = ahead[i]
+      if (node.key.z >= opts.maxZoom && node.imageryUpgrade === undefined && upgradeImagery(node, PREFETCH_RANK + i, true) && node.imageryUpgrade !== undefined) started++
     }
     return started
   }

@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { AlwaysDepth, CanvasTexture, Group, type Camera, LinearFilter, SRGBColorSpace, Sprite, SpriteMaterial, Vector3 } from 'three'
 import type { LocalFrame, TerrainEngine } from '../core/types'
-import { exportRenderScale, registerDrapeFlush } from '../export/store'
+import { exportRenderScale, registerDrapeFlush, drapesHeld } from '../export/store'
 import { useMediaStore } from '../film/media'
 import { paramAt } from '../film/paramKeys'
 import { trackPathOf } from '../flyover/path'
@@ -426,7 +426,7 @@ export function Labels() {
     drape(engine, exaggeration)
   }, [engine, exaggeration, drape])
 
-  const redrape = useDebouncedCallback(drape, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS)
+  const redrape = useDebouncedCallback(drape, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS, drapesHeld)
   // the video export runs the pending re-drape right away instead of waiting for the debounce
   useEffect(
     () =>

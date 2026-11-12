@@ -69,6 +69,8 @@ export class TileNode {
   lastVisitedFrame = -1
   /** engine clock (ms) until which the unload sweep keeps this node: its latest selection pass's `keepUntil` */
   keepUntil = 0
+  /** export: the earliest film frame, not yet rendered, whose view or look-ahead selected this node (`SelectionParams.neededAt`) */
+  neededAt = -Infinity
   /** screen-space error from the last selection pass (0 when culled) */
   sse = 0
   /** load priority from the last selection pass (higher = sooner) */
@@ -86,6 +88,12 @@ export class TileNode {
    * never retried, not an error. Only meaningful while `state === 'failed'`.
    */
   noData = false
+  /** imagery levels finer than the tile's own that its texture holds (`imageryLevels`), and the finer texture on its way */
+  imageryOffset = 0
+  imageryUpgrade: { offset: number; controller: AbortController } | undefined = undefined
+  /** failed attempts at a finer texture, and the engine clock (ms) from which the next one may start */
+  upgradeFailures = 0
+  upgradeRetryAt = 0
   /** drawn with grey patches or a grey material: some imagery never arrived (every attempt used) */
   imageryMissing = false
   /** engine clock (ms) from which a failed node may be retried */
@@ -263,6 +271,19 @@ export function screenSpaceError(geometricError: number, sphere: Sphere, camera:
   return (geometricError * camera.viewportHeightPx) / (2 * distance * camera.tanHalfFov)
 }
 
+/**
+ * Imagery levels finer than its own that a tile at the deepest zoom of the relief shows, `maxLevels` at most
+ * (« Détail de l'imagerie »). The relief stops refining there, the imagery goes on by the same rule: one more level
+ * each time a grid cell of the tile doubles on screen past `errorTargetPx`. A tile drawn at 3 px a cell is 192 px
+ * across: its own 256 px image already gives more than a texel a pixel; at 6 px it needs 512 px, at 12 px 1024 px. Loading
+ * the finest level as soon as the tile appears, 20 km away, fetched 16 photos where the screen shows one (November 2026:
+ * a film flying low asked 28,000 photos in 330 frames from a server that takes 6 requests at once).
+ */
+export function imageryLevels(sse: number, errorTargetPx: number, maxLevels: number): number {
+  if (!(sse > errorTargetPx) || maxLevels <= 0) return 0
+  return Math.min(maxLevels, Math.ceil(Math.log2(sse / errorTargetPx) - 1e-9))
+}
+
 // ---------------------------------------------------------------------------
 // Selection
 // ---------------------------------------------------------------------------
@@ -281,6 +302,12 @@ export interface SelectionParams {
   now?: number
   /** stamped on the visited nodes (the latest wins): the sweep keeps them until then; default 0 */
   keepUntil?: number
+  /**
+   * export: film frame this selection is for (the frame being rendered, or one ahead of it), with `viewFrame` the frame
+   * being rendered. A node keeps the earliest coming frame that asked for it: what the texture budget unloads last.
+   */
+  neededAt?: number
+  viewFrame?: number
   /** failed nodes are re-queued at most this many times; default 3 */
   maxLoadAttempts?: number
   /** video export: the view also waits for the retries of its failed tiles (they are the view's, not background loads) */
@@ -401,6 +428,10 @@ function culledPriority(node: TileNode): number {
 function stamp(node: TileNode, params: SelectionParams): void {
   node.lastVisitedFrame = params.frame
   node.keepUntil = Math.max(node.keepUntil, params.keepUntil ?? 0)
+  if (params.neededAt !== undefined) {
+    // a frame already rendered no longer counts: the node is needed again at this selection's frame
+    node.neededAt = node.neededAt < (params.viewFrame ?? params.neededAt) ? params.neededAt : Math.min(node.neededAt, params.neededAt)
+  }
 }
 
 function visit(node: TileNode, ctx: SelectionContext): void {

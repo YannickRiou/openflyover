@@ -316,16 +316,26 @@ export function createTileFetcher(options: TileFetcherOptions = {}): TileFetcher
   /** Insertion order doubles as LRU order: the first key is the least recently used. */
   const cache = new Map<string, ImageBitmap>()
   const requests = new Map<string, PendingRequest>()
-  const heap = new BinaryHeap<HeapEntry>(
-    (a, b) => a.priority < b.priority || (a.priority === b.priority && a.seq < b.seq),
-  )
+  /**
+   * One queue per server: each server takes `concurrency` requests at once, or its own `maxRequests` when that is lower
+   * (Esri: the browser's 6 connections). A single queue of 12 for every server made the relief (100 kB a tile) and the
+   * photos wait for each other: a tile needs both, so the slower of the two set the pace of the whole film.
+   */
+  /** the server of a URL; a URL without one (a relative path) shares a single queue */
+  const serverOf = (url: string) => (/^https?:\/\//.test(url) ? hostOf(url) : '')
+  const heaps = new Map<string, BinaryHeap<HeapEntry>>()
+  const heapOf = (host: string): BinaryHeap<HeapEntry> => {
+    let heap = heaps.get(host)
+    if (!heap) heaps.set(host, (heap = new BinaryHeap<HeapEntry>((a, b) => a.priority < b.priority || (a.priority === b.priority && a.seq < b.seq))))
+    return heap
+  }
 
   /** requests in flight per server, to hold each one within its `maxRequests` (the export's preload does the same) */
   const inflightByHost = new Map<string, number>()
   const capByHost = new Map<string, number>()
   const capOf = (host: string, url: string): number => {
     let cap = capByHost.get(host)
-    if (cap === undefined) capByHost.set(host, (cap = maxRequestsFor(url)))
+    if (cap === undefined) capByHost.set(host, (cap = Math.min(concurrency, maxRequestsFor(url))))
     return cap
   }
   let sequence = 0
@@ -396,7 +406,7 @@ export function createTileFetcher(options: TileFetcherOptions = {}): TileFetcher
     request.state = 'inflight'
     queued--
     inflight++
-    const host = hostOf(request.url)
+    const host = serverOf(request.url)
     inflightByHost.set(host, (inflightByHost.get(host) ?? 0) + 1)
     try {
       const bitmap = await loadWithRetry(request)
@@ -422,22 +432,21 @@ export function createTileFetcher(options: TileFetcherOptions = {}): TileFetcher
   }
 
   function pump(): void {
-    // a server at its own cap is skipped for now (its request would only wait for the browser's connections, ahead of
-    // the other servers'): its entries go back in the queue once the others have been started
-    let skipped: HeapEntry[] | undefined
-    while (inflight < concurrency) {
-      const entry = heap.pop()
-      if (!entry) break
-      const request = entry.request
-      if (request.state !== 'queued' || entry.seq !== request.seq) continue // stale entry
-      const host = hostOf(request.url)
-      if ((inflightByHost.get(host) ?? 0) >= capOf(host, request.url)) {
-        ;(skipped ??= []).push(entry)
-        continue
+    for (const [host, heap] of heaps) {
+      while (heap.size > 0) {
+        const cap = capByHost.get(host)
+        if (cap !== undefined && (inflightByHost.get(host) ?? 0) >= cap) break
+        const entry = heap.pop()
+        if (!entry) break
+        const request = entry.request
+        if (request.state !== 'queued' || entry.seq !== request.seq) continue // stale entry
+        if ((inflightByHost.get(host) ?? 0) >= capOf(host, request.url)) {
+          heap.push(entry)
+          break
+        }
+        void run(request)
       }
-      void run(request)
     }
-    if (skipped) for (const entry of skipped) heap.push(entry)
   }
 
   function fetchBitmap(
@@ -466,12 +475,12 @@ export function createTileFetcher(options: TileFetcherOptions = {}): TileFetcher
         }
         requests.set(url, request)
         queued++
-        heap.push({ priority, seq: request.seq, request })
+        heapOf(serverOf(url)).push({ priority, seq: request.seq, request })
       } else if (request.state === 'queued' && priority < request.priority) {
         // Re-prioritise: push a fresh entry, the older one becomes stale.
         request.priority = priority
         request.seq = ++sequence
-        heap.push({ priority, seq: request.seq, request })
+        heapOf(serverOf(url)).push({ priority, seq: request.seq, request })
       }
 
       const waiter: Waiter = { resolve, reject }
@@ -500,7 +509,7 @@ export function createTileFetcher(options: TileFetcherOptions = {}): TileFetcher
       // A queued request has no run() to settle its waiters; an in-flight one settles them when its fetch aborts.
       if (wasQueued) settle(request, (waiter) => waiter.reject(createAbortError()))
     }
-    heap.clear()
+    heaps.clear()
     failed = 0
   }
 

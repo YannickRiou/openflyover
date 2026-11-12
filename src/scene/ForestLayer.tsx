@@ -15,7 +15,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Color, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3 } from 'three'
 import type { Camera, BufferGeometry } from 'three'
 import type { LocalFrame, TerrainEngine } from '../core/types'
-import { isExportBusy, registerDrapeFlush, useExportStore } from '../export/store'
+import { isExportBusy, registerDrapeFlush, useExportStore, drapesHeld } from '../export/store'
 import { mergeByTrack } from '../osm/byTrack'
 import { fetchTrackForest } from '../osm/forest'
 import { simplifyLine } from '../osm/overpass'
@@ -248,7 +248,7 @@ export function ForestLayer() {
     epoch.current++
     wakeScene()
   }, [])
-  const redrape = useDebouncedCallback(bump, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS)
+  const redrape = useDebouncedCallback(bump, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS, drapesHeld)
   useEffect(() => {
     if (!engine) return
     bump()

@@ -308,7 +308,7 @@ export interface TerrainEngine {
    * frame of the video export). Changes neither what is drawn nor the stats; bounded to part of the load
    * budget. Returns the number of loads started.
    */
-  prefetch?(camera: PerspectiveCamera, viewportHeightPx: number): number
+  prefetch?(camera: PerspectiveCamera, viewportHeightPx: number, atFrame?: number): number
   /**
    * Count the retention of the tiles in film frames (`TerrainRetention`, set again for every frame) instead of wall
    * time; `null` goes back to wall time. The export's tile waits and a phone's slow frames then no longer decide how

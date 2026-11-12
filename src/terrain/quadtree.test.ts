@@ -4,6 +4,7 @@ import type { TileKey } from '../core/types'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { boundsIntersect, tileBounds, tileCenter, tileGroundSizeM, tilesForBounds } from '../geo/mercator'
 import {
+  imageryLevels,
   TileNode,
   computeConservativeSphere,
   createCameraState,
@@ -61,6 +62,20 @@ describe('screenSpaceError', () => {
     cam.viewportHeightPx = 800
     const sphere = new Sphere(new Vector3(0, 0, 0), 500)
     expect(screenSpaceError(2, sphere, cam)).toBeCloseTo((2 * 800) / (2 * 1 * 0.5), 9)
+  })
+})
+
+describe('imageryLevels', () => {
+  it('adds a level each time a grid cell doubles on screen past the error target, up to the setting', () => {
+    expect(imageryLevels(1.5, 3, 2)).toBe(0)
+    expect(imageryLevels(3, 3, 2)).toBe(0)
+    expect(imageryLevels(3.1, 3, 2)).toBe(1)
+    expect(imageryLevels(6, 3, 2)).toBe(1)
+    expect(imageryLevels(6.1, 3, 2)).toBe(2)
+    expect(imageryLevels(500, 3, 2)).toBe(2)
+    expect(imageryLevels(500, 3, 1)).toBe(1)
+    expect(imageryLevels(500, 3, 0)).toBe(0)
+    expect(imageryLevels(0, 3, 2)).toBe(0)
   })
 })
 

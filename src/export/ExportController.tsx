@@ -88,6 +88,7 @@ import {
   videoFileName,
   type ExportRequest,
   type ExportTimings,
+  holdDrapes,
 } from './store'
 import { t } from '../i18n'
 
@@ -105,6 +106,8 @@ const NEXT_FRAME = [1] as const
  * only reaches one level deeper (the children of a tile are selected once it is loaded).
  */
 const PREFETCH_WAIT_MS = 100
+/** How long (ms) the views of the frames ahead are kept while the same frame waits (`prefetchAhead`). */
+const PREFETCH_VIEWS_MS = 500
 /** JPEG quality of still images (PNG is lossless) */
 const STILL_JPEG_QUALITY = 0.92
 /** Overview still (poster): the whole track seen from the south, north up like a map. */
@@ -482,19 +485,29 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
 
   // Ask the engine for the tiles of upcoming frames (`offsets` after frame `i`), after the current view's (bounded by the engine).
   const prefetchCamera = new PerspectiveCamera()
+  let aheadViews: { frame: number; at: number; views: Map<number, { position: Vector3; target: Vector3; rollRad?: number }> } = { frame: -1, at: 0, views: new Map() }
   const prefetchAhead = (i: number, offsets: readonly number[] = exportPrefetchAhead) => {
     const engine = deps.engine()
     const frame = deps.frame()
     const camera = deps.get().camera as PerspectiveCamera
     if (!engine?.prefetch || !path || path.count === 0 || !frame || !camera.isPerspectiveCamera) return
     prefetchCamera.copy(camera, false)
+    // while a frame waits for its tiles, the look-ahead is asked again ten times a second with the same frames: their
+    // views (placed above the relief, a costly sampling) are computed again every PREFETCH_VIEWS_MS only
+    const now = performance.now()
+    if (aheadViews.frame !== i || now - aheadViews.at > PREFETCH_VIEWS_MS) aheadViews = { frame: i, at: now, views: new Map() }
     for (const ahead of offsets) {
       const j = i + ahead
       if (j >= schedule.length) break
-      const view = filmViewAt(path, filmClock, schedule[j], times[j], frame, engine, width / height)
+      let view = aheadViews.views.get(j)
+      if (!view) {
+        const placed = filmViewAt(path, filmClock, schedule[j], times[j], frame, engine, width / height)
+        view = { position: placed.position.clone(), target: placed.target.clone(), rollRad: placed.rollRad }
+        aheadViews.views.set(j, view)
+      }
       prefetchCamera.position.copy(view.position)
       lookAtView(prefetchCamera, view)
-      engine.prefetch(prefetchCamera, lodHeight)
+      engine.prefetch(prefetchCamera, lodHeight, j)
     }
   }
 
@@ -569,6 +582,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     three.setFrameloop('never')
     // the view waits for the retries of its failed tiles, longer and longer (engine.ts)
     deps.engine()?.setExporting?.(true)
+    holdDrapes(true)
     canvas.style.pointerEvents = 'none'
     applyVideoSize()
     writeBreadcrumb(`export : taille ${width}×${height} appliquée`)
@@ -985,6 +999,9 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     setExportProbe(null)
     deps.engine()?.setRetention?.(null)
     deps.engine()?.setExporting?.(false)
+    holdDrapes(false)
+    // what was held is draped now: the preview is back
+    flushDrapes()
     releaseFrameMedia()
     setShutterSubFrame(0, 1)
     holdRegion(false)
