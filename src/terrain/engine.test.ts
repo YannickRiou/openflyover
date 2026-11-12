@@ -278,6 +278,65 @@ describe('createTerrainEngine', () => {
     expect(engine.prefetch?.(cameraAbove(4000), 1000)).toBe(0)
   })
 
+  describe('look-ahead of an export', () => {
+    /** the roots loaded, then a deeper view whose own loads are held (the frame is waiting for tiles) */
+    async function busyView(exporting: boolean) {
+      const deps = createFakeDeps({ deferDem: true })
+      const engine = engineWith(deps, { maxZoom: ROOT_ZOOM + 4 }, { maxConcurrentLoads: 4, prefetchLoadShare: 0.5 })
+      engine.setExporting?.(exporting)
+      const high = cameraAbove(600_000)
+      for (let i = 0; i < 8 && engine.stats.pendingTiles > 0; i++) {
+        engine.update(high, 1000)
+        deps.release()
+        await settle()
+      }
+      engine.update(cameraAbove(600_000, 2), 1000) // a narrow view: its children, even outside it, hold every slot
+      expect(engine.stats.pendingTiles).toBeGreaterThanOrEqual(4)
+      return { deps, engine }
+    }
+
+    it('starts its loads while the view holds every slot, within its own share', async () => {
+      const { engine } = await busyView(true)
+      const started = engine.prefetch?.(cameraAbove(4000), 1000) ?? 0
+      expect(started).toBe(2)
+      expect(engine.prefetch?.(cameraAbove(4000), 1000)).toBe(0) // its share is used
+    })
+
+    it('does not, in the preview: the view comes first', async () => {
+      const { engine } = await busyView(false)
+      expect(engine.prefetch?.(cameraAbove(4000), 1000)).toBe(0)
+    })
+
+    it('ranks the off-screen children of the view after the look-ahead, and not in the preview', async () => {
+      const ranksOf = async (exporting: boolean) => {
+        const deps = createFakeDeps({ deferDem: true })
+        const engine = engineWith(deps, { maxZoom: ROOT_ZOOM + 3 }, { maxConcurrentLoads: 64 })
+        engine.setExporting?.(exporting)
+        const narrow = cameraAbove(600_000, 2)
+        const wide = cameraAbove(600_000)
+        for (let i = 0; i < 6; i++) {
+          engine.update(wide, 1000)
+          deps.release()
+          await settle()
+        }
+        const calls = (deps.fetcher.fetchBitmap as ReturnType<typeof vi.fn>).mock.calls
+        const before = calls.length
+        // the look-ahead looks at the centre, deeper than the wide view; a narrow view then queues off-screen children
+        engine.prefetch?.(cameraAbove(4000), 1000)
+        engine.update(narrow, 1000)
+        return calls.slice(before).map((c) => c[1]?.priority as number)
+      }
+      const exported = await ranksOf(true)
+      const previewed = await ranksOf(false)
+      const lookAhead = exported.filter((r) => r >= 1_000_000 && r < 1_010_000)
+      const culled = exported.filter((r) => r >= 1_010_000)
+      expect(lookAhead.length).toBeGreaterThan(0)
+      expect(culled.length).toBeGreaterThan(0)
+      expect(Math.max(...lookAhead)).toBeLessThan(Math.min(...culled))
+      expect(previewed.filter((r) => r >= 1_010_000)).toHaveLength(0)
+    })
+  })
+
   it('loads the root tiles after a few updates and renders them', async () => {
     const deps = createFakeDeps()
     const engine = engineWith(deps)
@@ -1512,6 +1571,53 @@ describe('export: the view is final when the settle loop returns', () => {
     const again = exportView(engine, camera, clock)
     await again.run()
     expect(again.counts.waits).toBe(0)
+  })
+
+  it('does not use up an attempt while the browser reports the network down, and tries again once it is back', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const bad = ROOT_KEYS[0]
+    const badUrl = `https://dem.test/${bad.z}/${bad.x}/${bad.y}.png`
+    let down = true
+    const deps = createFakeDeps({ failDem: (url) => down && url === badUrl, demError: () => new TypeError('Failed to fetch') })
+    const clock = { t: 0 }
+    deps.now = () => clock.t
+    const engine = engineWith(deps, {}, FAST_RETRIES)
+    engine.setExporting?.(true)
+    const camera = cameraAbove(600_000)
+    vi.stubGlobal('navigator', { onLine: false })
+    try {
+      const view = exportView(engine, camera, clock)
+      const run = view.run()
+      // far more failures than the 8 attempts of an export, none counted
+      while (deps.fetched.filter((u) => u === badUrl).length < 3 * DEFAULT_TUNING.exportMaxLoadAttempts) await settle()
+      expect(engine.stats.missingVisibleTiles).toBe(0)
+      down = false
+      vi.stubGlobal('navigator', { onLine: true })
+      expect(await run).toBe(true)
+      expect(engine.stats.missingVisibleTiles).toBe(0)
+      expect(meshesOf(engine).some((m) => m.name === `${bad.z}/${bad.x}/${bad.y}`)).toBe(true)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('counts the attempts as before when the network is up, or when the server answered', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const bad = ROOT_KEYS[0]
+    const badUrl = `https://dem.test/${bad.z}/${bad.x}/${bad.y}.png`
+    vi.stubGlobal('navigator', { onLine: false })
+    try {
+      // offline, but the error is the server's answer (a 503): counted
+      const deps = createFakeDeps({ failDem: (url) => url === badUrl, demError: (url) => new TileFetchError(url, 503) })
+      const clock = { t: 0 }
+      deps.now = () => clock.t
+      const engine = engineWith(deps, {}, FAST_RETRIES)
+      engine.setExporting?.(true)
+      expect(await exportView(engine, cameraAbove(600_000), clock).run()).toBe(true)
+      expect(deps.fetched.filter((u) => u === badUrl)).toHaveLength(DEFAULT_TUNING.exportMaxLoadAttempts)
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it('counts a tile drawn with some imagery missing, once its attempts are used', async () => {

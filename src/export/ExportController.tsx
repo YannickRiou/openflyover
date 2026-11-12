@@ -708,7 +708,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
      */
     let sceneCopy: { canvas: OffscreenCanvas; ctx: OffscreenCanvasRenderingContext2D } | null = null
     let sceneCopyValid = false
-    // a phone: tiles are kept for a number of film frames, not seconds (the engine also caps them, deviceBudget.ts)
+    // tiles are kept for a number of film frames, not seconds (a phone also has them capped by the engine, deviceBudget.ts)
     const retention = {
       frame: 0,
       keepFrames: exportTileKeepFrames,
@@ -882,7 +882,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       await encoded()
       const t0 = performance.now()
       const frame = await within(Promise.resolve(handover.take()), STEP_LIMIT_MS.encoder, () => t('export.controller.stalledEncoder'), isCanceled)
-      encoding = session.addFrame(i, frame)
+      // a held frame of an image sequence: the PNG already written is written again, not encoded again
+      encoding = composed === null && i > startFrame && session.repeatFrame ? session.repeatFrame(i) : session.addFrame(i, frame)
       handover.release(frame)
       const taken = performance.now() - t0
       timings.frameMs += taken

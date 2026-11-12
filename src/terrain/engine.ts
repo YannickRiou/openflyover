@@ -351,6 +351,11 @@ export function createTerrainEngine(
     return node.key.z >= zoomLimit(node, { ...selectionParams, maxZoom: opts.maxZoom, detailArea: opts.detailArea }) ? opts.imageryZoomOffset : 0
   }
 
+  /** the browser says the network is down (`navigator.onLine`); unknown counts as online */
+  const offline = () => typeof navigator !== 'undefined' && navigator.onLine === false
+  /** a failure of the network itself (not an answer of the server), while the browser reports it down: not the tile's fault */
+  const outageDuringExport = (error: unknown) => exporting && error !== undefined && !(error instanceof TileFetchError) && !isAbortError(error) && offline()
+
   function startLoad(node: TileNode, rank: number): void {
     if (node.state === 'failed' && !node.noData) failedCount--
     // a retry may well fail again: in the background, after every first attempt (it would hold their fetch slots)
@@ -403,7 +408,7 @@ export function createTerrainEngine(
         node.abortController = undefined
         loadingCount--
         imageryFailed ||= texture?.userData.incomplete === true
-        if (imageryFailed && node.failedAttempts + 1 < attemptLimit()) {
+        if (imageryFailed && (node.failedAttempts + 1 < attemptLimit() || outageDuringExport(imageryError))) {
           if (texture) disposeTexture(texture)
           markFailed(node, false, imageryError, imageryFailure())
           return
@@ -474,8 +479,11 @@ export function createTerrainEngine(
     node.abortController = undefined
     node.state = 'failed'
     node.noData = permanent
-    node.failedAttempts = permanent ? Math.max(cfg.maxLoadAttempts, cfg.exportMaxLoadAttempts) : node.failedAttempts + 1
-    node.retryAt = now() + retryDelay(node.failedAttempts)
+    // an export during a network outage: the attempt is not used up, the tile is tried again soon (and at once when the
+    // network comes back, `onOnline`); the frame's own timeout (capture.ts) still ends an outage that lasts
+    const outage = !permanent && outageDuringExport(error)
+    node.failedAttempts = permanent ? Math.max(cfg.maxLoadAttempts, cfg.exportMaxLoadAttempts) : outage ? node.failedAttempts : node.failedAttempts + 1
+    node.retryAt = now() + (outage ? cfg.exportRetryDelayMs : retryDelay(node.failedAttempts))
     if (permanent) return
     node.failure = failure
     failedCount++
@@ -829,7 +837,8 @@ export function createTerrainEngine(
     enforceCap(Math.max(0, Math.min(toLoad.length, cfg.maxConcurrentLoads - loadingCount)))
     let started = 0
     for (let i = 0; i < toLoad.length && loadingCount < cfg.maxConcurrentLoads; i++) {
-      startLoad(toLoad[i], i)
+      // an export: the children outside the view (priority < 0) are fetched after the look-ahead, not before it
+      startLoad(toLoad[i], exporting && toLoad[i].priority < 0 ? CULLED_RANK + i : i)
       started++
     }
 
@@ -847,6 +856,14 @@ export function createTerrainEngine(
   const PREFETCH_RANK = BACKGROUND_PRIORITY
   /** Fetch ranks of retries start here: after the prefetches. */
   const RETRY_RANK = 2 * PREFETCH_RANK
+  /** During an export the view's off-screen children are fetched after the look-ahead (whose ranks stay far below this). */
+  const CULLED_RANK = PREFETCH_RANK + 10_000
+  /** Loads the look-ahead of an export started and that are still in flight: its share is counted apart from the view's. */
+  const prefetchLoads = new Set<TileNode>()
+  function prefetchLoadsInFlight(): number {
+    for (const node of prefetchLoads) if (node.state !== 'loading') prefetchLoads.delete(node)
+    return prefetchLoads.size
+  }
 
   function prefetch(camera: PerspectiveCamera, viewportHeightPx: number): number {
     if (disposed) return 0
@@ -861,13 +878,18 @@ export function createTerrainEngine(
     const limit = Math.max(1, Math.floor(cfg.maxConcurrentLoads * cfg.prefetchLoadShare))
     const toLoad = prefetchSelection.toLoad
     let started = 0
+    // An export: the look-ahead has its own share, whatever the frame being waited for loads (the view's loads would
+    // otherwise starve it exactly when it matters); the fetcher still serves the view first (rank) within its own
+    // connection limit. The preview: the look-ahead only uses what the view leaves of the budget.
+    const inFlight = () => (exporting ? prefetchLoadsInFlight() : loadingCount)
     // only what that camera would draw (priority >= 0, sorted first), never its off-screen children; none past the cap
     for (
       let i = 0;
-      i < toLoad.length && loadingCount < limit && readyCount + loadingCount < cfg.maxResidentTiles && toLoad[i].priority >= 0;
+      i < toLoad.length && inFlight() < limit && readyCount + loadingCount < cfg.maxResidentTiles && toLoad[i].priority >= 0;
       i++
     ) {
       startLoad(toLoad[i], PREFETCH_RANK + i)
+      if (exporting && toLoad[i].state === 'loading') prefetchLoads.add(toLoad[i])
       started++
     }
     return started
@@ -966,9 +988,19 @@ export function createTerrainEngine(
     }
   }
 
+  /** the network is back: the tiles waiting for a retry try at once */
+  function onOnline(): void {
+    if (disposed || !exporting) return
+    forEachNode(roots, (node) => {
+      if (node.state === 'failed' && !node.noData) node.retryAt = 0
+    })
+  }
+  if (typeof addEventListener === 'function') addEventListener('online', onOnline)
+
   function dispose(): void {
     if (disposed) return
     disposed = true
+    if (typeof removeEventListener === 'function') removeEventListener('online', onOnline)
     disposeTree()
     listeners.clear()
     clearHeightField()

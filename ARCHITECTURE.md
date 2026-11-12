@@ -303,7 +303,11 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      of waits plus the fetcher's own retries, ~2.2 min per tile), fetched at once, counted in `pendingVisibleTiles` until
      the last attempt; tiles that had given up are tried again at the start, and so are the tiles the preview kept with
      grey patches (`imageryMissing`, unloaded then loaded again: left as they were, the first frame showing one stopped the
-     export without a new try). Each failed node keeps why (`node.failure`:
+     export without a new try). **A network outage does not use up the attempts**: while `navigator.onLine === false`, a failure that is not an answer of the server (not a `TileFetchError`,
+     not an abort) leaves `failedAttempts` as it was and tries the tile again after `exportRetryDelayMs`, at once on the
+     browser's `online` event (`onOnline`). Nothing waits for ever: the frame's own timeout (`DEFAULT_SETTLE`, 5 min in
+     `export/capture.ts`) ends the wait with « délai dépassé » and the tiles still pending, so a long outage fails the export
+     with that message instead of « tuiles abandonnées ». Each failed node keeps why (`node.failure`:
      host, layer élévation / imagerie, cause such as « HTTP 503 », « erreur réseau (…) », « imagerie incomplète »); the
      selection lists the visible nodes given up on (`missing`) and those still retried (`retrying`), read by
      `viewTileFailures(engine)` for the export's error. A visible tile given up on (or drawn with imagery missing) is
@@ -320,7 +324,10 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      tiles for the next frames outlast a slow frame; the export waits up to 5 min per frame) and not ancestors of a visible node → dispose geometry/texture; the `HeightField`
      keeps ~400 grids at 256 px equivalent (LRU, i.e. ~100 MB; a 512 px grid counts as four; 160 on a phone or tablet).
      The texture's retained 2D canvas is released with it (`width = height = 0`: WebKit keeps a canvas's backing store until a GC).
-   - **Tile retention during an export on a phone or tablet.** Wall time is the wrong clock there: an export renders a few
+   - **Tile retention during an export.** On a computer too it counts film frames (`exportTileKeepFrames` = 12 for the
+     views, the look-ahead 50 frames: farthest prefetched frame + 2 × 5), memory not being capped there: with the wall clock
+     alone (30 s), a frame lasting more than a second unloaded the tiles prefetched 40 frames ahead before their turn and
+     they were decoded and composed again. The rest of this passage describes the phone and tablet numbers and the cap. Wall time is the wrong clock there: an export renders a few
      frames a second, so 30 s keep hundreds of film frames of tiles (measured on an iPhone 12: +1.2 tiles per frame,
      68 → 244 loaded tiles in 100 frames, no plateau, tab killed). The export (`ExportController`) calls
      `engine.setRetention({ frame, keepFrames, prefetchKeepFrames })` before every film frame when
@@ -332,7 +339,7 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
      preview): past it `enforceCap` (every update) unloads the ready tiles the current selection did not visit, least
      recently visited first (a prefetch counts half a frame after the update, so a tile ahead outlasts one behind; deeper first on
      a tie; roots stay), and `prefetch` starts nothing. The tiles of the current selection (drawn, shadow casters, their
-     ancestors) are never evicted. A computer sets no retention and no cap: nothing changes there. Estimate behind 120:
+     ancestors) are never evicted. A computer counts frames the same way but sets no cap. Estimate behind 120:
      ~2.6 MB a tile (imagery texture 512² with mipmaps ~1.4 MB, its canvas ~1 MB, DEM grid, geometry) = ~310 MB at the cap.
    - **Tiles of the film fetched before its first frame** (`export/tilePreload.ts`, #401). Before the frames of a film,
      `filmTilesToPreload` lists the terrain and imagery tiles with the offline planner (`planOfflineTiles`, corridor
@@ -2942,7 +2949,12 @@ exports) gets it from the terrain source of the settings.
   (`PREFETCH_WAIT_MS`), and those of the next frame (+1, `NEXT_FRAME`) right after each frame is drawn, before the
   wait for the GPU (`waitForGpu` reads a pixel, which blocks the page but not the network nor the tile workers: about
   0.2 s per image on an iPhone 12, during which the next frame's tiles now load): the network is mostly idle during those waits (one load in flight out of 24 was typical), and
-  a prefetch only reaches one level deeper per call (children are selected once their parent is loaded). Prefetches (and the preview's retries) are fetched at a low network priority (`priority: 'low'`, Priority Hints, `BACKGROUND_PRIORITY` in `terrain/fetch.ts`; ignored where unsupported): the browser serves the tiles the frame waits for first.
+  a prefetch only reaches one level deeper per call (children are selected once their parent is loaded). Prefetches (and the preview's retries) are fetched at a low network priority (`priority: 'low'`, Priority Hints, `BACKGROUND_PRIORITY` in `terrain/fetch.ts`; ignored where unsupported): the browser serves the tiles the frame waits for first. During an export the look-ahead has **its own share** of
+  `maxConcurrentLoads × prefetchLoadShare` loads, counted apart from the view's (`prefetchLoadsInFlight`): the view's loads
+  counted before, and a frame waiting for tiles left it nothing to start. The engine may then have more loads open than
+  `maxConcurrentLoads`, but the fetcher's own limit on connections is unchanged and serves the ranks in order. Also during an
+  export the view's off-screen children (priority < 0) are fetched after the look-ahead (`CULLED_RANK`), not before it. The
+  preview keeps the former rules.
 - The WebGL image is composited in the same task as the render onto an `OffscreenCanvas` (sky gradient, image, then overlay
   `DrawOverlay(ctx, { progress, time }, w, h)` after loading its fonts, `time` = `overlayTime(clock, progress,
   frame time)`; still image: current playback time), then encoded by mediabunny (WebCodecs): MP4 H.264,
@@ -3034,7 +3046,7 @@ exports) gets it from the terrain source of the settings.
   sequence** (`src/export/sequenceEncoder.ts`, « Séquence d'images PNG », `ExportRequest.sequence = { folder }`): a
   `VideoEncodeSession` that writes frame `i` as `<name>_00001.png` through `canvas.convertToBlob` into the folder picked on the
   click (`pickFolder`: `showDirectoryPicker` on Chrome / Edge, the folder dialog on the desktop; written flat, no subfolder), no
-  sound (`mixFilmAudio` skipped), no held frames (holds 0), `ExportResult.fileName` the pattern `<name>_#####.png`; a cancel keeps
+  sound (`mixFilmAudio` skipped), no held frames (holds 0), a frame the controller repeats (`composed === null`: a hold) is written again with the bytes of the previous PNG (`repeatFrame(index)`, optional on `VideoEncodeSession`) instead of a new `convertToBlob`, `ExportResult.fileName` the pattern `<name>_#####.png`; a cancel keeps
   the images already written (a closed file cannot be removed through a folder). `VideoEncodeSession.codec` is a `SessionCodec`
   (container and codec as strings) so that `png/png` fits. **ProRes** is not offered: WebCodecs cannot encode it (mediabunny only
   muxes it), and the desktop route would be the system's ffmpeg (`prores_ks`, `.mov`) with a new choice of the native encoder.

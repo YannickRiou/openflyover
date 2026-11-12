@@ -53,7 +53,10 @@ export interface DeviceBudget {
   maxResidentTiles: number
   /** terrain tiles loading at the same time: each holds its fetches and decode copies (bitmaps, DEM pixels, canvas) */
   maxTileLoads: number
-  /** export: film frames a tile of the view is kept after the last frame that needed it; 0 = wall time (the preview's) */
+  /**
+   * export: film frames a tile of the view is kept after the last frame that needed it (and the look-ahead's tiles, until the
+   * farthest frame ahead is behind); 0 = wall time (the preview's). Wall time is wrong when a frame takes seconds.
+   */
   exportTileKeepFrames: number
   /** export: frames ahead whose tiles are prefetched (every few rendered frames) */
   exportPrefetchAhead: readonly number[]
@@ -81,7 +84,8 @@ export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
   memoryWarnBytes: 1.5e9,
   maxResidentTiles: Infinity,
   maxTileLoads: 24,
-  exportTileKeepFrames: 0,
+  // frames, not 30 s: a slow frame (clouds, a wait for tiles) must not unload what was prefetched 40 frames ahead; memory is not capped here
+  exportTileKeepFrames: 12,
   exportPrefetchAhead: [5, 10, 15, 20, 30, 40],
   shadowMapSize: 4096,
   maxTrees: 250_000,
