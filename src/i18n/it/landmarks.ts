@@ -3,8 +3,8 @@ import type { Messages } from '../messages'
 const messages: Messages['landmarks'] = {
   attribution: '© contributori di OpenStreetMap (ODbL)',
   'overpass.drinkingWater': 'Acqua potabile',
-  'overpass.unexpected': 'risposta Overpass inattesa',
-  'overpass.noServer': 'nessun server Overpass',
+  'overpass.unexpected': 'risposta inattesa del servizio dei riferimenti',
+  'overpass.noServer': 'nessun server di riferimenti raggiungibile',
   'kind.peak': 'Vette',
   'kind.pass': 'Passi',
   'kind.hut': 'Rifugi',

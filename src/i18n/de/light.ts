@@ -179,7 +179,7 @@ const messages: Messages['light'] = {
   'atmosphere.nightLightTip': 'Beleuchtet das Gelände nachts wie Mondlicht: bei 0 bleibt die Nacht sehr dunkel, höher sieht man Berge und Wolken. Tagsüber ohne Wirkung.',
   'atmosphere.sun': 'Sonne',
   'atmosphere.sunOff': 'Atmosphäre (vorheriger Abschnitt) aktivieren, um die Uhrzeit der Sonne einzustellen.',
-  'map.imageryDetailHint': 'Feiner: schärfere Fotos, aber mehr Kacheln zu laden (längere Vorschau, Export und Offline-Paket).',
+  'map.imageryDetailHint': 'Feiner: schärfere Fotos, aber mehr Kartenbilder zu laden (längere Vorschau, Export und Offline-Paket).',
   // --- Schnee (Wetter › Schnee)
   'weather.snow': 'Schnee',
   'snow.mode.meteo': 'Nach dem Wetter des Tages',

@@ -16,7 +16,7 @@ const messages: Messages['poster'] = {
   'figure.climb': 'Climb',
   'draw.profile': 'Profile · {range}',
   'error.mapImage': 'Unable to create the map image.',
-  'error.noTile': 'Unable to load the map: no tile of “{name}” received.',
+  'error.noTile': 'Unable to load the map: no map image of “{name}” received.',
   'error.noTrack': 'No track to draw.',
   'error.posterImage': 'Unable to create the poster image.',
   'preview.aria': 'Poster preview',
@@ -27,8 +27,8 @@ const messages: Messages['poster'] = {
   saveFailed: 'Unable to save “{file}”: {error}',
   'progress.compose': 'Composing the poster…',
   'progress.save': 'Saving the image…',
-  'progress.tilesMap': 'Map tiles: {done} / {total}',
-  'progress.tiles3d': '3D view tiles: {done} / {total}',
+  'progress.tilesMap': 'Map images: {done} / {total}',
+  'progress.tiles3d': '3D view map images: {done} / {total}',
   'progress.loadingMap': 'Loading the map…',
   'progress.rendering': 'Rendering the 3D view…',
   'progress.aria': 'Image progress',
@@ -63,7 +63,7 @@ const messages: Messages['poster'] = {
   'panel.failed': 'Failed: {error}',
   'panel.done': '{file} ({size})',
   'panel.saveAgain': 'Save again…',
-  'panel.missingTiles': { one: '— {n} map tile never received (in grey): try again later or change the map background.', other: '— {n} map tiles never received (in grey): try again later or change the map background.' },
+  'panel.missingTiles': { one: '— {n} map image never received (in grey): try again later or change the map background.', other: '— {n} map images never received (in grey): try again later or change the map background.' },
 }
 
 export default messages

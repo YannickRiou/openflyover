@@ -80,7 +80,7 @@ const messages: Messages['timeline'] = {
   'bar.elevation': 'Elevation: ',
   'bar.recordedTime': 'Recorded time: ',
   'bar.addHold': 'Add a hold at the marker position',
-  'bar.keys': 'Keys',
+  'bar.keys': 'Keyframes',
   'bar.add': 'Add',
   'bar.holdAt': 'Hold: {label}',
   'bar.addRow': 'Text, photo, music',

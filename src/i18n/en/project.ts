@@ -22,7 +22,7 @@ const messages: Messages['project'] = {
   'doc.waypointsInvalid': '{label}: invalid list of waypoints (“waypoints”).',
   'doc.mediaDropped': { one: '{count} media item without a readable file in the project, removed from the film.', other: '{count} media items without a readable file in the project, removed from the film.' },
   'doc.musicDropped': { one: '{count} music file without a readable file in the project, removed from the film.', other: '{count} music files without a readable file in the project, removed from the film.' },
-  'doc.notJson': 'Unreadable project file: it is not valid JSON.',
+  'doc.notJson': 'Unreadable project file: it is not a valid project file.',
   'doc.notProject': 'This file is not an OpenFlyover project (“format” field missing or unknown).',
   'doc.tracksMissing': 'Invalid project: list of tracks (“tracks”) missing.',
   'doc.duplicateId': 'Invalid project: two tracks have the identifier “{id}”.',

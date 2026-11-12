@@ -16,7 +16,7 @@ const messages: Messages['poster'] = {
   'figure.climb': 'Anstieg',
   'draw.profile': 'Profil · {range}',
   'error.mapImage': 'Das Kartenbild kann nicht erstellt werden.',
-  'error.noTile': 'Die Karte kann nicht geladen werden: keine Kachel von „{name}“ empfangen.',
+  'error.noTile': 'Die Karte kann nicht geladen werden: kein Kartenbild von „{name}“ empfangen.',
   'error.noTrack': 'Kein Track zum Zeichnen.',
   'error.posterImage': 'Das Posterbild kann nicht erstellt werden.',
   'preview.aria': 'Poster-Vorschau',
@@ -27,8 +27,8 @@ const messages: Messages['poster'] = {
   saveFailed: '„{file}“ kann nicht gespeichert werden: {error}',
   'progress.compose': 'Poster wird zusammengesetzt…',
   'progress.save': 'Bild wird gespeichert…',
-  'progress.tilesMap': 'Kacheln der Karte: {done} / {total}',
-  'progress.tiles3d': 'Kacheln der 3D-Ansicht: {done} / {total}',
+  'progress.tilesMap': 'Kartenbilder: {done} / {total}',
+  'progress.tiles3d': 'Kartenbilder der 3D-Ansicht: {done} / {total}',
   'progress.loadingMap': 'Karte wird geladen…',
   'progress.rendering': '3D-Ansicht wird gerendert…',
   'progress.aria': 'Fortschritt des Bildes',
@@ -63,7 +63,7 @@ const messages: Messages['poster'] = {
   'panel.failed': 'Fehlgeschlagen: {error}',
   'panel.done': '{file} ({size})',
   'panel.saveAgain': 'Erneut speichern…',
-  'panel.missingTiles': { one: '— {n} Kachel der Karte nie empfangen (grau): später erneut versuchen oder die Hintergrundkarte wechseln.', other: '— {n} Kacheln der Karte nie empfangen (grau): später erneut versuchen oder die Hintergrundkarte wechseln.' },
+  'panel.missingTiles': { one: '— {n} Kartenbild nie empfangen (grau): später erneut versuchen oder die Hintergrundkarte wechseln.', other: '— {n} Kartenbilder nie empfangen (grau): später erneut versuchen oder die Hintergrundkarte wechseln.' },
 }
 
 export default messages

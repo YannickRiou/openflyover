@@ -28,7 +28,7 @@ const messages: Messages['project'] = {
     one: '{count} música sin archivo legible en el proyecto, retirada de la película.',
     other: '{count} músicas sin archivo legible en el proyecto, retiradas de la película.',
   },
-  'doc.notJson': 'Archivo de proyecto ilegible: no es un JSON válido.',
+  'doc.notJson': 'Archivo de proyecto ilegible: no es un archivo de proyecto válido.',
   'doc.notProject': 'Este archivo no es un proyecto de OpenFlyover (campo «format» ausente o desconocido).',
   'doc.tracksMissing': 'Proyecto no válido: falta la lista de tracks («tracks»).',
   'doc.duplicateId': 'Proyecto no válido: dos tracks tienen el identificador «{id}».',

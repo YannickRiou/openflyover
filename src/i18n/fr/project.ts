@@ -20,7 +20,7 @@ export default {
   'doc.waypointsInvalid': '{label} : liste des points (« waypoints ») invalide.',
   'doc.mediaDropped': { one: '{count} média sans fichier lisible dans le projet, retiré du film.', other: '{count} médias sans fichier lisible dans le projet, retirés du film.' },
   'doc.musicDropped': { one: '{count} musique sans fichier lisible dans le projet, retirée du film.', other: '{count} musiques sans fichier lisible dans le projet, retirées du film.' },
-  'doc.notJson': "Fichier de projet illisible : ce n'est pas du JSON valide.",
+  'doc.notJson': 'Fichier de projet illisible : ce n’est pas un fichier de projet valide.',
   'doc.notProject': "Ce fichier n'est pas un projet OpenFlyover (champ « format » absent ou inconnu).",
   'doc.tracksMissing': 'Projet invalide : liste des traces (« tracks ») manquante.',
   'doc.duplicateId': "Projet invalide : deux traces portent l'identifiant « {id} ».",

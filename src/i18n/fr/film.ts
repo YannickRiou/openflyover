@@ -45,7 +45,7 @@ export default {
   'snap.video': 'Vidéo',
   'snap.photo': 'Photo',
   'snap.music': 'Musique',
-  'snap.keyframe': 'Image clé',
+  'snap.keyframe': 'Image image clé',
   'snap.setting': 'Réglage',
   'snap.marker': 'Marqueur',
   'snap.highlight': 'Temps fort',

@@ -64,7 +64,7 @@ const messages: Messages['settings'] = {
   'preferences.timeline.snap': 'El imán se ajusta a',
   'preferences.timeline.snapHint': 'Alt invierte el imán al arrastrar.',
   'preferences.timeline.snapPlayhead': 'El cabezal',
-  'preferences.timeline.snapBlocks': 'Los bloques y las claves',
+  'preferences.timeline.snapBlocks': 'Los bloques y los fotogramas clave',
   'preferences.timeline.snapRuler': 'Las marcas de la regla',
   'preferences.timeline.snapMarks': 'Transiciones y momentos destacados',
   'updates.title': 'Actualizaciones',

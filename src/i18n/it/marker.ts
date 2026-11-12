@@ -87,7 +87,7 @@ const messages: Messages['marker'] = {
   'track.width': 'Spessore della traccia',
   'track.dash': 'Tratto',
   'section.title': 'Marcatore',
-  'section.keyed': { one: '{count} chiave del marcatore (corsia «Marcatore») ne cambia l’aspetto lungo il percorso: questo pannello regola l’aspetto prima di essa.', other: '{count} chiavi del marcatore (corsia «Marcatore») ne cambiano l’aspetto lungo il percorso: questo pannello regola l’aspetto prima della prima.' },
+  'section.keyed': { one: '{count} keyframe del marcatore (corsia «Marcatore») ne cambia l’aspetto lungo il percorso: questo pannello regola l’aspetto prima di esso.', other: '{count} keyframe del marcatore (corsia «Marcatore») ne cambiano l’aspetto lungo il percorso: questo pannello regola l’aspetto prima del primo.' },
   'section.shape': 'Forma',
   'section.style': 'Stile',
   'section.figurine': 'Figurina',

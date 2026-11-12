@@ -12,7 +12,7 @@ export default {
   'label.start': 'Départ',
   'label.finish': 'Arrivée',
   'canvas.contextLost': 'Affichage 3D interrompu (carte graphique). Il reprendra automatiquement…',
-  'canvas.noWebgl': 'La 3D n’est pas disponible : la carte graphique ou le navigateur ne prend pas en charge WebGL 2.',
+  'canvas.noWebgl': 'La 3D n’est pas disponible : ce navigateur ou cette carte graphique ne sait pas dessiner la 3D. Essayez un autre navigateur à jour.',
   'menu.poiName': "Nom du point d'intérêt",
   'menu.add': 'Ajouter',
   'menu.addHold': 'Ajouter un arrêt ici',

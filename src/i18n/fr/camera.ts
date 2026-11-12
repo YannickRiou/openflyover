@@ -10,7 +10,7 @@ export default {
   'styleHint.orbit': 'Tourne autour du marqueur : un tour complet sur la durée du survol par défaut.',
   'styleHint.top': 'Haute et presque verticale (inclinaison d’au moins 70°).',
   'styleHint.cinematic': 'Plus loin et plus bas, avec un lent mouvement latéral.',
-  'styleHint.free': 'La caméra ne suit rien : fixe sur une vue de tout le tracé, ou d’une image clé à l’autre si vous en ajoutez sur la timeline.',
+  'styleHint.free': 'La caméra ne suit rien : fixe sur une vue de toute la trace, ou d’une image clé à l’autre si vous en ajoutez sur la timeline.',
   'style.chase': 'Suivre',
   'style.sway': 'Balancer',
   'style.orbit': 'Tourner autour',
@@ -107,7 +107,7 @@ export default {
   'speed.hintDuration': 'Vous réglez la durée du survol ; la vitesse du marqueur s’en déduit (c’est une vitesse moyenne).',
   'speed.hintSpeed': 'Vous réglez la vitesse moyenne du marqueur ; l’appli en déduit la durée du survol.',
   'speed.hintUntimed': 'Cette trace n’a pas d’heures : la vitesse est donnée en km/h seulement.',
-  'speed.hintStages': 'Plusieurs traces : la longueur est celle de tout le parcours ; une étape à durée fixée garde sa durée.',
+  'speed.hintStages': 'Plusieurs traces : la longueur est celle de toute la trace ; une étape à durée fixée garde sa durée.',
   // 4.2.1 — the flyover duration and the speed say what they count
   'speed.hintKept': 'Les arrêts et les ralentis sont pris dans cette durée.',
   'speed.hintAdded': 'Les arrêts et les ralentis s’y ajoutent (« Garder la durée du survol » est décoché).',

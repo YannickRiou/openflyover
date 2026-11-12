@@ -19,7 +19,7 @@ export default {
   'error.denied': 'Autorisation refusée sur Strava.',
   'error.scope': 'Strava n’autorise pas la lecture de vos activités : reconnectez-vous en la laissant cochée.',
   'error.incomplete': 'Réponse de Strava incomplète.',
-  'error.limit': 'Strava limite les requêtes (100 par quart d’heure, 1 000 par jour) : réessayez dans un quart d’heure.',
+  'error.limit': 'Strava limite les demandes (100 par quart d’heure, 1 000 par jour) : réessayez dans un quart d’heure.',
   'error.application': 'Client ID ou Client Secret refusé par Strava : vérifiez-les sur strava.com/settings/api.',
   'error.expired': 'Autorisation Strava expirée : reconnectez-vous.',
   'error.revoked': 'Accès à Strava refusé ou retiré : reconnectez-vous.',

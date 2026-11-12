@@ -22,7 +22,7 @@ const messages: Messages['project'] = {
   'doc.waypointsInvalid': '{label}: elenco dei punti («waypoints») non valido.',
   'doc.mediaDropped': { one: '{count} media senza file leggibile nel progetto, rimosso dal film.', other: '{count} media senza file leggibile nel progetto, rimossi dal film.' },
   'doc.musicDropped': { one: '{count} brano musicale senza file leggibile nel progetto, rimosso dal film.', other: '{count} brani musicali senza file leggibile nel progetto, rimossi dal film.' },
-  'doc.notJson': 'File di progetto illeggibile: non è un JSON valido.',
+  'doc.notJson': 'File di progetto illeggibile: non è un file di progetto valido.',
   'doc.notProject': 'Questo file non è un progetto OpenFlyover (campo «format» assente o sconosciuto).',
   'doc.tracksMissing': 'Progetto non valido: elenco delle tracce («tracks») mancante.',
   'doc.duplicateId': 'Progetto non valido: due tracce hanno lo stesso identificatore «{id}».',

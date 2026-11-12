@@ -16,7 +16,7 @@ const messages: Messages['poster'] = {
   'figure.climb': 'Subida',
   'draw.profile': 'Perfil · {range}',
   'error.mapImage': 'No se puede crear la imagen del mapa.',
-  'error.noTile': 'No se puede cargar el mapa: no se ha recibido ninguna tesela de «{name}».',
+  'error.noTile': 'No se puede cargar el mapa: no se ha recibido ninguna imagen de mapa de «{name}».',
   'error.noTrack': 'Ningún track que dibujar.',
   'error.posterImage': 'No se puede crear la imagen del póster.',
   'preview.aria': 'Vista previa del póster',
@@ -27,8 +27,8 @@ const messages: Messages['poster'] = {
   saveFailed: 'No se puede guardar «{file}»: {error}',
   'progress.compose': 'Componiendo el póster…',
   'progress.save': 'Guardando la imagen…',
-  'progress.tilesMap': 'Teselas del mapa: {done} / {total}',
-  'progress.tiles3d': 'Teselas de la vista 3D: {done} / {total}',
+  'progress.tilesMap': 'Imágenes de mapa: {done} / {total}',
+  'progress.tiles3d': 'Imágenes de mapa de la vista 3D: {done} / {total}',
   'progress.loadingMap': 'Cargando el mapa…',
   'progress.rendering': 'Renderizando la vista 3D…',
   'progress.aria': 'Progreso de la imagen',
@@ -64,8 +64,8 @@ const messages: Messages['poster'] = {
   'panel.done': '{file} ({size})',
   'panel.saveAgain': 'Guardar de nuevo…',
   'panel.missingTiles': {
-    one: '— {n} tesela del mapa nunca recibida (en gris): inténtalo más tarde o cambia el fondo de mapa.',
-    other: '— {n} teselas del mapa nunca recibidas (en gris): inténtalo más tarde o cambia el fondo de mapa.',
+    one: '— {n} imagen de mapa nunca recibida (en gris): inténtalo más tarde o cambia el fondo de mapa.',
+    other: '— {n} imágenes de mapa nunca recibidas (en gris): inténtalo más tarde o cambia el fondo de mapa.',
   },
 }
 

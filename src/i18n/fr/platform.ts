@@ -17,6 +17,6 @@ export default {
   'app.gotIt': 'Compris',
   shareSave: 'Partager / Enregistrer',
   encoderNative: "installez ffmpeg (sudo apt install ffmpeg), qui encode la vidéo sur ce système, puis relancez l'application ; l'image fixe reste disponible ici.",
-  encoderTouch: "ce navigateur n'encode pas la vidéo (WebCodecs). Sur téléphone ou tablette, exportez depuis Chrome (Android) ou Safari 16.4 ou plus récent (iPhone, iPad) ; l'image fixe reste disponible ici.",
-  encoderMissing: "l'encodage vidéo (WebCodecs) manque. Exportez depuis Chrome, Edge ou un Firefox récent ; l'image fixe reste disponible ici.",
+  encoderTouch: "ce navigateur ne sait pas enregistrer la vidéo. Sur téléphone ou tablette, exportez depuis Chrome (Android) ou Safari 16.4 ou plus récent (iPhone, iPad) ; l'image fixe reste disponible ici.",
+  encoderMissing: "ce navigateur ne sait pas enregistrer la vidéo. Exportez depuis Chrome, Edge ou un Firefox récent ; l'image fixe reste disponible ici.",
 }

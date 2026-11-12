@@ -62,7 +62,7 @@ export default {
   'preferences.timeline.snap': 'L’aimantation s’accroche à',
   'preferences.timeline.snapHint': 'Alt inverse l’aimantation pendant un glissement.',
   'preferences.timeline.snapPlayhead': 'La tête de lecture',
-  'preferences.timeline.snapBlocks': 'Les blocs et les clés',
+  'preferences.timeline.snapBlocks': 'Les blocs et les images clés',
   'preferences.timeline.snapRuler': 'Les graduations',
   'preferences.timeline.snapMarks': 'Transitions et temps forts',
   'updates.title': 'Mises à jour',

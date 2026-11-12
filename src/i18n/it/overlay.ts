@@ -144,7 +144,7 @@ const messages: Messages['overlay'] = {
   'panel.showHint': 'Contatori, profilo, minimappa, meteo, logo e testo libero sovrapposti al film, come esportati. I titoli hanno un proprio interruttore (Titoli, sotto); testi e foto della timeline si vedono sempre.',
   'panel.style': 'Stile',
   'panel.labels3d': 'Etichette 3D',
-  'panel.labels3dHint': 'Le etichette spuntate sopra restano visibili per tutto il film, entro la portata scelta. Con ◇, metti delle chiavi per nasconderle e farle tornare in dissolvenza: 100 % le mostra, 0 % le nasconde.',
+  'panel.labels3dHint': 'Le etichette spuntate sopra restano visibili per tutto il film, entro la portata scelta. Con ◇, metti dei keyframe per nasconderle e farle tornare in dissolvenza: 100 % le mostra, 0 % le nasconde.',
   'panel.labels3dWhich': 'Quali riferimenti (cime, passi, rifugi…): Mappa › Riferimenti e punti di interesse.',
   'panel.titles': 'Titoli',
   'panel.counters': 'Contatori',

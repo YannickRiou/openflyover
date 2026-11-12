@@ -22,7 +22,7 @@ const messages: Messages['project'] = {
   'doc.waypointsInvalid': '{label}: Punkteliste („waypoints“) ungültig.',
   'doc.mediaDropped': { one: '{count} Medium ohne lesbare Datei im Projekt, aus dem Film entfernt.', other: '{count} Medien ohne lesbare Datei im Projekt, aus dem Film entfernt.' },
   'doc.musicDropped': { one: '{count} Musikstück ohne lesbare Datei im Projekt, aus dem Film entfernt.', other: '{count} Musikstücke ohne lesbare Datei im Projekt, aus dem Film entfernt.' },
-  'doc.notJson': 'Projektdatei nicht lesbar: kein gültiges JSON.',
+  'doc.notJson': 'Projektdatei nicht lesbar: keine gültige Projektdatei.',
   'doc.notProject': 'Diese Datei ist kein OpenFlyover-Projekt (Feld „format“ fehlt oder ist unbekannt).',
   'doc.tracksMissing': 'Ungültiges Projekt: Trackliste („tracks“) fehlt.',
   'doc.duplicateId': 'Ungültiges Projekt: Zwei Tracks haben die Kennung „{id}“.',
