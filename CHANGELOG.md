@@ -3,8 +3,9 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## 8.0.2 (unreleased)
+## 8.1.0 (November 2026)
 
+- **« Nouveautés 8.1 »**: exports that get to the end, « Reprendre à l’image N », faster exports, days and photos in the right place.
 - **An export with dated Esri photos no longer stops on the sea**: the Wayback archive of Esri has no photos over the sea from zoom 14 on, and it answers those tiles with a 404 the browser cannot read (no `Access-Control-Allow-Origin` header), so the page only saw a network error. Each such tile was retried for about 2 minutes, then given up, and the export stopped with « Tuiles introuvables » (seen on a raid along the coast, tile 12/2161/1520 east of Corsica, release 16681). A dated Esri source now has the latest photos as its fallback, like the IGN years: a network error on a dated tile is retried once only, then the latest photo of the same place is drawn instead, and when that one fails too the tile is retried as before (`datedImagerySource`, `loadImageryTexture`, `retryNetworkErrors` of `fetchBitmap`).
 - **The preload fetches the photos of the date chosen**: with a « Date des photos », the tiles fetched before the first frame were the latest photos, which no frame asks for. On the same raid, 369 s of preload were wasted and the frames then waited 621 s for their tiles. The preload now uses the same dated source as the terrain, and keeps to 6 requests at once on the Wayback server, as on the main Esri server (`maxRequestsFor` with `extra` sources).
 - **A tile the preview drew with grey patches is tried again when the export starts**: after its last attempt the preview keeps such a tile with the grey where its photos are missing. The export stopped on the first frame that showed it, without one new try. It is now reloaded at the start of the export, like the tiles that had failed (`setExporting`).

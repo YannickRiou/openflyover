@@ -231,7 +231,7 @@ export default {
   'panel.frozen': "L'aperçu reste figé pendant l'export ; chaque image attend que ses images de carte soient chargées.",
   'panel.cancel': "Annuler l'export",
   'panel.diagnostic': 'Rapport de diagnostic',
-  'panel.resume': "Reprendre à l'image {frame}",
+  'panel.resume': 'Reprendre à l’image {frame}',
   'panel.savedTo': 'Enregistrée dans {fileName}',
   'panel.saveFile': 'Enregistrer {fileName}…',
   'panel.shareFile': '{label} {fileName}',

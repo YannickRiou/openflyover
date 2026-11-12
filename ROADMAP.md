@@ -8,7 +8,7 @@ it serves and how it will be checked. The [changelog](CHANGELOG.md) says what ea
 - **8.0** (November 2026): the camera keeps the tilt you ask for in the mountains, relief shadows are sharp when the
   camera flies low, a new project starts graded, one lens for every film.
 - **8.0.1**: a ridge hides the marker no longer than before 8.0; the « Nouveautés » are in plainer French.
-- **8.0.2** (next): the export holds on long films and bad networks: tiles that stall give up and are tried again, a
+- **8.1** (November 2026): the export holds on long films and bad networks: tiles that stall give up and are tried again, a
   graphics card reset is recovered, « Annuler » always works, a failed export can resume from the kept frames.
 - **Still open**: the 7.0 items below that are not marked done, and the points of « To decide ».
 

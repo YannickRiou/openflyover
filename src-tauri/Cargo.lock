@@ -2487,7 +2487,7 @@ dependencies = [
 
 [[package]]
 name = "openflyover"
-version = "8.0.1"
+version = "8.1.0"
 dependencies = [
  "serde",
  "serde_json",
