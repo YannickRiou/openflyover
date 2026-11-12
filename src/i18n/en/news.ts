@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'What’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v812.labels.title': "Labels you can read on a phone",
+  'v812.labels.text': "In a vertical film, 9:16 or 4:5, the names of summits, passes and lakes now show larger on their own, so they can be read on a phone. If you want them bigger still, \"Label size\" goes up to ×3.",
   'v811.situation.title': "Films seen from the sky now export all the way",
   'v811.situation.text': "If your film starts or ends on a view of the whole region from very high up, the export could slow down and then get stuck. It now goes all the way through, even on a modest computer, and the picture looks the same.",
   'v81.export.title': "Your exports go all the way",

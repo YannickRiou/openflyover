@@ -2,6 +2,8 @@ export default {
   title: 'Nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v812.labels.title': "Des étiquettes lisibles sur un téléphone",
+  'v812.labels.text': "Dans un film vertical, en 9:16 ou en 4:5, les noms des sommets, des cols et des lacs s’affichent maintenant plus grands, d’eux-mêmes, pour se lire sur un téléphone. Si vous les voulez encore plus grands, « Taille des étiquettes » va jusqu’à ×3.",
   'v811.situation.title': "Les films vus du ciel s’exportent jusqu’au bout",
   'v811.situation.text': "Quand votre film commence ou finit sur une vue de toute la région, prise de très haut, l’export pouvait ralentir puis se bloquer. Il va maintenant jusqu’au bout, même sur un ordinateur modeste, et l’image ne change pas.",
   'v81.export.title': "Vos exports vont jusqu’au bout",

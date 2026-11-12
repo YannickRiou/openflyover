@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Novità',
   hint: 'Cosa è cambiato in OpenFlyover, versione dopo versione.',
   version: 'Versione {version}',
+  'v812.labels.title': "Etichette che si leggono sullo smartphone",
+  'v812.labels.text': "In un film verticale, 9:16 o 4:5, i nomi di cime, colli e laghi ora appaiono più grandi da soli, per leggerli sullo smartphone. Se li vuoi ancora più grandi, «Dimensione delle etichette» arriva fino a ×3.",
   'v811.situation.title': "I film visti dal cielo si esportano fino in fondo",
   'v811.situation.text': "Quando il tuo film comincia o finisce con una vista su tutta la regione, presa da molto in alto, l’esportazione poteva rallentare e poi bloccarsi. Adesso arriva fino alla fine, anche su un computer modesto, e l’immagine non cambia.",
   'v81.export.title': "Le tue esportazioni arrivano fino in fondo",
