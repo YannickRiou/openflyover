@@ -125,7 +125,12 @@ let webgl2: boolean | undefined
 
 /** Whether a WebGL 2 context can be created here (checked once). */
 function webgl2Supported(): boolean {
-  webgl2 ??= !!document.createElement('canvas').getContext('webgl2')
+  if (webgl2 === undefined) {
+    const gl = document.createElement('canvas').getContext('webgl2')
+    webgl2 = !!gl
+    // the probe must not keep a live context (browsers allow a handful per page): let it go at once
+    gl?.getExtension('WEBGL_lose_context')?.loseContext()
+  }
   return webgl2
 }
 
