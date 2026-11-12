@@ -253,6 +253,9 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
     }
   }, [exporting, quality, cloudResolutionScale, exportScale, shadowEvery])
 
+  const applied = useRef<{ field: object; texture: object } | null>(null)
+  const fieldMemo = useRef<{ series: object; sunMs: number; frame: object; field: ReturnType<typeof cloudCoverField> } | null>(null)
+
   useFrame(({ camera, invalidate }) => {
     const effect = ref.current
     if (!effect || !frame) return
@@ -268,16 +271,23 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
     const sunMs = now?.getTime()
     const geometry = { groundM: under?.track.stats.minEle ?? 0, altitudeM: settings.clouds.altitudeM, exaggeration: settings.exaggeration }
     // weather: the cover differs over the scene according to the stations of the series (otherwise one value for all)
-    const field =
-      settings.clouds.mode === 'meteo' && series && sunMs !== undefined
-        ? cloudCoverField(series, sunMs, {
-            lon: frame.origin.lon,
-            lat: frame.origin.lat,
-            origin: _origin.toArray(),
-            east: _east.toArray(),
-            north: _north.toArray(),
-          })
-        : null
+    let field: ReturnType<typeof cloudCoverField> = null
+    if (settings.clouds.mode === 'meteo' && series && sunMs !== undefined) {
+      // a pure function of the series, the time and the frame: the same inputs give the same field, kept until one moves
+      const kept = fieldMemo.current
+      if (kept && kept.series === series && kept.sunMs === sunMs && kept.frame === frame) {
+        field = kept.field
+      } else {
+        field = cloudCoverField(series, sunMs, {
+          lon: frame.origin.lon,
+          lat: frame.origin.lat,
+          origin: _origin.toArray(),
+          east: _east.toArray(),
+          north: _north.toArray(),
+        })
+        fieldMemo.current = { series, sunMs, frame, field }
+      }
+    }
     const clouds =
       settings.clouds.mode === 'mer'
         ? seaOfClouds(settings.clouds.seaTopM, settings.exaggeration)
@@ -287,11 +297,14 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
     const target = regional.current
     if (target) {
       const data = target.texture.image.data as Uint8Array
-      if (field && (field.data.length !== data.length || field.data.some((v, i) => v !== data[i]))) {
+      // the memoised field is the same object while its inputs hold: nothing to compare, nothing to upload
+      const same = field !== null && applied.current?.field === field && applied.current.texture === target.texture
+      if (field && !same && (field.data.length !== data.length || field.data.some((v, i) => v !== data[i]))) {
         data.set(field.data)
         target.texture.needsUpdate = true
         ++fieldVersion.current
       }
+      applied.current = field ? { field, texture: target.texture } : null
       target.regionalFrame.value.set(field?.centre[0] ?? 0, field?.centre[1] ?? 0, field?.invSpan ?? 0)
       target.regionalAmount.value = field && clouds ? 1 : 0
     }
