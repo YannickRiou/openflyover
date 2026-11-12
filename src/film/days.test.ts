@@ -52,6 +52,17 @@ describe('days of a track', () => {
     expect(trackDays(buildTrackPath(rested), 120).map((d) => d.date)).toEqual(['2026-06-01', '2026-06-02'])
   })
 
+  it('a watch left recording at the hut: the night of rest still opens the next day', () => {
+    // 8:00 to 18:00 riding, then a point every 30 min without moving until 6:00, then riding again until 12:00
+    const evening = ride(8, 18, 6.8)
+    const last = evening[evening.length - 1]
+    const hut: TrackPoint[] = []
+    for (let t = 18.5; t < 28; t += 0.5) hut.push({ lon: last.lon, lat: last.lat, time: DAY1 + t * HOUR })
+    const morning = ride(28, 34, last.lon)
+    const trek = buildTrack({ name: 'refuge', source: 'gpx', segments: [{ points: [...evening, ...hut, ...morning] }] })
+    expect(trackDays(buildTrackPath(trek), 120).map((d) => d.date)).toEqual(['2026-06-01', '2026-06-02'])
+  })
+
   it('a single day, or no time: no split', () => {
     const one = buildTrack({ name: 'jour', source: 'gpx', segments: [{ points: day1 }] })
     expect(trackDays(buildTrackPath(one))).toHaveLength(1)

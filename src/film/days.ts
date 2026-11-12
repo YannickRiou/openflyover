@@ -4,6 +4,7 @@
  * (overlay/data.ts `dayCardAt`), so it follows the track, the nights and the weather; earlier versions baked it into
  * the texts of the film (`day-n`), which `withoutDayCards` removes. Pure module (no DOM, React, Three or store).
  */
+import { trackNights } from '../flyover/nights'
 import type { TrackPath } from '../flyover/path'
 import type { WeatherSeries, WeatherSummary } from '../weather/series'
 import { summarizeOuting } from '../weather/series'
@@ -35,15 +36,32 @@ export function localDate(ms: number, utcOffsetMin?: number): string {
 /** A recording gap from which a new day starts (ms): a night ride across midnight stays one day, a night's rest opens the next. */
 export const DAY_GAP_MS = 4 * 3_600_000
 
-/** The timed stretches of `path` separated by a gap of `DAY_GAP_MS`, as point indices (times that go back are ignored). */
+/** A night with less distance than this between sunset and sunrise is a night of rest: the next day starts after it. */
+export const REST_NIGHT_M = 1_000
+
+/**
+ * The days of `path` as point indices: its timed points cut at every recording gap of `DAY_GAP_MS` and in the middle of
+ * every night of rest (`trackNights`, less than `REST_NIGHT_M` covered: a watch left recording at the hut), not by the
+ * calendar date, so a ride through the night stays one day. Times that go back are ignored.
+ */
 function dayRuns(path: TrackPath): { first: number; last: number }[] {
+  const cuts = trackNights(path)
+    .filter((night) => night.nightM < REST_NIGHT_M)
+    // the middle of the night: the pause of the film may sit in any stretch of it when the watch kept recording
+    .map((night) => (night.sunsetMs + night.sunriseMs) / 2)
   const runs: { first: number; last: number }[] = []
   let lastTime = Number.NaN
+  let cut = 0
   for (let i = 0; i < path.count; i++) {
     const time = path.time[i]
     if (Number.isNaN(time) || time < lastTime) continue
+    let rested = false
+    while (cut < cuts.length && cuts[cut] <= time) {
+      if (cuts[cut] > lastTime) rested = true
+      cut++
+    }
     const run = runs[runs.length - 1]
-    if (run && time - lastTime < DAY_GAP_MS) run.last = i
+    if (run && !rested && time - lastTime < DAY_GAP_MS) run.last = i
     else runs.push({ first: i, last: i })
     lastTime = time
   }
@@ -51,7 +69,7 @@ function dayRuns(path: TrackPath): { first: number; last: number }[] {
 }
 
 /**
- * Days of `path`: its timed points cut at every recording gap of `DAY_GAP_MS`, dated by the local date of their first
+ * Days of `path` (`dayRuns`: cut at a recording gap or a night of rest), dated by the local date of their first
  * point (one day, or none without time, for a single-day track).
  */
 export function trackDays(path: TrackPath, utcOffsetMin?: number): TrackDay[] {
