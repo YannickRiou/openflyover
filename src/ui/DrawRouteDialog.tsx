@@ -8,7 +8,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { LonLat, LonLatBounds, TileFetcher } from '../core/types'
 import { cumulativeDistances } from '../geo/lonLat'
 import { assignColors } from '../import'
-import { joinLegs, routeLeg } from '../import/routing'
+import { RouteHttpError, joinLegs, pacedFetchJson, routeLeg } from '../import/routing'
 import type { FetchJson, LegMode } from '../import/routing'
 import { buildTrack } from '../import/stats'
 import { useT } from '../i18n'
@@ -43,11 +43,12 @@ const FRANCE: LonLatBounds = { west: -5.5, south: 41.2, east: 9.8, north: 51.2 }
 /** Tiles of the map, kept from one opening to the next. */
 let tileFetcher: TileFetcher | null = null
 
-const fetchJson: FetchJson = async (url, signal) => {
+/** One at a time and one request a second to the OpenStreetMap routing servers, for every drawing of the session. */
+const fetchJson: FetchJson = pacedFetchJson(async (url, signal) => {
   const response = await fetch(url, { signal })
-  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  if (!response.ok) throw new RouteHttpError(response.status)
   return response.json()
-}
+})
 
 /** The line between two points: routed, or straight; `line` is null for a straight line, `loading` while the services answer. */
 interface Leg {
