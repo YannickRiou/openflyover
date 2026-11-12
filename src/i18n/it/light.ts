@@ -146,7 +146,7 @@ const messages: Messages['light'] = {
   'map.imageryDateError': 'Impossibile leggere le date. Controlla la connessione e riprova.',
   'map.imageryDateNone': 'Qui non ci sono altre foto oltre alle più recenti.',
   'map.imageryDateHintIgn': 'Date di ripresa al centro della traccia (l’IGN fotografa soprattutto in primavera e in estate). Dove l’anno scelto non è stato fotografato, completano le foto più recenti.',
-  'map.imageryDateHintEsri': 'Data di ripresa al centro della traccia: scegli una data invernale per avere la neve, estiva per evitarla.',
+  'map.imageryDateHintEsri': 'Data di ripresa al centro della traccia: scegli una data invernale per avere la neve, estiva per evitarla. Dove mancano queste foto, in mare per esempio, completano le foto più recenti.',
   'map.imageryPhotos': 'Foto aeree',
   'map.imageryMaps': 'Mappe',
   'map.imageryElsewhere': 'Non coprono la traccia',

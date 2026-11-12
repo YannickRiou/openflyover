@@ -146,7 +146,7 @@ const messages: Messages['light'] = {
   'map.imageryDateError': 'The dates could not be read. Check the connection and try again.',
   'map.imageryDateNone': 'No other photos here than the most recent ones.',
   'map.imageryDateHintIgn': 'Dates the photos were taken at the centre of the track (IGN mostly flies in spring and summer). Where the chosen year was not photographed, the most recent photos fill in.',
-  'map.imageryDateHintEsri': 'Date the photos were taken at the centre of the track: pick a winter date for snow, a summer one to avoid it.',
+  'map.imageryDateHintEsri': 'Date the photos were taken at the centre of the track: pick a winter date for snow, a summer one to avoid it. Where these photos are missing, over the sea for example, the most recent photos fill in.',
   'map.imageryPhotos': 'Aerial photos',
   'map.imageryMaps': 'Maps',
   'map.imageryElsewhere': 'Do not cover the track',

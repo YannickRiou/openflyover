@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { BACKGROUND_PRIORITY, TileFetchError, createTileFetcher, downloadTile, fetchTileBlob, setStoredTileReader } from './fetch'
+import { BACKGROUND_PRIORITY, TILE_REQUEST_TIMEOUT_MS, TileFetchError, TileTimeoutError, createTileFetcher, downloadTile, fetchTileBlob, setStoredTileReader } from './fetch'
 import type { StoredTileReader } from './fetch'
 
 interface Deferred<T> {
@@ -82,7 +82,28 @@ describe('fetchTileBlob', () => {
     const promise = fetchTileBlob('https://tiles.test/1/2/3.png')
     pending[0].d.resolve(okResponse())
     await expect(promise).resolves.toBeInstanceOf(Blob)
-    expect(fetchMock).toHaveBeenCalledWith('https://tiles.test/1/2/3.png', { signal: undefined, priority: 'auto' })
+    expect(fetchMock).toHaveBeenCalledWith('https://tiles.test/1/2/3.png', { signal: expect.any(AbortSignal), priority: 'auto' })
+  })
+
+  it('gives up on a request that stalls, as a TileTimeoutError (retried like a network error)', async () => {
+    vi.useFakeTimers()
+    try {
+      const promise = fetchTileBlob('https://tiles.test/stall.png')
+      const outcome = expect(promise).rejects.toBeInstanceOf(TileTimeoutError)
+      expect(pending[0].signal?.aborted).toBe(false)
+      await vi.advanceTimersByTimeAsync(TILE_REQUEST_TIMEOUT_MS)
+      expect(pending[0].signal?.aborted).toBe(true)
+      await outcome
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('passes on the abort of its caller, not as a timeout', async () => {
+    const controller = new AbortController()
+    const promise = fetchTileBlob('https://tiles.test/a.png', controller.signal)
+    controller.abort()
+    await expect(promise).rejects.toMatchObject({ name: 'AbortError' })
   })
 
   it('throws a TileFetchError carrying status and url on HTTP errors', async () => {
@@ -193,6 +214,14 @@ describe('createTileFetcher', () => {
     const bitmap = await promise
     expect(bitmap).toBe(bitmaps[0])
     expect(fetcher.stats.failed).toBe(0)
+  })
+
+  it('does not retry a network error when asked not to (the caller has a fallback)', async () => {
+    const fetcher = createTileFetcher({ retryDelayMs: 0 })
+    const promise = fetcher.fetchBitmap('u', { retryNetworkErrors: false })
+    pending[0].d.reject(new TypeError('Failed to fetch'))
+    await expect(promise).rejects.toBeInstanceOf(TypeError)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('gives up after three retries of a network error', async () => {

@@ -26,7 +26,7 @@ import { boundsIntersect, lonLatToTileFrac, tileGroundSizeM } from '../geo/merca
 import { decodeDem as defaultDecodeDem } from './dem'
 import { DEFAULT_DEM_CLEAN, sameDemClean } from './demClean'
 import { errorMessage } from '../core/errors'
-import { BACKGROUND_PRIORITY, TileFetchError, createTileFetcher, isAbortError, isNoDataError } from './fetch'
+import { BACKGROUND_PRIORITY, TILE_REQUEST_TIMEOUT_MS, TileFetchError, TileTimeoutError, createTileFetcher, isAbortError, isNoDataError } from './fetch'
 import { HeightField } from './heightField'
 import { loadImageryTexture as defaultLoadImageryTexture } from './imagery'
 import { buildTileGeometry, geometryFromArrays, sampleTileMeshAt } from './mesh'
@@ -944,12 +944,14 @@ export function createTerrainEngine(
     exporting = next
     selectionParams.maxLoadAttempts = attemptLimit()
     if (!next) return
-    // tiles that gave up before the export are tried again: the export waits for them
+    // tiles that gave up before the export are tried again: the export waits for them. So are the tiles the preview kept
+    // with grey patches after its last attempt (`imageryMissing`): left as they are, the first frame that shows one would
+    // stop the export at once, without a single new try
     forEachNode(roots, (node) => {
       if (node.state === 'failed' && !node.noData) {
         node.failedAttempts = 0
         node.retryAt = 0
-      }
+      } else if (node.state === 'ready' && node.imageryMissing) unloadNode(node)
     })
   }
 
@@ -1042,5 +1044,6 @@ export function describeTileError(error: unknown, url: string, layer: string): T
   while (!(cause instanceof TileFetchError) && cause instanceof Error && cause.cause !== undefined) cause = cause.cause
   if (cause instanceof TileFetchError) return { host: hostOf(cause.url), layer, cause: `HTTP ${cause.status}` }
   if (cause instanceof TypeError) return { host: hostOf(url), layer, cause: t('terrain.cause.network', { detail: cause.message.slice(0, MAX_CAUSE) }) }
+  if (cause instanceof TileTimeoutError) return { host: hostOf(cause.url), layer, cause: t('terrain.cause.timeout', { seconds: TILE_REQUEST_TIMEOUT_MS / 1000 }) }
   return { host: hostOf(url), layer, cause: errorMessage(cause).slice(0, MAX_CAUSE) }
 }

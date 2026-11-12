@@ -359,6 +359,10 @@ Not sources of their own: a setting of `ign-ortho` and `arcgis-world-imagery` (`
   differs there (22 at Chamonix z15, 19 at the pic de l'Homme). The day the photo was taken: `metadataLayerUrl` of the release, layer 6
   (« 1.2m Resolution Metadata »), `query?geometry=<lon>,<lat>…&outFields=SRC_DATE2` (Chamonix, release of 2023-08-10: 4 August 2019, Maxar
   WV02, 0.5 m). Same attribution as World Imagery. Never in offline packs (Esri refused).
+  **No photos over the sea from z14** (checked 2026-11-12, tile 12/2161/1520 east of Corsica, releases 64776 and 16681): z12 and
+  z13 answer 200, z14 to z18 a 404 **without** `Access-Control-Allow-Origin` (`text/html`), which Chrome reports as
+  `TypeError: Failed to fetch`. Live World Imagery has the tile (200). Hence the latest photos as the dated source's fallback.
+  HTTP/1.1, like the live server: 6 requests at once.
 
 ### Plan IGN v2
 

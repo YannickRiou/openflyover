@@ -62,8 +62,9 @@ export function datedImagerySource(source: ImagerySource, date: string): Imagery
     kind === 'ign'
       ? source.urlTemplate.replace('LAYER=ORTHOIMAGERY.ORTHOPHOTOS&', `LAYER=ORTHOIMAGERY.ORTHOPHOTOS${value}&`)
       : WAYBACK_TILE_TEMPLATE.replace('{release}', String(value))
-  // an id of its own: the engine reloads the imagery when the date changes
-  return { ...source, id: `${source.id}@${date}`, urlTemplate, fallback: kind === 'ign' ? source : undefined }
+  // an id of its own: the engine reloads the imagery when the date changes. Where the date has no photo, the latest ones:
+  // a yearly IGN layer covers only the departments flown that year, and the Wayback archive has no deep tiles over the sea
+  return { ...source, id: `${source.id}@${date}`, urlTemplate, fallback: source }
 }
 
 /** A date offered at a place: the setting value and when the photos were taken (or published, `taken` false). */

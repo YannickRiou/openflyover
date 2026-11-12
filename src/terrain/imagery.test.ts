@@ -180,6 +180,7 @@ interface FetchCall {
   url: string
   priority: number | undefined
   signal: AbortSignal | undefined
+  retryNetworkErrors: boolean | undefined
 }
 
 function fakeFetcher(answer: (url: string) => Promise<ImageBitmap>): TileFetcher & { calls: FetchCall[] } {
@@ -187,7 +188,7 @@ function fakeFetcher(answer: (url: string) => Promise<ImageBitmap>): TileFetcher
   return {
     calls,
     fetchBitmap(url, options = {}) {
-      calls.push({ url, priority: options.priority, signal: options.signal })
+      calls.push({ url, priority: options.priority, signal: options.signal, retryNetworkErrors: options.retryNetworkErrors })
       if (options.signal?.aborted) return Promise.reject(new DOMException('aborted', 'AbortError'))
       return new Promise((resolve, reject) => {
         options.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
@@ -402,6 +403,25 @@ describe('loadImageryTexture', () => {
       const texture = await loadImageryTexture(KEY, dated, fetcher, { zoomOffset: 0 })
       expect(fetcher.calls.map((c) => c.url)).toEqual(['https://tiles.test/10/530/370.jpg', 'https://latest.test/10/530/370.jpg'])
       expect(texture.userData.incomplete).toBeUndefined()
+    })
+
+    it('dated photos: a network error (the Wayback 404 the browser cannot read) is drawn from the fallback, without retries', async () => {
+      const latest = source({ urlTemplate: 'https://latest.test/{z}/{x}/{y}.jpg' })
+      const dated = { ...source(), fallback: latest }
+      const fetcher = fakeFetcher((url) => (url.startsWith('https://tiles.test/') ? Promise.reject(new TypeError('Failed to fetch')) : Promise.resolve(bitmapFor(url))))
+      const texture = await loadImageryTexture(KEY, dated, fetcher, { zoomOffset: 0 })
+      expect(fetcher.calls.map((c) => [c.url, c.retryNetworkErrors])).toEqual([
+        ['https://tiles.test/10/530/370.jpg', false],
+        ['https://latest.test/10/530/370.jpg', true],
+      ])
+      expect(texture.userData.incomplete).toBeUndefined()
+    })
+
+    it('dated photos: when the latest photos fail too, the tile is incomplete (retried by the engine)', async () => {
+      const latest = source({ urlTemplate: 'https://latest.test/{z}/{x}/{y}.jpg' })
+      const dated = { ...source(), fallback: latest }
+      const fetcher = fakeFetcher((url) => (url.startsWith('https://tiles.test/') ? Promise.reject(new TypeError('Failed to fetch')) : Promise.reject(new TypeError('Failed to fetch'))))
+      await expect(loadImageryTexture(KEY, dated, fetcher, { zoomOffset: 0 })).rejects.toThrow(/No imagery/)
     })
 
     it('a tile the regional source does not have (404, beyond the border) is drawn from the coarser tile too, not a failure', async () => {

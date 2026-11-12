@@ -332,9 +332,10 @@ export interface TileFetcherStats {
 export interface TileFetcher {
   /**
    * Resolve to a decoded bitmap. `priority` lower = sooner. Rejects on HTTP/network error or abort.
-   * Cached results are returned synchronously-resolved.
+   * Cached results are returned synchronously-resolved. `retryNetworkErrors: false`: a network error is not retried (the
+   * caller has a fallback; a request already queued for the URL keeps its own policy).
    */
-  fetchBitmap(url: string, options?: { priority?: number; signal?: AbortSignal }): Promise<ImageBitmap>
+  fetchBitmap(url: string, options?: { priority?: number; signal?: AbortSignal; retryNetworkErrors?: boolean }): Promise<ImageBitmap>
   readonly stats: TileFetcherStats
   /** approximate memory of the cached bitmaps (diagnostic) */
   readonly cachedBytes?: number
