@@ -54,9 +54,13 @@ import {
   composeFrame,
   composeOverlayFrame,
   fillSky,
+  ExportStalledError,
+  GPU_RECOVERY_ATTEMPTS,
   renderSettledFrame,
   tileFailureMessage,
   wait,
+  watchContextLoss,
+  within,
   yieldToEventLoop,
   type DrawOverlay,
   type FrameOutcome,
@@ -150,13 +154,41 @@ function withoutDrawing(gl: WebGLRenderer, run: () => void): void {
 const direction = new Vector3()
 const toTarget = new Vector3()
 
-/** End of a failed or canceled export: nothing written is kept (the destination file is removed). */
-async function abandon(error: unknown, request: ExportRequest, session: VideoEncodeSession | null, canceled: boolean): Promise<void> {
+/**
+ * Longest wait of each export step that does not depend on the network tiles (those have their own limit,
+ * `DEFAULT_SETTLE`): past it the export stops with a message (`within`) instead of freezing. Far beyond what each step
+ * takes on a slow phone.
+ */
+export const STEP_LIMIT_MS = {
+  /** the faces of the overlay, the 3D models of the markers, the photos and clips of a frame */
+  assets: 60_000,
+  /** the soundtrack mixed for the whole film */
+  soundtrack: 180_000,
+  /** where a resumable export is kept: past this, the export goes on without being resumable */
+  storage: 30_000,
+  /** the encoder made, a frame handed over or encoded: a graphics card or an encoder that stopped answering */
+  encoder: 120_000,
+  /** the end of the file (last frames, the index of the video written to the file) */
+  finish: 300_000,
+}
+
+/**
+ * End of a failed or canceled export: nothing written is kept (the destination file is removed). `resumeFrom`: the
+ * frames kept on the device for « Reprendre » (export/resume), offered at once with the error.
+ */
+async function abandon(error: unknown, request: ExportRequest, session: VideoEncodeSession | null, canceled: boolean, resumeFrom: number | null = null): Promise<void> {
   await session?.cancel().catch(() => undefined)
   // also when failing before the encoder existed
   await request.destination?.discard().catch(() => undefined)
   if (error instanceof ExportCanceledError || canceled) useExportStore.getState().canceled()
-  else useExportStore.getState().fail(errorMessage(error))
+  else useExportStore.getState().fail(errorMessage(error), resumeFrom)
+}
+
+/** The frame a stored export of the project now open would resume from, null when there is none. */
+async function storedResumeFrame(): Promise<number | null> {
+  const manifest = await (await openStorage())?.readManifest().catch(() => null)
+  if (!manifest || manifest.key !== projectKey() || manifest.frames <= 0 || manifest.frames >= manifest.frameCount) return null
+  return manifest.frames
 }
 
 type Still = NonNullable<ExportRequest['still']>
@@ -215,21 +247,21 @@ async function runOverlayOnly(request: ExportRequest, deps: RunDeps, schedule: n
     const compositor = new OffscreenCanvas(width, height)
     const ctx = compositor.getContext('2d', compositorAttributes())
     if (!ctx) throw new Error(t('export.controller.noCompositor'))
-    if (drawOverlay) await loadOverlayFonts()
-    session = await createExportEncoder(compositor, { ...request, transparent: true })
+    if (drawOverlay) await within(loadOverlayFonts(), STEP_LIMIT_MS.assets, () => t('export.controller.stalledFonts'), isCanceled)
+    session = await within(createExportEncoder(compositor, { ...request, transparent: true }), STEP_LIMIT_MS.encoder, () => t('export.controller.stalledEncoder'), isCanceled)
     for (let i = 0; i < schedule.length; i++) {
       if (isCanceled()) throw new ExportCanceledError()
       // the page answers between two frames (the frames themselves are a few ms of 2D drawing)
       await yieldToEventLoop()
       const progress = schedule[i]
-      await loadFrameMedia(times[i], progress)
+      await within(loadFrameMedia(times[i], progress), STEP_LIMIT_MS.assets, () => t('export.controller.stalledMedia', { frame: i + 1 }), isCanceled)
       composeOverlayFrame(ctx, { progress, time: overlayTime(clock, progress, times[i]) }, width, height, drawOverlay)
-      await session.addFrame(i)
+      await within(session.addFrame(i), STEP_LIMIT_MS.encoder, () => t('export.controller.stalledEncoder'), isCanceled)
       report(i + 1, performance.now(), undefined, i === schedule.length - 1)
     }
     exportStore().finalizing()
     writeBreadcrumb('export : finalisation du fichier')
-    const { blob, sizeBytes } = await session.finish()
+    const { blob, sizeBytes } = await within(session.finish(), STEP_LIMIT_MS.finish, () => t('export.controller.stalledFinish'), isCanceled)
     exportStore().complete({
       url: blob && URL.createObjectURL(blob),
       fileName: request.destination?.fileName ?? videoFileName(request.baseName, session.extension),
@@ -324,6 +356,14 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   const gl = three.gl as { getContext?: () => unknown }
   const glContext = typeof gl.getContext === 'function' ? gl.getContext() : null
   const gpuTimer = createGpuTimer(glContext)
+  const gpu = watchContextLoss(canvas, glContext as WebGLRenderingContext | null, {
+    isCanceled,
+    // the tiles redraw their imagery from the sources on a new context (engine `restoreImagery`): the frame waits for it
+    imageryBack: () => {
+      frameDeps.advance(false)
+      return frameDeps.missingTiles() === 0 && frameDeps.pendingTiles() === 0
+    },
+  })
   const readGpuTimer = () => {
     if (!gpuTimer) return
     gpuTimer.poll()
@@ -512,7 +552,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     if (!encoding) return
     const t0 = performance.now()
     try {
-      await encoding
+      await within(encoding, STEP_LIMIT_MS.encoder, () => t('export.controller.stalledEncoder'), isCanceled)
     } finally {
       encoding = null
       const spent = performance.now() - t0
@@ -536,13 +576,13 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     const ctx = compositor.getContext('2d', { alpha: false, ...compositorAttributes() })
     if (!ctx) throw new Error(t('export.controller.noCompositor'))
     // a canvas never downloads web fonts by itself: the overlay faces must be ready before the first frame
-    if (deps.overlay()) await loadOverlayFonts()
+    if (deps.overlay()) await within(loadOverlayFonts(), STEP_LIMIT_MS.assets, () => t('export.controller.stalledFonts'), isCanceled)
 
     if (request.still) {
       const { progress, compose } = request.still
       const time = overlayTime(filmClock, progress, saved.timeS)
       // pictures and video frames decoded before the render: composing must follow it in the same task
-      if (!compose) await loadFrameMedia(time.timeS, progress)
+      if (!compose) await within(loadFrameMedia(time.timeS, progress), STEP_LIMIT_MS.assets, () => t('export.controller.stalledMedia', { frame: 1 }), isCanceled)
       const outcome = await renderSettledFrame(schedule[0], frameDeps)
       if (outcome !== 'complete') throw tilesFailed(outcome, 1)
       // a composed still (poster) draws its own text instead of the film overlay
@@ -556,16 +596,33 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     const settings = useAppStore.getState().settings
     // the soundtrack from the first frame: film time 0 comes after the frames held at the start
     // an image sequence has no sound
-    const audio = request.sequence || request.probe ? null : await filmSoundtrack(settings.film, Math.round(request.holdStartS * fps) / fps, schedule.length / fps, request.encoding?.loudnessLufs ?? null)
+    const audio =
+      request.sequence || request.probe
+        ? null
+        : await within(
+            filmSoundtrack(settings.film, Math.round(request.holdStartS * fps) / fps, schedule.length / fps, request.encoding?.loudnessLufs ?? null),
+            STEP_LIMIT_MS.soundtrack,
+            () => t('export.controller.stalledSound'),
+            isCanceled,
+          )
     if (isCanceled()) throw new ExportCanceledError()
     // the web video export keeps its packets on the device; where the browser has no storage for it, nothing is kept
     if (!noEncoding && !request.sequence && !request.probe && getPlatform().capabilities.videoEncoder === 'webcodecs') {
-      const storage = await openStorage()
-      if (storage) {
+      // storage that does not answer: the export goes on, without being resumable
+      const begin = async (): Promise<ResumeRun | null> => {
+        const storage = await openStorage()
+        if (!storage) return null
         const job = { key: projectKey(), width, height, fps, frameCount: schedule.length, name: request.baseName }
-        resumeRun = await beginRun(storage, job, request.resumeStored === true)
+        const run = await beginRun(storage, job, request.resumeStored === true)
         // a continued export keeps the codec it was begun with (VP8, the fallback, cannot be asked for: start over)
-        if (resumeRun.codec && !VIDEO_CODEC_CHOICES.includes(resumeRun.codec as VideoCodecChoice)) resumeRun = await beginRun(storage, job, false)
+        return run.codec && !VIDEO_CODEC_CHOICES.includes(run.codec as VideoCodecChoice) ? beginRun(storage, job, false) : run
+      }
+      resumeRun = await within(begin(), STEP_LIMIT_MS.storage, () => '', isCanceled).catch((error: unknown) => {
+        if (error instanceof ExportCanceledError) throw error
+        writeBreadcrumb('export : stockage de reprise indisponible')
+        return null
+      })
+      if (resumeRun) {
         startFrame = resumeRun.startFrame
         if (startFrame > 0) writeBreadcrumb(`export : reprise à l'image ${startFrame + 1} / ${schedule.length}`)
       }
@@ -575,12 +632,17 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       ? noEncodingSession(() => timings.rendered, request.probe === true)
       : request.sequence
         ? createSequenceEncoder(compositor, request.sequence.folder, request.baseName)
-        : await createExportEncoder(compositor, {
-            ...request,
-            audio,
-            resume: resumeRun?.hooks,
-            ...(resumeRun?.codec && { encoding: { ...(request.encoding ?? DEFAULT_ENCODING), codec: resumeRun.codec as VideoCodecChoice } }),
-          })
+        : await within(
+            createExportEncoder(compositor, {
+              ...request,
+              audio,
+              resume: resumeRun?.hooks,
+              ...(resumeRun?.codec && { encoding: { ...(request.encoding ?? DEFAULT_ENCODING), codec: resumeRun.codec as VideoCodecChoice } }),
+            }),
+            STEP_LIMIT_MS.encoder,
+            () => t('export.controller.stalledEncoder'),
+            isCanceled,
+          )
     resumeRun?.recorder.setCodec(session.codec.container, session.codec.codec)
     writeBreadcrumb(
       noEncoding
@@ -693,7 +755,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       }
     }
     // the 3D models of the markers are there before the first frame (not their stand-ins)
-    await whenMarkerModelsLoaded()
+    await within(whenMarkerModelsLoaded(), STEP_LIMIT_MS.assets, () => t('export.controller.stalledModels'), isCanceled)
     // the remaining time counts from the first frame: the soundtrack, the encoder and the tiles are made once, before it
     // a resumed film counts its remaining frames: progress, time left and history are those of this run
     useExportStore.setState({ startedAt: performance.now(), frameCount: schedule.length - startFrame })
@@ -741,7 +803,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         // a tab killed for memory leaves no page event: the last step tells where
         if (isExportStep(timings.rendered)) writeBreadcrumb(`export : image ${i + 1} / ${schedule.length}`)
         // pictures and video frames decoded before the render: composing must follow it in the same task
-        await loadFrameMedia(frameTimeS, progress)
+        await within(loadFrameMedia(frameTimeS, progress), STEP_LIMIT_MS.assets, () => t('export.controller.stalledMedia', { frame: i + 1 }), isCanceled)
         const at = { progress, time: overlayTime(filmClock, progress, frameTimeS) }
         const overlay = deps.overlay()
         // a full-screen photo or clip covers the whole frame: the view under it is not rendered (the image is the same)
@@ -762,11 +824,21 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
           }
         } else {
           waitingFrame = i
-          for (let j = 0; j < renders.length; j++) {
-            setShutterSubFrame(j, renders.length)
-            frameTimeS = renders[j].timeS
-            const outcome = await renderSettledFrame(renders[j].progress, frameDeps, DEFAULT_SETTLE)
-            if (outcome !== 'complete') throw tilesFailed(outcome, i + 1)
+          // a graphics card reset during the renders leaves a blank frame: the frame is rendered again once it is back
+          for (let attempt = 0; ; attempt++) {
+            const lossesBefore = gpu.losses
+            for (let j = 0; j < renders.length; j++) {
+              setShutterSubFrame(j, renders.length)
+              frameTimeS = renders[j].timeS
+              const outcome = await renderSettledFrame(renders[j].progress, frameDeps, DEFAULT_SETTLE)
+              if (outcome !== 'complete') throw tilesFailed(outcome, i + 1)
+            }
+            if (gpu.losses === lossesBefore && !gpu.lost()) break
+            if (attempt >= GPU_RECOVERY_ATTEMPTS) throw new ExportStalledError(t('export.controller.gpuLost', { frame: i + 1 }))
+            writeBreadcrumb(`export : carte graphique réinitialisée à l'image ${i + 1}`)
+            await gpu.recovered()
+            previous = ''
+            sceneCopyValid = false
           }
           frameTimeS = times[i]
           // the next frame's tiles load while the GPU draws this one (the wait below blocks the page, not the network nor
@@ -809,7 +881,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       // the next frame renders
       await encoded()
       const t0 = performance.now()
-      const frame = await handover.take()
+      const frame = await within(Promise.resolve(handover.take()), STEP_LIMIT_MS.encoder, () => t('export.controller.stalledEncoder'), isCanceled)
       encoding = session.addFrame(i, frame)
       handover.release(frame)
       const taken = performance.now() - t0
@@ -822,7 +894,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     await encoded()
 
     exportStore().finalizing()
-    const { blob, sizeBytes } = await session.finish()
+    const { blob, sizeBytes } = await within(session.finish(), STEP_LIMIT_MS.finish, () => t('export.controller.stalledFinish'), isCanceled)
     // the film is whole: what was kept to resume it is no longer needed
     await resumeRun?.recorder.discard()
     const { container, codec, hardware } = session.codec
@@ -865,8 +937,10 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     // stopped by the person, or a stored export that cannot be continued: nothing is kept; else (a failure) what was encoded stays
     const kept = !isCanceled() && !(error instanceof ExportCanceledError) && !(resumeRun?.prior && !session)
     await (kept ? resumeRun?.recorder.settle() : resumeRun?.recorder.discard())
-    await abandon(error, request, session, isCanceled())
+    const resumeFrom = kept && resumeRun ? await storedResumeFrame().catch(() => null) : null
+    await abandon(error, request, session, isCanceled(), resumeFrom)
   } finally {
+    gpu.dispose()
     gpuTimer?.dispose()
     setExportProbe(null)
     deps.engine()?.setRetention?.(null)

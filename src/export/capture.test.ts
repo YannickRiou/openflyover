@@ -5,11 +5,15 @@ import {
   REPLACE_TOLERANCE_M,
   composeFrame,
   composeOverlayFrame,
+  ExportStalledError,
+  GPU_RECOVERY_MS,
   createWorkerSleep,
   renderSettledFrame,
   settle,
   tileFailureMessage,
   wait,
+  watchContextLoss,
+  within,
   yieldToEventLoop,
   type RenderFrameDeps,
 } from './capture'
@@ -506,5 +510,79 @@ describe('createWorkerSleep', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('within: an export step that never ends', () => {
+  it('gives the value of a step that ends in time', async () => {
+    await expect(within(Promise.resolve(7), 1000, () => 'trop long', () => false)).resolves.toBe(7)
+  })
+
+  it('stops with the message of the step once its limit has passed', async () => {
+    const never = new Promise<number>(() => undefined)
+    await expect(within(never, 20, () => 'trop long', () => false)).rejects.toEqual(new ExportStalledError('trop long'))
+  })
+
+  it('stops as a cancel while it waits: « Annuler » works during a step', async () => {
+    let canceled = false
+    const never = new Promise<number>(() => undefined)
+    const guarded = within(never, 60_000, () => 'trop long', () => canceled)
+    canceled = true
+    await expect(guarded).rejects.toBeInstanceOf(ExportCanceledError)
+  })
+
+  it('passes on the error of the step', async () => {
+    await expect(within(Promise.reject(new Error('panne')), 1000, () => 'trop long', () => false)).rejects.toThrow('panne')
+  })
+})
+
+describe('watchContextLoss: a graphics card reset during an export', () => {
+  function fakeCanvas() {
+    const listeners = new Map<string, () => void>()
+    return {
+      listeners,
+      addEventListener: (type: string, fn: () => void) => listeners.set(type, fn),
+      removeEventListener: (type: string) => listeners.delete(type),
+    }
+  }
+
+  it('counts the resets and waits for the context, then for the imagery, before the frame is rendered again', async () => {
+    const canvas = fakeCanvas()
+    let lost = false
+    let imagery = false
+    const clock = { t: 0 }
+    const watch = watchContextLoss(canvas as never, { isContextLost: () => lost }, {
+      isCanceled: () => false,
+      imageryBack: () => imagery,
+      now: () => clock.t,
+      wait: async (ms) => {
+        clock.t += ms
+        if (clock.t >= 300) lost = false
+        if (clock.t >= 600) imagery = true
+      },
+    })
+    expect(watch.losses).toBe(0)
+    lost = true
+    canvas.listeners.get('webglcontextlost')!()
+    expect(watch.losses).toBe(1)
+    expect(watch.lost()).toBe(true)
+    await watch.recovered()
+    expect(clock.t).toBe(600)
+    watch.dispose()
+    expect(canvas.listeners.size).toBe(0)
+  })
+
+  it('stops the export when the graphics card does not come back', async () => {
+    const clock = { t: 0 }
+    const watch = watchContextLoss(fakeCanvas() as never, { isContextLost: () => true }, {
+      isCanceled: () => false,
+      imageryBack: () => true,
+      now: () => clock.t,
+      wait: async (ms) => {
+        clock.t += ms
+      },
+    })
+    await expect(watch.recovered()).rejects.toBeInstanceOf(ExportStalledError)
+    expect(clock.t).toBeGreaterThanOrEqual(GPU_RECOVERY_MS)
   })
 })

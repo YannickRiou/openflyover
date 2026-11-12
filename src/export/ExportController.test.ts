@@ -117,6 +117,45 @@ describe('runExport', () => {
     useExportStore.setState({ phase: 'idle', request: null, cancelRequested: false, result: null, error: null })
   })
 
+  it('renders a frame again when the graphics card was reset during its renders, instead of encoding a blank one', async () => {
+    const file = destination()
+    let lost = false
+    let onLost: (() => void) | undefined
+    const three = fakeThree()
+    Object.assign(three.gl, {
+      domElement: { style: {}, parentElement: null, addEventListener: (_: string, fn: () => void) => (onLost = fn), removeEventListener: vi.fn() },
+      getContext: () => ({ readPixels, isContextLost: () => lost }),
+    })
+    const render = vi.mocked(renderSettledFrame)
+    let calls = 0
+    render.mockImplementation(async () => {
+      // the third render loses the context; it is back at once
+      if (++calls === 3) {
+        lost = true
+        onLost?.()
+        setTimeout(() => (lost = false), 0)
+      }
+      return 'complete'
+    })
+    const { frameCount } = await exportFilm(file, { get: () => three as unknown as RootState })
+    render.mockImplementation(async () => 'complete')
+    expect(useExportStore.getState().phase).toBe('done')
+    expect(session.addFrame).toHaveBeenCalledTimes(frameCount)
+    // the frame of the lost render was rendered once more
+    expect(calls).toBeGreaterThan(3)
+  })
+
+  it('stops with a message, and « Annuler » works, when the encoder no longer answers', async () => {
+    session.addFrame.mockImplementation(() => new Promise(() => undefined))
+    const file = destination()
+    const run = exportFilm(file)
+    await vi.waitFor(() => expect(session.addFrame).toHaveBeenCalled())
+    useExportStore.getState().cancel()
+    await run
+    expect(useExportStore.getState().phase).toBe('canceled')
+    expect(file.discard).toHaveBeenCalled()
+  })
+
   it('encodes every scheduled frame, then restores the renderer', async () => {
     const file = destination()
     const { three, frameCount } = await exportFilm(file)

@@ -231,8 +231,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const startTime = useAppStore((s) => s.tracks[0]?.stats.startTime)
   const setSetting = useAppStore((s) => s.setSetting)
   // only what the panel draws: `cancelRequested`, `request`… changing does not redraw it
-  const { phase, frame, frameCount, etaS, result, error, tiles } = useExportStore(
-    useShallow((s) => ({ phase: s.phase, frame: s.frame, frameCount: s.frameCount, etaS: s.etaS, result: s.result, error: s.error, tiles: s.tiles })),
+  const { phase, frame, frameCount, etaS, result, error, tiles, resumeFrom } = useExportStore(
+    useShallow((s) => ({ phase: s.phase, frame: s.frame, frameCount: s.frameCount, etaS: s.etaS, result: s.result, error: s.error, tiles: s.tiles, resumeFrom: s.resumeFrom })),
   )
   const id = useId()
   /** « Habillage seul »: the overlay alone, transparent WebM to lay over one's own footage */
@@ -819,9 +819,17 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       {phase === 'error' && error && (
         <div className={`field ${ERROR}`} role="alert">
           <p className="mb-2 text-hint text-text-1">{t('export.panel.failed', { error })}</p>
-          <Button size="sm" onClick={() => showDiagnostic(currentReport())}>
-            {t('export.panel.diagnostic')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {/* the frames already encoded are kept on the device: the film goes on from there, not from the start */}
+            {resumeFrom !== null && (
+              <Button size="sm" variant="primary" onClick={() => start({ resume: true })}>
+                {t('export.panel.resume', { frame: resumeFrom + 1 })}
+              </Button>
+            )}
+            <Button size="sm" onClick={() => showDiagnostic(currentReport())}>
+              {t('export.panel.diagnostic')}
+            </Button>
+          </div>
         </div>
       )}
 

@@ -136,6 +136,95 @@ export async function renderSettledFrame(
   return outcome(complete)
 }
 
+/** Error of an export step that took longer than its limit (`within`): the export stops with this message. */
+export class ExportStalledError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ExportStalledError'
+  }
+}
+
+/** How often `within` looks whether the export was canceled. */
+const CANCEL_POLL_MS = 250
+
+/**
+ * `promise`, or an `ExportStalledError` with `message` once `timeoutMs` has passed without it, or an `ExportCanceledError`
+ * as soon as `isCanceled`. A step that never ends (a font, a model or a photo that never loads, an encoder whose graphics
+ * card was reset) then stops the export with a message instead of freezing it, and « Annuler » works during it. The step
+ * itself is not stopped: what it does after is ignored.
+ */
+export function within<T>(promise: Promise<T>, timeoutMs: number, message: () => string, isCanceled: () => boolean): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const start = performance.now()
+    const timer = setInterval(() => {
+      if (isCanceled()) finish(() => reject(new ExportCanceledError()))
+      else if (performance.now() - start >= timeoutMs) finish(() => reject(new ExportStalledError(message())))
+    }, Math.min(CANCEL_POLL_MS, timeoutMs))
+    let done = false
+    const finish = (settle: () => void) => {
+      if (done) return
+      done = true
+      clearInterval(timer)
+      settle()
+    }
+    promise.then(
+      (value) => finish(() => resolve(value)),
+      (error: unknown) => finish(() => reject(error)),
+    )
+  })
+}
+
+/** Times a frame is rendered again after a graphics card reset before the export stops. */
+export const GPU_RECOVERY_ATTEMPTS = 2
+/** Longest wait for the graphics card to come back after a reset, and the tiles to have their imagery again. */
+export const GPU_RECOVERY_MS = 120_000
+
+export interface ContextWatch {
+  /** resets seen since the start (`webglcontextlost`) */
+  readonly losses: number
+  /** the context is lost right now */
+  lost(): boolean
+  /** resolves once the context is back and `imageryBack`; throws ExportStalledError after GPU_RECOVERY_MS */
+  recovered(): Promise<void>
+  dispose(): void
+}
+
+/**
+ * Watch the WebGL context of the export: a graphics card reset (driver update, sleep, another app taking the GPU) loses
+ * it, and a frame rendered meanwhile is blank. The export compares `losses` around the renders of a frame, waits for the
+ * context to come back (FlyoverCanvas lets it be restored) and for the tiles' imagery (`imageryBack`), then renders the
+ * frame again.
+ */
+export function watchContextLoss(
+  canvas: Partial<Pick<EventTarget, 'addEventListener' | 'removeEventListener'>>,
+  gl: { isContextLost?(): boolean } | null,
+  deps: { isCanceled(): boolean; imageryBack(): boolean; wait?: (ms: number) => Promise<void>; now?: () => number },
+): ContextWatch {
+  let losses = 0
+  const onLost = () => {
+    losses++
+  }
+  canvas.addEventListener?.('webglcontextlost', onLost)
+  const lost = () => gl?.isContextLost?.() === true
+  const now = deps.now ?? (() => performance.now())
+  return {
+    get losses() {
+      return losses
+    },
+    lost,
+    async recovered() {
+      const start = now()
+      // the imagery is asked for only once the context is back: a pass on a lost context draws nothing
+      while (lost() || !deps.imageryBack()) {
+        if (deps.isCanceled()) throw new ExportCanceledError()
+        if (now() - start >= GPU_RECOVERY_MS) throw new ExportStalledError(t('export.controller.gpuNotBack'))
+        await (deps.wait ?? wait)(100)
+      }
+    },
+    dispose: () => canvas.removeEventListener?.('webglcontextlost', onLost),
+  }
+}
+
 /** Tiles named in the error, the others counted. */
 const NAMED_TILES = 3
 
