@@ -108,6 +108,25 @@ export function samplePath(path: TrackPath, distanceM: number): PathSample {
   return sample
 }
 
+const timedRanges = new WeakMap<TrackPath, { first: number; last: number }>()
+
+/** Indices of the first and last point with a recorded time (-1 for both without any), found once per path. */
+function timedRange(path: TrackPath): { first: number; last: number } {
+  let range = timedRanges.get(path)
+  if (!range) {
+    let first = -1
+    let last = -1
+    for (let i = 0; i < path.count; i++) {
+      if (Number.isNaN(path.time[i])) continue
+      if (first < 0) first = i
+      last = i
+    }
+    range = { first, last }
+    timedRanges.set(path, range)
+  }
+  return range
+}
+
 /**
  * Recorded time at `distanceM`, bridging points without time: interpolated by distance between the nearest
  * timed points on each side, or the time of the only side that has one. Undefined when no point has a time.
@@ -117,6 +136,11 @@ export function recordedTimeAt(path: TrackPath, distanceM: number): number | und
   const { count, time, dist } = path
   const { d, a, b, t } = locate(path, distanceM)
   if (!Number.isNaN(time[a]) && !Number.isNaN(time[b])) return time[a] + (time[b] - time[a]) * t
+  // no timed point at all, or the position is before the first / after the last one: no scan
+  const { first, last } = timedRange(path)
+  if (first < 0) return undefined
+  if (b <= first) return time[first]
+  if (a >= last) return time[last]
   let before = a
   while (before >= 0 && Number.isNaN(time[before])) before--
   let after = b

@@ -228,6 +228,14 @@ export function filmViewMovesWithTime(state: FilmState, camera: CameraSettings):
   return movesWithTime(camera.style)
 }
 
+/**
+ * True when the view at film time `timeS` changes with the time alone: the shot, orbit or smoothing of `filmViewMovesWithTime`,
+ * or a high view over a night or a recap pause (`highViewAt`). The preview and the export both use it to know whether a held frame repeats.
+ */
+export function viewMovesWithTime(clock: Pick<FilmClock, 'stateAt' | 'days' | 'nights' | 'junctions'>, timeS: number, camera: CameraSettings): boolean {
+  return filmViewMovesWithTime(clock.stateAt(timeS), camera) || highViewAt(clock, timeS) !== null
+}
+
 // ---------------------------------------------------------------------------
 // Overview
 // ---------------------------------------------------------------------------

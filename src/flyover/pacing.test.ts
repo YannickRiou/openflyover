@@ -9,7 +9,6 @@ import {
   isValidPacing,
   MAX_PAUSE_SHARE,
   PACING_RANGES,
-  pausePositions,
   withPacingDefaults,
   PAUSE_EASE_S,
   SPEED_EASE_S,
@@ -158,6 +157,16 @@ describe('pauses', () => {
     expectWellFormed(capped, 1 / (D * (1 - MAX_PAUSE_SHARE)) + 1e-9)
   })
 
+  it('two pauses a metre apart still ease into the first and out of the last (a recap before a junction)', () => {
+    const pacing = at([5000, 5001], pauseOnly, 4)
+    const [first, last] = pacing.pauses
+    expect(first.holdStartS - first.startS).toBeCloseTo(PAUSE_EASE_S, 6)
+    expect(last.endS - last.holdEndS).toBeCloseTo(PAUSE_EASE_S, 6)
+    expect(pacing.totalTime()).toBeCloseTo(D + 8, 9)
+    expect(first.holdEndS).toBeLessThanOrEqual(last.holdStartS + 1e-9)
+    expectWellFormed(pacing, 1 / D)
+  })
+
   it('shorten the eases when pauses are very close in time', () => {
     // 1000 km in 15 s: neighbouring clusters a few hundredths of a second apart
     const pacing = at([500_000, 501_500, 503_000], pauseOnly, 4, 1_000_000, 15)
@@ -215,7 +224,7 @@ describe('flight stops (pauses given by the film)', () => {
       { atM: 5000, durationS: 3 },
     ])
     expect(pacing.totalTime()).toBeCloseTo(D + 5, 9)
-    expect(pacing.timeAtProgress(0.5)).toBeCloseTo(pacing.pauses[0].startS, 9)
+    expect(pacing.timeAtProgress(0.5)).toBeCloseTo(pacing.pauses[0].holdStartS, 9)
     expectWellFormed(pacing, 1 / D)
   })
 
@@ -330,10 +339,6 @@ describe('highlights', () => {
   it('landmarks: passes crossed and peaks next to the track only', () => {
     const landmarks = [landmark('pass', 1500, 50), landmark('pass', 2000, 400), landmark('peak', 3500, 250), landmark('peak', 4000, 500), landmark('hut', 4500, 0)]
     expect(landmarks.filter(isHighlightLandmark).map((l) => l.alongM)).toEqual([1500, 3500])
-  })
-
-  it('stop once per cluster of close highlights, at a highlight', () => {
-    expect(pausePositions([4000, 4600, 5100, 8000], 1000)).toEqual([4600, 8000])
   })
 })
 

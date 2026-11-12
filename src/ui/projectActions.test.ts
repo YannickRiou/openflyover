@@ -517,15 +517,20 @@ describe('removeTrackOrCloseProject', () => {
     expect(useLibraryStore.getState().currentId).toBeNull()
   })
 
-  it('a track that is not the last one just goes: the project stays open', async () => {
+  it('a track that is not the last one just goes, with « Annuler » in the message: the project stays open', async () => {
     useAppStore.getState().addTracks([rando(), second()])
     useAppStore.getState().setProjectName('Rando')
+    useToastStore.setState({ toasts: [] })
+    const before = useAppStore.getState().tracks
     const ask = answering('cancel')
     await removeTrackOrCloseProject('second', ask)
     expect(ask).not.toHaveBeenCalled()
     expect(useAppStore.getState().tracks).toHaveLength(1)
     expect(useAppStore.getState().projectName).toBe('Rando')
-    expect(toasts()).toEqual([])
+    const [toast] = useToastStore.getState().toasts
+    expect(toast).toMatchObject({ text: 'Trace « Autre » retirée', action: { label: 'Annuler' } })
+    toast.action!.run()
+    expect(useAppStore.getState().tracks).toBe(before)
   })
 })
 

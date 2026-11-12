@@ -162,6 +162,8 @@ export interface FilmClock {
    * the flight, after the opening; a stop's position the start of its hold); 1 is the end of the film
    */
   timeAtProgress(progress: number): number
+  /** film time where the marker reaches `progress` (1 is the end of the flight, before the closing shot): where photos, clips and highlights are placed */
+  flightTimeAtProgress(progress: number): number
   positionAt(progress: number): PacingPosition
   /** position after `dtS` seconds of playback at `speed` (film time clamped to [0, totalTime()]) */
   advance(from: PacingPosition, dtS: number, speed: number): PacingPosition
@@ -301,6 +303,7 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
 
   const progressAtTime = (tS: number) => flight.progressAtTime(tS - openingS)
   const timeAtProgress = (progress: number) => (progress >= 1 ? total : openingS + flight.timeAtProgress(progress))
+  const flightTimeAtProgress = (progress: number) => openingS + flight.timeAtProgress(Math.min(1, Math.max(0, progress)))
 
   // a day's card: with the flight for the first; for the others, once the night pause before it ends (or, over a high
   // view of the day, as it starts), else where the marker reaches the day's first point
@@ -360,6 +363,7 @@ export function buildFilmClock(input: FilmClockInput): FilmClock {
     totalTime: () => total,
     progressAtTime,
     timeAtProgress,
+    flightTimeAtProgress,
     positionAt: (progress) => ({ timeS: timeAtProgress(progress), progress }),
     advance: (from, dtS, speed) => {
       const timeS = clamp(from.timeS + dtS * speed, 0, total)

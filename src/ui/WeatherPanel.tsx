@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo } from 'react'
-import { buildTrackPath } from '../flyover/path'
+import { trackPathOf } from '../flyover/path'
 import { useT } from '../i18n'
 import { playsBilan, playsInSequence } from '../flyover/sequence'
 import { useAppStore } from '../state/store'
@@ -61,7 +61,7 @@ export function WeatherPanel() {
     syncStageWeather(sequence ? tracks.slice(1) : [], enabled)
   }, [sequence, tracks, enabled])
 
-  const path = useMemo(() => (track ? buildTrackPath(track) : null), [track])
+  const path = useMemo(() => (track ? trackPathOf(track) : null), [track])
   const ready = status === 'ready' && series !== null && path !== null && weatherTrackId === track?.id
   const summary = useMemo(() => (ready ? summarizeOuting(series, path) : undefined), [ready, series, path])
   const now = ready ? weatherWidgetData(series, path, progress) : undefined

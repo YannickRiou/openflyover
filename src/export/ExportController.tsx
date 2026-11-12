@@ -23,7 +23,7 @@ import { filmSoundtrack } from './soundtrack'
 import type { FilmClock } from '../film/clock'
 import { pinsMoveWithTime } from '../film/photoPins'
 import { CAMERA_FOV_DEG } from '../flyover/cameraSettings'
-import { filmViewMovesWithTime, lookAtView, overviewView } from '../flyover/filmCamera'
+import { lookAtView, overviewView, viewMovesWithTime } from '../flyover/filmCamera'
 import { filmTrackOf, playsBilan } from '../flyover/sequence'
 import { smoothedTrackPath } from '../flyover/smooth'
 import { junctionBlendAt, nightAt } from '../flyover/sun'
@@ -806,7 +806,6 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
         deps.engine()?.setRetention?.(retention)
       }
       const progress = schedule[i]
-      const state = filmClock.stateAt(times[i])
       // the renders of an open shutter stay in the shot of the frame: no blend across a cut
       const keep = (t: number) => sameShot(filmClock, t, times[i])
       // fewer renders when the view barely moves over the shutter (ARCHITECTURE.md, « Objectif »); the placements are
@@ -828,7 +827,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
       // held frames (holds, stops) repeat the composed image as is, unless the view, the scene (animated figurine,
       // drifting clouds, rippling water), the sun (a night pause, the light blending across a fade between stages) or the overlay moves with time
       const timed =
-        sceneMovesWithTime || filmViewMovesWithTime(state, settings.camera) || nightAt(filmClock, times[i]) !== null || junctionBlendAt(filmClock, times[i]) !== null
+        sceneMovesWithTime || viewMovesWithTime(filmClock, times[i], settings.camera) || nightAt(filmClock, times[i]) !== null || junctionBlendAt(filmClock, times[i]) !== null
       const overlayNow = overlayKey(progress, times[i])
       /** time spent composing this frame (ms), null when it repeats the previous one */
       let composed: number | null = null

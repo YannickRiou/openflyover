@@ -309,7 +309,7 @@ export function snapTargets(
   ] as const) {
     for (const k of keys) if (!skipped(k.id)) out.push({ timeS: k.timeS, label: name, kind: 'edge' })
   }
-  for (const h of highlights) out.push({ timeS: clock.timeAtProgress(h), label: t('film.snap.highlight'), kind: 'highlight' })
+  for (const h of highlights) out.push({ timeS: clock.flightTimeAtProgress(h), label: t('film.snap.highlight'), kind: 'highlight' })
   for (const tick of extra.ticks ?? []) out.push({ timeS: tick, label: formatFilmTime(tick), kind: 'ruler' })
   return out
 }
@@ -1079,7 +1079,7 @@ export function photoFilmTime(path: TrackPath, clock: FilmClock, place: { lon?: 
     if (nearest && nearest.offM <= PHOTO_MAX_OFF_M) atM = nearest.distanceM
   }
   if (atM === undefined && place.timeMs !== undefined) atM = distanceAtTime(path, place.timeMs, PHOTO_TIME_TOLERANCE_MS)
-  return atM === undefined ? undefined : roundS(clock.timeAtProgress(atM / path.lengthM))
+  return atM === undefined ? undefined : roundS(clock.flightTimeAtProgress(atM / path.lengthM))
 }
 
 /** Recorded instants of the first and last timed points of the track (ms), undefined without time. */
@@ -1129,7 +1129,7 @@ export function clipSyncOffsetS(path: TrackPath, startMs: number, fileS: number)
 export function syncClipPlacement(
   media: FilmMedia,
   path: TrackPath,
-  clock: Pick<FilmClock, 'timeAtProgress'>,
+  clock: Pick<FilmClock, 'flightTimeAtProgress'>,
   fileS: number,
 ): Pick<FilmMedia, 'startS' | 'durationS' | 'inS'> | undefined {
   const range = recordedRange(path)
@@ -1137,7 +1137,7 @@ export function syncClipPlacement(
   const startMs = media.sync.startMs + media.sync.offsetS * 1000
   const endMs = startMs + fileS * 1000
   if (startMs >= range.to || endMs <= range.from) return undefined
-  const filmTimeAt = (ms: number) => clock.timeAtProgress((distanceAtTime(path, ms) ?? 0) / path.lengthM)
+  const filmTimeAt = (ms: number) => clock.flightTimeAtProgress((distanceAtTime(path, ms) ?? 0) / path.lengthM)
   const inS = Math.max(0, (range.from - startMs) / 1000)
   const startS = filmTimeAt(Math.max(startMs, range.from))
   const durationS = media.sync.follow ? filmTimeAt(Math.min(endMs, range.to)) - startS : Math.min(media.durationS, fileS - inS)
@@ -1148,7 +1148,7 @@ export function syncClipPlacement(
  * `film` with clip `id` synced (`sync`) and placed by `syncClipPlacement`; undefined when it does not overlap the
  * outing (or is not in the film).
  */
-export function syncClip(film: Film, id: string, sync: MediaSync, path: TrackPath, clock: Pick<FilmClock, 'timeAtProgress'>, fileS: number): Film | undefined {
+export function syncClip(film: Film, id: string, sync: MediaSync, path: TrackPath, clock: Pick<FilmClock, 'flightTimeAtProgress'>, fileS: number): Film | undefined {
   const media = film.media.find((m) => m.id === id)
   const place = media && syncClipPlacement({ ...media, sync }, path, clock, fileS)
   return place && updateMedia(film, id, { sync, ...place })

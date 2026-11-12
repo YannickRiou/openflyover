@@ -17,6 +17,7 @@ import {
   lookAtView,
   recapViewAt,
   filmViewMovesWithTime,
+  viewMovesWithTime,
   framedGroup,
   GROUP_FRAMING_MARGIN,
   groundReach,
@@ -1094,6 +1095,14 @@ describe('high view of the day during the night', () => {
       expect(sequenceClockOf(false, false).junctions[0].recap).toBeUndefined()
       // no jolt nor loss of the marker on the way up and while it holds, at 30 i/s
       expect(auditFilmCamera(path, clock, where, flat, opts, { fromS: recap.startS - 2, toS: junction.holdStartS - 0.1 })).toEqual([])
+    })
+
+    it('a recap pause is timed: the preview and the export do not hold the frame there', () => {
+      const clock = sequenceClockOf(true, false)
+      const recap = clock.junctions[0].recap!
+      const camera = { ...CAMERA, style: 'chase' as CameraStyle }
+      expect(viewMovesWithTime(clock, recap.holdStartS + 3, camera)).toBe(true)
+      expect(viewMovesWithTime(clock, recap.startS - 0.1, camera)).toBe(filmViewMovesWithTime(clock.stateAt(recap.startS - 0.1), camera))
     })
 
     it('no jolt nor loss of the marker through the night, at 30 i/s', () => {

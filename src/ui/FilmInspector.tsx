@@ -81,7 +81,7 @@ import {
 import { movesWithTime } from '../flyover/camera'
 import { cameraKeyEaseM, keyedCamera } from '../flyover/cameraKeys'
 import { CAMERA_RANGES } from '../flyover/cameraSettings'
-import { buildTrackPath } from '../flyover/path'
+import { trackPathOf } from '../flyover/path'
 import { shotSunHoursOf } from '../flyover/sun'
 
 /** Hint of each « Soleil » choice, [opening, closing]. */
@@ -422,7 +422,7 @@ export function FilmInspector() {
   const { track, film, pacing, stageIds } = useFilmSource()
   const sequence = useFilmSequence()
   const clock = useFilmClock()
-  const path = useMemo(() => (track ? buildTrackPath(track) : null), [track])
+  const path = useMemo(() => (track ? trackPathOf(track) : null), [track])
   const atmosphere = useAppStore((s) => s.settings.atmosphere)
   const marker = useAppStore((s) => s.settings.marker)
   const cameraStyle = useAppStore((s) => s.settings.camera.style)

@@ -172,12 +172,6 @@ export function cameraHeightStop(camera: Pick<CameraSettings, 'distance' | 'pitc
   return { index, custom: gap(CAMERA_HEIGHTS[index]) !== 0 }
 }
 
-/** The preset whose camera equals `camera`, if any. */
-export function findCameraPreset(camera: CameraSettings): CameraPreset | undefined {
-  const keys = Object.keys(DEFAULT_CAMERA) as (keyof CameraSettings)[]
-  return CAMERA_PRESETS.find((p) => keys.every((k) => p.camera[k] === camera[k]))
-}
-
 /** Known style and every number inside its slider range. */
 export function isValidCamera(camera: CameraSettings): boolean {
   if (!CAMERA_STYLES.includes(camera.style)) return false

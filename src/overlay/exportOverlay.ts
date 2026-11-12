@@ -69,7 +69,7 @@ let dayMemo: { track: Track; series: WeatherSeries | null; figures: DayFigures[]
 function dayFiguresOf(track: Track, series: WeatherSeries | null): DayFigures[] {
   if (dayMemo?.track === track && dayMemo.series === series) return dayMemo.figures
   const path = trackPathOf(track)
-  const figures = dayFigures(path, trackDays(path, track.utcOffsetMin), track.stats.maxEle === undefined ? undefined : cumulativeAscent(track), series, track.utcOffsetMin)
+  const figures = dayFigures(path, trackDays(path, track.utcOffsetMin), track.stats.maxEle === undefined ? undefined : cumulativeAscent(track), series)
   dayMemo = { track, series, figures }
   return figures
 }

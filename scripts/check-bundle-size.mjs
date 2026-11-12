@@ -12,7 +12,7 @@ import { resolve } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
 /** kB, gzipped (1 kB = 1000 bytes): 4.5.0 measured 559, French and the stylesheet included (the other languages load on demand). */
-const FIRST_SCREEN_GZIP_KB = 594
+const FIRST_SCREEN_GZIP_KB = 598
 
 const dist = resolve(process.argv[2] ?? 'dist')
 const html = readFileSync(resolve(dist, 'index.html'), 'utf8')

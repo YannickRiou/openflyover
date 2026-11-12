@@ -29,6 +29,7 @@ import { getSettingsHistory } from '../project/history'
 import { CLOUD_QUALITY_NAMES, QUALITY_NAMES, effectiveRender, isCustomised } from '../export/qualityTier'
 import { t, t as translate, useT } from '../i18n'
 import type { MessageKey } from '../i18n'
+import { localDate } from '../film/days'
 import { LOUDNESS_TARGETS_LUFS } from '../film/loudness'
 import { clipHasSound } from '../film/model'
 import {
@@ -229,6 +230,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
   const trackName = useAppStore((s) => s.tracks[0]?.name)
   const projectName = useAppStore((s) => s.projectName)
   const startTime = useAppStore((s) => s.tracks[0]?.stats.startTime)
+  const utcOffsetMin = useAppStore((s) => s.tracks[0]?.utcOffsetMin)
   const setSetting = useAppStore((s) => s.setSetting)
   // only what the panel draws: `cancelRequested`, `request`… changing does not redraw it
   const { phase, frame, frameCount, etaS, result, error, tiles, resumeFrom } = useExportStore(
@@ -363,7 +365,8 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
         format: video.aspect.replace(':', 'x'),
         resolution: video.resolution,
         fps: String(video.fps),
-        date: new Date(startTime ?? Date.now()).toISOString().slice(0, 10),
+        // the date of the outing where it was recorded, not in UTC (a morning start at 01:00 local is still that day)
+        date: localDate(startTime ?? Date.now(), startTime === undefined ? undefined : utcOffsetMin),
       },
       trackName,
     )

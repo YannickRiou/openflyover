@@ -213,21 +213,6 @@ function invertEase(ease: (s: number, e: number) => number, target: number, e: n
   return (lo + hi) / 2
 }
 
-/** Highlights closer than `gapM` to the previous one form a cluster; each cluster's member nearest its middle. */
-export function pausePositions(sorted: readonly number[], gapM: number): number[] {
-  const out: number[] = []
-  let start = 0
-  for (let i = 1; i <= sorted.length; i++) {
-    if (i < sorted.length && sorted[i] - sorted[i - 1] <= gapM) continue
-    const middle = (sorted[start] + sorted[i - 1]) / 2
-    let best = sorted[start]
-    for (let k = start; k < i; k++) if (Math.abs(sorted[k] - middle) < Math.abs(best - middle)) best = sorted[k]
-    out.push(best)
-    start = i
-  }
-  return out
-}
-
 /** Speed portions clamped to the track, without the empty or neutral ones, with transitions of at most `easeM`. */
 function speedRamps(speeds: readonly FlightSpeed[], lengthM: number, easeM: number): SpeedRamp[] {
   return speeds.flatMap(({ fromM, toM, factor }) => {
@@ -356,14 +341,16 @@ export function flightPacing(
   const uTable = timed ? stagedMovingTime(stages, xs, raw, L, durationS, settings.keepDuration, pauseAt, stops.map((s, k) => (s.extra ? 0 : pauseS[k]))) : raw.map((u) => u * scale)
   const U = uTable[n - 1]
 
-  // pauses: moving time of the paused node, eases limited by the neighbours and the ends
+  // pauses: moving time of the paused node. The ease into a pause is limited by the pause before it, the ease out of it by the pause after it (both by the ends of the track): two pauses almost at the same place (the recap of a
+  // stage and the junction after it) only lose their ease between them, the marker still slows into the first and starts out of the last
   const pu = pauseAt.map((x) => uTable[lastIndexAtOrBelow(xTable, x)])
-  const ease = pu.map((u, k) =>
-    Math.min(settings.transitionS, pauseS[k], 2 * u, 2 * (U - u), k > 0 ? u - pu[k - 1] : Infinity, k < pu.length - 1 ? pu[k + 1] - u : Infinity),
-  )
+  const lead = pu.map((u, k) => Math.min(settings.transitionS, pauseS[k], 2 * u, 2 * (U - u), k > 0 ? u - pu[k - 1] : Infinity))
+  const trail = pu.map((u, k) => Math.min(settings.transitionS, pauseS[k], 2 * u, 2 * (U - u), k < pu.length - 1 ? pu[k + 1] - u : Infinity))
   /** film time at which each pause starts easing in, and its moving time then */
-  const startT = pu.map((u, k) => u - ease[k] / 2 + added[k])
-  const startU = pu.map((u, k) => u - ease[k] / 2)
+  const startT = pu.map((u, k) => u - lead[k] / 2 + added[k])
+  const startU = pu.map((u, k) => u - lead[k] / 2)
+  /** the film time the marker holds, from the end of the ease in to the start of the ease out */
+  const holdS = pauseS.map((p, k) => p - lead[k] / 2 - trail[k] / 2)
   const total = U + added[pauseS.length]
 
   const progressOfU = (u: number) => clamp(interpolate(uTable, xTable, u) / L, 0, 1)
@@ -374,12 +361,13 @@ export function flightPacing(
     const t = clamp(tS, 0, total)
     const k = lastIndexAtOrBelow(startT, t)
     if (k < 0) return t
-    const e = ease[k]
-    const hold = pauseS[k] - e
+    const eIn = lead[k]
+    const eOut = trail[k]
+    const hold = holdS[k]
     const s = t - startT[k]
-    if (s < e) return startU[k] + easeIn(s, e)
-    if (s < e + hold) return pu[k]
-    if (s < 2 * e + hold) return pu[k] + easeOut(s - e - hold, e)
+    if (s < eIn) return startU[k] + easeIn(s, eIn)
+    if (s < eIn + hold) return pu[k]
+    if (s < eIn + hold + eOut) return pu[k] + easeOut(s - eIn - hold, eOut)
     return t - added[k + 1]
   }
 
@@ -389,11 +377,12 @@ export function flightPacing(
     let k = lastIndexAtOrBelow(startU, u)
     if (k < 0) return u
     // pauses at the same place: the first one is reached first
-    while (k > 0 && startU[k - 1] === u) k--
-    const e = ease[k]
+    while (k > 0 && pu[k - 1] === pu[k] && u <= pu[k]) k--
+    const eIn = lead[k]
+    const eOut = trail[k]
     const d = u - startU[k]
-    if (d <= e / 2) return startT[k] + (d >= e / 2 ? e : invertEase(easeIn, d, e))
-    if (d < e) return startT[k] + pauseS[k] + invertEase(easeOut, d - e / 2, e)
+    if (d <= eIn / 2) return startT[k] + (d >= eIn / 2 ? eIn : invertEase(easeIn, d, eIn))
+    if (d < eIn / 2 + eOut / 2) return startT[k] + pauseS[k] + (eIn - eOut) / 2 + invertEase(easeOut, d - eIn / 2, eOut)
     return u + added[k + 1]
   }
 
@@ -404,9 +393,9 @@ export function flightPacing(
     pauses: pauseAt.map((x, k) => ({
       progress: x / L,
       startS: startT[k],
-      holdStartS: startT[k] + ease[k],
-      holdEndS: startT[k] + pauseS[k],
-      endS: startT[k] + pauseS[k] + ease[k],
+      holdStartS: startT[k] + lead[k],
+      holdEndS: startT[k] + pauseS[k] + (lead[k] - trail[k]) / 2,
+      endS: startT[k] + pauseS[k] + (lead[k] + trail[k]) / 2,
       durationS: pauseS[k],
     })),
     totalTime: () => total,
