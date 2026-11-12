@@ -206,6 +206,18 @@ export function isUtcOffsetMin(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= -12 * 60 && value <= 14 * 60
 }
 
+/**
+ * Milliseconds since the epoch of a GPX / KML time: ISO 8601 with "T" or a space, an offset written "+02:00", "+0200" or
+ * "-05", "Z", or no zone at all (read as UTC, never in the browser's zone: these formats say UTC). NaN when unreadable.
+ */
+export function parseUtcTime(text: string): number {
+  const match = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}(?::\d{2}(?:[.,]\d+)?)?)\s*(Z|[+-]\d{2}(?::?\d{2})?)?$/i.exec(text.trim())
+  if (!match) return Date.parse(text.trim())
+  const [, day, clock, zone] = match
+  const offset = !zone || zone.toUpperCase() === 'Z' ? 'Z' : zone.length === 3 ? `${zone}:00` : zone.includes(':') ? zone : `${zone.slice(0, 3)}:${zone.slice(3)}`
+  return Date.parse(`${day}T${clock.replace(',', '.')}${offset}`)
+}
+
 /** "dossier/trace.GPX" -> "trace"; names without an extension are returned unchanged. */
 export function stripExtension(fileName: string): string {
   const base = fileName.split(/[\\/]/).pop() ?? fileName

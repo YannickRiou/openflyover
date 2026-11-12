@@ -244,14 +244,47 @@ async function accessToken(): Promise<string> {
   return renewed.accessToken
 }
 
+/** Strava's default limit is 100 requests per 15 minutes (and 1,000 a day): a few less, for the pages of the list. */
+export const API_WINDOW_LIMIT = 90
+export const API_WINDOW_MS = 15 * 60 * 1000
+
+/**
+ * A gate the requests pass one at a time: at most `limit` go through in any `windowMs`; the next waits until the
+ * oldest leaves the window (a bulk import of more than ~90 activities slows down instead of ending on a 429).
+ */
+export function createApiPacer(
+  limit: number,
+  windowMs: number,
+  clock: { now(): number; sleep(ms: number): Promise<void> } = { now: () => Date.now(), sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)) },
+): () => Promise<void> {
+  const sent: number[] = []
+  let tail: Promise<void> = Promise.resolve()
+  const pass = async () => {
+    for (;;) {
+      const now = clock.now()
+      while (sent.length > 0 && now - sent[0] >= windowMs) sent.shift()
+      if (sent.length < limit) {
+        sent.push(now)
+        return
+      }
+      await clock.sleep(sent[0] + windowMs - now)
+    }
+  }
+  return () => (tail = tail.then(pass))
+}
+
+const apiPacer = createApiPacer(API_WINDOW_LIMIT, API_WINDOW_MS)
+
 async function apiGet(url: string, signal?: AbortSignal): Promise<unknown> {
+  await apiPacer()
   return request(url, { headers: { Authorization: `Bearer ${await accessToken()}` }, signal }, 'api')
 }
 
 /** Page `page` (from 1) of the athlete's activities, most recent first. */
 export async function listActivities(page: number, signal?: AbortSignal): Promise<StravaActivity[]> {
   const body = await apiGet(activitiesUrl(page), signal)
-  return Array.isArray(body) ? (body as StravaActivity[]) : []
+  // an activity can come without a name (null): the list and the search read it as text
+  return Array.isArray(body) ? (body as StravaActivity[]).map((a) => ({ ...a, name: typeof a.name === 'string' ? a.name : '' })) : []
 }
 
 export async function fetchStreams(activityId: number): Promise<StravaStreams> {

@@ -167,4 +167,17 @@ describe('gpxUtcOffset', () => {
     expect(a.time).toBe(Date.UTC(2025, 6, 12, 9, 0, 0))
     expect(b.time).toBe(Date.UTC(2025, 6, 12, 7, 0, 10))
   })
+
+  it('reads a time with a space, a short offset or no seconds, never in the zone of the browser', () => {
+    const times = ['2025-07-12 09:00:00', '2025-07-12T09:00:00-05', '2025-07-12T09:00:00+0530', '2025-07-12T09:00Z', '2025-07-12T09:00:00,5']
+    const points = times.map((time, i) => `<trkpt lat="45.${i}" lon="6.78"><time>${time}</time></trkpt>`).join('')
+    const gpx = `<gpx xmlns="http://www.topografix.com/GPX/1/1"><trk><trkseg>${points}</trkseg></trk></gpx>`
+    expect(parseGpx(gpx, 'a.gpx')[0].segments[0].points.map((p) => p.time)).toEqual([
+      Date.UTC(2025, 6, 12, 9),
+      Date.UTC(2025, 6, 12, 14),
+      Date.UTC(2025, 6, 12, 3, 30),
+      Date.UTC(2025, 6, 12, 9),
+      Date.UTC(2025, 6, 12, 9, 0, 0, 500),
+    ])
+  })
 })

@@ -47,6 +47,8 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Desktop: the soundtrack is written to a file only the app creates**: the temporary WAV now has a random name and is created only if it does not exist yet, so a link left at the expected name in the temporary folder is never followed. A failed write removes the file.
 - **Desktop: the Rust version is the real one**: `rust-version` is 1.95 (what `sysinfo` 0.40 needs) instead of 1.77.2, with the comment and the guides corrected.
 - **Command line: a render folder on a network share works**: `--rendu \\serveur\partage\traces` came out as `UNC\serveur\partage\traces`. The `\\?\UNC\` prefix that Windows gives is now turned into `\\`, and `\\?\C:\` into `C:\` as before.
+- **A big Strava import slows down instead of failing**: Strava allows 100 requests every 15 minutes. The app now lets 90 go through in any 15 minutes and makes the next ones wait, instead of ending the import on an error. An activity without a name no longer stops the list or the import.
+- **GPX and KML times in more spellings**: « 2025-07-12 09:00:00 » (a space, no zone) was read in the zone of the browser, and « 2025-07-12T09:00:00-05 » was not read at all. Both are now read, and a time without a zone is UTC, in GPX and in KML (`parseUtcTime`).
 
 ## 8.0.1 (November 2026)
 

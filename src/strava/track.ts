@@ -71,7 +71,7 @@ export function streamsToTrack(activity: StravaActivity, streams: StravaStreams)
   if (points.length === 0) throw new Error(t('strava.noPosition'))
 
   const track = buildTrack({
-    name: activity.name.trim() || t('strava.defaultName'),
+    name: (activity.name ?? '').trim() || t('strava.defaultName'),
     source: 'strava',
     segments: [{ points }],
     activityType: stravaActivityType(sportOf(activity)),

@@ -26,6 +26,14 @@ describe('parseKml', () => {
     expect(track.source).toBe('gpx')
   })
 
+  it('reads times with a space, a short offset or no zone as UTC', () => {
+    const kml = `<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2"><Document><Placemark><gx:Track>
+      <when>2025-07-12 09:00:00</when><when>2025-07-12T09:00:00-05</when>
+      <gx:coord>6.1 45.1 100</gx:coord><gx:coord>6.2 45.2 110</gx:coord></gx:Track></Placemark></Document></kml>`
+    const points = parseKml(kml, 'x.kml')[0].segments[0].points
+    expect(points.map((p) => p.time)).toEqual([Date.UTC(2025, 6, 12, 9), Date.UTC(2025, 6, 12, 14)])
+  })
+
   it('reads a LineString: lon,lat,alt triples, no time', () => {
     const [track] = parseKml(wrap('<Placemark><LineString><coordinates>6.1,45.1,1000 6.2,45.2,1100\n6.3,45.3,1200</coordinates></LineString></Placemark>'), 'ligne.kml')
     expect(track.name).toBe('Sortie du jour')

@@ -51,6 +51,7 @@ describe('streamsToTrack', () => {
 
   it('names an unnamed activity and refuses one without GPS positions', () => {
     expect(streamsToTrack({ ...ACTIVITY, name: '' }, { latlng: { data: LATLNG } }).name).toBe('Activité Strava')
+    expect(streamsToTrack({ ...ACTIVITY, name: null as unknown as string }, { latlng: { data: LATLNG } }).name).toBe('Activité Strava')
     expect(() => streamsToTrack(ACTIVITY, { time: { data: [0, 1] } })).toThrow('aucune position GPS dans cette activité')
   })
 })

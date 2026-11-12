@@ -4,7 +4,7 @@
  */
 import { errorMessage } from '../core/errors'
 import type { Track, TrackPoint, TrackSegment, Waypoint } from '../core/types'
-import { buildTrack, isUtcOffsetMin, stripExtension } from './stats'
+import { buildTrack, isUtcOffsetMin, parseUtcTime, stripExtension } from './stats'
 import { t } from '../i18n'
 
 type ExtensionField = 'hr' | 'cad' | 'power' | 'temp'
@@ -97,8 +97,7 @@ function parseGpxPoint(element: Element): TrackPoint | undefined {
       }
       case 'time': {
         // GPX times are UTC: a time written without a zone is read as UTC, not in the browser's zone
-        const raw = textOf(child).trim()
-        const time = Date.parse(raw.includes('T') && !/(z|[+-]\d{2}:?\d{2})$/i.test(raw) ? `${raw}Z` : raw)
+        const time = parseUtcTime(textOf(child))
         if (Number.isFinite(time)) point.time = time
         break
       }

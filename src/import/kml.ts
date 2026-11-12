@@ -6,7 +6,7 @@
  */
 import { errorMessage } from '../core/errors'
 import type { Track, TrackPoint, TrackSegment, Waypoint } from '../core/types'
-import { buildTrack, stripExtension } from './stats'
+import { buildTrack, parseUtcTime, stripExtension } from './stats'
 import { t } from '../i18n'
 
 /** altitude modes whose altitude is not metres above the sea (the ground follows the relief): the altitude is dropped */
@@ -70,7 +70,7 @@ function trackPoints(track: Element): TrackPoint[] {
   childrenNamed(track, 'coord').forEach((coord, index) => {
     const point = parsePosition(textOf(coord))
     if (!point) return
-    const time = whens[index] ? Date.parse(textOf(whens[index])) : Number.NaN
+    const time = whens[index] ? parseUtcTime(textOf(whens[index])) : Number.NaN
     if (Number.isFinite(time)) point.time = time
     points.push(point)
   })
