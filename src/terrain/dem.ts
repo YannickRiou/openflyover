@@ -112,6 +112,12 @@ export function decodeDem(bitmap: ImageBitmap, encoding: DemEncoding, clean?: De
 export function sampleGrid(grid: HeightGrid, u: number, v: number): number {
   const { width, height, data } = grid
   if (width === 0 || height === 0) return NaN
+  // the heights at the mesh vertices (`HeightGrid.vertices`): read at the vertex, the value the full grid gave there
+  if (grid.vertices !== undefined) {
+    const x = clamp(Math.round(u * grid.vertices), 0, width - 1)
+    const y = clamp(Math.round(v * grid.vertices), 0, height - 1)
+    return data[y * width + x]
+  }
 
   const fx = clamp(u * width - 0.5, 0, width - 1)
   const fy = clamp(v * height - 0.5, 0, height - 1)

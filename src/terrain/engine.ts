@@ -29,7 +29,7 @@ import { errorMessage } from '../core/errors'
 import { BACKGROUND_PRIORITY, TILE_REQUEST_TIMEOUT_MS, TileFetchError, TileTimeoutError, createTileFetcher, isAbortError, isNoDataError } from './fetch'
 import { HeightField } from './heightField'
 import { loadImageryTexture as defaultLoadImageryTexture } from './imagery'
-import { buildTileGeometry, geometryFromArrays, sampleTileMeshAt, type TileMeshArrays } from './mesh'
+import { buildTileGeometry, geometryFromArrays, meshVertexGrid, sampleTileMeshAt, type TileMeshArrays } from './mesh'
 import {
   TileNode,
   countSelection,
@@ -465,9 +465,10 @@ export function createTerrainEngine(
     node.setGeometryBounds(result.geometry)
     group.add(mesh)
 
-    node.grid = grid
     node.setHeightRangeFromGrid(grid)
     rememberGrid(node.key, grid)
+    // the full elevation tile goes to the height field (bounded); the tile keeps the heights of its mesh vertices only
+    node.grid = meshVertexGrid(grid, opts.segments)
     node.state = 'ready'
     node.failedAttempts = 0
     node.failure = undefined

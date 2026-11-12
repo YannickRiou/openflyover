@@ -211,6 +211,22 @@ export function buildTileMesh(
 }
 
 /**
+ * The heights of `grid` at the vertices of a tile mesh of `segments` a side, sampled as `buildTileMesh` samples them
+ * (`sampleGrid`, nodata kept as NaN): a loaded tile keeps these 65 × 65 values (16 kB) instead of its 512 × 512 elevation
+ * tile (1 MB; in doubles, 33 kB, so they are the exact values), with exactly the same mesh and the same heights read on it. Measured on a 400 km « situation » opening
+ * (November 2026): the descent kept about 3,000 tiles, so 3 GB of grids, enough to stall an export.
+ */
+export function meshVertexGrid(grid: HeightGrid, segments: number): HeightGrid {
+  if (grid.vertices === segments) return grid
+  const edge = segments + 1
+  const data = new Float64Array(edge * edge)
+  for (let j = 0; j < edge; j++) {
+    for (let i = 0; i < edge; i++) data[j * edge + i] = sampleGrid(grid, i / segments, j / segments)
+  }
+  return { width: edge, height: edge, data, vertices: segments }
+}
+
+/**
  * Height (metres, true scale) of the surface `buildTileGeometry` draws for `grid` at the tile coordinates (zoom `key.z`) of
  * a point: the triangle of its grid cell, not the finer grid, so what is draped on the tile lies on its mesh.
  */
