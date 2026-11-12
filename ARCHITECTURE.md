@@ -4567,7 +4567,7 @@ bug 300782, October 2025): the device budget below is conservative, to be measur
   message says « Pour installer OpenFlyover : touchez Partager, puis « Sur l'écran d'accueil ». » (toast, « Compris »).
 - **Files in**: Android (installed app): `share_target` (POST, multipart, field `tracks`, `.gpx`, `.fit` and the MIME
   types apps use, `application/octet-stream` included: Garmin and Komoot share FIT / GPX under it). The worker answers
-  the POST to `share-target`: files kept in the `openflyover-share` cache, then a 303 to `./?partage`; the page
+  the POST to `share-target` (refused with a 303 to `./` when `Sec-Fetch-Site` is `cross-site`): files kept in the `openflyover-share` cache, then a 303 to `./?partage`; the page
   (`takeSharedFiles`) reads them, empties the cache, removes the query and opens them as « Ouvrir » does. A name
   without extension gets one from the content (`sharedFileName`: ".FIT" at byte 8, `<gpx`). iOS has no share target:
   the file picker. On iOS, the track picker has no `accept` filter (`pickerAccept`): Safari greys out `.gpx` / `.fit`

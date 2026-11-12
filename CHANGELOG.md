@@ -42,6 +42,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **The home page no longer says « Tout reste sur votre appareil »**: the landmarks (Overpass) and the weather (Open-Meteo) are on by default, so it was not true. It now says that your track never leaves your device (the maps, landmarks and weather are fetched for the area), in the five languages. `docs/self-hosting.md` lists the routing servers of « Tracer sur la carte » among the services the browser talks to.
 - **The desktop application's security policy is tighter**: Amazon S3 is allowed only for the two paths the app reads (the terrain tiles `elevation-tiles-prod/`, the Esri photo dates `config.maptiles.arcgis.com/`), not the whole host, and `base-uri` and `form-action` are limited to the application itself.
 - **A recommended policy for the website**: `docs/deploying.md` gives a `Content-Security-Policy` header that fits the app and explains why (the Strava identifiers stay in the browser's storage), and says where the Strava secret is kept on the desktop. No code changed for it: a `<meta>` policy would also block the development server.
+- **A foreign site can no longer drop files into the app's share box**: the share target of the installed web app refuses a request the browser marks as coming from another site (`Sec-Fetch-Site: cross-site`) and sends it back to the app, instead of keeping its files for the next opening.
 
 ## 8.0.1 (November 2026)
 
