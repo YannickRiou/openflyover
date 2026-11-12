@@ -81,12 +81,16 @@ export function TrackLines() {
   const styleRef = useRef<AppliedStyle | null>(null)
   const raceRef = useRef(race)
 
+  /** the cuts must be set again at the next frame: after a rebuild, a re-drape or a new race (the store's own changes call `refreshDrawOn` by themselves) */
+  const drawOnStale = useRef(true)
   useEffect(() => {
     raceRef.current = race
+    drawOnStale.current = true
   }, [race])
 
   // « Trace qui se dessine »: each set cut at its marker (cutTrackLineSet does nothing when unchanged).
   const refreshDrawOn = useCallback(() => {
+    drawOnStale.current = false
     const { tracks: current, playback, settings } = useAppStore.getState()
     // the distances are in the order of the stages « À la suite »
     const flown = orderedTracks(current, settings.race)
@@ -120,6 +124,7 @@ export function TrackLines() {
 
   const drapeAll = useCallback((current: TerrainEngine | null, factor: number, curtain: number) => {
     for (const set of setsRef.current.values()) drapeTrackLineSet(set, current, factor, curtain)
+    drawOnStale.current = true
     wakeScene()
   }, [])
 
@@ -134,6 +139,7 @@ export function TrackLines() {
     const built = syncTrackLineSets(group, setsRef.current, tracks, frame, width, height, smoothingM)
     exposureRef.current = Number.NaN
     styleRef.current = null
+    drawOnStale.current = true
     const last = drapedWith.current
     if (!last || last.engine !== engine || last.exaggeration !== exaggeration || last.curtainM !== curtainM) {
       drapedWith.current = { engine, exaggeration, curtainM }
@@ -171,8 +177,8 @@ export function TrackLines() {
     }
     // a flight's width is the user's at the distance the camera looks at (the dashes' scale reference too)
     applyFlightDepth(setsRef.current.values(), viewDistance(camera, controls?.target ?? null))
-    // after a rebuild or a re-drape (the subscription covers the progress and settings)
-    refreshDrawOn()
+    // after a rebuild or a re-drape (the subscription covers the progress and settings, once per change)
+    if (drawOnStale.current) refreshDrawOn()
     if (gl.toneMappingExposure === exposureRef.current) return
     exposureRef.current = gl.toneMappingExposure
     applyExposure(setsRef.current.values(), gl.toneMappingExposure, style.glowColor)

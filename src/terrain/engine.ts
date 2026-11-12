@@ -538,9 +538,10 @@ export function createTerrainEngine(
         (fresh) => {
           // the tile went away (or the engine was rebuilt) while the imagery was coming
           if (disposed || node.texture !== stale) {
-            disposeTexture(fresh)
+            if (fresh) disposeTexture(fresh)
             return
           }
+          if (!fresh) return
           material.map = fresh
           material.color.setHex(0xffffff)
           material.needsUpdate = true

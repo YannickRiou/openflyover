@@ -368,4 +368,4 @@ export type LoadImageryTexture = (
   source: ImagerySource,
   fetcher: TileFetcher,
   options: LoadImageryOptions,
-) => Promise<Texture>
+) => Promise<Texture | undefined>

@@ -62,6 +62,8 @@ export interface DeviceBudget {
   exportPrefetchAhead: readonly number[]
   /** texels per side of the relief's shadow map (memory grows with its square: estimated ~128 MB at 4096², ~32 MB at 2048²) */
   shadowMapSize: number
+  /** anisotropic filtering of the imagery textures (three clamps it to the GPU's maximum): each level costs sampling time on a phone's GPU */
+  anisotropy: number
   /** most trees the forests place (scene/forestPoints.ts): one instance each, ~30 triangles, drawn only near the camera */
   maxTrees: number
 }
@@ -89,6 +91,7 @@ export const DESKTOP_BUDGET: Readonly<DeviceBudget> = {
   exportPrefetchAhead: [5, 10, 15, 20, 30, 40],
   shadowMapSize: 4096,
   maxTrees: 250_000,
+  anisotropy: 16,
 }
 
 const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'exportCloudResolutionScale' | 'exportCloudShadowEvery' | 'maxExportShortSide' | 'maxLodHeightPx' | 'maxVideoBitrate' | 'memoryWarnBytes' | 'maxResidentTiles' | 'maxTileLoads'> = {
@@ -103,6 +106,7 @@ const MOBILE_BUDGET: Omit<DeviceBudget, 'kind' | 'exportCloudResolutionScale' | 
   // a quarter of the computer's memory; the map is refitted to the view every frame and a phone screen is small
   shadowMapSize: 2048,
   maxTrees: 60_000,
+  anisotropy: 4,
   // counted in film frames, not seconds: a phone renders a few frames a second, 30 s of wall time hold hundreds of them
   exportTileKeepFrames: 6,
   exportPrefetchAhead: [5, 10, 20],
