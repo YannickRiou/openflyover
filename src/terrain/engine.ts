@@ -462,6 +462,7 @@ export function createTerrainEngine(
     group.add(mesh)
 
     node.grid = grid
+    node.setHeightRangeFromGrid(grid)
     rememberGrid(node.key, grid)
     node.state = 'ready'
     node.failedAttempts = 0

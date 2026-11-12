@@ -18,7 +18,7 @@ import { offlinePolicy } from '../offline/policy'
 import { DEFAULT_SEGMENTS, DEFAULT_TUNING, OUTER_MAX_ZOOM } from '../terrain/engine'
 import { planImagerySubtiles } from '../terrain/imagery'
 import type { TileNode } from '../terrain/quadtree'
-import { computeConservativeSphere, createCameraState, createRootNodes, screenSpaceError, updateCameraState, zoomLimit } from '../terrain/quadtree'
+import { HEIGHT_MARGIN_M, HEIGHT_MARGIN_SHARE, computeConservativeSphere, createCameraState, createRootNodes, screenSpaceError, updateCameraState, zoomLimit } from '../terrain/quadtree'
 import type { QuadtreeContext, SelectionParams } from '../terrain/quadtree'
 import { buildTileUrl } from '../terrain/sources'
 import { tileGroundSizeM } from '../geo/mercator'
@@ -112,11 +112,10 @@ export interface FilmTiles {
   planMs: number
 }
 
+export { HEIGHT_MARGIN_M }
 /** Points of a tile where the loaded relief is read (`heightRange`): its corners, the middle of its sides and its centre. */
 const HEIGHT_SAMPLES = [0, 0.5, 1]
 /** Margin of `heightRange` (metres): a fixed part and a share of the tile's width (the relief the coarse grid smooths out). */
-export const HEIGHT_MARGIN_M = 60
-export const HEIGHT_MARGIN_SHARE = 0.1
 
 /**
  * Height range (m) of a tile from the relief already loaded (`heightAt`, the engine's `sampleHeight`: the coarse tiles

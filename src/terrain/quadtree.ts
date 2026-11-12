@@ -21,6 +21,9 @@ export type TileState = 'empty' | 'loading' | 'ready' | 'failed'
 /** Height range (metres) assumed for a tile until its DEM is decoded (conservative sphere). */
 export const UNLOADED_MIN_HEIGHT_M = -500
 export const UNLOADED_MAX_HEIGHT_M = 9000
+/** Margin of the relief read from a loaded parent (metres): a fixed part and a share of the tile's width (same as the export's plan). */
+export const HEIGHT_MARGIN_M = 60
+export const HEIGHT_MARGIN_SHARE = 0.1
 /** Safety margin applied to the conservative sphere radius (covers the curvature between samples). */
 const CONSERVATIVE_SPHERE_MARGIN = 1.02
 
@@ -52,6 +55,13 @@ export class TileNode {
   grid: HeightGrid | undefined = undefined
   /** local-frame bounding sphere: tight once the geometry is loaded, conservative otherwise */
   readonly boundingSphere = new Sphere()
+  /**
+   * height range (metres, before exaggeration) the conservative sphere assumes while the geometry is not loaded:
+   * the wide default for a root, the loaded relief of the nearest loaded ancestor (plus a margin) below it
+   */
+  heightRangeM: readonly [number, number] = [UNLOADED_MIN_HEIGHT_M, UNLOADED_MAX_HEIGHT_M]
+  /** true once the range comes from this node's own DEM */
+  private ownRange = false
   /** world-space size of one grid cell, metres (≈ tileGroundSizeM / segments) */
   readonly geometricError: number
 
@@ -90,6 +100,7 @@ export class TileNode {
     this.parent = parent
     this.ctx = ctx
     this.geometricError = tileGroundSizeM(key) / ctx.segments
+    if (parent) this.heightRangeM = parent.heightRangeM
     this.resetBounds()
   }
 
@@ -113,6 +124,37 @@ export class TileNode {
     this.boundingSphere.copy(geometry.boundingSphere!)
   }
 
+  /**
+   * Learn the real relief from the decoded DEM: this node and the unloaded descendants below it get a tight range
+   * (min/max of the grid with the margin the export's tile planner uses) instead of the -500..9000 m default, so a
+   * far child no longer counts as visible, blocks its parent's replacement or loads early for nothing.
+   */
+  setHeightRangeFromGrid(grid: HeightGrid): void {
+    let min = Infinity
+    let max = -Infinity
+    const data = grid.data
+    for (let i = 0; i < data.length; i++) {
+      const h = data[i]
+      if (h < min) min = h
+      if (h > max) max = h
+    }
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return
+    const margin = HEIGHT_MARGIN_M + HEIGHT_MARGIN_SHARE * tileGroundSizeM(this.key)
+    this.heightRangeM = [min - margin, max + margin]
+    this.ownRange = true
+    this.spreadRange()
+  }
+
+  private spreadRange(): void {
+    if (!this.children) return
+    for (const child of this.children) {
+      if (child.ownRange) continue
+      child.heightRangeM = this.heightRangeM
+      if (!child.geometry) child.resetBounds()
+      child.spreadRange()
+    }
+  }
+
   /** Back to the conservative sphere (after the geometry is disposed, or when the exaggeration changes). */
   resetBounds(): void {
     const scale = this.ctx.exaggeration ?? 1
@@ -120,8 +162,8 @@ export class TileNode {
       this.bounds,
       this.ctx.frame,
       this.boundingSphere,
-      UNLOADED_MIN_HEIGHT_M * scale,
-      UNLOADED_MAX_HEIGHT_M * scale,
+      this.heightRangeM[0] * scale,
+      this.heightRangeM[1] * scale,
     )
   }
 
