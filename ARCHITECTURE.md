@@ -215,8 +215,8 @@ once it is still (see "Volumetric clouds", Quality); the export goes back to the
    `ORTHOIMAGERY.ORTHOPHOTOS<year>` (2000–2024, each only the departments flown that year, white elsewhere at every zoom:
    the dated source's `fallback`, the latest photos, is drawn instead in `loadImageryTexture`), `esri:<release>` = the
    World Imagery Wayback release (`wayback.maptiles.arcgis.com`; no photos over the sea from z14, where it answers a 404
-   without `Access-Control-Allow-Origin` that the browser reports as a network error: a dated source asks without retrying
-   network errors, `retryNetworkErrors: false`, and draws its `fallback`, the latest photos, on a network error or a 404; when
+   without `Access-Control-Allow-Origin` that the browser reports as a network error: a dated source retries a network error once only
+   (`retryNetworkErrors: false`, so a brief glitch does not swap in the latest photos), and draws its `fallback`, the latest photos, on a network error or a 404; when
    the fallback fails too, the tile is incomplete and the engine retries it). `datedImagerySource` gives the engine a source with its own
    id (`ign-ortho@ign:2020`), so a date change reloads the imagery. The dates offered are found on demand at the centre of the
    first track: for IGN the mosaic graphs (WFS `ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE.<period>:graphe_bdortho` for 2000–2023 and
