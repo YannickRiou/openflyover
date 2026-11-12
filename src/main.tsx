@@ -5,7 +5,7 @@ import './ui/theme.css'
 import './index.css'
 import './ui/appearance.css'
 import App from './App.tsx'
-import { loadLanguage } from './i18n'
+import { getLanguage, loadLanguage } from './i18n'
 import { applyGpuWaitParam } from './export/diagnostic'
 import { installExportGuard, reportInterruptedExport } from './export/guard'
 import { installExportHistory } from './export/historyStore'
@@ -37,9 +37,10 @@ installWebApp((files) => void openFiles(files))
 if (window.matchMedia?.('(pointer: coarse)').matches) document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false })
 
 // first render once the catalog of the language is in (French is bundled; another is a small chunk, precached by the
-// service worker): no text in the wrong language, no missing one. If it cannot be fetched the app starts in French.
+// service worker): no text in the wrong language, no missing one. If it cannot be fetched the app starts in French, and
+// the preference goes back to French so that the language menu shows the language the screen is in.
 void loadLanguage(usePreferences.getState().language)
-  .catch(() => undefined)
+  .catch(() => usePreferences.setState({ language: getLanguage() }))
   .then(() =>
     createRoot(document.getElementById('root')!).render(
       <StrictMode>

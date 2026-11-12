@@ -238,7 +238,7 @@ describe('openProject', () => {
     await openProject(new File([text], 'vieux.json'))
     expect(useAppStore.getState().settings.exaggeration).toBe(1)
     expect(toasts()).toEqual([
-      { kind: 'info', text: 'Projet « Vieux » ouvert.\nRéglages invalides remplacés par leur valeur par défaut : exaggeration.' },
+      { kind: 'info', text: 'Projet « Vieux » ouvert.\nRéglages invalides remplacés par leur valeur par défaut : Carte.' },
     ])
   })
 
@@ -253,7 +253,7 @@ describe('openProject', () => {
     await openProject(new File([], 'vide.opnflvr'))
     expect(toasts().at(-1)).toEqual({ kind: 'error', text: "Impossible d'ouvrir « vide.opnflvr » : Le fichier est vide." })
     await openProject(new File(['{"a":'], 'casse.json'))
-    expect(toasts().at(-1)?.text).toContain("ce n'est pas du JSON valide")
+    expect(toasts().at(-1)?.text).toContain("ce n’est pas un fichier de projet valide")
   })
 })
 

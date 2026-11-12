@@ -236,7 +236,7 @@ describe('runExport', () => {
     expect(file.discard).toHaveBeenCalled()
     const state = useExportStore.getState()
     expect(state).toMatchObject({ phase: 'error', result: null })
-    expect(state.error).toMatch(/^Tuiles introuvables pour l'image \d+\. Export arrêté/)
+    expect(state.error).toMatch(/^Images de carte introuvables pour l'image \d+\. Export arrêté/)
     // the history reads these: one frame given up, none at the timeout
     expect(state.timings).toMatchObject({ givenUp: 1, timeouts: 0 })
     expect(three.setFrameloop).toHaveBeenLastCalledWith('demand')

@@ -119,6 +119,12 @@ function lookup(language: LanguageCode, key: string): string | Plural | undefine
  * French typography: a no-break space before `:` and after `«` / before `»` (U+00A0), a narrow one before `;` `?` `!` (U+202F),
  * so a line never starts with a lone punctuation mark. Only an ordinary space is replaced: `12:30` and URLs stay as they are.
  */
+let typography = true
+/** The tests read the French messages as written (an ordinary space); the typography itself has its own test. */
+export function setFrenchTypography(on: boolean): void {
+  typography = on
+}
+
 export function frenchTypography(text: string): string {
   return text
     .replace(/ (?=:)/g, '\u00A0')
@@ -135,7 +141,7 @@ export function template(key: MessageKey, vars?: Partial<Vars>): string {
     typeof entry === 'string'
       ? entry
       : ((typeof vars?.count === 'number' ? entry[pluralCategory(vars.count)] : undefined) ?? entry.other)
-  return current === 'fr' ? frenchTypography(text) : text
+  return typography && current === 'fr' ? frenchTypography(text) : text
 }
 
 /** The message of `key` in the current language, `{name}` placeholders filled from `vars`; `vars.count` picks a plural form. */

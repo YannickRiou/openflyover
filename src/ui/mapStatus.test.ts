@@ -107,8 +107,8 @@ describe('perfParts', () => {
       heapBytes: 312e6,
       system: { usedMemoryBytes: 8.2e9, totalMemoryBytes: 16e9, cpuPercent: 23.4 },
     }
-    expect(perfParts(sample, all)).toEqual(['60 i/s', '412 textures · 380 géométries', '245 tuiles', 'JS 312 Mo', 'RAM 8,2 Go / 16,0 Go', 'CPU 23 %'])
-    expect(perfParts(sample, { ...all, gpu: false, system: false })).toEqual(['60 i/s', '245 tuiles', 'JS 312 Mo'])
+    expect(perfParts(sample, all)).toEqual(['60 i/s', '412 textures · 380 géométries', '245 images de carte', 'JS 312 Mo', 'RAM 8,2 Go / 16,0 Go', 'CPU 23 %'])
+    expect(perfParts(sample, { ...all, gpu: false, system: false })).toEqual(['60 i/s', '245 images de carte', 'JS 312 Mo'])
     expect(perfParts({ fps: 0 }, all)).toEqual(['3D au repos'])
   })
 })

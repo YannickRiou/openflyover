@@ -338,9 +338,9 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
 
   useEffect(() => {
     if (useBatchStore.getState().phase === 'running') return
-    if (phase === 'error' && error) showToast({ kind: 'error', text: translate('export.panel.failed', { error }) })
-    else if (phase === 'canceled') showToast({ kind: 'info', text: translate('export.panel.canceled') })
-  }, [phase, error])
+    // an error is told once, in the panel (`role="alert"`, with its « Reprendre » and report buttons), not again as a toast
+    if (phase === 'canceled') showToast({ kind: 'info', text: translate('export.panel.canceled') })
+  }, [phase])
 
   const update = (patch: Partial<VideoSettings>) => setSetting('video', { ...video, ...patch })
   // one click on a platform: its format as one undo step

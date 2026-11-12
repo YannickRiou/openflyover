@@ -169,7 +169,7 @@ export default {
   'v23.more.text': 'Des drapeaux de départ et d’arrivée sur la carte de l’affiche, une caméra plus stable à l’ouverture, à la fermeture et quand le relief se précise, un relief mieux nettoyé en mer, la couleur d’accent sur le profil et la mini-carte, et tous les préréglages de survol visibles d’un coup.',
   'v22.landmarks.title': 'Des repères plus simples à choisir',
   'v22.landmarks.text': 'Choisissez une densité (peu, normal, beaucoup) plutôt qu’un nombre. Chaque repère peut être en Auto, Toujours ou Jamais, et vous les choisissez sur une carte, avec le profil d’altitude de la trace.',
-  'v22.keys.title': 'Images images clés : sélection multiple et clic droit',
+  'v22.keys.title': 'Images clés : sélection multiple et clic droit',
   'v22.keys.text': 'Sélectionnez plusieurs images clés avec Ctrl et un glisser, pour les déplacer ou les supprimer ensemble. Un clic droit sur la timeline ajoute une image clé, ou supprime ce que vous visez.',
   'v22.keysFollow.title': 'Les images clés suivent vos réglages',
   'v22.keysFollow.text': 'Les curseurs du soleil, de l’exposition et des couleurs modifient maintenant l’image clé sous la tête de lecture. Une image clé de caméra suit la vue que vous déplacez à la souris.',

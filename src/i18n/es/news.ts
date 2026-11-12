@@ -31,7 +31,7 @@ const messages: Messages['news'] = {
   'v60.titlebar.title': 'Adiós a la barra de Windows',
   'v60.titlebar.text': 'En la aplicación de escritorio, la barra superior de OpenFlyover es ahora también la barra de título. Arrástrala para mover la ventana, haz doble clic para agrandarla y usa los tres botones a la derecha de «Exportar». Una fila menos y el mismo color en todo el ancho. En Mac, los tres botones redondos siguen a la izquierda.',
   'v60.status.title': 'Una barra de estado más tranquila',
-  'v60.status.text': 'La barra de abajo solo muestra lo que se está cargando y lo que ha fallado. Cuando todo está listo, no dice nada. Las cifras de rendimiento están en «À propos et mises à jour», en el menú del logo.',
+  'v60.status.text': 'La barra de abajo solo muestra lo que se está cargando y lo que ha fallado. Cuando todo está listo, no dice nada. Las cifras de rendimiento están en «Acerca de y actualizaciones», en el menú del logo.',
   // 5.5 — families of tabs, folded summaries
   'v60.groups.title': 'Cinco grupos de pestañas',
   'v60.groups.text': 'En el ordenador como en el teléfono, la columna de la izquierda muestra cinco grupos: Track, Escena, Cámara, Gráficos y Proyecto. Un selector en la parte superior del panel pasa de una pestaña a otra. Ctrl+K abre el grupo correcto.',
@@ -84,7 +84,7 @@ const messages: Messages['news'] = {
   'v47.search.title': 'Buscar un ajuste',
   'v47.search.text': 'Ctrl+K (Cmd+K en Mac) abre una búsqueda. Escriba el nombre de un ajuste: el panel se abre en la sección correcta.',
   'v47.tour.title': 'Una visita guiada',
-  'v47.tour.text': 'En el primer arranque, unos globos muestran dónde importar un track, ajustar el aspecto y exportar. Deténgala cuando quiera. «Revoir la visite guidée» (ayuda) la vuelve a lanzar.',
+  'v47.tour.text': 'En el primer arranque, unos globos muestran dónde importar un track, ajustar el aspecto y exportar. Deténgala cuando quiera. «Repetir la visita guiada» (ayuda) la vuelve a lanzar.',
   'v46.nights.title': 'Las noches en la línea de tiempo',
   'v46.nights.text': 'En un track de varios días, cada noche es ahora un bloque verde en la pista «Paradas» de la línea de tiempo. Haz clic para verla, Supr para sacarla de la película (se puede deshacer). «Recuperar las noches» (Luz › Días y noches) las devuelve todas.',
   'v46.stage.title': 'Dos botones en la vista',

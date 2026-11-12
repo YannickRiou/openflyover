@@ -49,6 +49,13 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Command line: a render folder on a network share works**: `--rendu \\serveur\partage\traces` came out as `UNC\serveur\partage\traces`. The `\\?\UNC\` prefix that Windows gives is now turned into `\\`, and `\\?\C:\` into `C:\` as before.
 - **A big Strava import slows down instead of failing**: Strava allows 100 requests every 15 minutes. The app now lets 90 go through in any 15 minutes and makes the next ones wait, instead of ending the import on an error. An activity without a name no longer stops the list or the import.
 - **GPX and KML times in more spellings**: « 2025-07-12 09:00:00 » (a space, no zone) was read in the zone of the browser, and « 2025-07-12T09:00:00-05 » was not read at all. Both are now read, and a time without a zone is UTC, in GPX and in KML (`parseUtcTime`).
+- **French typography**: a no-break space before « : ; ? ! » and inside the guillemets, so a line never starts with a lone mark. One rule in the French rendering path, nothing edited in the messages. English and German use their own quotes (“ ” and „ “)
+- **Plainer words in the messages**: « images de carte » instead of « tuiles » (and its equivalents in the four other languages and in the user guides), « demandes » instead of « requêtes », « fichier abîmé » instead of « XML mal formé », no more « JSON », « WebGL 2 », « WebCodecs » or « Overpass » on screen. One word for one thing: « image clé » everywhere (never « clé » alone), « trace » for the track
+- **Plurals without « (s) »**: « image(s) », « autre(s) », « non ouvert(s) » now use the plural forms of the catalogue
+- **A project with settings that cannot be read names the tabs, not the keys**: « Réglages invalides remplacés par leur valeur par défaut : Carte, Lumière » instead of the names of the fields
+- **An export error is told once**: in the panel, with its « Reprendre » and report buttons, no longer a second time as a toast. « Son » and « Volume » that disappear for a PNG sequence or « Habillage seul » now say why
+- **The news quote each language's own labels**, a unique key for each item of the « Nouveautés » list, the dead texts removed, and a language whose file cannot be loaded at start-up no longer stays selected in the menu while the screen is in French
+- **Lint**: the false positives of the 3D scene (mutating three.js objects in `useFrame`) are off for `src/scene`, and `TopBar` no longer sets state in its effect needlessly
 
 ## 8.0.1 (November 2026)
 

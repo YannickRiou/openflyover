@@ -113,7 +113,7 @@ describe('Timeline', () => {
     expect(['param:speed', 'texts', 'media', 'music'].map(hidden)).toEqual([true, true, true, true])
     // the row of the bar: three named buttons, nothing to scroll; a row under the lanes opens « Ajouter » too
     const tools = Array.from(host.querySelectorAll('[data-testid="timeline-tools"] button')).map((b) => b.textContent || b.getAttribute('aria-label'))
-    expect(tools).toEqual(['Clés', 'Ajouter', 'Options du film'])
+    expect(tools).toEqual(['Images clés', 'Ajouter', 'Options du film'])
     expect(host.querySelector('[data-testid="timeline-add-row"] button')!.textContent).toBe('Texte, photo, musique')
     // the column of the headers stays hidden, the lanes keep the width
     expect(host.querySelector('[data-testid="timeline-heads"]')!.className).toContain('hidden')
@@ -235,7 +235,7 @@ describe('Timeline', () => {
 
     // a speed key stays on the « Vitesse » lane, which then has its keys group
     await act(async () => addParamKeyHere('speed'))
-    expect(groups()).toEqual(['Images clés', 'Clés : Vitesse'])
+    expect(groups()).toEqual(['Images clés', 'Images clés : Vitesse'])
     expect(useAppStore.getState().settings.film.paramKeys).toMatchObject([{ param: 'speed', value: 1 }])
     expect(lanes()).toEqual(['Plans', 'Vitesse', 'Textes', 'Médias', 'Musique'])
     expect(host.querySelectorAll('[role="group"][aria-label="Vitesse"]  [data-testid="timeline-key"]')).toHaveLength(1)

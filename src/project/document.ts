@@ -42,6 +42,7 @@ import { isValidDemClean, withDemCleanDefaults } from '../terrain/demClean'
 import { isValidSnow } from '../weather/snowLine'
 import { PROJECT_EXTENSION } from './file'
 import { t } from '../i18n'
+import type { MessageKey } from '../i18n'
 
 export const PROJECT_FORMAT = 'openflyover-project'
 export const PROJECT_VERSION = 8
@@ -254,6 +255,23 @@ export function sanitizeSettings(raw: unknown, base: Settings = DEFAULT_SETTINGS
   }
   // the transition and cards « À la suite » moved from `race` to the film's junction default
   return { settings: withStageSettingsMigrated(settings), invalid }
+}
+
+/** The tab or section the person sees a setting in (never the name of the key, which means nothing to them). */
+const SETTING_SECTIONS: Partial<Record<keyof Settings, MessageKey>> = {
+  trackColorBy: 'shell.tab.trace', trackLegendAnchor: 'shell.tab.trace', trackLegendShown: 'shell.tab.trace', trackLegendFree: 'shell.tab.trace',
+  trackStyle: 'shell.tab.trace', marker: 'shell.tab.trace', markerValue: 'shell.tab.trace', trackTail: 'shell.tab.trace', trackRibbon: 'shell.tab.trace', race: 'shell.tab.trace',
+  terrainSourceId: 'shell.tab.carte', demClean: 'shell.tab.carte', imagerySourceId: 'shell.tab.carte', imageryDate: 'shell.tab.carte', imageryZoomOffset: 'shell.tab.carte',
+  imageryVivid: 'shell.tab.carte', exaggeration: 'shell.tab.carte', contours: 'shell.tab.carte', water: 'shell.tab.carte', forest: 'shell.tab.carte', landmarks: 'shell.tab.carte',
+  weather: 'shell.tab.meteo', weatherScene: 'shell.tab.meteo', clouds: 'shell.tab.meteo', snow: 'shell.tab.meteo',
+  atmosphere: 'shell.tab.lumiere', shadows: 'shell.tab.lumiere', cloudShadows: 'shell.tab.lumiere', sunHour: 'shell.tab.lumiere', sunDate: 'shell.tab.lumiere',
+  sunFromTrack: 'shell.tab.lumiere', exposureEv: 'shell.tab.lumiere', nightLightEv: 'shell.tab.lumiere', grading: 'shell.tab.lumiere',
+  lens: 'shell.tab.objectif', camera: 'shell.tab.survol', flyoverDurationS: 'shell.tab.survol', pacing: 'shell.tab.survol',
+  overlay: 'shell.tab.habillage', labels: 'shell.tab.habillage', film: 'settings.preferences.timeline.title', video: 'export.panel.title', poster: 'export.panel.title',
+}
+
+function settingSectionName(key: string): string {
+  return t(SETTING_SECTIONS[key as keyof Settings] ?? 'shell.tab.projet')
 }
 
 // ---------------------------------------------------------------------------
@@ -693,7 +711,7 @@ export function parseProject(text: string): LoadedProject {
   if (typeof focalMm === 'number' && focalMm !== 26) warnings.push(t('project.doc.focalRemoved'))
   const { settings, invalid } = sanitizeSettings(withLookOfItsTime(doc.settings))
   if (invalid.length > 0) {
-    warnings.push(t('project.doc.settingsReplaced', { list: invalid.join(', ') }))
+    warnings.push(t('project.doc.settingsReplaced', { list: [...new Set(invalid.map(settingSectionName))].join(', ') }))
   }
   const media = sanitizeMediaTable(doc.media)
   settings.film = dropMissingMedia(settings.film, media, warnings)

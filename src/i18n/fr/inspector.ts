@@ -138,7 +138,7 @@ export default {
   'camKey.heading': 'Visée',
   'camKey.hint': 'À {distance}, {time} dans le film : la vue cadrée en 3D ; sa distance, son inclinaison et sa visée se retouchent ici. La caméra passe en douceur d’une image clé à la suivante ; avant la première et après la dernière, elle reprend les réglages de l’onglet Survol. Pour refaire la vue : la tête de lecture sur l’image clé, ◇ la supprime, cadrez la vue puis ◇ de nouveau.',
   'paramKey.label': 'Réglage',
-  'paramKey.title': 'Image image clé : {label}',
+  'paramKey.title': 'Image clé : {label}',
   'paramKey.value': 'Valeur',
   'paramKey.hint': 'À {distance}, {time} dans le film : {label} {value}. La valeur passe en douceur d’une image clé à la suivante et reste celle de la première image clé avant elle, de la dernière après elle, y compris pendant les arrêts. Dès qu’une image clé existe, le curseur de ce réglage dans les panneaux modifie l’image clé placée au marqueur.',
   'paramKey.speedExtra': ' Se combine avec les portions de vitesse.',
