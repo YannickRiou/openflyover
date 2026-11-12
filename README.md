@@ -170,7 +170,7 @@ Without the secret the installers are built as before and the button says that u
 | `npm run installer-assets` | regenerates the installer images (needs Chrome, see `OPENFLYOVER_CHROME` below) |
 | `npm run icons` | regenerates the icons of the web app and the desktop app from `src-tauri/icons/source/` (needs Chrome; `-- --no-desktop-bundle` keeps the .icns and .ico) |
 
-The suite has **about 2,700 tests** in 164 files (15 October 2026), each file next to its module (`src/**/*.test.ts`,
+The suite has thousands of tests (`npx vitest run` prints the count), each file next to its module (`src/**/*.test.ts`,
 `*.test.tsx` for the components); network calls and the video encoder are mocked. `npm run e2e` drives the app in a headless Chromium
 through 21 scenarios (home, tabs, language, timeline, project, export, phone…); its options (`OPENFLYOVER_CHROME`,
 `OPENFLYOVER_E2E_SKIP_EXPORT`, `OPENFLYOVER_E2E_GPU`, `OPENFLYOVER_E2E_ONLY`) are documented at the top of `e2e/run.mjs`. On Windows or macOS
