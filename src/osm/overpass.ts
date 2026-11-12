@@ -7,8 +7,9 @@
  *
  * Usage policy: one request at a time (the public server grants two slots per address and answers 429 beyond: running
  * two of ours would take both, and the retry logic would then fail more often than the queue costs; docs/sources.md),
- * cached in memory and in the platform storage, one retry on HTTP 429 / 504 then the next of `OVERPASS_ENDPOINTS`. The POST body is form-encoded so the browser sends a "simple" CORS request:
- * overpass-api.de answers the OPTIONS preflight with 406.
+ * cached in memory and in the platform storage (at most `MAX_CACHE_TOTAL_CHARS` in all, oldest dropped first), one retry on a
+ * busy answer (429 / 502 / 503 / 504, or a 200 whose `remark` says the query failed) then the next of `OVERPASS_ENDPOINTS`.
+ * The POST body is form-encoded so the browser sends a "simple" CORS request: overpass-api.de answers the OPTIONS preflight with 406.
  */
 import { cyrb53 } from '../core/math'
 import type { LonLat, LonLatBounds, Track } from '../core/types'
@@ -37,9 +38,11 @@ export const QUERY_TIMEOUT_S = 60
 export const BUSY_RETRY_DELAY_MS = 15_000
 /** HTTP statuses of a busy server: retried, then the next endpoint (a full overpass-api.de answers 502). */
 export const BUSY_STATUSES: readonly number[] = [429, 502, 503, 504]
-/** Persistent cache lifetime (milliseconds): OSM names and summits change slowly. */
 /** A result serialised beyond this many characters is not written to the persistent cache (it would evict the others). */
 export const MAX_CACHE_ENTRY_CHARS = 1_500_000
+/** All the persistent cache together (characters): the browser grants about 5 M to everything the application stores. */
+export const MAX_CACHE_TOTAL_CHARS = 3_000_000
+/** Persistent cache lifetime (milliseconds): OSM names and summits change slowly. */
 export const CACHE_TTL_MS = 30 * 24 * 3600 * 1000
 
 const CACHE_PREFIX = 'openflyover.osm.v1.'
@@ -258,7 +261,8 @@ function classify(tags: Record<string, string>): { kind: OsmKind; detail?: strin
 /** Elements of an Overpass JSON response; throws an `OverpassError` on a server-side error or an unexpected shape. */
 export function overpassElements(json: unknown): unknown[] {
   const record = json as { elements?: unknown; remark?: unknown }
-  if (typeof record?.remark === 'string' && /error/i.test(record.remark)) throw new OverpassError(record.remark, 0)
+  // a 200 with a runtime error (timeout, out of memory) is a busy server: 504, so that the next endpoint is tried
+  if (typeof record?.remark === 'string' && /error/i.test(record.remark)) throw new OverpassError(record.remark, 504)
   if (!Array.isArray(record?.elements)) throw new OverpassError(t('landmarks.overpass.unexpected'), 0)
   return record.elements
 }
@@ -360,13 +364,16 @@ export async function runOverpassQuery<T = OsmFeature[]>(
     for (let attempt = 0; attempt < 2; attempt++) {
       if (signal?.aborted) throw abortError()
       let response: Response
-      // a server that never answers must not hold the queue for ever: a little longer than the server's own timeout
+      let body: unknown
+      // a server that never answers must not hold the queue for ever: a little longer than the server's own timeout,
+      // over the body as well (a stalled body would freeze the queue)
       const hung = new AbortController()
       const timer = setTimeout(() => hung.abort(), QUERY_TIMEOUT_S * 1000 + 10_000)
       const onAbort = () => hung.abort()
       signal?.addEventListener('abort', onAbort, { once: true })
       try {
         response = await deps.fetch(endpoint, { method: 'POST', body: new URLSearchParams({ data: query }), signal: hung.signal })
+        if (response.ok) body = await response.json()
       } catch (e) {
         if (signal?.aborted) throw abortError()
         lastError = e
@@ -375,7 +382,17 @@ export async function runOverpassQuery<T = OsmFeature[]>(
         clearTimeout(timer)
         signal?.removeEventListener('abort', onAbort)
       }
-      if (response.ok) return parse(await response.json())
+      if (response.ok) {
+        try {
+          return parse(body)
+        } catch (e) {
+          // « 200 + remark: runtime error »: like a busy server (retry, then the next endpoint)
+          if (!(e instanceof OverpassError) || !BUSY_STATUSES.includes(e.status)) throw e
+          lastError = e
+          if (attempt === 0) await deps.sleep(BUSY_RETRY_DELAY_MS, signal)
+          continue
+        }
+      }
       lastError = new OverpassError(`HTTP ${response.status}`, response.status)
       if (!BUSY_STATUSES.includes(response.status)) throw lastError
       if (attempt === 0) await deps.sleep(retryAfterMs(response), signal)
@@ -453,10 +470,29 @@ function readCache<T>(storage: OverpassDeps['storage'], key: string, now: number
   }
 }
 
+/** Our cache entries, oldest first (`t` is the first field of the stored JSON; an unreadable entry counts as the oldest). */
+function ownEntries(storage: KeyValueStore): { key: string; size: number }[] {
+  return storage
+    .keys(CACHE_PREFIX)
+    .map((key) => {
+      const raw = storage.get(key) ?? ''
+      return { key, size: raw.length, t: Number(/^\{"t":(\d+)/.exec(raw)?.[1] ?? 0) }
+    })
+    .sort((a, b) => a.t - b.t)
+}
+
 function writeCache(storage: OverpassDeps['storage'], key: string, features: readonly unknown[], now: number): void {
   if (!storage) return
   const value = JSON.stringify({ t: now, features })
   if (value.length > MAX_CACHE_ENTRY_CHARS) return
+  // the whole cache stays under its cap: the oldest entries go first (the other keys are never touched)
+  const entries = ownEntries(storage).filter((e) => e.key !== CACHE_PREFIX + key)
+  let total = value.length + entries.reduce((sum, e) => sum + e.size, 0)
+  for (const e of entries) {
+    if (total <= MAX_CACHE_TOTAL_CHARS) break
+    storage.remove(e.key)
+    total -= e.size
+  }
   if (storage.set(CACHE_PREFIX + key, value)) return
   // full: drop our older entries (never other keys) and try once more; if refused again, the memory cache still
   // avoids repeated queries in this session

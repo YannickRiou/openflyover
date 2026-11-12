@@ -2669,8 +2669,8 @@ exports) gets it from the terrain source of the settings.
   `OsmFeature.area`, with the raw `population` tag). The `around:` form on a
   polyline exceeds the public server's timeout; the distance to the track is computed locally, so changing the types or the
   distance never triggers a new request. Queue (one request at a time, kept at one on purpose: `docs/sources.md`; first come first served, except `urgent` queries (the region's) which go before the ones still waiting; `onStart` tells a caller when its request is really sent), memory cache (the 32 most recently used, `MEMORY_CACHE_ENTRIES`) +
-  `getPlatform().storage` for 30 days per request fingerprint, one retry on 429 / 504 (`Retry-After`, otherwise 15 s) then the other instance; a 200 response carrying an
-  error `remark` (timeout exceeded) is an error. Each fetch is aborted after `QUERY_TIMEOUT_S` + 10 s (4.1: a server that never answers no longer holds the queue; the next endpoint is tried; the body is not covered).
+  `getPlatform().storage` for 30 days per request fingerprint, one retry on 429 / 502 / 503 / 504 (`Retry-After`, otherwise 15 s) then the other instance; a 200 response carrying an
+  error `remark` (timeout exceeded) is read as a 504 (`overpassElements`): same retry, then the next endpoint. Each fetch, body included, is aborted after `QUERY_TIMEOUT_S` + 10 s (a server that never answers, or a stalled body, no longer holds the queue; the next endpoint is tried). The persistent cache keeps under `MAX_CACHE_TOTAL_CHARS` (oldest entries dropped first), and `keyValueStore` drops the `openflyover.osm.` entries when a write of another key is refused (`EVICTABLE_KEY_PREFIX`).
 - **Pure post-processing** (`src/osm/landmarks.ts`): projection onto the path → distance and offset, filter by type and distance
   (`settings.landmarks`, default summits + passes + huts + lakes + places (cities, villages, hamlets) within 1.5 km;
   `settings.landmarks.places { city, village, hamlet }` filters the places, « Villes » = city + town), elevation from `ele`

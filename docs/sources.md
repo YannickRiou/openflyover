@@ -483,7 +483,7 @@ Rate limiting per IP: `/api/status` announces "Rate limit: 2" (two concurrent sl
 server is overloaded (HTML body "Dispatcher_Client::request_read_and_idx::timeout / rate_limited"). Patterns considered abusive: repeated
 identical requests, sweeping boxes to scrape the planet, a production application using it as its backbone. Hence, here: **a single
 request per track** (all types, 3 km corridor), sent alone (queue), cached 30 days in `localStorage` by
-request fingerprint, a single retry after `Retry-After` (otherwise 15 s) on 429 / 504, then the other instance; changing the types or the
+request fingerprint (3 million characters at most in all, the oldest entries dropped first; a full storage drops this cache before it loses the preferences), a single retry after `Retry-After` (otherwise 15 s) on 429 / 502 / 503 / 504 (or on a 200 whose `remark` reports a runtime error), then the other instance; changing the types or the
 distance does not send a new request (local filtering).
 
 | Item checked | Result |

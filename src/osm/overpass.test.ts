@@ -4,6 +4,8 @@ import { buildTrack } from '../import/stats'
 import { keyValueStore, type KeyValueStore } from '../platform'
 import {
   MAX_CACHE_ENTRY_CHARS,
+  MAX_CACHE_TOTAL_CHARS,
+  QUERY_TIMEOUT_S,
   MAX_LANDMARK_DISTANCE_M,
   MEMORY_CACHE_ENTRIES,
   OverpassError,
@@ -232,6 +234,38 @@ describe('runOverpassQuery', () => {
     expect((deps.sleep as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe(2000)
   })
 
+  it('treats a 200 with a runtime error remark like a busy server: retry, then the next endpoint', async () => {
+    const timedOut = () => json({ elements: [], remark: 'runtime error: Query timed out in "query" at line 10 after 60 seconds.' })
+    const deps = makeDeps([timedOut(), timedOut(), json(RESPONSE)])
+    expect(await runOverpassQuery('Q', undefined, deps, ENDPOINTS)).toHaveLength(6)
+    expect(deps.fetch).toHaveBeenCalledTimes(3)
+    expect((deps.fetch.mock.calls[2] as [string])[0]).toBe(ENDPOINTS[1])
+    const all = makeDeps([timedOut(), timedOut(), timedOut(), timedOut()])
+    await expect(runOverpassQuery('Q', undefined, all, ENDPOINTS)).rejects.toMatchObject({ status: 504 })
+  })
+
+  it('keeps the time limit over the body: a stalled body is cut', async () => {
+    vi.useFakeTimers()
+    try {
+      const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+        if (fetchMock.mock.calls.length > 1) return json(RESPONSE)
+        // headers arrived, the body never does: it fails only when the time limit aborts the request
+        return {
+          ok: true,
+          status: 200,
+          json: () => new Promise((_resolve, reject) => init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))),
+        } as unknown as Response
+      })
+      const deps = { ...makeDeps([]), fetch: fetchMock as unknown as OverpassDeps['fetch'] }
+      const run = runOverpassQuery('Q', undefined, deps, ENDPOINTS)
+      await vi.advanceTimersByTimeAsync(QUERY_TIMEOUT_S * 1000 + 11_000)
+      expect(await run).toHaveLength(6)
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('gives up with the last busy status when every endpoint is busy', async () => {
     const deps = makeDeps([
       new Response('', { status: 504 }),
@@ -329,6 +363,26 @@ describe('fetchTrackFeatures', () => {
     const track = northTrack(3, 1000)
     await fetchTrackFeatures(track, undefined, deps)
     expect([...storage.map.keys()]).toEqual(['openflyover.prefs', `openflyover.osm.v1.${hashQuery(trackQuery(track))}`])
+  })
+
+  it('keeps the whole cache under its cap, dropping the oldest entries first and never other keys', async () => {
+    const storage = memoryStorage()
+    storage.set('openflyover.prefs', '{}')
+    const rows = (n: number) => Array.from({ length: n }, (_, i) => ({ i }))
+    const deps = makeDeps([json({ elements: [] })], storage)
+    const entry = (t: number) => JSON.stringify({ t, features: rows(70_000) })
+    storage.set('openflyover.osm.v1.a', entry(1))
+    storage.set('openflyover.osm.v1.b', entry(2))
+    storage.set('openflyover.osm.v1.c', entry(3))
+    const size = entry(1).length
+    expect(size * 4).toBeGreaterThan(MAX_CACHE_TOTAL_CHARS)
+    await cachedOverpassQuery('q-new', () => rows(70_000), undefined, deps)
+    const keys = [...storage.map.keys()]
+    expect(keys).not.toContain('openflyover.osm.v1.a')
+    expect(keys).toContain('openflyover.osm.v1.c')
+    expect(keys).toContain('openflyover.prefs')
+    const total = keys.filter((k) => k.startsWith('openflyover.osm.')).reduce((n, k) => n + storage.map.get(k)!.length, 0)
+    expect(total).toBeLessThanOrEqual(MAX_CACHE_TOTAL_CHARS)
   })
 
   it('does not write a result too large for the cache, and keeps the entries already there', async () => {
