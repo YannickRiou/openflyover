@@ -138,7 +138,7 @@ It has been run on Windows. The macOS and Linux installers are built on GitHub; 
 ### Prerequisites
 
 - Node.js 24 and the website dependencies (`npm ci`);
-- stable Rust (<https://rustup.rs>), 1.77.2 or later;
+- stable Rust (<https://rustup.rs>), 1.95 or later;
 - the system libraries, depending on the platform:
 
 | System | To install | Web engine |

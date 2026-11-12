@@ -43,6 +43,9 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **The desktop application's security policy is tighter**: Amazon S3 is allowed only for the two paths the app reads (the terrain tiles `elevation-tiles-prod/`, the Esri photo dates `config.maptiles.arcgis.com/`), not the whole host, and `base-uri` and `form-action` are limited to the application itself.
 - **A recommended policy for the website**: `docs/deploying.md` gives a `Content-Security-Policy` header that fits the app and explains why (the Strava identifiers stay in the browser's storage), and says where the Strava secret is kept on the desktop. No code changed for it: a `<meta>` policy would also block the development server.
 - **A foreign site can no longer drop files into the app's share box**: the share target of the installed web app refuses a request the browser marks as coming from another site (`Sec-Fetch-Site: cross-site`) and sends it back to the app, instead of keeping its files for the next opening.
+- **Desktop: cancelling an encoding no longer waits for a frame**: the Rust side held the lock on the encodings while writing a frame to ffmpeg, so « Annuler », the end of the film or a second encoding waited until ffmpeg had read it. The pipe is taken out of the lock for the write.
+- **Desktop: the soundtrack is written to a file only the app creates**: the temporary WAV now has a random name and is created only if it does not exist yet, so a link left at the expected name in the temporary folder is never followed. A failed write removes the file.
+- **Desktop: the Rust version is the real one**: `rust-version` is 1.95 (what `sysinfo` 0.40 needs) instead of 1.77.2, with the comment and the guides corrected.
 
 ## 8.0.1 (November 2026)
 

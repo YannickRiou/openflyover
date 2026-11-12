@@ -4419,9 +4419,9 @@ JavaScript.
   fallback), the export fails with a message.
 - **Frames**: the export compositor draws each frame into a 2D canvas; `getImageData` → raw RGBA as the binary
   body of `invoke` (no JSON; 8.3 MB at 1080p, negligible next to the render). Back-pressure: `video_frame`
-  writes to ffmpeg's standard input and only replies once the pipe has taken the frame; size checked.
+  writes to ffmpeg's standard input and only replies once the pipe has taken the frame; size checked. The pipe is taken out of the session for the write, so the lock on the sessions is free meanwhile: `video_cancel` and `video_finish` (and a second encoding) never wait for a full pipe, and a cancel kills ffmpeg, which ends the write.
 - **Sound**: the film mix (`mixFilmAudio`, see "Video export") is converted to interleaved 16-bit WAV (`wavFile`)
-  and passed before opening (`video_sound`), as ffmpeg's second input, encoded as AAC 192 kbit/s (Opus in WebM); temporary file
+  and passed before opening (`video_sound`: a new file in the temporary folder, random name, `create_new` so that a link left at that name is never followed), as ffmpeg's second input, encoded as AAC 192 kbit/s (Opus in WebM); temporary file
   deleted at the end of the session (success, failure, cancel) or if `video_open` fails.
 - **Errors**: ffmpeg runs with `-loglevel error`; if it stops (write refused on its input) or ends in
   failure, the command returns "ffmpeg a échoué :" and its last three error lines, and deletes the partial
@@ -4440,7 +4440,7 @@ JavaScript.
   (`nativeEncoder.test.ts`); GPU probe without a GPU (both fail, `libx264` kept). To be checked on a Linux desktop
   (`cargo test`, real export, NVENC / VAAPI): the manual checks of `docs/handbook/index.html`.
 - **Machine load** (`src-tauri/src/system.rs`): read-only command `system_stats` → used / total RAM and CPU %, for the
-  performance readout behind the status bar's ⓘ button (`sysinfo` 0.36, the last release for `rust-version` 1.77, `system` feature only;
+  performance readout behind the status bar's ⓘ button (`sysinfo` 0.40 (needs Rust 1.95, the `rust-version`), `system` feature only;
   permission `allow-system-stats` in `capabilities/default.json`).
 
 ## Offline packs (phase 6)

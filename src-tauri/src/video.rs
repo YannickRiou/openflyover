@@ -45,7 +45,9 @@ pub type VideoState = Mutex<Videos>;
 
 struct Session {
     ffmpeg: Child,
-    input: ChildStdin,
+    /// the pipe of the frames; taken out while a frame is being written, so that the lock on the sessions is free
+    /// (cancel and finish, or another encoding, never wait for a full pipe)
+    input: Option<ChildStdin>,
     /// size of one RGBA frame
     frame_bytes: usize,
     output: PathBuf,
@@ -305,14 +307,40 @@ pub async fn video_available() -> bool {
         .is_ok_and(|status| status.success())
 }
 
+/// `wav` in a new file of the temporary folder: the name has a random part and the file is created only if it does not
+/// exist (`create_new` does not follow a link someone left at that name), then removed if the write fails.
+fn write_temp_wav(wav: &[u8], id: u32) -> std::io::Result<PathBuf> {
+    use std::collections::hash_map::RandomState;
+    use std::hash::{BuildHasher, Hasher};
+    let mut last = None;
+    for _ in 0..8 {
+        let random = RandomState::new().build_hasher().finish();
+        let path = std::env::temp_dir().join(format!("openflyover-{}-{id}-{random:016x}.wav", std::process::id()));
+        match fs::OpenOptions::new().write(true).create_new(true).open(&path) {
+            Ok(mut file) => {
+                return match file.write_all(wav) {
+                    Ok(()) => Ok(path),
+                    Err(error) => {
+                        drop(file);
+                        let _ = fs::remove_file(&path);
+                        Err(error)
+                    }
+                };
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => last = Some(error),
+            Err(error) => return Err(error),
+        }
+    }
+    Err(last.unwrap_or_else(|| std::io::Error::other("nom de fichier temporaire indisponible")))
+}
+
 /// Keep the soundtrack of the next encoding (a WAV file, as the raw body); its id goes to `video_open`.
 #[tauri::command]
 pub async fn video_sound(request: Request<'_>, videos: State<'_, VideoState>) -> Result<u32, String> {
     let wav = raw_body(&request)?;
     let mut videos = lock(&videos);
     let id = videos.new_id();
-    let path = std::env::temp_dir().join(format!("openflyover-{}-{id}.wav", std::process::id()));
-    fs::write(&path, wav).map_err(|e| format!("Impossible d'écrire le son du film : {e}"))?;
+    let path = write_temp_wav(wav, id).map_err(|e| format!("Impossible d'écrire le son du film : {e}"))?;
     videos.sounds.insert(id, path);
     Ok(id)
 }
@@ -338,7 +366,7 @@ fn start(app: &AppHandle, output: PathBuf, width: u32, height: u32, fps: u32, ra
         bytes
     });
     let frame_bytes = width as usize * height as usize * 4;
-    Ok(Session { ffmpeg, input, frame_bytes, output, sound, errors })
+    Ok(Session { ffmpeg, input: Some(input), frame_bytes, output, sound, errors })
 }
 
 /// Start ffmpeg writing `path` (picked in the save dialog) and return the id of the session; `bitrate` and
@@ -388,16 +416,26 @@ pub async fn video_frame(request: Request<'_>, videos: State<'_, VideoState>) ->
         .get(SESSION_HEADER)
         .and_then(|value| value.to_str().ok()?.parse().ok())
         .ok_or("Encodage vidéo non précisé.")?;
+    let mut input = {
+        let mut videos = lock(&videos);
+        let session = videos.sessions.get_mut(&id).ok_or("Encodage vidéo introuvable.")?;
+        if frame.len() != session.frame_bytes {
+            return Err(format!("Image de {} octets au lieu de {}.", frame.len(), session.frame_bytes));
+        }
+        session.input.take().ok_or("Une image est déjà en cours d'envoi.")?
+    };
+    // the write waits for ffmpeg to read (full pipe): the lock is not held meanwhile; a cancel kills ffmpeg, which ends the write
+    let written = input.write_all(frame).is_ok();
     let mut videos = lock(&videos);
-    let session = videos.sessions.get_mut(&id).ok_or("Encodage vidéo introuvable.")?;
-    if frame.len() != session.frame_bytes {
-        return Err(format!("Image de {} octets au lieu de {}.", frame.len(), session.frame_bytes));
-    }
-    if session.input.write_all(frame).is_ok() {
+    if written {
+        // a session canceled during the write is gone: the pipe is dropped
+        let session = videos.sessions.get_mut(&id).ok_or("Encodage vidéo introuvable.")?;
+        session.input = Some(input);
         return Ok(());
     }
     // ffmpeg stopped: its error output says why
-    let session = videos.sessions.remove(&id).expect("session just found");
+    let session = videos.sessions.remove(&id).ok_or("Encodage vidéo introuvable.")?;
+    drop(input);
     Err(session.end(false).expect_err("a killed ffmpeg never succeeds"))
 }
 
@@ -429,6 +467,15 @@ mod tests {
     /// 14 Mbit/s, a key frame every 60 frames, sound at 192 kbit/s
     const RATE: Rate = Rate { video: 14_000_000, keyframes: 60, audio: 192_000 };
     const TARGET: &str = "-b:v 14000000 -maxrate 21000000 -bufsize 28000000 -g 60";
+
+    #[test]
+    fn writes_the_soundtrack_to_a_new_file_each_time() {
+        let a = write_temp_wav(b"RIFF-a", 1).unwrap();
+        let b = write_temp_wav(b"RIFF-b", 1).unwrap();
+        assert_ne!(a, b);
+        assert_eq!(fs::read(&a).unwrap(), b"RIFF-a");
+        let _ = (fs::remove_file(a), fs::remove_file(b));
+    }
 
     #[test]
     fn checks_the_rate_asked() {
