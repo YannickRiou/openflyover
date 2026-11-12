@@ -2,7 +2,8 @@
  * The tiles a film asks for, found the way the terrain engine finds them (#401, audit lot 2): the camera of the film is
  * sampled without terrain every fraction of a second (and at every cut), and for each pose the tiles are selected with
  * the engine's own rules (`engineAreaFor`, `detailArea` and `OUTER_MAX_ZOOM`, the frustum of the real aspect and lens,
- * the screen-space error at the export's height, the imagery offset only at a tile's deepest zoom). The list is ordered by
+ * the screen-space error at the export's height, the finer imagery only at a tile's deepest zoom and only the levels the
+ * screen shows at that pose, `imageryLevels`). The list is ordered by
  * the film time a tile is first needed, the coarser one first at equal time. Pure (tested): no network, no WebGL.
  *
  * What it does not model: the coarsening of the level of detail a phone applies to stay under its tile cap
@@ -18,7 +19,7 @@ import { offlinePolicy } from '../offline/policy'
 import { DEFAULT_SEGMENTS, DEFAULT_TUNING, OUTER_MAX_ZOOM } from '../terrain/engine'
 import { planImagerySubtiles } from '../terrain/imagery'
 import type { TileNode } from '../terrain/quadtree'
-import { HEIGHT_MARGIN_M, HEIGHT_MARGIN_SHARE, computeConservativeSphere, createCameraState, createRootNodes, screenSpaceError, updateCameraState, zoomLimit } from '../terrain/quadtree'
+import { HEIGHT_MARGIN_M, HEIGHT_MARGIN_SHARE, computeConservativeSphere, createCameraState, createRootNodes, imageryLevels, screenSpaceError, updateCameraState, zoomLimit } from '../terrain/quadtree'
 import type { QuadtreeContext, SelectionParams } from '../terrain/quadtree'
 import { buildTileUrl } from '../terrain/sources'
 import { tileGroundSizeM } from '../geo/mercator'
@@ -167,12 +168,23 @@ export function planFilmTiles(input: FilmTilePlanInput): FilmTiles {
   const state = createCameraState()
   /** film time (s) a node is first needed, in the order it was met */
   const wanted = new Map<TileNode, number>()
+  /** film time (s) each finer imagery level of a tile at the deepest zoom is first shown: [level 1, level 2, …] */
+  const finer = new Map<TileNode, number[]>()
   let timeS = 0
   const visit = (node: TileNode) => {
     if (!state.frustum.intersectsSphere(node.boundingSphere)) return
     if (!wanted.has(node)) wanted.set(node, timeS)
+    const sse = screenSpaceError(node.geometricError, node.boundingSphere, state)
+    if (node.key.z >= params.maxZoom) {
+      const levels = imageryLevels(sse, params.errorTargetPx, input.imageryZoomOffset)
+      let times = finer.get(node)
+      for (let level = times?.length ?? 0; level < levels; level++) {
+        if (!times) finer.set(node, (times = []))
+        times.push(timeS)
+      }
+    }
     if (node.key.z >= zoomLimit(node, params)) return
-    if (screenSpaceError(node.geometricError, node.boundingSphere, state) <= params.errorTargetPx) return
+    if (sse <= params.errorTargetPx) return
     const children = node.ensureChildren()
     for (let i = 0; i < 4; i++) {
       prepare(children[i])
@@ -191,7 +203,11 @@ export function planFilmTiles(input: FilmTilePlanInput): FilmTiles {
   }
 
   const walkedAt = performance.now()
-  const nodes = [...wanted.entries()].sort((a, b) => a[1] - b[1] || a[0].key.z - b[0].key.z)
+  // a tile and its own imagery when it is first needed, each finer imagery level when the camera is close enough to show it
+  const needs: { node: TileNode; timeS: number; level: number }[] = []
+  for (const [node, firstS] of wanted) needs.push({ node, timeS: firstS, level: 0 })
+  for (const [node, times] of finer) times.forEach((at, i) => needs.push({ node, timeS: at, level: i + 1 }))
+  needs.sort((a, b) => a.timeS - b.timeS || a.node.key.z - b.node.key.z || a.level - b.level)
   const urls: string[] = []
   const times: number[] = []
   const fallbacks = new Map<string, string>()
@@ -214,14 +230,12 @@ export function planFilmTiles(input: FilmTilePlanInput): FilmTiles {
     times.push(timeS)
     if (fallback) fallbacks.set(url, fallback)
   }
-  for (const [node, firstS] of nodes) {
-    add(buildTileUrl(terrain, node.key), terrainBytes, firstS)
+  for (const { node, timeS: firstS, level } of needs) {
+    if (level === 0) add(buildTileUrl(terrain, node.key), terrainBytes, firstS)
     if (!imagery) continue
-    // the finer imagery levels only at the deepest zoom of the relief, as the engine draws them (`imageryOffsetOf`)
-    const offset = node.key.z >= params.maxZoom ? input.imageryZoomOffset : 0
-    for (const op of planImagerySubtiles(node.key, imagery, offset).tiles) {
+    for (const op of planImagerySubtiles(node.key, imagery, level).tiles) {
       add(buildTileUrl(imagery, op.key), imageryBytes, firstS, imagery.fallback ? buildTileUrl(imagery.fallback, op.key) : undefined)
     }
   }
-  return { urls, times, fallbacks, planned, estimatedBytes, poses: input.poses.length, nodes: nodes.length, walkMs: walkedAt - startedAt, planMs: performance.now() - startedAt }
+  return { urls, times, fallbacks, planned, estimatedBytes, poses: input.poses.length, nodes: wanted.size, walkMs: walkedAt - startedAt, planMs: performance.now() - startedAt }
 }

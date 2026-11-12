@@ -156,6 +156,22 @@ describe('createTileFetcher', () => {
     await Promise.all(promises)
   })
 
+  it('gives every server its own queue: one server at its limit does not hold the requests of another', async () => {
+    const fetcher = createTileFetcher({ concurrency: 2, retryDelayMs: 0 })
+    const promises = ['https://dem.example/a', 'https://dem.example/b', 'https://dem.example/c'].map((u) => fetcher.fetchBitmap(u))
+    promises.push(fetcher.fetchBitmap('https://photos.example/a'), fetcher.fetchBitmap('https://photos.example/b'))
+    // two requests at once to each server, not two in all
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+    expect(pending.filter((p) => p.url.includes('dem.example'))).toHaveLength(2)
+    expect(fetcher.stats).toMatchObject({ inflight: 4, queued: 1 })
+    for (let i = 0; i < 3; i++) {
+      for (const p of pending) p.d.resolve(okResponse())
+      await flush()
+    }
+    await Promise.all(promises)
+    expect(fetcher.stats).toMatchObject({ inflight: 0, queued: 0, cached: 5 })
+  })
+
   it('serves the lowest priority first and re-prioritises a repeated URL', async () => {
     const fetcher = createTileFetcher({ concurrency: 1, retryDelayMs: 0 })
     void fetcher.fetchBitmap('busy')

@@ -37,6 +37,26 @@ describe('createDebounced', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
+  it('held, a due call stays pending until the flush (a video export drapes once per frame)', () => {
+    const fn = vi.fn<(n: number) => void>()
+    let held = true
+    const debounced = createDebounced(fn, 100, { maxWaitMs: 300, hold: () => held })
+    debounced(1)
+    vi.advanceTimersByTime(1000)
+    expect(fn).not.toHaveBeenCalled()
+    expect(debounced.isPending()).toBe(true)
+    debounced(2)
+    debounced.flush()
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn).toHaveBeenCalledWith(2)
+    expect(debounced.isPending()).toBe(false)
+    // released: the timer runs it again
+    held = false
+    debounced(3)
+    vi.advanceTimersByTime(100)
+    expect(fn).toHaveBeenCalledTimes(2)
+  })
+
   it('cancel drops the pending call', () => {
     const fn = vi.fn()
     const debounced = createDebounced(fn, 100)

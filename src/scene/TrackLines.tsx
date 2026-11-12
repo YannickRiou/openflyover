@@ -13,7 +13,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Group, Vector3 } from 'three'
 import type { TerrainEngine } from '../core/types'
-import { exportRenderScale, registerDrapeFlush } from '../export/store'
+import { exportRenderScale, registerDrapeFlush, drapesHeld } from '../export/store'
 import { filmSequenceOf, orderedTracks } from '../flyover/sequence'
 import { useAppStore } from '../state/store'
 import type { TrackStyle } from './markerSettings'
@@ -186,7 +186,7 @@ export function TrackLines() {
 
   // Re-drape (debounced, with a bounded wait so a long tile stream cannot starve it) whenever the engine
   // reports new or removed tiles.
-  const redrape = useDebouncedCallback(drapeAll, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS)
+  const redrape = useDebouncedCallback(drapeAll, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS, drapesHeld)
   // the video export runs the pending re-drape right away instead of waiting for the debounce
   useEffect(
     () =>

@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { BufferAttribute, BufferGeometry, Color, Mesh, MeshStandardMaterial, Uniform, Vector3 } from 'three'
 import type { LocalFrame, TerrainEngine } from '../core/types'
-import { registerDrapeFlush } from '../export/store'
+import { registerDrapeFlush, drapesHeld } from '../export/store'
 import { mergeByTrack } from '../osm/byTrack'
 import { useWaterStore } from '../osm/store'
 import { corridorBoxes } from '../osm/overpass'
@@ -316,7 +316,7 @@ export function WaterLayer() {
   )
   useEffect(() => drape(engine, exaggeration), [drape, engine, exaggeration])
 
-  const redrape = useDebouncedCallback(drape, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS)
+  const redrape = useDebouncedCallback(drape, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS, drapesHeld)
   useEffect(() => {
     if (!engine) return
     const unsubscribe = engine.onChange(() => redrape(engine, exaggeration))

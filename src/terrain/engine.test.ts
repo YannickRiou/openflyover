@@ -409,6 +409,70 @@ describe('createTerrainEngine', () => {
     expect(engine.stats.loadedTiles).toBe(meshesOf(engine).length)
   })
 
+  it('gives a tile at the deepest zoom the imagery level the screen shows, finer as the camera comes closer, never coarser', async () => {
+    const deps = createFakeDeps()
+    const load = deps.loadImageryTexture as ReturnType<typeof vi.fn>
+    const offsetsAsked = () => load.mock.calls.map(([, , , options]) => options.zoomOffset as number)
+    // the roots are the deepest zoom: the relief stops there, only the imagery goes on
+    const engine = engineWith(deps, { maxZoom: ROOT_ZOOM, imageryZoomOffset: 2 })
+    const settleView = async (camera: PerspectiveCamera) => {
+      for (let i = 0; i < 6; i++) {
+        engine.update(camera, 1000)
+        await settle()
+      }
+      engine.update(camera, 1000)
+    }
+    // from very far, a grid cell is under the error target: the tile's own imagery level
+    await settleView(cameraAbove(5_000_000))
+    expect(engine.stats.pendingVisibleTiles).toBe(0)
+    expect(new Set(offsetsAsked())).toEqual(new Set([0]))
+    const first = deps.textures.length
+
+    // close: the view is not final until the finer textures are there, then the old ones are freed
+    const near = cameraAbove(20_000)
+    engine.update(near, 1000)
+    expect(engine.stats.pendingVisibleTiles).toBeGreaterThan(0)
+    await settleView(near)
+    expect(engine.stats.pendingVisibleTiles).toBe(0)
+    expect(Math.max(...offsetsAsked())).toBe(2)
+    expect(deps.textures.length).toBeGreaterThan(first)
+    expect(deps.disposedTextures.length).toBeGreaterThan(0)
+    const drawn = meshesOf(engine).filter((m) => m.visible)
+    expect(drawn.some((m) => deps.textures.indexOf((m.material as MeshStandardMaterial).map!) >= first)).toBe(true)
+
+    // far again: nothing is loaded again, the finer textures stay
+    const calls = load.mock.calls.length
+    await settleView(cameraAbove(5_000_000))
+    expect(load.mock.calls.length).toBe(calls)
+  })
+
+  it('keeps the texture it has when a finer one fails, and stops waiting for it after the last attempt', async () => {
+    const deps = createFakeDeps()
+    const load = deps.loadImageryTexture as ReturnType<typeof vi.fn>
+    let clock = 0
+    const engine = createTerrainEngine(makeOptions({ maxZoom: ROOT_ZOOM, imageryZoomOffset: 1 }), { ...deps, now: () => clock }, { maxLoadAttempts: 2, retryDelayMs: 1000 })
+    engines.push(engine)
+    const far = cameraAbove(5_000_000)
+    for (let i = 0; i < 4; i++) {
+      engine.update(far, 1000)
+      await settle()
+    }
+    const kept = meshesOf(engine).map((m) => (m.material as MeshStandardMaterial).map)
+    load.mockImplementation(async () => {
+      throw new Error('imagery down')
+    })
+    const near = cameraAbove(20_000)
+    for (let i = 0; i < 6; i++) {
+      engine.update(near, 1000)
+      await settle()
+      clock += 2000
+    }
+    engine.update(near, 1000)
+    expect(engine.stats.pendingVisibleTiles).toBe(0)
+    expect(engine.stats.missingVisibleTiles).toBe(0)
+    expect(meshesOf(engine).map((m) => (m.material as MeshStandardMaterial).map)).toEqual(kept)
+  })
+
   it('makes every tile cast and receive shadows, frustum-culled by three', async () => {
     const deps = createFakeDeps()
     const engine = engineWith(deps)
@@ -1080,6 +1144,57 @@ describe('tile budget', () => {
     expect(bounded.drawn).toEqual(free.drawn)
     expect(bounded.loaded.size).toBeLessThan(free.loaded.size)
     expect(bounded.engine.stats.loadedTiles * TEXTURE_BYTES).toBeLessThanOrEqual(budget + ROOT_KEYS.length * TEXTURE_BYTES)
+  })
+
+  it('an export makes room for a coming frame from what the rendered frames left behind, then from frames farther ahead, never from a nearer one', async () => {
+    const TEXTURE_BYTES = (512 * 512 * 4 * 4) / 3
+    const retention = (frame: number) => ({ frame, keepFrames: 1000, prefetchKeepFrames: 1000 })
+    // frame 0 over the west; then the film is at frame 10 over the middle and looks ahead at frame 12 (near east) and 40 (far east)
+    const film = async (textureBudgetBytes: number, farFirst: boolean) => {
+      const deps = createFakeDeps()
+      deps.loadImageryTexture = vi.fn(async () => new Texture({ width: 512, height: 512 } as unknown as HTMLCanvasElement))
+      const engine = engineWith(deps, { maxZoom: ROOT_ZOOM + 2 }, { unloadAfterMs: 1e9, textureBudgetBytes })
+      const settleAll = async (run: () => void) => {
+        for (let i = 0; i < 5; i++) {
+          run()
+          await flush()
+        }
+      }
+      engine.setRetention?.(retention(0))
+      await settleAll(() => engine.update(cameraAt(-16_000, 0, 3000), 1000))
+      const behind = names(engine)
+      engine.setRetention?.(retention(10))
+      const view = cameraAt(0, 0, 3000)
+      await settleAll(() => engine.update(view, 1000))
+      const afterView = names(engine)
+      const current = names(engine, true)
+      const near = () => engine.prefetch?.(cameraAt(8000, 0, 3000), 1000, 12)
+      const far = () => engine.prefetch?.(cameraAt(16_000, 0, 3000), 1000, 40)
+      await settleAll(farFirst ? far : near)
+      const afterFirst = names(engine)
+      await settleAll(farFirst ? near : far)
+      engine.update(view, 1000)
+      return { behind, afterView, current, afterFirst, loaded: names(engine), drawn: names(engine, true) }
+    }
+    const free = await film(Infinity, false)
+    const soon = [...free.afterFirst].filter((n) => !free.afterView.has(n))
+    const late = [...free.loaded].filter((n) => !free.afterFirst.has(n))
+    const left = [...free.behind].filter((n) => !free.current.has(n))
+    expect(soon.length).toBeGreaterThan(0)
+    expect(late.length).toBeGreaterThan(0)
+    expect(left.length).toBeGreaterThan(0)
+
+    // the look-ahead stops loading past 80 % of the budget: here just under what the film loads in all
+    const budget = ((free.loaded.size - 2) * TEXTURE_BYTES) / 0.8
+    const bounded = await film(budget, true)
+    expect(bounded.drawn).toEqual(free.drawn)
+    for (const name of soon) expect(bounded.loaded.has(name)).toBe(true)
+    const gone = [...free.loaded].filter((n) => !bounded.loaded.has(n))
+    expect(gone.length).toBeGreaterThan(0)
+    // what went was left behind by frame 0; a tile of frame 40 only once nothing left behind remains
+    const goneLate = gone.filter((n) => late.includes(n))
+    if (goneLate.length > 0) expect(left.filter((n) => bounded.loaded.has(n) && !n.startsWith(`${ROOT_ZOOM}/`))).toEqual([])
+    expect(gone.every((n) => left.includes(n) || late.includes(n))).toBe(true)
   })
 
   it('keeps nothing but the current view and the roots with a cap of zero', async () => {

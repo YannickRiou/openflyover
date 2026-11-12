@@ -30,7 +30,7 @@ import {
 } from 'three'
 import type { SkyLightProbe, SunDirectionalLight } from '@takram/three-atmosphere'
 import type { LocalFrame, LonLatBounds, TerrainEngine } from '../core/types'
-import { registerDrapeFlush } from '../export/store'
+import { registerDrapeFlush, drapesHeld } from '../export/store'
 import { samplePath } from '../flyover/path'
 import { expandBounds } from '../geo/lonLat'
 import { useAppStore } from '../state/store'
@@ -313,7 +313,7 @@ export function CloudSeaSurface({ sun, sky, nightFill, marker }: CloudSeaSurface
     [sea, grid],
   )
   useEffect(() => sample(engine, exaggeration), [sample, engine, exaggeration])
-  const resample = useDebouncedCallback(sample, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS)
+  const resample = useDebouncedCallback(sample, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS, drapesHeld)
   useEffect(() => {
     if (!engine) return
     const unsubscribe = engine.onChange(() => resample(engine, exaggeration))

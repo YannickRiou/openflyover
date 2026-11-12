@@ -30,7 +30,7 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js'
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js'
 import type { TerrainEngine } from '../core/types'
-import { exportRenderScale, isExportBusy, registerDrapeFlush, useExportStore } from '../export/store'
+import { exportRenderScale, isExportBusy, registerDrapeFlush, useExportStore, drapesHeld } from '../export/store'
 import { filmRegionId, highlightsRegion } from '../film/model'
 import { REGION_AREA_MARGIN_M, regionHighlightOpacity } from '../flyover/filmCamera'
 import { centroid } from '../geo/lonLat'
@@ -242,7 +242,7 @@ export function RegionHighlight() {
   )
   useEffect(() => drape(engine, exaggeration), [drape, engine, exaggeration])
 
-  const redrape = useDebouncedCallback(drape, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS)
+  const redrape = useDebouncedCallback(drape, REDRAPE_DEBOUNCE_MS, REDRAPE_MAX_WAIT_MS, drapesHeld)
   useEffect(() => {
     if (!engine) return
     const unsubscribe = engine.onChange(() => redrape(engine, exaggeration))
