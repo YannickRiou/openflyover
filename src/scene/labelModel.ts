@@ -53,7 +53,6 @@ export const LABEL_KIND_ACCENTS: Readonly<Record<LandmarkKind, string>> = {
   endpoint: '#FFFFFF', // --color-white
 }
 export const LABEL_PANEL_COLOR = '#1C2A33' // --color-ink
-export const LABEL_TEXT_COLOR = '#FFFFFF' // --color-white
 
 /** Priority of waypoint labels. */
 export const WAYPOINT_PRIORITY = 50

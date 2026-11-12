@@ -15,9 +15,6 @@ import { MAX_COVERAGE } from '../weather/sceneClouds'
 const LOCAL_WEATHER_OFFSET = 'uniform vec2 localWeatherOffset;'
 const FACTOR = 'vec4 factor = 1.0 - coverage * heightScale;'
 
-/** Uniforms added to the materials of the clouds and of their shadow map by `patchRegionalCoverage`. */
-export const REGIONAL_UNIFORMS = ['regionalCoverage', 'regionalFrame', 'regionalAmount'] as const
-
 /**
  * Cloud or shadow fragment shader reading the coverage of each layer from `regionalCoverage` (RGBA8, one layer per
  * channel, 255 = MAX_COVERAGE; `regionalFrame` = centre UV, 1 / width) where `regionalAmount` is 1.
