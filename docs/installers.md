@@ -44,8 +44,8 @@ The images and licence pages are build inputs committed in `src-tauri/installer/
 3. Only if a dependency changed: regenerate the third-party licenses with `npm run notices` (after `npm ci`; a few seconds: the licences already in
    `THIRD_PARTY_NOTICES.md` are reused, only the crates new since then are asked of crates.io, one a second) and commit `THIRD_PARTY_NOTICES.md` and `src-tauri/installer/license.rtf` / `license.txt`: they are shipped with the installers.
 4. Open the pull request from a branch `release/2.2.0` and merge it: `release-tag.yml` tags the merge commit `v2.2.0` and
-   starts this workflow on it. By hand, the same: `git tag -a v2.2.0 -m "OpenFlyover 2.2.0"`, then `git push origin v2.2.0`
-   (any tag starting with `v` starts the workflow).
+   starts this workflow on it. A pull request from any other branch name gets no tag. By hand, the same:
+   `git tag -a v2.2.0 -m "OpenFlyover 2.2.0"`, then `git push origin v2.2.0` (any tag starting with `v` starts the workflow).
 
 When a change to `master` updates a dependency the app ships (not a dev-only npm package, nor a crate of a build script, a procedural
 macro or the tests), `release-pr.yml` does steps 1 and
