@@ -179,6 +179,8 @@ export interface ExportState {
   etaS: number | null
   result: ExportResult | null
   error: string | null
+  /** after a failure: the frame a « Reprendre » would continue from (frames kept on the device), null when none */
+  resumeFrom: number | null
   timings: ExportTimings
   /** seconds per frame and per megapixel of the last film exported (time hint of a batch), kept by `start` and `reset` */
   secondsPerMegapixel: number | null
@@ -200,7 +202,7 @@ export interface ExportState {
   reportTiles(done: number, total: number): void
   finalizing(): void
   complete(result: ExportResult): void
-  fail(message: string): void
+  fail(message: string, resumeFrom?: number | null): void
   canceled(): void
 }
 
@@ -247,6 +249,7 @@ const IDLE = {
   etaS: null,
   result: null,
   error: null,
+  resumeFrom: null,
   timings: EMPTY_TIMINGS,
   tiles: null,
 }
@@ -353,8 +356,8 @@ export const useExportStore = create<ExportState>()((set, get) => ({
     set({ phase: 'done', request: null, cancelRequested: false, etaS: null, result, secondsPerMegapixel: rate ?? secondsPerMegapixel })
   },
 
-  fail(message) {
-    set({ phase: 'error', request: null, cancelRequested: false, etaS: null, error: message })
+  fail(message, resumeFrom = null) {
+    set({ phase: 'error', request: null, cancelRequested: false, etaS: null, error: message, resumeFrom })
   },
 
   canceled() {

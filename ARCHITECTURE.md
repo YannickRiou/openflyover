@@ -4326,7 +4326,20 @@ no sequence, no probe, no native encoder) keeps what it has encoded on the devic
   counts the frames of this run (`frameCount` is the frames left), so that progress, time left, history and the pace per image of the
   next estimate are those of what was rendered.
 - **End of the stored export.** Deleted when the film is whole, when the person cancels, when they abandon, when a new export starts
-  (it replaces it), when it is older than three days (read at start), or when it cannot be continued. A failure (tiles) keeps it.
+  (it replaces it), when it is older than three days (read at start), or when it cannot be continued. A failure (tiles, a
+  step past its limit, the graphics card lost) keeps it, and the error of the panel offers « Reprendre à l'image N » at once
+  (`storedResumeFrame`, the store's `resumeFrom`, `ExportPanel` starts with `resume`), without waiting for the next opening.
+- **Steps that never end.** Every wait of the export that does not depend on the tiles goes through `within(promise,
+  limit, message, isCanceled)` (`capture.ts`): the overlay fonts, the marker models and the media of a frame 60 s, the
+  soundtrack 3 min, the resume storage 30 s (past it the export goes on, not resumable), the encoder made, a frame handed
+  over or encoded 2 min, the end of the file 5 min (`STEP_LIMIT_MS`). Past its limit the export stops with a message
+  (`ExportStalledError`) and keeps what it can resume; « Annuler » ends any of these waits within 250 ms. A hardware
+  encoder whose graphics card is reset never fires `dequeue` again (mediabunny waits for it once 4 frames are queued):
+  without the limit the export froze on its frame.
+- **Graphics card reset.** `watchContextLoss` counts `webglcontextlost` on the canvas: when a reset happened during the
+  renders of a frame, or the context is lost after them, the export waits (2 min at most, `GPU_RECOVERY_MS`) for the context
+  to come back and for the tiles to have redrawn their imagery (`restoreImagery`), then renders the frame again (twice at
+  most, `GPU_RECOVERY_ATTEMPTS`). Before, the frames rendered on a lost context were encoded blank and the film counted as done.
 - **The offer.** `ExportController` mounts `ui/resumeBoot.tsx`, which renders `ui/ResumeOffer.tsx` in a root of its own (loaded with
   the scene: the first screen is exactly at its budget and carries none of it, texts included: `i18n/resume/<lang>.ts`). Once a
   project is open and its key is the stored one, the dialog proposes « Reprendre » (the export store's `resumeRequested`, the top bar
