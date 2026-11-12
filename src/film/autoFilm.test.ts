@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { LANGUAGES, setLanguage, t } from '../i18n'
 import { platformPresetOf } from '../export/schedule'
-import { FLYOVER_DURATION_RANGE, findCameraPreset } from '../flyover/cameraSettings'
+import { CAMERA_PRESETS, FLYOVER_DURATION_RANGE } from '../flyover/cameraSettings'
 import { CARD_FADE_OUT, DEFAULT_OVERLAY } from '../overlay/settings'
 import { sanitizeSettings } from '../project/document'
 import { DEFAULT_SETTINGS } from '../state/store'
@@ -13,12 +13,14 @@ import { DEFAULT_FILM } from './model'
 const single = { days: 1, stages: false }
 const total = (s: Settings) => s.film.opening.durationS + s.flyoverDurationS + s.film.closing.durationS
 
+const cinema = CAMERA_PRESETS.find((p) => p.id === 'cinema')!.camera
+
 describe('autoFilmSettings', () => {
   it('gives each gabarit the length, format, camera and cards it promises', () => {
     const reel = autoFilmSettings(DEFAULT_SETTINGS, 'reel', single)
     expect(total(reel)).toBe(30)
     expect(platformPresetOf(reel.video)).toBe('vertical')
-    expect(findCameraPreset(reel.camera)?.id).toBe('cinema')
+    expect(reel.camera).toEqual(cinema)
     // every gabarit starts from the same look, the « Cinéma » camera and overlay style
     for (const id of ['reel', 'resume', 'souvenir'] as const) expect(autoFilmSettings(DEFAULT_SETTINGS, id, single).overlay.style).toBe('cinema')
     expect(reel.overlay).toMatchObject({ enabled: true, style: 'cinema', title: { enabled: true, showDate: true }, end: { enabled: true, figures: ['distance', 'ascent', 'maxAltitude'] } })
@@ -34,7 +36,7 @@ describe('autoFilmSettings', () => {
 
     const souvenir = autoFilmSettings(DEFAULT_SETTINGS, 'souvenir', single)
     expect(total(souvenir)).toBe(180)
-    expect(findCameraPreset(souvenir.camera)?.id).toBe('cinema')
+    expect(souvenir.camera).toEqual(cinema)
     expect(souvenir.pacing).toMatchObject({ keepDuration: true })
     // « Souvenir » alone also stops at the places passed; another gabarit afterwards takes it back; stops placed by hand are never touched
     expect(souvenir.film).toMatchObject({ autoStops: true, autoStopsPlaces: true })

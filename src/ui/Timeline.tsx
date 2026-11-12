@@ -85,7 +85,7 @@ import { getBlockClip, setBlockClip } from './blockClipboard'
 import { Filmstrip, filmstripCount } from './Filmstrip'
 import { useLaneState } from './laneState'
 import { modeAtLeast, useModeShows } from './uiMode'
-import { buildTrackPath, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
+import { buildTrackPath, trackPathOf, elevationProfile, recordedTimeAt, samplePath, type ElevationProfile } from '../flyover/path'
 import { modifiedSettings } from '../project/apply'
 import { getSettingsHistory } from '../project/history'
 import type { OverlaySettings } from '../overlay/settings'
@@ -679,7 +679,7 @@ export function Timeline({ sheetOpen = false, centred = false, onUnfold }: { she
   const id = useId()
   const clipId = `profile-played-${id.replace(/[^\w-]/g, '')}`
 
-  const path = useMemo(() => (track ? buildTrackPath(track) : null), [track])
+  const path = useMemo(() => (track ? trackPathOf(track) : null), [track])
   const profile = useMemo(() => (path ? elevationProfile(path, PROFILE_SAMPLES) : undefined), [path])
   const clockSource = useMemo<FilmClockFor>(
     () => ({ track, film, durationS, pacing, landmarks, cutsM, stageIds, bilan }),

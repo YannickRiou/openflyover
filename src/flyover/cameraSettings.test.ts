@@ -7,7 +7,6 @@ import {
   cameraHeightStop,
   DEFAULT_CAMERA,
   DEFAULT_FLYOVER_DURATION_S,
-  findCameraPreset,
   isValidCamera,
   turnSmoothingM,
   type CameraSettings,
@@ -26,7 +25,6 @@ describe('camera presets', () => {
   it('start with today\'s chase view and have unique names and cameras', () => {
     expect(CAMERA_PRESETS[0].camera).toEqual(DEFAULT_CAMERA)
     expect(new Set(CAMERA_PRESETS.map((p) => p.name)).size).toBe(CAMERA_PRESETS.length)
-    for (const preset of CAMERA_PRESETS) expect(findCameraPreset({ ...preset.camera })).toBe(preset)
   })
 
   it('are all valid', () => {
@@ -38,15 +36,6 @@ describe('camera presets', () => {
     for (const id of ['fast-drone', 'bird', 'glider']) expect(bank(id), id).toBeGreaterThan(DEFAULT_CAMERA.bankDeg)
     for (const id of ['orbit', 'balloon', 'top-view', 'satellite']) expect(bank(id), id).toBe(0)
     for (const p of CAMERA_PRESETS) expect(p.camera.leadRoomPct, p.id).toBe(DEFAULT_CAMERA.leadRoomPct)
-  })
-
-  it('a camera that differs by the lead room or the bank alone is a custom one', () => {
-    expect(findCameraPreset({ ...DEFAULT_CAMERA, leadRoomPct: 20 })).toBeUndefined()
-    expect(findCameraPreset({ ...DEFAULT_CAMERA, bankDeg: 5 })).toBeUndefined()
-  })
-
-  it('findCameraPreset returns undefined for a custom camera', () => {
-    expect(findCameraPreset({ ...DEFAULT_CAMERA, pitchDeg: 31 })).toBeUndefined()
   })
 })
 
