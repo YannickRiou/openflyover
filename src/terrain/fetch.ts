@@ -10,6 +10,7 @@
 import { deviceBudget } from '../core/deviceBudget'
 import type { TileFetcher, TileFetcherStats } from '../core/types'
 import { noteTileLastModified } from './sourceDates'
+import { hostOf, maxRequestsFor } from './sources'
 
 export interface TileFetcherOptions {
   /** Maximum simultaneous network requests. Default 12. */
@@ -319,6 +320,14 @@ export function createTileFetcher(options: TileFetcherOptions = {}): TileFetcher
     (a, b) => a.priority < b.priority || (a.priority === b.priority && a.seq < b.seq),
   )
 
+  /** requests in flight per server, to hold each one within its `maxRequests` (the export's preload does the same) */
+  const inflightByHost = new Map<string, number>()
+  const capByHost = new Map<string, number>()
+  const capOf = (host: string, url: string): number => {
+    let cap = capByHost.get(host)
+    if (cap === undefined) capByHost.set(host, (cap = maxRequestsFor(url)))
+    return cap
+  }
   let sequence = 0
   let inflight = 0
   let queued = 0
@@ -387,6 +396,8 @@ export function createTileFetcher(options: TileFetcherOptions = {}): TileFetcher
     request.state = 'inflight'
     queued--
     inflight++
+    const host = hostOf(request.url)
+    inflightByHost.set(host, (inflightByHost.get(host) ?? 0) + 1)
     try {
       const bitmap = await loadWithRetry(request)
       if (request.controller.signal.aborted) {
@@ -401,6 +412,9 @@ export function createTileFetcher(options: TileFetcherOptions = {}): TileFetcher
       settle(request, (waiter) => waiter.reject(error))
     } finally {
       inflight--
+      const left = (inflightByHost.get(host) ?? 1) - 1
+      if (left > 0) inflightByHost.set(host, left)
+      else inflightByHost.delete(host)
       request.state = 'done'
       if (requests.get(request.url) === request) requests.delete(request.url)
       pump()
@@ -408,13 +422,22 @@ export function createTileFetcher(options: TileFetcherOptions = {}): TileFetcher
   }
 
   function pump(): void {
+    // a server at its own cap is skipped for now (its request would only wait for the browser's connections, ahead of
+    // the other servers'): its entries go back in the queue once the others have been started
+    let skipped: HeapEntry[] | undefined
     while (inflight < concurrency) {
       const entry = heap.pop()
-      if (!entry) return
+      if (!entry) break
       const request = entry.request
       if (request.state !== 'queued' || entry.seq !== request.seq) continue // stale entry
+      const host = hostOf(request.url)
+      if ((inflightByHost.get(host) ?? 0) >= capOf(host, request.url)) {
+        ;(skipped ??= []).push(entry)
+        continue
+      }
       void run(request)
     }
+    if (skipped) for (const entry of skipped) heap.push(entry)
   }
 
   function fetchBitmap(

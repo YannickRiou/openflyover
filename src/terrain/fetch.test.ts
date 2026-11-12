@@ -139,6 +139,23 @@ describe('createTileFetcher', () => {
     expect(fetcher.cachedBytes).toBe(5 * 256 * 256 * 4)
   })
 
+  it('holds a server to its maxRequests and lets the other servers use the free slots', async () => {
+    const fetcher = createTileFetcher({ concurrency: 8, retryDelayMs: 0 })
+    const esri = (n: number) => `https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/5/${n}/1`
+    const promises = [0, 1, 2, 3, 4, 5, 6, 7].map((n) => fetcher.fetchBitmap(esri(n), { priority: n }))
+    promises.push(fetcher.fetchBitmap('https://other.example/a', { priority: 100 }))
+    // the six Esri requests first, then the other server's one although it ranks last
+    expect(fetchMock).toHaveBeenCalledTimes(7)
+    expect(pending.filter((p) => p.url.includes('arcgisonline'))).toHaveLength(6)
+    pending[0].d.resolve(okResponse())
+    await flush()
+    expect(pending.filter((p) => p.url.includes('arcgisonline'))).toHaveLength(7)
+    for (const p of pending) p.d.resolve(okResponse())
+    await flush()
+    for (const p of pending) p.d.resolve(okResponse())
+    await Promise.all(promises)
+  })
+
   it('serves the lowest priority first and re-prioritises a repeated URL', async () => {
     const fetcher = createTileFetcher({ concurrency: 1, retryDelayMs: 0 })
     void fetcher.fetchBitmap('busy')

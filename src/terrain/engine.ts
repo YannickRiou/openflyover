@@ -47,7 +47,7 @@ import {
 import { applyContours } from './contourShader'
 import { applySnow } from './snowShader'
 import { applyVivid } from './vividShader'
-import { buildTileUrl } from './sources'
+import { buildTileUrl, hostOf } from './sources'
 import type { TileJob, TileResult } from './tileJob'
 import { buildTileOffThread } from './tileWorker'
 import { t } from '../i18n'
@@ -1055,17 +1055,10 @@ export function restoreEngineImagery(engine: TerrainEngine | null | undefined): 
 }
 
 /** The tiles of the engine's last view that failed (given up on first); empty for an engine made elsewhere. */
+export { hostOf }
+
 export function viewTileFailures(engine: TerrainEngine | null | undefined): TileFailure[] {
   return (engine && failureReaders.get(engine)?.()) || []
-}
-
-/** Host of a tile URL; the proxy path (`/tiles/<source>`) of a source served without CORS. */
-export function hostOf(url: string): string {
-  try {
-    return new URL(url).host
-  } catch {
-    return url.split('/').slice(0, 3).join('/') || url
-  }
 }
 
 const MAX_CAUSE = 80
