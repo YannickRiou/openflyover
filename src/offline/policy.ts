@@ -97,9 +97,10 @@ export const OFFLINE_POLICIES: Readonly<Record<string, OfflinePolicy>> = {
   },
 }
 
+/** The rules of a source; a dated one (`ign-ortho@ign:2020`, `datedImagerySource`) follows its provider's source. */
 export function offlinePolicy(sourceId: string): OfflinePolicy {
   return (
-    OFFLINE_POLICIES[sourceId] ?? {
+    OFFLINE_POLICIES[sourceId.split('@')[0]] ?? {
       provider: sourceId,
       allowed: false,
       get reason() { return t('offline.policy.unknown') },

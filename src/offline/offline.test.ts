@@ -3,6 +3,7 @@ import type { LonLat, LonLatBounds, TileKey } from '../core/types'
 import { tileBounds } from '../geo/mercator'
 import { keyValueStore } from '../platform/platform'
 import { TileFetchError } from '../terrain/fetch'
+import { datedImagerySource } from '../terrain/imageryDates'
 import { getImagerySource, getTerrainSource, IMAGERY_SOURCES, TERRAIN_SOURCES } from '../terrain/sources'
 import { createDailyQuota, MAX_FAILURES_IN_A_ROW, startPackDownload } from './download'
 import type { DownloadProgress } from './download'
@@ -75,6 +76,12 @@ describe('offline policy', () => {
     expect(offlinePolicy('ign-ortho').provider).toBe(offlinePolicy('ign-plan').provider)
     expect(offlinePolicy('ign-ortho').dailyLimit).toBeGreaterThan(0)
     expect(offlinePolicy('aws-terrarium').dailyLimit).toBeUndefined()
+  })
+
+  it('applies the rules of the provider to its dated photos', () => {
+    const ign2020 = datedImagerySource(getImagerySource('ign-ortho'), 'ign:2020')
+    expect(offlinePolicy(ign2020.id)).toBe(offlinePolicy('ign-ortho'))
+    expect(offlinePolicy(datedImagerySource(getImagerySource('arcgis-world-imagery'), 'esri:10').id).allowed).toBe(false)
   })
 })
 
@@ -152,6 +159,21 @@ describe('planOfflineTiles', () => {
     const plan = planOfflineTiles(input({ imagery: null }))
     expect(plan.imageryTiles).toBe(0)
     expect(plan.estimatedBytes).toBe(plan.terrainTiles * offlinePolicy('mapterhorn').typicalTileBytes)
+  })
+
+  it('stores the photos of the chosen IGN year, not the latest ones', () => {
+    const latest = getImagerySource('ign-ortho')
+    const ign2020 = datedImagerySource(latest, 'ign:2020')
+    const plan = planOfflineTiles(input({ imagery: ign2020 }))
+    const photos = plan.tiles.filter((t) => t.sourceId === ign2020.id)
+    expect(photos.length).toBe(plan.imageryTiles)
+    expect(photos.every((t) => t.url.includes('LAYER=ORTHOIMAGERY.ORTHOPHOTOS2020&'))).toBe(true)
+    expect(plan.estimatedBytes).toBe(planOfflineTiles(input({ imagery: latest })).estimatedBytes)
+    // the pack answers for the year's URLs only: the latest photos (the fallback) still come from the network
+    const prefixes = sourcePrefixes(ign2020)
+    const covers = (url: string) => prefixes.some((p) => url.startsWith(p))
+    expect(covers(photos[0].url)).toBe(true)
+    expect(covers(photos[0].url.replace('ORTHOPHOTOS2020&', 'ORTHOPHOTOS&'))).toBe(false)
   })
 
   it('gives an honest order of magnitude for a 10 km track and a 2 km corridor', () => {
