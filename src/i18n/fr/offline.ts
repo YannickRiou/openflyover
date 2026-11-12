@@ -18,7 +18,7 @@ export default {
   'error.network': 'Le réseau ne répond plus.',
   'error.notSaved': 'Tuiles non enregistrées : {error}',
   'error.running': 'Une préparation est déjà en cours.',
-  'panel.packName': '{name} et {count} autre(s)',
+  'panel.packName': { one: '{name} et {count} autre', other: '{name} et {count} autres' },
   'panel.failed': 'Hors ligne : {value} tuiles en échec. Relancez pour les reprendre.',
   'panel.ready': 'Prêt hors ligne : {name}',
   'panel.limited': 'Limite du jour atteinte pour cette source. Relancez demain pour finir.',

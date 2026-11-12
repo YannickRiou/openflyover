@@ -20,7 +20,7 @@ const messages: Messages['offline'] = {
   'error.network': 'Das Netzwerk antwortet nicht mehr.',
   'error.notSaved': 'Kacheln nicht gespeichert: {error}',
   'error.running': 'Eine Vorbereitung läuft bereits.',
-  'panel.packName': '{name} und {count} weitere',
+  'panel.packName': { one: '{name} und {count} weitere', other: '{name} und {count} weitere' },
   'panel.failed': 'Offline: {value} Kacheln fehlgeschlagen. Neu starten, um sie nachzuholen.',
   'panel.ready': 'Offline bereit: {name}',
   'panel.limited': 'Tageslimit für diese Quelle erreicht. Morgen neu starten, um fertig zu werden.',

@@ -13,7 +13,6 @@ export default {
   'tab.reglages': 'Réglages',
   'group.decor': 'Scène',
   'group.camera': 'Caméra',
-  'section.labels': 'Étiquettes',
   'section.weather': 'Météo de la sortie',
   'section.offline': 'Hors ligne',
   'search.title': 'Rechercher un réglage',

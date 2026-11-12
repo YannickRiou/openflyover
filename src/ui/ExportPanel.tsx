@@ -604,6 +604,7 @@ function VideoExportPanel({ onClose, modes, hidden }: { onClose?: () => void; mo
       </SettingRow>
       )}
       {/* a silent output (a PNG sequence, the overlay alone) or a film without music nor sound clip has no sound to set */}
+      {silent && hasSound && <p className="type-hint">{t(overlayOnly ? 'export.panel.overlayNoSound' : 'export.panel.sequenceNoSound')}</p>}
       {!silent && hasSound && (<>
       <SettingRow label={t('export.panel.sound')} value={`${video.audioKbps} kbit/s`} paths={['video.audioKbps']}>
         <div className="field">

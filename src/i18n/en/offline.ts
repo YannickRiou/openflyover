@@ -20,7 +20,7 @@ const messages: Messages['offline'] = {
   'error.network': 'The network is no longer responding.',
   'error.notSaved': 'Tiles not saved: {error}',
   'error.running': 'A preparation is already running.',
-  'panel.packName': '{name} and {count} other(s)',
+  'panel.packName': { one: '{name} and {count} other', other: '{name} and {count} others' },
   'panel.failed': { one: 'Offline: {value} tile failed. Run it again to retry it.', other: 'Offline: {value} tiles failed. Run it again to retry them.' },
   'panel.ready': 'Ready offline: {name}',
   'panel.limited': 'Daily limit reached for this source. Run it again tomorrow to finish.',

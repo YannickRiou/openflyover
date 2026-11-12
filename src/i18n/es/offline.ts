@@ -20,7 +20,7 @@ const messages: Messages['offline'] = {
   'error.network': 'La red ya no responde.',
   'error.notSaved': 'Teselas no guardadas: {error}',
   'error.running': 'Ya hay una preparación en curso.',
-  'panel.packName': '{name} y {count} más',
+  'panel.packName': { one: '{name} y {count} más', other: '{name} y {count} más' },
   'panel.failed': {
     one: 'Sin conexión: {value} tesela con error. Vuelve a ejecutarlo para reintentarla.',
     other: 'Sin conexión: {value} teselas con error. Vuelve a ejecutarlo para reintentarlas.',

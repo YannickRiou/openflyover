@@ -128,7 +128,7 @@ const messages: Messages['export'] = {
   'history.row.breakdown': 'Breakdown',
   'history.row.timeouts': 'Tiles still loading at the timeout',
   'history.row.givenUp': 'Tiles given up',
-  'history.row.frames': '{count} frame(s)',
+  'history.row.frames': { one: '{count} frame', other: '{count} frames' },
   'history.row.encoder': 'Encoder',
   'history.row.encoderHardware': '{encoder}, hardware encoder',
   'history.row.handover': 'Video frame',

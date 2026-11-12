@@ -156,7 +156,6 @@ export default {
   'panel.profileWidth': "Largeur (% de l'image)",
   'panel.profileWidthInStyle': 'Dans ce style, le profil prend toute la largeur de sa place : seule la hauteur compte.',
   'panel.profileHeight': "Hauteur (% de l'image)",
-  'panel.noElevation': "Cette trace n'a pas d'altitude enregistrée.",
   'panel.minimap': 'Mini-carte',
   'panel.minimapHint': 'Tout le tracé vu de dessus, nord en haut, avec la position.',
   'panel.northArrow': 'Flèche du nord',
@@ -179,7 +178,6 @@ export default {
   'panel.styleHint': 'Changer de style remet à la place du style le titre, la carte de clôture, les compteurs, le profil, la mini-carte et la météo (positions et tailles) ; le logo, le texte libre et le classement gardent les leurs.',
   'panel.styleMoved': 'Style « {style} » : titre, carte de clôture, compteurs, profil, mini-carte et météo remis à la place du style.',
   // 4.0 — Eau reflétante : la mer, les rivières tracées en ligne (4.0)
-  'draw.credits.landmarksAndWater': 'Repères et eau : {source}',
   'draw.counter.outings': 'Sorties',
   'draw.stat.outings': 'Sorties',
   'draw.regionTitle': 'Région {n} sur {count}',

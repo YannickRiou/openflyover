@@ -158,7 +158,6 @@ const messages: Messages['overlay'] = {
   'panel.profileWidth': 'Anchura (% de la imagen)',
   'panel.profileWidthInStyle': 'En este estilo el perfil ocupa todo el ancho de su sitio: solo cuenta la altura.',
   'panel.profileHeight': 'Altura (% de la imagen)',
-  'panel.noElevation': 'Este track no tiene altitud registrada.',
   'panel.minimap': 'Minimapa',
   'panel.minimapHint': 'Todo el trazado visto desde arriba, con el norte arriba, y la posición.',
   'panel.northArrow': 'Flecha del norte',
@@ -181,7 +180,6 @@ const messages: Messages['overlay'] = {
   'panel.styleHint': 'Cambiar de estilo pone el título, la tarjeta de cierre, los contadores, el perfil, el minimapa y el tiempo donde los tiene el estilo (posiciones y tamaños); el logo, el texto libre y la clasificación conservan los suyos.',
   'panel.styleMoved': 'Estilo «{style}»: título, tarjeta de cierre, contadores, perfil, minimapa y tiempo devueltos a su sitio en el estilo.',
   // 4.0 — Agua reflectante: el mar y los ríos trazados como líneas (4.0)
-  'draw.credits.landmarksAndWater': 'Referencias y agua: {source}',
   'draw.counter.outings': 'Salidas',
   'draw.stat.outings': 'Salidas',
   'draw.regionTitle': 'Región {n} de {count}',

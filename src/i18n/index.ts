@@ -115,13 +115,27 @@ function lookup(language: LanguageCode, key: string): string | Plural | undefine
   return domain?.[key.slice(dot + 1)]
 }
 
+/**
+ * French typography: a no-break space before `:` and after `«` / before `»` (U+00A0), a narrow one before `;` `?` `!` (U+202F),
+ * so a line never starts with a lone punctuation mark. Only an ordinary space is replaced: `12:30` and URLs stay as they are.
+ */
+export function frenchTypography(text: string): string {
+  return text
+    .replace(/ (?=:)/g, '\u00A0')
+    .replace(/ (?=[;?!])/g, '\u202F')
+    .replace(/ (?=»)/g, '\u00A0')
+    .replace(/(?<=«) /g, '\u00A0')
+}
+
 /** The message of `key` in the current language (French, then the key itself when it is missing), placeholders not filled. */
 export function template(key: MessageKey, vars?: Partial<Vars>): string {
   const entry = lookup(current, key) ?? lookup(DEFAULT_LANGUAGE, key)
   if (entry === undefined) return key
-  if (typeof entry === 'string') return entry
-  const count = vars?.count
-  return (typeof count === 'number' ? entry[pluralCategory(count)] : undefined) ?? entry.other
+  const text =
+    typeof entry === 'string'
+      ? entry
+      : ((typeof vars?.count === 'number' ? entry[pluralCategory(vars.count)] : undefined) ?? entry.other)
+  return current === 'fr' ? frenchTypography(text) : text
 }
 
 /** The message of `key` in the current language, `{name}` placeholders filled from `vars`; `vars.count` picks a plural form. */

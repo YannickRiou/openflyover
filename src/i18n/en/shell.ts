@@ -15,7 +15,6 @@ const messages: Messages['shell'] = {
   'tab.reglages': 'Settings',
   'group.decor': 'Scene',
   'group.camera': 'Camera',
-  'section.labels': 'Labels',
   'section.weather': 'Weather of the outing',
   'section.offline': 'Offline',
   'search.title': 'Search settings',

@@ -48,7 +48,7 @@ const messages: Messages['project'] = {
   'actions.openFailed': 'Impossibile aprire «{fileName}»: {reason}',
   'actions.closed': 'Progetto «{name}» chiuso',
   'actions.trackRemoved': 'Traccia «{name}» rimossa',
-  'actions.extraProjects': 'Un solo progetto alla volta: {names} non aperti.',
+  'actions.extraProjects': { one: 'Un solo progetto alla volta: {names} non è stato aperto.', other: 'Un solo progetto alla volta: {names} non sono stati aperti.' },
   'actions.readFailed': 'Impossibile leggere il file scelto: {error}',
   'actions.chainQuestion': 'Concatenare queste {count} tracce?',
   'actions.chain': 'Concatena',

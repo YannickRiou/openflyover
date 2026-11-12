@@ -126,7 +126,7 @@ export default {
   'history.row.breakdown': 'Répartition',
   'history.row.timeouts': 'Tuiles encore en chargement au délai',
   'history.row.givenUp': 'Tuiles abandonnées',
-  'history.row.frames': '{count} image(s)',
+  'history.row.frames': { one: '{count} image', other: '{count} images' },
   'history.row.encoder': 'Encodeur',
   'history.row.encoderHardware': '{encoder}, encodeur matériel',
   'history.row.handover': 'Image vidéo',

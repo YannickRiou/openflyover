@@ -31,7 +31,6 @@ export default {
   'preset.satellite': 'Satellite',
   'preset.free': 'Libre',
   'panel.custom': 'Personnalisé',
-  'panel.morePresets': 'Plus de préréglages',
   'panel.northUp': 'Nord en haut',
   'panel.orbitTurns': 'Tours d’orbite',
   'panel.orbitTurnsTip': 'Nombre de tours complets autour du marqueur pendant le survol, quelle que soit sa durée.',

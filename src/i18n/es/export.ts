@@ -128,7 +128,7 @@ const messages: Messages['export'] = {
   'history.row.breakdown': 'Desglose',
   'history.row.timeouts': 'Teselas aún en carga al agotarse el plazo',
   'history.row.givenUp': 'Teselas descartadas',
-  'history.row.frames': '{count} fotograma(s)',
+  'history.row.frames': { one: '{count} fotograma', other: '{count} fotogramas' },
   'history.row.encoder': 'Codificador',
   'history.row.encoderHardware': '{encoder}, codificador por hardware',
   'history.row.handover': 'Fotograma de vídeo',
