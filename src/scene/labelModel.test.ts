@@ -19,6 +19,7 @@ import {
   upgradeLabelSettings,
   withLabelDefaults,
   isValidLabelSettings,
+  portraitLabelBoost,
   createClearanceMemo,
   lineOfSightClearance,
   occlusionFade,
@@ -109,6 +110,11 @@ describe('label texts and sources', () => {
     expect(isValidLabelSettings({ kmStep: 0, size: 3.5, rangeKm: 70 })).toBe(false)
     expect(isValidLabelSettings({ kmStep: 0, size: 3, rangeKm: 70 })).toBe(true)
     expect(isValidLabelSettings({ kmStep: 0, size: 1, rangeKm: 500 })).toBe(false)
+    // a tall frame (watched on a phone) grows its labels; square and landscape frames keep them
+    expect(portraitLabelBoost(1080, 1920)).toBeCloseTo(1.5, 1)
+    expect(portraitLabelBoost(1080, 1350)).toBeCloseTo(1.17, 2)
+    expect(portraitLabelBoost(1080, 1080)).toBe(1)
+    expect(portraitLabelBoost(1920, 1080)).toBe(1)
     expect(withLabelDefaults({ climbs: false, waypoints: true })).toEqual({ climbs: false, waypoints: true, kmStep: 0, endpoints: false, photos: false, photoPins: true, size: 1, rangeKm: 70 })
     expect(withLabelDefaults({ climbs: true, waypoints: true, kmStep: 5 })).toMatchObject({ kmStep: 5 })
   })

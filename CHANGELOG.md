@@ -5,7 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
-- **« Taille des étiquettes » goes up to ×3** (was ×1.6): the 3D labels follow the short side of the frame, so in 9:16 they are as small as in 16:9 while the film is watched on a phone, and ×1.6 was not enough to read them there. Above ×2 the labels are drawn finer, so they stay sharp (`LABEL_SIZE_RANGE`, `textureScaleFor`). The photo pins follow the same slider.
+- **3D labels readable in 9:16**: the labels follow the short side of the frame, so in 9:16 they were as small as in 16:9 while the film is watched on a phone, and even ×1.6 was hard to read. A vertical frame now enlarges them on its own with its shape: ×1.5 in 9:16, ×1.17 in 4:5, nothing in square or landscape frames (`portraitLabelBoost`); the preview frame has the film's shape, so it shows them as the film will. « Taille des étiquettes » also goes up to ×3 (was ×1.6), and larger labels are drawn finer (up to 4 texture pixels per pixel, `textureScaleFor`) so they stay sharp. The photo pins keep their own size rule.
 
 ## 8.1.1 (November 2026)
 

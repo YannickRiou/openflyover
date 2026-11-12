@@ -12,7 +12,7 @@
  * Must be rendered inside TerrainLayer.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { AlwaysDepth, CanvasTexture, Group, type Camera, LinearFilter, SRGBColorSpace, Sprite, SpriteMaterial, Vector3 } from 'three'
 import type { LocalFrame, TerrainEngine } from '../core/types'
 import { exportRenderScale, registerDrapeFlush } from '../export/store'
@@ -33,6 +33,7 @@ import {
   distanceFade,
   occlusionFade,
   poiLabels,
+  portraitLabelBoost,
   FAINT_OPACITY,
   resolveOverlaps,
   spriteScaleForPixels,
@@ -70,9 +71,9 @@ const DOT_R = 4
 const PIN_PX = 14
 const PIN_X = 6
 const PIN_GAP = 4
-/** Texture pixels per CSS pixel (sharp on high-density screens); a larger « Taille des étiquettes » draws them finer. */
+/** Texture pixels per CSS pixel (sharp on high-density screens); larger labels are drawn finer, up to 4 (memory). */
 const TEXTURE_SCALE = 2
-const textureScaleFor = (size: number) => Math.max(TEXTURE_SCALE, Math.ceil(size))
+const textureScaleFor = (size: number) => Math.min(4, Math.max(TEXTURE_SCALE, Math.ceil(size)))
 /** A label's text is wrapped to two lines at most this wide (CSS pixels), then cut with « … ». */
 const MAX_TEXT_PX = 220
 const LINE_H = 16
@@ -314,7 +315,8 @@ export function Labels() {
   const look = useMemo(() => resolveLabelStyle(overlayStyle, labelColors), [overlayStyle, labelColors])
   const family = (OVERLAY_THEMES[overlayStyle] ?? OVERLAY_THEMES.editorial).bodyFamily
   const texturesLookRef = useRef<unknown>(null)
-  const texScale = textureScaleFor(show.size)
+  const boost = useThree((s) => portraitLabelBoost(s.size.width, s.size.height))
+  const texScale = textureScaleFor(show.size * boost)
 
   const labels = useMemo(() => withLanguage(language, () => {
     const out: LandmarkLabel[] = []
@@ -461,7 +463,7 @@ export function Labels() {
     }
     const { playback, settings, tracks } = useAppStore.getState()
     // the share of the image the video gives them (`exportRenderScale`): the preview shows them as the film will
-    const renderScale = exportRenderScale(size.width, size.height)
+    const renderScale = exportRenderScale(size.width, size.height) * portraitLabelBoost(size.width, size.height)
     // the « Étiquettes » keys are anchored in metres along the film track, like the other parameter keys
     const flown = filmTrackOf(tracks, settings.race)
     const keyOpacity = paramAt(settings.film, 1, 'labels', playback.progress * (flown ? trackPathOf(flown).lengthM : 0))

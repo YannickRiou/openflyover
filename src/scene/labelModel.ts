@@ -182,6 +182,16 @@ export const LABEL_FADE_END_M = 70_000
 /** Common size (multiplier) and range (km, where they are gone) of every label, « Étiquettes dans la vue ». */
 export const LABEL_SIZE_RANGE = { min: 0.6, max: 3, step: 0.1 } as const
 export const LABEL_RANGE_KM = { min: 10, max: 150, step: 5 } as const
+
+/**
+ * A tall frame is watched on a phone, where labels sized on its short side are too small to read: they grow with
+ * the frame's shape, ×1.5 in 9:16, ×1.17 in 4:5, not at all in a square or landscape frame. The preview frame has
+ * the film's shape, so it shows them as the film will.
+ */
+export function portraitLabelBoost(width: number, height: number): number {
+  return height > width && width > 0 ? (height / width) ** 0.7 : 1
+}
+
 function smoothstep(edge0: number, edge1: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)))
   return t * t * (3 - 2 * t)
