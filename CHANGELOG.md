@@ -21,6 +21,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 - **Missing dated tiles and failures**: where a dated tile is missing, the preload fetches the latest photos of that place, as the render draws them; at its end, the tiles that failed are asked for once more, and those that still fail are counted by server in the diagnostic steps (« échecs hôte ×n »).
 - **The export no longer freezes the camera during « Revoir l'étape finie »**: the export held the frame during the recap pause (the camera rising over the finished stage) while the preview moved it. One shared rule, `viewMovesWithTime`, now tells both whether the view changes with the film time, including the high views of the nights and recap pauses.
 - **A photo or a clip at the end of the track is placed before the closing shot**: a photo (or a synced clip, or a highlight snap) at the last point of the track was placed at the end of the whole film, after the closing shot. It now sits at the end of the flight (`flightTimeAtProgress`); scrubbing to 1 still goes to the end of the film.
+- **A day card no longer splits a night ride at midnight**: the days of a multi-day track were cut at every calendar date, so a ride from 22:00 to 03:00 became two days. A new day now starts after a recording gap of 4 hours (`DAY_GAP_MS`); times that go back are ignored. A day is dated by its first point.
 
 ## 8.0.1 (November 2026)
 

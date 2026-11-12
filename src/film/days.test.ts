@@ -27,7 +27,7 @@ const track = { ...buildTrack({ name: 'deux jours', source: 'gpx', segments: [{ 
 const path = buildTrackPath(track)
 
 describe('days of a track', () => {
-  it('split on the local calendar date of the recorded times', () => {
+  it('split at a recording gap, dated by the local date of their first point', () => {
     expect(localDate(DAY1 + 23 * HOUR, 120)).toBe('2026-06-02')
     expect(localDate(DAY1 + 21 * HOUR, 120)).toBe('2026-06-01')
     const days = trackDays(path, track.utcOffsetMin)
@@ -37,6 +37,19 @@ describe('days of a track', () => {
     expect(days[1].endM).toBe(path.lengthM)
     // the second day starts with its first point: the evening's last point stays on the first day
     expect(days[1].startM).toBe(path.dist[day1.length])
+  })
+
+  it('a night ride across midnight stays one day; times that go back are ignored', () => {
+    // 22:00 to 03:00 local (UTC+2): the date changes, the recording does not stop
+    const late = ride(20, 25, 6.8)
+    const one = buildTrack({ name: 'nuit', source: 'gpx', segments: [{ points: late }] })
+    expect(trackDays(buildTrackPath(one), 120)).toHaveLength(1)
+    // a point stamped hours in the past does not open a day of its own
+    const odd = late.map((p, i) => (i === 4 ? { ...p, time: (p.time ?? 0) - 10 * HOUR } : p))
+    expect(trackDays(buildTrackPath(buildTrack({ name: 'horloge', source: 'gpx', segments: [{ points: odd }] })), 120)).toHaveLength(1)
+    // a night's rest (a gap of hours) opens the next day
+    const rested = buildTrack({ name: 'repos', source: 'gpx', segments: [{ points: [...late, ...ride(35, 38, 7)] }] })
+    expect(trackDays(buildTrackPath(rested), 120).map((d) => d.date)).toEqual(['2026-06-01', '2026-06-02'])
   })
 
   it('a single day, or no time: no split', () => {
@@ -49,7 +62,7 @@ describe('days of a track', () => {
 
 describe('day figures', () => {
   const days = trackDays(path, track.utcOffsetMin)
-  const figures = dayFigures(path, days, cumulativeAscent(track), null, track.utcOffsetMin)
+  const figures = dayFigures(path, days, cumulativeAscent(track), null)
 
   it('distance, first recorded time and time of each day', () => {
     expect(figures.map((f) => [f.n, f.count, f.date])).toEqual([[1, 2, '2026-06-01'], [2, 2, '2026-06-02']])
@@ -64,11 +77,11 @@ describe('day figures', () => {
   })
 
   it('climb of a day: the cumulative ascent between its first and last point; none without elevations', () => {
-    const climbing = dayFigures(path, days, Float64Array.from({ length: path.count }, (_, i) => i * 10), null, track.utcOffsetMin)
+    const climbing = dayFigures(path, days, Float64Array.from({ length: path.count }, (_, i) => i * 10), null)
     expect(climbing[0].ascentM).toBeCloseTo((day1.length - 1) * 10, 6)
     expect(climbing[1].ascentM).toBeCloseTo((day2.length - 1) * 10, 6)
     expect(figures[0].ascentM).toBe(0)
-    expect(dayFigures(path, days, undefined, null, track.utcOffsetMin)[0].ascentM).toBeUndefined()
+    expect(dayFigures(path, days, undefined, null)[0].ascentM).toBeUndefined()
   })
 })
 

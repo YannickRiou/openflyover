@@ -1,6 +1,6 @@
 /**
- * Days of a multi-day track and their cards (« Cartes de jour », Lumière tab): days split on the local calendar date of
- * the recorded times, and the figures of each day the card can show. The card itself is drawn from these at every frame
+ * Days of a multi-day track and their cards (« Cartes de jour », Lumière tab): days split at every recording gap (4 h), dated by the
+ * local calendar date of their first recorded time, and the figures of each day the card can show. The card itself is drawn from these at every frame
  * (overlay/data.ts `dayCardAt`), so it follows the track, the nights and the weather; earlier versions baked it into
  * the texts of the film (`day-n`), which `withoutDayCards` removes. Pure module (no DOM, React, Three or store).
  */
@@ -32,18 +32,35 @@ export function localDate(ms: number, utcOffsetMin?: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-/** Days of `path` by the local date of its timed points (one day, or none without time, for a single-day track). */
-export function trackDays(path: TrackPath, utcOffsetMin?: number): TrackDay[] {
-  const days: TrackDay[] = []
+/** A recording gap from which a new day starts (ms): a night ride across midnight stays one day, a night's rest opens the next. */
+export const DAY_GAP_MS = 4 * 3_600_000
+
+/** The timed stretches of `path` separated by a gap of `DAY_GAP_MS`, as point indices (times that go back are ignored). */
+function dayRuns(path: TrackPath): { first: number; last: number }[] {
+  const runs: { first: number; last: number }[] = []
+  let lastTime = Number.NaN
   for (let i = 0; i < path.count; i++) {
-    if (Number.isNaN(path.time[i])) continue
-    const date = localDate(path.time[i], utcOffsetMin)
-    const last = days[days.length - 1]
-    if (last?.date === date) continue
-    if (last) last.endM = path.dist[i]
-    days.push({ date, startM: days.length === 0 ? 0 : path.dist[i], endM: path.lengthM })
+    const time = path.time[i]
+    if (Number.isNaN(time) || time < lastTime) continue
+    const run = runs[runs.length - 1]
+    if (run && time - lastTime < DAY_GAP_MS) run.last = i
+    else runs.push({ first: i, last: i })
+    lastTime = time
   }
-  return days
+  return runs
+}
+
+/**
+ * Days of `path`: its timed points cut at every recording gap of `DAY_GAP_MS`, dated by the local date of their first
+ * point (one day, or none without time, for a single-day track).
+ */
+export function trackDays(path: TrackPath, utcOffsetMin?: number): TrackDay[] {
+  const runs = dayRuns(path)
+  return runs.map((run, k) => ({
+    date: localDate(path.time[run.first], utcOffsetMin),
+    startM: k === 0 ? 0 : path.dist[run.first],
+    endM: runs[k + 1] ? path.dist[runs[k + 1].first] : path.lengthM,
+  }))
 }
 
 /** Texts made by the day cards of earlier versions: `day-1`, `day-2`… */
@@ -91,7 +108,7 @@ export interface DayFigures {
 /**
  * Figures of each day of `days`: distance, climb (`ascent`: the cumulative ascent at each point of the path,
  * `cumulativeAscent`), time from its first to its last recorded point and the weather along it (`series`, when fetched).
- * A day is its timed points of its local date (`utcOffsetMin`, as `trackDays`): the last point of an evening and the
+ * A day is its timed points up to the next recording gap (as `trackDays`): the last point of an evening and the
  * first of the morning can stand at the same distance.
  */
 export function dayFigures(
@@ -99,18 +116,10 @@ export function dayFigures(
   days: readonly TrackDay[],
   ascent: ArrayLike<number> | undefined,
   series?: WeatherSeries | null,
-  utcOffsetMin?: number,
 ): DayFigures[] {
-  const ends = new Map<string, { first: number; last: number }>()
-  for (let i = 0; i < path.count; i++) {
-    if (Number.isNaN(path.time[i])) continue
-    const date = localDate(path.time[i], utcOffsetMin)
-    const known = ends.get(date)
-    if (known) known.last = i
-    else ends.set(date, { first: i, last: i })
-  }
+  const runs = dayRuns(path)
   return days.map((day, k) => {
-    const { first, last } = ends.get(day.date) ?? { first: 0, last: 0 }
+    const { first, last } = runs[k] ?? { first: 0, last: 0 }
     const figures: DayFigures = { n: k + 1, count: days.length, date: day.date, distanceM: day.endM - day.startM }
     figures.startTime = path.time[first]
     if (path.time[last] > path.time[first]) figures.durationS = (path.time[last] - path.time[first]) / 1000
