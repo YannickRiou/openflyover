@@ -21,7 +21,7 @@ import { keyAt, updateCameraKey } from '../film/timeline'
 import { flightDistanceM } from '../flyover/camera'
 import { captureKey, registerKeyCapture } from '../flyover/cameraKeys'
 import { clampWorkArea, loopTime } from '../film/workArea'
-import { filmViewMovesWithTime, highViewAt, lookAtView, situationFramingOf, situationTarget } from '../flyover/filmCamera'
+import { lookAtView, situationFramingOf, situationTarget, viewMovesWithTime } from '../flyover/filmCamera'
 import { smoothedTrackPath } from '../flyover/smooth'
 import { registerFramingCapture, useRegionStore } from '../osm/region'
 import { getSettingsHistory } from '../project/history'
@@ -113,7 +113,7 @@ export function FlyoverRig() {
   const appliedRef = useRef({
     progress: mount.progress,
     timeS: mountTimeS,
-    timed: filmViewMovesWithTime(clock.stateAt(mountTimeS), mountSettings.camera) || highViewAt(clock, mountTimeS) !== null,
+    timed: viewMovesWithTime(clock, mountTimeS, mountSettings.camera),
   })
   const appliedSettingsRef = useRef(mountSettings)
   /** requests of « Revenir à la vue du film » already answered */
@@ -250,8 +250,7 @@ export function FlyoverRig() {
     const placed = appliedRef.current
     // the turn towards a photo's pin follows the film time, even while the marker holds
     const timed =
-      filmViewMovesWithTime(clock.stateAt(timeS), settings.camera) ||
-      highViewAt(clock, timeS) !== null ||
+      viewMovesWithTime(clock, timeS, settings.camera) ||
       pinsMoveWithTime(settings.labels, settings.film)
     const moved = progress !== placed.progress || ((timed || placed.timed) && timeS !== placed.timeS)
     const { returns } = useHandViewStore.getState()
