@@ -52,7 +52,6 @@ export default {
   defaultHold: 'Arrêt {n}',
   defaultText: 'Nouveau texte',
   defaultDay: 'Jour {n}',
-  dayTotal: '{distance} au total',
   defaultPoi: "Point d'intérêt {n}",
   'error.unreadableFile': 'fichier illisible.',
   'error.videoTooBig': "vidéo trop lourde ({size} Mo) : {max} Mo au plus, car elle est enregistrée dans le projet. Raccourcissez-la avant de l'ajouter.",

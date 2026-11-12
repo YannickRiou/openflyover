@@ -14,7 +14,7 @@ const messages: Messages['scene'] = {
   'label.start': 'Start',
   'label.finish': 'Finish',
   'canvas.contextLost': '3D display interrupted (graphics card). It will resume automatically…',
-  'canvas.noWebgl': '3D is not available: the graphics card or the browser does not support WebGL 2.',
+  'canvas.noWebgl': '3D is not available: this browser or graphics card cannot draw the 3D view. Try another, up-to-date browser.',
   'menu.poiName': 'Name of the point of interest',
   'menu.add': 'Add',
   'menu.addHold': 'Add a hold here',

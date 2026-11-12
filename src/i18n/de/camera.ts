@@ -33,7 +33,6 @@ const messages: Messages['camera'] = {
   'preset.satellite': 'Satellit',
   'preset.free': 'Frei',
   'panel.custom': 'Eigene',
-  'panel.morePresets': 'Weitere Voreinstellungen',
   'panel.northUp': 'Norden oben',
   'panel.orbitTurns': 'Orbit-Runden',
   'panel.orbitTurnsTip': 'Anzahl voller Runden um den Marker während des Überflugs, unabhängig von seiner Dauer.',

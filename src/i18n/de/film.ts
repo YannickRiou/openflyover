@@ -54,7 +54,6 @@ const messages: Messages['film'] = {
   defaultHold: 'Stopp {n}',
   defaultText: 'Neuer Text',
   defaultDay: 'Tag {n}',
-  dayTotal: '{distance} insgesamt',
   defaultPoi: 'POI {n}',
   'error.unreadableFile': 'Datei nicht lesbar.',
   'error.videoTooBig': 'Video zu groß ({size} MB): höchstens {max} MB, da es im Projekt gespeichert wird. Vor dem Hinzufügen kürzen.',

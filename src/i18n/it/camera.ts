@@ -33,7 +33,6 @@ const messages: Messages['camera'] = {
   'preset.satellite': 'Satellite',
   'preset.free': 'Libera',
   'panel.custom': 'Personalizzato',
-  'panel.morePresets': 'Altri preset',
   'panel.northUp': 'Nord in alto',
   'panel.orbitTurns': 'Giri di orbita',
   'panel.orbitTurnsTip': 'Numero di giri completi attorno al marcatore durante il sorvolo, qualunque sia la sua durata.',

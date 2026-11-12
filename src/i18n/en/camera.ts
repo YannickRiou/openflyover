@@ -33,7 +33,6 @@ const messages: Messages['camera'] = {
   'preset.satellite': 'Satellite',
   'preset.free': 'Free',
   'panel.custom': 'Custom',
-  'panel.morePresets': 'More presets',
   'panel.northUp': 'North up',
   'panel.orbitTurns': 'Orbit turns',
   'panel.orbitTurnsTip': 'Number of full turns around the marker during the flyover, whatever its duration.',

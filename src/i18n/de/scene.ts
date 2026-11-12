@@ -14,7 +14,7 @@ const messages: Messages['scene'] = {
   'label.start': 'Start',
   'label.finish': 'Ziel',
   'canvas.contextLost': '3D-Anzeige unterbrochen (Grafikkarte). Sie wird automatisch fortgesetzt…',
-  'canvas.noWebgl': '3D ist nicht verfügbar: Die Grafikkarte oder der Browser unterstützt WebGL 2 nicht.',
+  'canvas.noWebgl': '3D ist nicht verfügbar: Dieser Browser oder diese Grafikkarte kann die 3D-Ansicht nicht darstellen. Versuchen Sie einen anderen, aktuellen Browser.',
   'menu.poiName': 'Name des POI',
   'menu.add': 'Hinzufügen',
   'menu.addHold': 'Hier einen Stopp hinzufügen',

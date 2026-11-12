@@ -365,7 +365,7 @@ describe('where the time went', () => {
     expect(e).toMatchObject({ renders: 140, gpuMs: 21_000, gpuRenders: 140, composeMs: 6000, frameMs: 1500, encodeWaitMs: 2500, givenUp: 1, hardware: true })
     expect(parseHistory(serialiseHistory([e]))[0]).toEqual(e)
     const rows = Object.fromEntries(entryDetails(e).map((r) => [r.label, r.value]))
-    expect(rows['Tuiles abandonnées']).toBe('1 image(s)')
+    expect(rows['Tuiles abandonnées']).toBe('1 image')
     expect(rows['Encodeur']).toBe('WebCodecs (navigateur), encodeur matériel')
     // an entry stored before: zeros, nothing invented
     const { renders: _r, gpuMs: _g, givenUp: _u, ...older } = e

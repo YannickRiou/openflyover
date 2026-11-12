@@ -292,8 +292,8 @@ describe('tileFailureMessage', () => {
 
   it('names the host, the tile and the cause of the tiles given up on', () => {
     const text = tileFailureMessage('missing', 12, [failure('14/8345/5843')], 0, 300_000)
-    expect(text).toContain("Tuiles introuvables pour l'image 12")
-    expect(text).toContain('data.geopf.fr, tuile 14/8345/5843 (imagerie) : HTTP 503, 8 essais')
+    expect(text).toContain("Images de carte introuvables pour l'image 12")
+    expect(text).toContain('data.geopf.fr, image de carte 14/8345/5843 (imagerie) : HTTP 503, 8 essais')
     expect(text).toContain('Export arrêté')
   })
 

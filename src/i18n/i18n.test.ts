@@ -4,7 +4,7 @@ import { en } from './en'
 import { es } from './es'
 import { fr } from './fr'
 import { it as italian } from './it'
-import { LANGUAGES, detectLanguage, getLanguage, setLanguage, subscribeLanguage, t, template, withLanguage } from './index'
+import { LANGUAGES, detectLanguage, frenchTypography, getLanguage, setFrenchTypography, setLanguage, subscribeLanguage, t, template, withLanguage } from './index'
 import type { MessageKey } from './index'
 import type { Plural } from './messages'
 import { DEFAULT_LANGUAGE, isLanguageCode, localeOf } from './languages'
@@ -213,5 +213,22 @@ describe('loading the languages on demand', () => {
     await i18n.loadLanguage('de')
     expect(i18n.withLanguage('de', () => i18n.t('film.defaultHold', { n: 2 }))).toBe('Stopp 2')
     expect(i18n.getLanguage()).toBe('fr')
+  })
+})
+
+describe('French typography', () => {
+  it('is applied to the French messages when on', () => {
+    setFrenchTypography(true)
+    try {
+      expect(withLanguage('fr', () => template('project.doc.settingsReplaced'))).toContain('\u00A0')
+      expect(withLanguage('en', () => template('project.doc.settingsReplaced'))).not.toContain('\u00A0')
+    } finally {
+      setFrenchTypography(false)
+    }
+  })
+
+  it('puts no-break spaces before : ; ? ! » and after «, leaving times, URLs and placeholders alone', () => {
+    expect(frenchTypography('Durée : 12:30 « ok » ; vraiment ? Oui !')).toBe('Durée\u00A0: 12:30 «\u00A0ok\u00A0»\u202F; vraiment\u202F? Oui\u202F!')
+    expect(frenchTypography('https://a.b/c et {name} : {value}')).toBe('https://a.b/c et {name}\u00A0: {value}')
   })
 })

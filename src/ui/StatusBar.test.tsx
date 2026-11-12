@@ -62,7 +62,7 @@ describe('StatusBar', () => {
       setWaterStatus('ready')
       setForestStatus('ready')
     }, 1500)
-    expect(bar()).not.toMatch(/Chargement|Carte|Eau|Forêts|tuiles|JS|i\/s|textures/)
+    expect(bar()).not.toMatch(/Chargement|Carte|Eau|Forêts|images de carte|JS|i\/s|textures/)
   })
 
   it('keeps a failure in words on the bar, loaded or not', async () => {
@@ -70,17 +70,17 @@ describe('StatusBar', () => {
       stats(40, 0, 2)
       setForestStatus('error')
     })
-    expect(bar()).toContain('2 tuiles en erreur')
+    expect(bar()).toContain('2 images de carte en erreur')
     expect(bar()).toContain('Échec du chargement\u202f: Forêts')
   })
 
   it('never shows the technical figures: they are in « À propos et mises à jour »', async () => {
     await change(() => stats(40, 0), 1500)
-    expect(bar()).not.toContain('tuiles')
+    expect(bar()).not.toContain('images de carte')
     expect(host.querySelector('button[aria-label^="Sources et licences"]')).toBeNull()
     await act(async () => root.render(<AboutDialog open onClose={() => {}} />))
     await change(() => {}, 1500)
     expect(document.body.textContent).toContain('Performances')
-    expect(document.body.textContent).toContain('40 tuiles')
+    expect(document.body.textContent).toContain('40 images de carte')
   })
 })

@@ -27,37 +27,37 @@ describe('PanelKeys', () => {
     )
     const button = (name: string) => host.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`)!
     const keys = () => useAppStore.getState().settings.film.paramKeys
-    expect(button('Exposition : clé précédente').disabled).toBe(true)
-    expect(button('Exposition : clé suivante').disabled).toBe(true)
+    expect(button('Exposition : image clé précédente').disabled).toBe(true)
+    expect(button('Exposition : image clé suivante').disabled).toBe(true)
 
-    await act(async () => button('Exposition : ajouter une clé').click())
+    await act(async () => button('Exposition : ajouter une image clé').click())
     expect(keys()).toMatchObject([{ param: 'exposure', value: 1.5 }])
     expect(useAppStore.getState().filmSelection).toBe(keys()[0].id)
     // the playhead is on the key: the middle button removes it instead of adding another, and adds it back from there
-    expect(button('Exposition : supprimer la clé')).not.toBeNull()
-    await act(async () => button('Exposition : supprimer la clé').click())
+    expect(button('Exposition : supprimer l’image clé')).not.toBeNull()
+    await act(async () => button('Exposition : supprimer l’image clé').click())
     expect(keys()).toHaveLength(0)
-    await act(async () => button('Exposition : ajouter une clé').click())
+    await act(async () => button('Exposition : ajouter une image clé').click())
     expect(keys()).toMatchObject([{ param: 'exposure', value: 1.5 }])
 
     await act(async () => useAppStore.getState().setProgress(0.75))
-    await act(async () => button('Exposition : ajouter une clé').click())
+    await act(async () => button('Exposition : ajouter une image clé').click())
     expect(keys()).toHaveLength(2)
-    expect(button('Exposition : clé précédente').disabled).toBe(false)
-    expect(button('Exposition : clé suivante').disabled).toBe(true)
+    expect(button('Exposition : image clé précédente').disabled).toBe(false)
+    expect(button('Exposition : image clé suivante').disabled).toBe(true)
 
-    await act(async () => button('Exposition : clé précédente').click())
+    await act(async () => button('Exposition : image clé précédente').click())
     expect(useAppStore.getState().playback.progress).toBeCloseTo(0.25, 2)
     // the inspector followed: it showed a key of that parameter
     const first = [...keys()].sort((a, b) => a.atM - b.atM)[0]
     expect(useAppStore.getState().filmSelection).toBe(first.id)
 
     // the marker keys have their own group
-    expect(button('Marqueur : clé précédente').disabled).toBe(true)
-    await act(async () => button('Marqueur : ajouter une clé').click())
+    expect(button('Marqueur : image clé précédente').disabled).toBe(true)
+    await act(async () => button('Marqueur : ajouter une image clé').click())
     expect(useAppStore.getState().settings.film.markerKeys).toHaveLength(1)
     // on the marker key, the same button removes it
-    await act(async () => button('Marqueur : supprimer la clé').click())
+    await act(async () => button('Marqueur : supprimer l’image clé').click())
     expect(useAppStore.getState().settings.film.markerKeys).toHaveLength(0)
     act(() => root.unmount())
   })
@@ -91,7 +91,7 @@ describe('useKeyedValue', () => {
     expect(keys()).toHaveLength(0)
 
     // one key (at the hour shown), then another place and another hour: the film now has two hours, the setting is not touched
-    await act(async () => void host.querySelector<HTMLButtonElement>('button[aria-label="Soleil : ajouter une clé"]')!.click())
+    await act(async () => void host.querySelector<HTMLButtonElement>('button[aria-label="Soleil : ajouter une image clé"]')!.click())
     expect(keys()).toMatchObject([{ param: 'sunHour', value: 14 }])
     await act(async () => useAppStore.getState().setProgress(0.75))
     expect(slider[0]).toBe(14)

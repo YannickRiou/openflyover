@@ -64,7 +64,7 @@ const messages: Messages['settings'] = {
   'preferences.timeline.snap': 'The magnet snaps to',
   'preferences.timeline.snapHint': 'Alt inverts the magnet while dragging.',
   'preferences.timeline.snapPlayhead': 'The playhead',
-  'preferences.timeline.snapBlocks': 'Blocks and keys',
+  'preferences.timeline.snapBlocks': 'Blocks and keyframes',
   'preferences.timeline.snapRuler': 'The ruler marks',
   'preferences.timeline.snapMarks': 'Transitions and highlights',
   'updates.title': 'Updates',

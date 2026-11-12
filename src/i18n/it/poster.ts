@@ -16,7 +16,7 @@ const messages: Messages['poster'] = {
   'figure.climb': 'Salita',
   'draw.profile': 'Profilo · {range}',
   'error.mapImage': 'Impossibile creare l’immagine della mappa.',
-  'error.noTile': 'Impossibile caricare la mappa: nessuna tile di «{name}» ricevuta.',
+  'error.noTile': 'Impossibile caricare la mappa: nessuna immagine di mappa di «{name}» ricevuta.',
   'error.noTrack': 'Nessuna traccia da disegnare.',
   'error.posterImage': 'Impossibile creare l’immagine del poster.',
   'preview.aria': 'Anteprima del poster',
@@ -27,8 +27,8 @@ const messages: Messages['poster'] = {
   saveFailed: 'Impossibile salvare «{file}»: {error}',
   'progress.compose': 'Composizione del poster…',
   'progress.save': 'Salvataggio dell’immagine…',
-  'progress.tilesMap': 'Tile della mappa: {done} / {total}',
-  'progress.tiles3d': 'Tile della vista 3D: {done} / {total}',
+  'progress.tilesMap': 'Immagini di mappa: {done} / {total}',
+  'progress.tiles3d': 'Immagini di mappa della vista 3D: {done} / {total}',
   'progress.loadingMap': 'Caricamento della mappa…',
   'progress.rendering': 'Rendering della vista 3D…',
   'progress.aria': 'Avanzamento dell’immagine',
@@ -63,7 +63,7 @@ const messages: Messages['poster'] = {
   'panel.failed': 'Errore: {error}',
   'panel.done': '{file} ({size})',
   'panel.saveAgain': 'Salva di nuovo…',
-  'panel.missingTiles': { one: '— {n} tile della mappa mai ricevuta (in grigio): riprova più tardi o cambia sfondo mappa.', other: '— {n} tile della mappa mai ricevute (in grigio): riprova più tardi o cambia sfondo mappa.' },
+  'panel.missingTiles': { one: '— {n} immagine di mappa mai ricevuta (in grigio): riprova più tardi o cambia sfondo mappa.', other: '— {n} immagini di mappa mai ricevute (in grigio): riprova più tardi o cambia sfondo mappa.' },
 }
 
 export default messages

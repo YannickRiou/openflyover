@@ -18,8 +18,8 @@ const messages: Messages['platform'] = {
   'app.gotIt': 'Entendido',
   shareSave: 'Compartir / Guardar',
   encoderNative: 'instala ffmpeg (sudo apt install ffmpeg), que codifica el vídeo en este sistema, y reinicia la aplicación; la imagen fija sigue disponible aquí.',
-  encoderTouch: 'este navegador no codifica vídeo (WebCodecs). En teléfono o tableta, exporta desde Chrome (Android) o Safari 16.4 o posterior (iPhone, iPad); la imagen fija sigue disponible aquí.',
-  encoderMissing: 'falta la codificación de vídeo (WebCodecs). Exporta desde Chrome, Edge o un Firefox reciente; la imagen fija sigue disponible aquí.',
+  encoderTouch: 'este navegador no puede guardar vídeo. En teléfono o tableta, exporta desde Chrome (Android) o Safari 16.4 o posterior (iPhone, iPad); la imagen fija sigue disponible aquí.',
+  encoderMissing: 'este navegador no puede guardar vídeo. Exporta desde Chrome, Edge o un Firefox reciente; la imagen fija sigue disponible aquí.',
   'error.noUpdate': 'No hay ninguna actualización que instalar: busca primero.',
 }
 

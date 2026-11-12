@@ -254,7 +254,7 @@ describe('fetchOutingWeather', () => {
 
   it('reports errors in French', async () => {
     const run = (fetchFn: typeof fetch) => fetchOutingWeather(outing, { fetch: fetchFn, cache: createWeatherCache(null), now: NOW })
-    await expect(run(async () => new Response('{}', { status: 429 }))).rejects.toThrow('Trop de requêtes')
+    await expect(run(async () => new Response('{}', { status: 429 }))).rejects.toThrow('Trop de demandes')
     // the 429 says which quota is used up, so the message says when to come back
     const limited = (reason: string) => run(async () => Response.json({ error: true, reason }, { status: 429 }))
     await expect(limited('Minutely API request limit exceeded. Please try again in one minute.')).rejects.toThrow('par minute')
@@ -262,7 +262,7 @@ describe('fetchOutingWeather', () => {
     await expect(limited('Daily API request limit exceeded. Please try again tomorrow.')).rejects.toThrow('réessayez demain')
     await expect(
       run(async () => Response.json({ error: true, reason: 'Parameter x is invalid' }, { status: 400 })),
-    ).rejects.toThrow('Open-Meteo a refusé la requête (Parameter x is invalid).')
+    ).rejects.toThrow('Open-Meteo a refusé la demande (Parameter x is invalid).')
     await expect(run(async () => new Response('oops', { status: 502 }))).rejects.toThrow('erreur 502')
     await expect(
       run(async () => {

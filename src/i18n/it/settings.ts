@@ -64,7 +64,7 @@ const messages: Messages['settings'] = {
   'preferences.timeline.snap': 'La calamita si aggancia a',
   'preferences.timeline.snapHint': 'Alt inverte la calamita durante il trascinamento.',
   'preferences.timeline.snapPlayhead': 'La testina',
-  'preferences.timeline.snapBlocks': 'I blocchi e le chiavi',
+  'preferences.timeline.snapBlocks': 'I blocchi e i keyframe',
   'preferences.timeline.snapRuler': 'I segni del righello',
   'preferences.timeline.snapMarks': 'Transizioni e momenti salienti',
   'updates.title': 'Aggiornamenti',

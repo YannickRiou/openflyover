@@ -19,8 +19,8 @@ const messages: Messages['platform'] = {
   'app.gotIt': 'Got it',
   shareSave: 'Share / Save',
   encoderNative: 'install ffmpeg (sudo apt install ffmpeg), which encodes the video on this system, then restart the app; the still image remains available here.',
-  encoderTouch: 'this browser does not encode video (WebCodecs). On a phone or tablet, export from Chrome (Android) or Safari 16.4 or later (iPhone, iPad); the still image remains available here.',
-  encoderMissing: 'video encoding (WebCodecs) is missing. Export from Chrome, Edge or a recent Firefox; the still image remains available here.',
+  encoderTouch: 'this browser cannot save video. On a phone or tablet, export from Chrome (Android) or Safari 16.4 or later (iPhone, iPad); the still image remains available here.',
+  encoderMissing: 'this browser cannot save video. Export from Chrome, Edge or a recent Firefox; the still image remains available here.',
 }
 
 export default messages

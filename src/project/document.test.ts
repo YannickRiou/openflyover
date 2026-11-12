@@ -189,7 +189,7 @@ describe('serializeProject / parseProject', () => {
     expect(loaded.settings).not.toHaveProperty('extra')
     expect(loaded.speed).toBe(1)
     expect(loaded.warnings).toEqual([
-      'Réglages invalides remplacés par leur valeur par défaut : terrainSourceId, imageryZoomOffset, exaggeration.',
+      'Réglages invalides remplacés par leur valeur par défaut : Carte.',
       'Vitesse de lecture invalide : vitesse ×1 utilisée.',
     ])
   })
@@ -492,7 +492,7 @@ describe('serializeProject / parseProject', () => {
 
 describe('parseProject errors', () => {
   const cases: [string, (d: Record<string, unknown>) => unknown, RegExp][] = [
-    ['not JSON', () => '{', /pas du JSON valide/],
+    ['not JSON', () => '{', /pas un fichier de projet valide/],
     ['another JSON', () => ({ type: 'FeatureCollection' }), /pas un projet OpenFlyover/],
     ['an array', () => [], /pas un projet OpenFlyover/],
     ['a future version', (d) => ({ ...d, version: 9 }), /format v9, plus récent .*\(v8\)/],

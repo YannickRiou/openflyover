@@ -321,7 +321,7 @@ export async function openFiles(files: readonly File[]): Promise<void> {
     }
   }
   if (extraProjects.length > 0) {
-    showToast({ kind: 'info', text: t('project.actions.extraProjects', { names: extraProjects.map((f) => t('common.quoted', { text: f.name })).join(', ') }) })
+    showToast({ kind: 'info', text: t('project.actions.extraProjects', { count: extraProjects.length, names: extraProjects.map((f) => t('common.quoted', { text: f.name })).join(', ') }) })
   }
 }
 

@@ -14,7 +14,7 @@ const messages: Messages['scene'] = {
   'label.start': 'Inicio',
   'label.finish': 'Llegada',
   'canvas.contextLost': 'Visualización 3D interrumpida (tarjeta gráfica). Se reanudará automáticamente…',
-  'canvas.noWebgl': 'El 3D no está disponible: la tarjeta gráfica o el navegador no admite WebGL 2.',
+  'canvas.noWebgl': 'El 3D no está disponible: este navegador o esta tarjeta gráfica no puede dibujar la vista 3D. Prueba con otro navegador actualizado.',
   'menu.poiName': 'Nombre del punto de interés',
   'menu.add': 'Añadir',
   'menu.addHold': 'Añadir una parada aquí',

@@ -246,7 +246,6 @@ export function TopBar({ onOpen, exportOpen, onToggleExport, onHelp }: TopBarPro
     const saved = wasUnsaved.current && !unsaved
     wasUnsaved.current = unsaved
     if (!saved) {
-      if (unsaved) setJustSaved(false)
       return
     }
     setJustSaved(true)

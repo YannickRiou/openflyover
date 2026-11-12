@@ -70,7 +70,7 @@ describe('parseKml', () => {
 
   it('names the problem: empty, malformed, not a KML, nothing to draw', () => {
     expect(() => parseKml('', 'a.kml')).toThrow(/KML invalide : fichier vide/)
-    expect(() => parseKml('<kml><Document>', 'a.kml')).toThrow(/KML invalide : XML mal formé/)
+    expect(() => parseKml('<kml><Document>', 'a.kml')).toThrow(/KML invalide : fichier abîmé/)
     expect(() => parseKml('<gpx/>', 'a.kml')).toThrow(/n'est pas <kml>/)
     expect(() => parseKml(wrap('<Placemark><name>Rien</name></Placemark>'), 'a.kml')).toThrow(/aucune trace ni ligne/)
   })

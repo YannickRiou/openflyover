@@ -33,7 +33,6 @@ const messages: Messages['camera'] = {
   'preset.satellite': 'Satélite',
   'preset.free': 'Libre',
   'panel.custom': 'Personalizado',
-  'panel.morePresets': 'Más preajustes',
   'panel.northUp': 'Norte arriba',
   'panel.orbitTurns': 'Vueltas de órbita',
   'panel.orbitTurnsTip': 'Número de vueltas completas alrededor del marcador durante el vuelo, sea cual sea su duración.',

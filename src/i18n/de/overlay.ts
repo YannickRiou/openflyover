@@ -158,7 +158,6 @@ const messages: Messages['overlay'] = {
   'panel.profileWidth': 'Breite (% des Bildes)',
   'panel.profileWidthInStyle': 'In diesem Stil nimmt das Profil die ganze Breite seines Platzes ein: nur die Höhe zählt.',
   'panel.profileHeight': 'Höhe (% des Bildes)',
-  'panel.noElevation': 'Für diesen Track ist keine Höhe aufgezeichnet.',
   'panel.minimap': 'Minikarte',
   'panel.minimapHint': 'Der ganze Verlauf von oben, Norden oben, mit der Position.',
   'panel.northArrow': 'Nordpfeil',
@@ -181,7 +180,6 @@ const messages: Messages['overlay'] = {
   'panel.styleHint': 'Ein Stilwechsel setzt Titel, Abschlusskarte, Zähler, Profil, Minikarte und Wetter an die Stelle des Stils (Positionen und Größen); Logo, freier Text und Rangliste behalten ihre.',
   'panel.styleMoved': 'Stil „{style}“: Titel, Abschlusskarte, Zähler, Profil, Minikarte und Wetter an die Stelle des Stils gesetzt.',
   // 4.0 — Spiegelndes Wasser: das Meer und die als Linien gezeichneten Flüsse (4.0)
-  'draw.credits.landmarksAndWater': 'Landmarken und Wasser: {source}',
   'draw.counter.outings': 'Touren',
   'draw.stat.outings': 'Touren',
   'draw.regionTitle': 'Region {n} von {count}',

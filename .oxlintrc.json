@@ -4,5 +4,13 @@
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+  },
+  "overrides": [
+    {
+      // react-three-fiber: the scene mutates three.js objects (uniforms, materials, cameras) in `useFrame` and effects on
+      // purpose, outside React state. The rule reads that as a render-time mutation: a false positive here only.
+      "files": ["src/scene/**"],
+      "rules": { "react/immutability": "off" }
+    }
+  ]
 }
