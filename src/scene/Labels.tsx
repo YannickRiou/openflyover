@@ -346,9 +346,11 @@ export function Labels() {
 
   // read by the build effect, which must not run again for them
   const engineRef = useRef(engine)
-  engineRef.current = engine
   const exaggerationRef = useRef(exaggeration)
-  exaggerationRef.current = exaggeration
+  useEffect(() => {
+    engineRef.current = engine
+    exaggerationRef.current = exaggeration
+  }, [engine, exaggeration])
 
   const drape = useCallback(
     (current: TerrainEngine | null, factor: number) => {

@@ -9,14 +9,12 @@ import {
   lonLatToTileFrac,
   lonLatToTileUV,
   parentOf,
-  parseTileKey,
   tileBounds,
   tileCenter,
-  tileContains,
+  tileAt,
   tileCountForBounds,
   tileGroundSizeM,
   tileKeyString,
-  tileUVToLonLat,
   tileXToLon,
   tileYToLat,
   tilesForBounds,
@@ -127,6 +125,20 @@ describe('tileBounds / tileCenter', () => {
     const south = tileBounds({ z: 12, x: 2126, y: 1459 })
     expect(a.east).toBe(east.west)
     expect(a.south).toBe(south.north)
+  })
+})
+
+/** test oracles: the inverse of lonLatToTileUV, and whether a tile holds a point (north-west edge in, south-east out) */
+const tileUVToLonLat = (key: TileKey, u: number, v: number) => ({ lon: tileXToLon(key.x + u, key.z), lat: tileYToLat(key.y + v, key.z) })
+const tileContains = (key: TileKey, lon: number, lat: number) => {
+  const f = lonLatToTileFrac(lon, lat, key.z)
+  return f.x >= key.x && f.x < key.x + 1 && f.y >= key.y && f.y < key.y + 1
+}
+
+describe('tileAt', () => {
+  it('gives the tile holding the point, clamped at the edges of the world', () => {
+    expect(tileAt({ lon: 6.87, lat: 45.92 }, 15)).toEqual({ z: 15, x: 17009, y: 11668 })
+    expect(tileAt({ lon: 180, lat: 89 }, 3)).toEqual({ z: 3, x: 7, y: 0 })
   })
 })
 
@@ -358,7 +370,7 @@ describe('tileGroundSizeM', () => {
   })
 })
 
-describe('tileKeyString / parseTileKey', () => {
+describe('tileKeyString', () => {
   it('round-trips', () => {
     const keys: TileKey[] = [
       { z: 0, x: 0, y: 0 },
@@ -368,16 +380,7 @@ describe('tileKeyString / parseTileKey', () => {
     for (const k of keys) {
       const s = tileKeyString(k)
       expect(s).toBe(`${k.z}/${k.x}/${k.y}`)
-      expect(parseTileKey(s)).toEqual(k)
     }
-  })
-
-  it('rejects malformed keys', () => {
-    expect(() => parseTileKey('12/2126')).toThrow()
-    expect(() => parseTileKey('a/b/c')).toThrow()
-    expect(() => parseTileKey('12/2126.5/1458')).toThrow()
-    expect(() => parseTileKey('-1/0/0')).toThrow()
-    expect(() => parseTileKey('')).toThrow()
   })
 })
 

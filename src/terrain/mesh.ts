@@ -11,7 +11,7 @@
  */
 import { BufferAttribute, BufferGeometry, Vector3 } from 'three'
 import type { BuildTileGeometryOptions, HeightGrid, LocalFrame, TileGeometryResult, TileKey } from '../core/types'
-import { lonLatToTileFrac, tileXToLon, tileYToLat } from '../geo/mercator'
+import { tileXToLon, tileYToLat } from '../geo/mercator'
 import { sampleGrid } from './dem'
 
 export interface TileMeshLayout {
@@ -60,7 +60,7 @@ export interface TileMeshArrays {
 /**
  * Build the geometry of one terrain tile in the local frame.
  * Heights come from `dem.sampleGrid` (the same bilinear, pixel-centre, NaN-safe sampler as the
- * height field; `sampleTileMesh` reads the result back), multiplied by `opts.exaggeration`;
+ * height field; `sampleTileMeshAt` reads the result back), multiplied by `opts.exaggeration`;
  * a vertex whose four neighbours are all nodata becomes 0 m. `skirtDepthM` is applied along the
  * ellipsoid normal (the skirt vertex is the border vertex re-projected at h - skirtDepthM).
  */
@@ -211,17 +211,9 @@ export function buildTileMesh(
 }
 
 /**
- * Height (metres, true scale) of the surface `buildTileGeometry` draws for `grid` at lon/lat in tile `key`: the
- * triangle of its grid cell, not the finer grid, so what is draped on the tile lies on its mesh.
+ * Height (metres, true scale) of the surface `buildTileGeometry` draws for `grid` at the tile coordinates (zoom `key.z`) of
+ * a point: the triangle of its grid cell, not the finer grid, so what is draped on the tile lies on its mesh.
  */
-export function sampleTileMesh(key: TileKey, grid: HeightGrid, segments: number, lon: number, lat: number): number {
-  const f = lonLatToTileFrac(lon, lat, key.z, fracScratch)
-  return sampleTileMeshAt(key, grid, segments, f.x, f.y)
-}
-
-const fracScratch = { x: 0, y: 0 }
-
-/** `sampleTileMesh` at the tile coordinates (zoom `key.z`) of the point, when the caller already has them. */
 export function sampleTileMeshAt(key: TileKey, grid: HeightGrid, segments: number, fx: number, fy: number): number {
   const u = Math.min(Math.max((fx - key.x) * segments, 0), segments)
   const v = Math.min(Math.max((fy - key.y) * segments, 0), segments)

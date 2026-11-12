@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { Vector3 } from 'three'
 import type { HeightGrid, TileKey } from '../core/types'
 import { createLocalFrame } from '../geo/ellipsoid'
-import { tileBounds, tileCenter, tileXToLon, tileYToLat } from '../geo/mercator'
-import { buildTileGeometry, sampleTileMesh, tileMeshLayout } from './mesh'
+import { tileBounds, tileCenter } from '../geo/mercator'
+import { buildTileGeometry, sampleTileMeshAt, tileMeshLayout } from './mesh'
 
 /** A z=12 tile over the Mont Blanc massif. */
 const KEY: TileKey = { z: 12, x: 2126, y: 1457 }
@@ -197,10 +197,10 @@ describe('buildTileGeometry', () => {
   })
 })
 
-describe('sampleTileMesh', () => {
+describe('sampleTileMeshAt', () => {
   /** a peak in the middle of a 2 × 2 cell mesh: the grid is finer than the mesh */
   const grid: HeightGrid = { width: 3, height: 3, data: new Float32Array([0, 0, 0, 0, 900, 0, 0, 0, 0]) }
-  const at = (u: number, v: number) => sampleTileMesh(KEY, grid, 2, tileXToLon(KEY.x + u, KEY.z), tileYToLat(KEY.y + v, KEY.z))
+  const at = (u: number, v: number) => sampleTileMeshAt(KEY, grid, 2, KEY.x + u, KEY.y + v)
 
   it('is the grid at the mesh vertices', () => {
     expect(at(0.5, 0.5)).toBeCloseTo(900, 3)

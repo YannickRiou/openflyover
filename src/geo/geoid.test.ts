@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Vector3 } from 'three'
 import { createLocalFrame, ecefToLonLat } from './ellipsoid'
-import { ellipsoidToMslHeight, geoidUndulation, mslLocalToEcef, mslToEllipsoidHeight } from './geoid'
+import { geoidUndulation, mslLocalToEcef } from './geoid'
 
 /** Reference values: NGA EGM96 15' grid (bilinear), metres; the 1° grid rounds off the sharp extremes by a few metres. */
 const REFERENCES: [name: string, lon: number, lat: number, n: number, tol: number][] = [
@@ -33,14 +33,6 @@ describe('geoidUndulation', () => {
     const a = geoidUndulation(6.999999, 45.5)
     const b = geoidUndulation(7.000001, 45.5)
     expect(Math.abs(a - b)).toBeLessThan(1e-3)
-  })
-})
-
-describe('MSL <-> ellipsoid heights', () => {
-  it('adds the undulation and round-trips', () => {
-    const n = geoidUndulation(6.87, 45.92)
-    expect(mslToEllipsoidHeight(6.87, 45.92, 1035)).toBeCloseTo(1035 + n, 9)
-    expect(ellipsoidToMslHeight(6.87, 45.92, mslToEllipsoidHeight(6.87, 45.92, 1035))).toBeCloseTo(1035, 9)
   })
 })
 

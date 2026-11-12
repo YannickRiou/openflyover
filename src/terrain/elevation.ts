@@ -11,7 +11,7 @@ import type { HeightGrid, LonLat, TerrainSource, TileFetcher, TileKey, Track, Tr
 import { detectFlights } from '../flyover/flights'
 import { buildTrackPath } from '../flyover/path'
 import { cumulativeDistances } from '../geo/lonLat'
-import { lonLatToTileFrac, lonLatToTileUV, tileKeyString } from '../geo/mercator'
+import { lonLatToTileUV, tileAt, tileKeyString } from '../geo/mercator'
 import { computeStats } from '../import/stats'
 import { decodeDem, sampleGrid } from './dem'
 import { createTileFetcher, isNoDataError } from './fetch'
@@ -52,12 +52,6 @@ export function hasMissingElevation(track: Track): boolean {
  */
 export function elevationZoom(source: TerrainSource): number {
   return clamp(Math.round(13 - Math.log2(source.tileSize / 256)), source.minZoom, source.maxZoom)
-}
-
-function tileAt(point: LonLat, z: number): TileKey {
-  const n = 2 ** z
-  const f = lonLatToTileFrac(point.lon, point.lat, z)
-  return { z, x: clamp(Math.floor(f.x), 0, n - 1), y: clamp(Math.floor(f.y), 0, n - 1) }
 }
 
 /** Runs of consecutive points without elevation, as [first, last] indices. */

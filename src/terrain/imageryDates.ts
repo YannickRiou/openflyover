@@ -13,6 +13,7 @@
  * The dates found are probed once per place and source (kept for the session, small JSON and tiles the HTTP cache keeps).
  */
 import type { ImagerySource, LonLat } from '../core/types'
+import { tileAt } from '../geo/mercator'
 
 export type ImageryDateKind = 'ign' | 'esri'
 
@@ -80,15 +81,6 @@ export interface ImageryDate {
 export interface ImageryDates {
   latest: ImageryDate | null
   dates: ImageryDate[]
-}
-
-/** Tile of zoom `z` containing (lon, lat), Web Mercator. */
-export function tileAt({ lon, lat }: LonLat, z: number): { z: number; x: number; y: number } {
-  const n = 2 ** z
-  const x = Math.floor(((lon + 180) / 360) * n)
-  const rad = (lat * Math.PI) / 180
-  const y = Math.floor(((1 - Math.asinh(Math.tan(rad)) / Math.PI) / 2) * n)
-  return { z, x: Math.min(n - 1, Math.max(0, x)), y: Math.min(n - 1, Math.max(0, y)) }
 }
 
 const found = new Map<string, Promise<ImageryDates>>()

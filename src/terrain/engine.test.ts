@@ -12,7 +12,7 @@ import type {
 } from '../core/types'
 import { DEFAULT_SETTLE, settle as settleView } from '../export/capture'
 import { createLocalFrame } from '../geo/ellipsoid'
-import { tileKeyString, tilesForBounds, tileUVToLonLat, zoomForTileBudget } from '../geo/mercator'
+import { tileKeyString, tileXToLon, tileYToLat, tilesForBounds, zoomForTileBudget } from '../geo/mercator'
 import { lineOfSightClearance } from '../scene/labelModel'
 import { reliefClearance } from '../scene/markerSprite'
 import {
@@ -914,7 +914,7 @@ describe('createTerrainEngine', () => {
       const data = new Float32Array(n * n)
       for (let j = 0; j < n; j++) {
         for (let i = 0; i < n; i++) {
-          const p = tileUVToLonLat(key, (i + 0.5) / n, (j + 0.5) / n)
+          const p = { lon: tileXToLon(key.x + (i + 0.5) / n, key.z), lat: tileYToLat(key.y + (j + 0.5) / n, key.z) }
           data[j * n + i] = hill(p.lon, p.lat)
         }
       }
