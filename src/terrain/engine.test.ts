@@ -30,7 +30,7 @@ import {
 } from './engine'
 import { TileFetchError } from './fetch'
 import { buildTileMesh } from './mesh'
-import type { TileJob, TileResult } from './tileJob'
+import { runMeshJob, type MeshJob, type TileJob, type TileResult } from './tileJob'
 
 // The engine wires these as defaults; the tests inject every dependency, so keep them inert.
 // `./dem` is NOT mocked: mesh.ts needs its real `sampleGrid`, and `decodeDem` is always injected.
@@ -615,6 +615,35 @@ describe('createTerrainEngine', () => {
     expect(cb.mock.calls.length).toBeLessThanOrEqual(frames)
     // all geometries are rebuilt within the budget: 2 per frame
     expect(engine.stats.loadedTiles).toBe(ROOT_KEYS.length)
+  })
+
+  it('rebuilds the meshes in a worker after an exaggeration change, and meshes them itself where it cannot', async () => {
+    const camera = cameraAbove(600_000)
+    const run = async (buildMesh: EngineDeps['buildMesh']) => {
+      const deps = createFakeDeps()
+      deps.buildMesh = buildMesh
+      const engine = engineWith(deps, {}, { rebuildsPerFrame: 1 })
+      engine.update(camera, 1000)
+      await settle()
+      engine.update(camera, 1000)
+      engine.setOptions({ exaggeration: 2 })
+      for (let i = 0; i < 3; i++) {
+        engine.update(camera, 1000)
+        await settle()
+      }
+      for (let i = 0; i < ROOT_KEYS.length + 2; i++) engine.update(camera, 1000)
+      return engine
+    }
+    const worker = vi.fn(async (job: MeshJob) => runMeshJob(job))
+    const viaWorker = await run(worker)
+    // every tile went to the worker at once (not one per frame), and none is left dirty
+    expect(worker).toHaveBeenCalledTimes(ROOT_KEYS.length)
+    expect(worker.mock.calls[0][0].geometry.exaggeration).toBe(2)
+    const none = await run(async () => undefined)
+    for (const mesh of meshesOf(viaWorker)) {
+      const same = meshesOf(none).find((m) => m.name === mesh.name)!
+      expect(mesh.geometry.getAttribute('position').array).toEqual(same.geometry.getAttribute('position').array)
+    }
   })
 
   describe('tiles built by a worker', () => {

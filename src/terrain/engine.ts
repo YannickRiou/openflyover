@@ -29,7 +29,7 @@ import { errorMessage } from '../core/errors'
 import { BACKGROUND_PRIORITY, TILE_REQUEST_TIMEOUT_MS, TileFetchError, TileTimeoutError, createTileFetcher, isAbortError, isNoDataError } from './fetch'
 import { HeightField } from './heightField'
 import { loadImageryTexture as defaultLoadImageryTexture } from './imagery'
-import { buildTileGeometry, geometryFromArrays, sampleTileMeshAt } from './mesh'
+import { buildTileGeometry, geometryFromArrays, sampleTileMeshAt, type TileMeshArrays } from './mesh'
 import {
   TileNode,
   countSelection,
@@ -48,8 +48,8 @@ import { applyContours } from './contourShader'
 import { applySnow } from './snowShader'
 import { applyVivid } from './vividShader'
 import { buildTileUrl, hostOf } from './sources'
-import type { TileJob, TileResult } from './tileJob'
-import { buildTileOffThread } from './tileWorker'
+import type { MeshJob, TileJob, TileResult } from './tileJob'
+import { buildMeshOffThread, buildTileOffThread } from './tileWorker'
 import { t } from '../i18n'
 
 // ---------------------------------------------------------------------------
@@ -83,6 +83,8 @@ export interface EngineDeps {
    * tile is then built here with `decodeDem`. Default: the workers, unless `decodeDem` is injected.
    */
   buildTile?: (job: TileJob) => Promise<TileResult | undefined>
+  /** Meshes a loaded grid again off the main thread (exaggeration change); undefined resolves to the page's own build. */
+  buildMesh?: (job: MeshJob) => Promise<TileMeshArrays | undefined>
   loadImageryTexture: LoadImageryTexture
   heightField: HeightFieldLike
   /** clock (ms) of the retry and unload delays; default `performance.now` */
@@ -229,6 +231,7 @@ export function createTerrainEngine(
     fetcher: deps.fetcher ?? createTileFetcher(),
     decodeDem: deps.decodeDem ?? defaultDecodeDem,
     buildTile: deps.buildTile ?? (deps.decodeDem ? undefined : buildTileOffThread),
+    buildMesh: deps.buildMesh ?? (deps.decodeDem ? undefined : buildMeshOffThread),
     loadImageryTexture: deps.loadImageryTexture ?? defaultLoadImageryTexture,
     heightField: deps.heightField ?? new HeightField(),
   }
@@ -729,20 +732,58 @@ export function createTerrainEngine(
     changed = true
   }
 
+  /** nodes whose mesh a worker is building again, and whether the workers can do it (false once one failed) */
+  const remeshing = new Set<TileNode>()
+  let meshWorkers = true
+
+  /** Mesh the node's grid in a worker; the page's own build takes over where the workers cannot. */
+  function rebuildOffThread(node: TileNode): void {
+    const grid = node.grid
+    if (!grid || !io.buildMesh) return
+    const geometry = { segments: opts.segments, exaggeration: opts.exaggeration, skirtDepthM: skirtDepthFor(node) }
+    remeshing.add(node)
+    io.buildMesh({ grid, key: node.key, origin: opts.frame.origin, geometry }).then(
+      (arrays) => {
+        remeshing.delete(node)
+        if (disposed || !node.dirty || !node.mesh || node.grid !== grid) return // gone, or rebuilt meanwhile
+        if (!arrays) {
+          meshWorkers = false
+          return // the next frames mesh it here
+        }
+        if (geometry.segments !== opts.segments || geometry.exaggeration !== opts.exaggeration || geometry.skirtDepthM !== skirtDepthFor(node)) return // changed again: the next frames mesh it again
+        node.dirty = false
+        dirtyCount--
+        const result = geometryFromArrays(arrays)
+        node.geometry?.dispose()
+        node.geometry = result.geometry
+        node.mesh.geometry = result.geometry
+        node.setGeometryBounds(result.geometry)
+        changed = true
+      },
+      () => {
+        remeshing.delete(node)
+        meshWorkers = false
+      },
+    )
+  }
+
   function rebuildDirty(): void {
     let budget = cfg.rebuildsPerFrame
-    for (let i = 0; i < rendered.length && budget > 0; i++) {
-      if (rendered[i].dirty) {
-        rebuildGeometry(rendered[i])
+    const useWorkers = meshWorkers && io.buildMesh !== undefined
+    const rebuild = (node: TileNode): void => {
+      if (!useWorkers) {
+        rebuildGeometry(node)
         budget--
+      } else if (!remeshing.has(node) && remeshing.size < MAX_REMESHING) {
+        rebuildOffThread(node) // in the workers: the page pays only the attachment of the buffers, as the tiles' own build
       }
     }
-    if (budget > 0 && dirtyCount > 0) {
+    for (let i = 0; i < rendered.length && (budget > 0 || useWorkers); i++) {
+      if (rendered[i].dirty) rebuild(rendered[i])
+    }
+    if ((budget > 0 || useWorkers) && dirtyCount > 0) {
       forEachNode(roots, (node) => {
-        if (budget > 0 && node.dirty) {
-          rebuildGeometry(node)
-          budget--
-        }
+        if ((budget > 0 || useWorkers) && node.dirty) rebuild(node)
       })
     }
   }
@@ -1062,6 +1103,8 @@ export function viewTileFailures(engine: TerrainEngine | null | undefined): Tile
 }
 
 const MAX_CAUSE = 80
+/** meshes the workers rebuild at once after an exaggeration change (each one holds a worker for a few milliseconds) */
+const MAX_REMESHING = 8
 
 /** Host and short reason of a failed tile request (HTTP status, network error, decoding…). */
 export function describeTileError(error: unknown, url: string, layer: string): TileFailureCause {

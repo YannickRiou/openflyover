@@ -36,3 +36,20 @@ export function runTileJob(job: TileJob): TileResult {
 export function resultBuffers({ grid, mesh }: TileResult): ArrayBuffer[] {
   return [grid.data, mesh.positions, mesh.normals, mesh.uvs, mesh.index].map((array) => array.buffer as ArrayBuffer)
 }
+
+/** What a worker does to mesh a grid the page already holds again (the exaggeration changed): no bitmap, no decoding. */
+export interface MeshJob {
+  grid: HeightGrid
+  key: TileKey
+  origin: LonLat
+  geometry: BuildTileGeometryOptions
+}
+
+export function runMeshJob(job: MeshJob): TileMeshArrays {
+  return buildTileMesh(job.key, job.grid, createLocalFrame(job.origin.lon, job.origin.lat), job.geometry)
+}
+
+/** The buffers of a mesh, to hand over to the page. */
+export function meshBuffers({ positions, normals, uvs, index }: TileMeshArrays): ArrayBuffer[] {
+  return [positions, normals, uvs, index].map((array) => array.buffer as ArrayBuffer)
+}
