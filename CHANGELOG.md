@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## 8.1.4 (November 2026)
+
+- **Dependencies of the app updated**, security fixes included: the list is in the commits since 8.1.3.
+
 ## 8.1.3 (November 2026)
 
 - **« Nouveautés 8.1.3 »**: fast, low films export without crawling; 8.1.2 is folded into 8.1.
