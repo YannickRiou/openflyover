@@ -4,14 +4,12 @@ import type { TrackPoint } from '../core/types'
 import { createLocalFrame } from '../geo/ellipsoid'
 import { buildTrack } from '../import/stats'
 import {
-  AIM_GROUND_EASE_M,
   CHASE_DISTANCE_MIN_M,
   CINEMATIC_DISTANCE_FACTOR,
   CINEMATIC_PITCH_FACTOR,
   computeCameraView,
   flightDistanceM,
   type FlightView,
-  MIN_GROUND_CLEARANCE_M,
   MIN_TERRAIN_CLEARANCE_M,
   movesWithTime,
   smoothedTurn,
@@ -138,8 +136,8 @@ describe('computeCameraView — chase (default)', () => {
 
   it('applies the exaggeration to the terrain height', () => {
     const view = computeCameraView(northbound, 0.5, frame, () => 2000, { ...options(), exaggeration: 2 })
-    // the track's ground and the grid's agree: eased together, a quarter of the band above
-    expect(view.target.distanceTo(frame.toLocal(6.85, 45.9, 2 * (2000 + AIM_GROUND_EASE_M / 4) + LIFT))).toBeLessThan(0.01)
+    // on flat ground the smoothed ground and the marker's own agree: the aim stands on it
+    expect(view.target.distanceTo(frame.toLocal(6.85, 45.9, 2 * 2000 + LIFT))).toBeLessThan(0.01)
   })
 
   it('scales the distance, sets the pitch and turns the viewing direction by the heading offset', () => {
@@ -157,19 +155,26 @@ describe('computeCameraView — chase (default)', () => {
     const sample = (_lon: number, lat: number) => (lat < 45.899 ? 3000 : 1000)
     const view = computeCameraView(northbound, 0.5, frame, sample, options())
     const below = frame.toLonLat(view.position)
-    expect(below.height).toBeGreaterThanOrEqual(3000 + MIN_GROUND_CLEARANCE_M - 0.5)
+    expect(below.height).toBeGreaterThanOrEqual(3000 + MIN_TERRAIN_CLEARANCE_M - 0.5)
   })
 
-  it('raises the camera until the sight line clears a ridge between it and the marker', () => {
+  /** The camera of `view` raised by the height it measured it needs to see the marker (`raiseM`, not applied here). */
+  const raised = (view: FlightView) => view.position.clone().setY(view.position.y + view.raiseM)
+
+  it('measures the height that would clear a ridge between it and the marker, without climbing for it', () => {
     // ~140 m wide ridge south of the marker, not under the camera
     const onRidge = (lat: number) => lat > 45.8965 && lat < 45.8978
     const sample = (_lon: number, lat: number) => (onRidge(lat) ? 2000 : 1000)
     const view = computeCameraView(northbound, 0.5, frame, sample, options())
+    const flat = computeCameraView(northbound, 0.5, frame, () => 1000, options())
     expect(frame.toLonLat(view.position).lat).toBeLessThan(45.8965)
-    // the ground grid (37.5 m cells here) softens the cliffs over a cell: the line clears the ridge inside them
+    // the film climbs only where a hiding lasts (`filmCamera.ts`): this view stays where it glides
+    expect(view.position.y).toBeLessThan(flat.position.y + 400)
+    expect(view.raiseM).toBeGreaterThan(500)
+    // from the height measured, the line clears the ridge (the ground grid, 37.5 m cells here, softens the cliffs over a cell)
     const cell = 37.5 / M_PER_DEG_LAT
     for (let f = 0; f <= 1; f += 0.01) {
-      const at = frame.toLonLat(view.position.clone().lerp(view.target, f))
+      const at = frame.toLonLat(raised(view).lerp(view.target, f))
       if (onRidge(at.lat - cell) && onRidge(at.lat + cell)) expect(at.height).toBeGreaterThan(2000)
     }
   })
@@ -187,34 +192,31 @@ describe('computeCameraView — chase (default)', () => {
     }
     const lineM = halfAt.height - 1000
 
-    it('keeps the camera where it is when the line passes well over the mound', () => {
-      // 60 m under the line, more than the margin kept near it (the old linear taper asked 80 m under the camera and
-      // still 40 m halfway: it raised the camera for a mound the line clears)
-      const sample = mound(lineM - 60)
-      const view = computeCameraView(northbound, 0.5, frame, sample, options())
-      expect(view.position.y).toBeCloseTo(free.position.y, 0)
-      expect(pitchDeg(view.position, view.target)).toBeCloseTo(pitchDeg(free.position, free.target), 1)
+    it('needs nothing when the line passes well over the mound', () => {
+      // 60 m under the line, more than the margin kept along it
+      const view = computeCameraView(northbound, 0.5, frame, mound(lineM - 60), options())
+      expect(view.raiseM).toBeLessThan(1)
     })
 
-    it('still raises the camera when the mound hides the marker', () => {
+    it('measures what clears the mound when it hides the marker', () => {
       // the top 40 m above the line: the marker is behind it
       const sample = mound(lineM + 40)
       const view = computeCameraView(northbound, 0.5, frame, sample, options())
-      expect(view.position.y).toBeGreaterThan(free.position.y + 40)
+      expect(view.raiseM).toBeGreaterThan(40)
       for (let f = 0.1; f <= 0.9; f += 0.01) {
-        const at = frame.toLonLat(view.position.clone().lerp(view.marker, f))
+        const at = frame.toLonLat(raised(view).lerp(view.marker, f))
         expect(at.height, `f=${f.toFixed(2)}`).toBeGreaterThan(sample(at.lon, at.lat))
       }
     })
   })
 
-  it('clears a crest narrower than a ground cell', () => {
+  it('measures what clears a crest narrower than a ground cell', () => {
     // a ridge 60 m wide at its foot (one grid cell is 37.5 m here), 300 m high, 170 m south of the marker (between two grid corners)
     const ridgeLat = 45.9 - 170 / M_PER_DEG_LAT
     const sample = (_lon: number, lat: number) => 1000 + 300 * Math.max(0, 1 - (Math.abs(lat - ridgeLat) * M_PER_DEG_LAT) / 30)
     const view = computeCameraView(northbound, 0.5, frame, sample, options())
     for (let f = 0; f <= 1; f += 0.001) {
-      const at = frame.toLonLat(view.position.clone().lerp(view.marker, f))
+      const at = frame.toLonLat(raised(view).lerp(view.marker, f))
       expect(at.height).toBeGreaterThan(sample(at.lon, at.lat))
     }
   })
@@ -358,8 +360,8 @@ describe('computeCameraView — continuity and clearance (every style)', () => {
   it.each(CAMERA_STYLES)('%s keeps the ground clearance under the camera', (style) => {
     for (const view of viewsAt(style, 80)) {
       const at = frame.toLonLat(view.position)
-      // above the ground grid, which follows these smooth hills within a metre
-      expect(at.height).toBeGreaterThanOrEqual(hills(at.lon, at.lat) + MIN_GROUND_CLEARANCE_M - 1)
+      // above the dome over the terrain around it, so at least that much above the terrain right under it
+      expect(at.height).toBeGreaterThanOrEqual(hills(at.lon, at.lat) + MIN_TERRAIN_CLEARANCE_M - 0.01)
     }
   })
 })

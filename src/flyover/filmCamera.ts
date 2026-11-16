@@ -21,9 +21,9 @@ import { CAMERA_KEY_RANGES, SITUATION_DISTANCE_KM_RANGE, SITUATION_TILT_DEFAULT_
 import type { FilmCameraKey, FilmShot, ShotStyle, SituationFraming, StartHeight } from '../film/model'
 import type { HeightSampler } from '../scene/trackLineSet'
 import {
-  LINE_OF_SIGHT_FINE_GAIN,
-  LINE_OF_SIGHT_MIN_CLEARANCE_M,
   MIN_GROUND_CLEARANCE_M,
+  LINE_OF_SIGHT_MIN_CLEARANCE_M,
+  MIN_TERRAIN_CLEARANCE_M,
   autoDistanceM,
   smoothMax,
   computeCameraView,
@@ -72,10 +72,8 @@ export const SWEEP_DEG = 75
 export const SWEEP_SHARE = 0.6
 /** Glide slope (degrees above the horizon) a shot's camera keeps over the flight view it moves to or from. */
 export const SHOT_GLIDE_DEG = 15
-/** A shot's camera clears the ground under it, and the line to its aim, by this share of its distance (at least the flight's). */
+/** A shot's camera clears the ground under it by MIN_TERRAIN_CLEARANCE_M (the flight camera's) and this share of how much farther than the flight camera it stands. */
 export const SHOT_CLEARANCE_SHARE = 0.08
-/** Samples of the relief along the line of sight of a shot's camera, up to 90% of the way to its aim. */
-const SHOT_SIGHT_SAMPLES = 16
 /** Width (share of its distance) over which the floor of a shot's camera takes over from the blend. */
 const SHOT_SOFT_SHARE = 0.2
 /** The glide and the clearances ease in over this share of the shot's blend at each end (the end views are untouched). */
@@ -286,13 +284,13 @@ export function trackBox(path: TrackPath, frame: LocalFrame, range?: PathRange):
   return box
 }
 
-/** Raise `position` to MIN_GROUND_CLEARANCE_M above the (exaggerated) ground under it. */
-function keepAboveGround(position: Vector3, frame: LocalFrame, sample: HeightSampler | null, exaggeration: number): Vector3 {
+/** Raise `position` to `clearanceM` (MIN_GROUND_CLEARANCE_M by default) above the (exaggerated) ground under it. */
+function keepAboveGround(position: Vector3, frame: LocalFrame, sample: HeightSampler | null, exaggeration: number, clearanceM = MIN_GROUND_CLEARANCE_M): Vector3 {
   if (!sample) return position
   const at = frame.toLonLat(position)
   const ground = sample(at.lon, at.lat)
   if (ground === undefined) return position
-  const floorY = frame.toLocal(at.lon, at.lat, ground * exaggeration + MIN_GROUND_CLEARANCE_M).y
+  const floorY = frame.toLocal(at.lon, at.lat, ground * exaggeration + clearanceM).y
   if (position.y < floorY) position.y = floorY
   return position
 }
@@ -528,44 +526,29 @@ export function blendViews(
   const distance = da ** (1 - k) * db ** k
   const target = a.target.clone().lerp(b.target, panWithZoom && Math.abs(da - db) > 1 ? (da - distance) / (da - db) : k)
   const position = target.clone().addScaledVector(direction.normalize(), distance)
-  return { target, position: keepAboveGround(position, frame, sample, exaggeration) }
+  // toward its ends the floor comes down to the flight camera's (MIN_TERRAIN_CLEARANCE_M): the blend leaves an end view
+  // without a step
+  const inside = smootherstep(Math.min(k, 1 - k) / SHOT_EASE_SHARE)
+  const clearanceM = MIN_TERRAIN_CLEARANCE_M + (MIN_GROUND_CLEARANCE_M - MIN_TERRAIN_CLEARANCE_M) * inside
+  return { target, position: keepAboveGround(position, frame, sample, exaggeration, clearanceM) }
 }
 
 /**
  * How much higher (metres, 0 or more) the camera of `view`, a blend of a wide view and the `flight` view, must be so
- * that it stays on a glide slope of SHOT_GLIDE_DEG over the flight camera (no dive far from it), clears the ground under
- * it by SHOT_CLEARANCE_SHARE of its distance and does not hide its aim behind the relief (the straight line of the
- * blend knows nothing of the terrain between the two views). The aim checked is the one before « Espace devant », for the
- * `flightShare` of the flight view in `view`: the lead aims ahead of the marker, often into the slope it climbs, and lifting
- * the camera over that would drop the marker out of the frame.
+ * that it stays on a glide slope of SHOT_GLIDE_DEG over the flight camera (no dive far from it) and above the ground
+ * under it, by the flight camera's clearance and SHOT_CLEARANCE_SHARE more of the distance it stands back. Like the flight camera (`GROUND_SMOOTHING_S`), it does not climb for the relief between it and its
+ * aim: the marker may pass behind a ridge for a moment.
  */
-function shotLift(view: CameraView, flight: CameraView, frame: LocalFrame, sample: HeightSampler | null, exaggeration: number, flightShare = 1): number {
+function shotLift(view: CameraView, flight: CameraView, frame: LocalFrame, sample: HeightSampler | null, exaggeration: number): number {
   const { position, target } = view
   // where the floor takes over from the blend, the camera's climb changes pace over a stretch, not at a point
   const softM = SHOT_SOFT_SHARE * position.distanceTo(target)
   let floorY = flight.position.y + Math.hypot(position.x - flight.position.x, position.z - flight.position.z) * Math.tan(SHOT_GLIDE_DEG * DEG)
   if (sample) {
-    const clearance = Math.max(MIN_GROUND_CLEARANCE_M, SHOT_CLEARANCE_SHARE * position.distanceTo(target))
-    // the blended aim's height knows nothing of the ground under it either: buried in a slope, no line could clear the
-    // relief up to it (the lift would be the depth × 1 / (1 − f), km for a few hundred metres): the line ends on the
-    // ground above it
-    const end = target.clone()
-    if ('aim' in flight && flight.aim instanceof Vector3) end.addScaledVector(flight.aim.clone().sub(flight.target), flightShare)
-    const aim = frame.toLonLat(end)
-    const aimGround = sample(aim.lon, aim.lat)
-    if (aimGround !== undefined) end.y = Math.max(end.y, frame.toLocal(aim.lon, aim.lat, aimGround * exaggeration).y)
-    const point = new Vector3()
-    for (let i = 0; i <= SHOT_SIGHT_SAMPLES; i++) {
-      const f = (0.9 * i) / SHOT_SIGHT_SAMPLES
-      const at = frame.toLonLat(point.lerpVectors(position, end, f))
-      const ground = sample(at.lon, at.lat)
-      if (ground === undefined) continue
-      // the line from the camera to the aim, at f of the way, must pass `clearance · (1 − f)` over the ground there
-      const need = frame.toLocal(at.lon, at.lat, ground * exaggeration).y + Math.max(clearance * (1 - f), LINE_OF_SIGHT_MIN_CLEARANCE_M)
-      // its lift eased out where a metre of ground lifts the camera by more than LINE_OF_SIGHT_FINE_GAIN (camera.ts)
-      const u = clamp(2 - 1 / ((1 - f) * LINE_OF_SIGHT_FINE_GAIN), 0, 1)
-      floorY = Math.max(floorY, end.y + ((need - end.y) * u * u * (3 - 2 * u)) / (1 - f))
-    }
+    const clearance = MIN_TERRAIN_CLEARANCE_M + SHOT_CLEARANCE_SHARE * Math.max(0, position.distanceTo(target) - flight.position.distanceTo(flight.target))
+    const at = frame.toLonLat(position)
+    const ground = sample(at.lon, at.lat)
+    if (ground !== undefined) floorY = Math.max(floorY, frame.toLocal(at.lon, at.lat, ground * exaggeration + clearance).y)
   }
   return Math.max(0, smoothMax(position.y, floorY, softM) - position.y)
 }
@@ -603,19 +586,18 @@ function liftedBlend(
 ): CameraView {
   const blended = blendViews(from, to, k, frame, sample, exaggeration, true)
   if (!(k > 0 && k < 1)) return blended
-  // the share of the flight view in the blend at `at` (`shotLift`)
-  const flightShare = (at: number) => (to === flight ? at : from === flight ? 1 - at : 0)
   let liftM = 0
   for (let i = 1; i < SHOT_LIFT_POINTS; i++) {
     const at = i / SHOT_LIFT_POINTS
     const away = Math.abs(at - k)
     if (away >= SHOT_LIFT_REACH) continue
     const weight = away <= SHOT_LIFT_HOLD ? 1 : 0.5 + 0.5 * Math.cos((Math.PI * (away - SHOT_LIFT_HOLD)) / (SHOT_LIFT_REACH - SHOT_LIFT_HOLD))
-    liftM = Math.max(liftM, weight * shotLift(blendViews(from, to, at, frame, sample, exaggeration, true), flight, frame, sample, exaggeration, flightShare(at)))
+    liftM = Math.max(liftM, weight * shotLift(blendViews(from, to, at, frame, sample, exaggeration, true), flight, frame, sample, exaggeration))
   }
   // never less than this very point's lift
-  liftM = Math.max(liftM, shotLift(blended, flight, frame, sample, exaggeration, flightShare(k)))
+  liftM = Math.max(liftM, shotLift(blended, flight, frame, sample, exaggeration))
   const { position } = liftedOnTheWay(blended, k, liftM)
+  ;(globalThis as unknown as { __trace?: unknown[] }).__trace?.push({ k, liftM, blendedY: blended.position.y, liftedY: position.y })
   const free = blendViews(from, to, k, frame, null, exaggeration, true)
   return { target: blended.target.clone().setY(blended.target.y + (position.y - free.position.y)), position }
 }
@@ -784,16 +766,26 @@ export function keyFramingFrom(base: KeyBase, position: Vector3, lookAt: Vector3
 interface RaiseTable {
   inputs: readonly unknown[]
   raises: Map<number, { raiseM: number; version: number }>
+  /** the raise kept at each instant once the short hidings are left out (`SIGHT_HOLD_S`), refreshed like `raises` */
+  lasting: Map<number, { raiseM: number; version: number }>
 }
 
 const raiseTables = new WeakMap<HeightSampler, RaiseTable>()
 
-function raiseTable(sample: HeightSampler, inputs: readonly unknown[]): RaiseTable['raises'] {
+/**
+ * The flight camera does not climb to see the marker over the relief for a hiding shorter than this (film seconds): a
+ * marker hidden for a moment behind a ridge stays hidden, as in a drone shot; a longer hiding is cleared, the climb taken
+ * ahead (`anticipatedRaise`). Read on the instants of the raise table, ANTICIPATION_STEP_S apart.
+ */
+export const SIGHT_HOLD_S = 1.5
+const SIGHT_HOLD_STEPS = Math.round(SIGHT_HOLD_S / ANTICIPATION_STEP_S)
+
+function raiseTable(sample: HeightSampler, inputs: readonly unknown[]): RaiseTable {
   const table = raiseTables.get(sample)
-  if (table && table.inputs.length === inputs.length && table.inputs.every((input, i) => input === inputs[i])) return table.raises
-  const raises: RaiseTable['raises'] = new Map()
-  raiseTables.set(sample, { inputs, raises })
-  return raises
+  if (table && table.inputs.length === inputs.length && table.inputs.every((input, i) => input === inputs[i])) return table
+  const fresh: RaiseTable = { inputs, raises: new Map(), lasting: new Map() }
+  raiseTables.set(sample, fresh)
+  return fresh
 }
 
 /**
@@ -813,13 +805,13 @@ function flightAt(
   const { followed, flightPath, wide, orbitRad } = flown
   if (sample) {
     const { camera, exaggeration, liftM, durationS, aspect, follow, terrainVersion: version = 0 } = options
-    const raises = raiseTable(sample, [path, clock, frame, camera, exaggeration, liftM, durationS, aspect, follow])
+    const { raises, lasting } = raiseTable(sample, [path, clock, frame, camera, exaggeration, liftM, durationS, aspect, follow])
     // the progress holds still during the opening and closing shots, so does the flight view they blend with
     const timeS = clamp(state.timeS, clock.openingS, clock.openingS + clock.flightS)
     // the instant refreshed this frame: the nearest to now that was computed on an older terrain (the first in time
     // order starved the others while tiles kept arriving, and the ones that count most went stale)
     let stale: number | undefined
-    for (let k = Math.ceil((timeS - ANTICIPATION_REACH_S) / ANTICIPATION_STEP_S); k * ANTICIPATION_STEP_S < timeS + ANTICIPATION_REACH_S; k++) {
+    for (let k = Math.ceil((timeS - ANTICIPATION_REACH_S - SIGHT_HOLD_S) / ANTICIPATION_STEP_S); k * ANTICIPATION_STEP_S < timeS + ANTICIPATION_REACH_S + SIGHT_HOLD_S; k++) {
       const instantS = k * ANTICIPATION_STEP_S
       const known = raises.get(instantS)
       if (known && known.version !== version && (stale === undefined || Math.abs(instantS - timeS) < Math.abs(stale - timeS))) stale = instantS
@@ -839,7 +831,32 @@ function flightAt(
       raises.set(instantS, { raiseM, version: raiseM === fresh ? version : known.version })
       return raiseM
     }
-    flown.view.position.y += anticipatedRaise(raiseAt, timeS) - flown.view.raiseM
+    // only a hiding that lasts is cleared: an instant whose marker is hidden (a need over LINE_OF_SIGHT_MIN_CLEARANCE_M,
+    // the line's margin) within a run of at least SIGHT_HOLD_STEPS + 1 hidden instants keeps its whole need; a shorter
+    // run, nothing. Then the climb is taken ahead and kept after (`anticipatedRaise`)
+    const hiddenAt = (k: number) => raiseAt(k * ANTICIPATION_STEP_S) > LINE_OF_SIGHT_MIN_CLEARANCE_M
+    const lastingAt = (instantS: number) => {
+      // the instants on the table's own keys (k × ANTICIPATION_STEP_S, the same float every time)
+      const k = Math.round(instantS / ANTICIPATION_STEP_S)
+      if (!hiddenAt(k)) return 0
+      let run = 1
+      for (let j = 1; j <= SIGHT_HOLD_STEPS && run <= SIGHT_HOLD_STEPS && hiddenAt(k - j); j++) run++
+      for (let j = 1; j <= SIGHT_HOLD_STEPS && run <= SIGHT_HOLD_STEPS && hiddenAt(k + j); j++) run++
+      const fresh = run > SIGHT_HOLD_STEPS ? raiseAt(k * ANTICIPATION_STEP_S) : 0
+      // on a sharper terrain a hiding can become long enough (or stop being so): the kept raise moves a little each frame
+      // toward the new one, like the raises themselves, never a step of a hundred metres
+      const known = lasting.get(k)
+      if (!known) {
+        lasting.set(k, { raiseM: fresh, version })
+        return fresh
+      }
+      if (known.version === version || known.raiseM === fresh) return known.raiseM
+      const reach = RAISE_REFRESH_SHARE * flown.view.position.distanceTo(flown.view.target)
+      const raiseM = known.raiseM + clamp(fresh - known.raiseM, -reach, reach)
+      lasting.set(k, { raiseM, version: raiseM === fresh ? version : known.version })
+      return raiseM
+    }
+    flown.view.position.y += anticipatedRaise(lastingAt, timeS)
     flown.view.target = flown.view.leadTarget(flown.view.position)
   }
   const view = flown.view
