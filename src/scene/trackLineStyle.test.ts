@@ -86,7 +86,7 @@ describe('trail (« Traînée »)', () => {
     const shader = { vertexShader: 'void main() {\noffset *= linewidth;\n}', fragmentShader: 'void main() {\ngl_FragColor = vec4( diffuseColor.rgb, alpha );\n}', uniforms: {} }
     glow.onBeforeCompile(shader as never, null as never)
     expect(shader.vertexShader).toContain('vTrackM = ( position.y < 0.5 ) ? instanceTrackStart : instanceTrackEnd;')
-    expect(shader.fragmentShader).toContain('if ( vTrackM < trailStartM ) discard;')
+    expect(shader.fragmentShader).toContain('if ( vTrackM < trailStartM || vTrackM > trackEndM ) discard;')
     // the oldest part thins out instead of ending on a sharp cut
     expect(shader.vertexShader).toContain('offset *= linewidth * trailWidth * flightWidth;')
     // the glow output is still patched
@@ -147,7 +147,10 @@ describe('addTrailCut: width in a flight', () => {
     const shader = { vertexShader: material.vertexShader, fragmentShader: material.fragmentShader, uniforms: {} }
     material.onBeforeCompile(shader as never, {} as never)
     expect(shader.vertexShader).toContain('offset *= linewidth * trailWidth * flightWidth;')
-    expect(shader.vertexShader).toContain(`clamp( flightDepthM / flightDepth, ${FLIGHT_WIDTH_MIN.toFixed(1)}, ${FLIGHT_WIDTH_MAX.toFixed(1)} )`)
+    // the bounds are uniforms (prototype 1 of `laboTrace.ts` widens them), the ones of flightWidthFactor by default
+    expect(shader.vertexShader).toContain('clamp( flightDepthM / flightDepth, widthMin, widthMax )')
+    expect(material.uniforms.widthMin.value).toBe(FLIGHT_WIDTH_MIN)
+    expect(material.uniforms.widthMax.value).toBe(FLIGHT_WIDTH_MAX)
     // the stock offset line was replaced, not kept next to ours
     expect(shader.vertexShader.match(/offset \*= linewidth/g)).toHaveLength(1)
   })
