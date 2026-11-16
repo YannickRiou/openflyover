@@ -3,6 +3,10 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
+## Unreleased
+
+- **Clouds marched in WebGPU, step 1 (a trial)**: the march of the volumetric clouds, written again as a WebGPU compute shader from the library's own (`scene/webgpuClouds`), with the same textures and settings. It does not draw the film yet: « Mesurer le coût des couches » adds a line that times it on the device with the slices of an export, to set beside « sans nuages ». Not in it yet: the cloud shadow map, the haze, the light shafts, the relief in front of the clouds, the aerial perspective.
+
 ## 8.1.3 (November 2026)
 
 - **« Nouveautés 8.1.3 »**: fast, low films export without crawling; 8.1.2 is folded into 8.1.

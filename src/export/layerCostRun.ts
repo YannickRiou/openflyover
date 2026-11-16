@@ -10,10 +10,14 @@ import { filmClockFor } from '../film/clock'
 import { getSettingsHistory } from '../project/history'
 import { getFilmSource } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
+import type { Settings } from '../state/store'
+import { EXPORT_SAMPLES } from '../weather/sceneClouds'
 import { useBatchStore } from './batch'
 import { collectDiagnostic, formatReport, noEncodingTest, setNoEncodingTest } from './diagnostic'
 import { layerCostSection, measureLayerCost } from './layerCost'
+import { effectiveRender } from './qualityTier'
 import { videoSize } from './schedule'
+import type { VideoQuality } from './schedule'
 import { isExportBusy, useExportStore } from './store'
 import { loadTrackData, shownFilm } from './trackFilms'
 
@@ -102,13 +106,36 @@ export async function runLayerCost(canceled: () => boolean, progress: (label: st
     })
     const completed = !canceled()
     const detail = `${even(full.width)} × ${even(full.height)}, ${WINDOW_FRAMES} images au milieu du vol après ${WARM_FRAMES} de chauffe, sans encodage`
+    const section = layerCostSection(results, detail, !completed)
+    if (completed) section.rows.push(await webgpuCloudsRow(base, film.quality, even(full.width), even(full.height)))
     const report = collectDiagnostic()
-    return { text: formatReport({ ...report, sections: [...report.sections, layerCostSection(results, detail, !completed)] }), completed }
+    return { text: formatReport({ ...report, sections: [...report.sections, section] }), completed }
   } finally {
     // the project as it was: the same settings object, so « Enregistré » stays
     useAppStore.setState({ settings: base })
     setNoEncodingTest(encodingFlag)
     useBatchStore.getState().release()
     resume()
+  }
+}
+
+/**
+ * The trial of the clouds marched in WebGPU (`scene/webgpuClouds`, step 1): the export's slices at the film's size, timed
+ * on the device, to set beside « sans nuages ». A failure is a line of the report, never a failed measure.
+ */
+async function webgpuCloudsRow(settings: Settings, quality: VideoQuality, width: number, height: number): Promise<[string, string]> {
+  const { benchWebgpuClouds, cloudBenchRow, UNAVAILABLE } = await import('../scene/webgpuClouds/bench')
+  try {
+    const { liveCloudsEffect } = await import('../scene/liveClouds')
+    const effect = liveCloudsEffect()
+    if (settings.clouds.mode === 'aucun' || !effect) return cloudBenchRow({ unavailable: UNAVAILABLE['no-clouds'] })
+    const { CLOUD_MARCH } = await import('../scene/webgpuClouds/layout')
+    const { cloudParamsFrom, uniformsOf } = await import('../scene/webgpuClouds/fromEffect')
+    const { cloudsQuality } = effectiveRender(quality, settings.clouds)
+    const params = cloudParamsFrom(uniformsOf(effect), effect.mainCamera, width, height, CLOUD_MARCH[cloudsQuality])
+    const result = await benchWebgpuClouds(params, EXPORT_SAMPLES[cloudsQuality], WARM_FRAMES, WINDOW_FRAMES, `${import.meta.env.BASE_URL}clouds/`)
+    return cloudBenchRow(result)
+  } catch (error) {
+    return cloudBenchRow({ unavailable: `échec : ${error instanceof Error ? error.message.split('\n')[0] : String(error)}` })
   }
 }
