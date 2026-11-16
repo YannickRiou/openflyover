@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'What’s new',
   hint: 'What changed in OpenFlyover, version after version.',
   version: 'Version {version}',
+  'v82.camera.title': "The camera glides over the relief",
+  'v82.camera.text': "The camera no longer goes up and down with every bump of the track: it follows the relief smoothed over a few seconds, like a drone holding its altitude. It no longer climbs for a crest that hides the marker for a moment, only when the marker would stay hidden for more than a second and a half, and then it starts climbing well before. On a high mountain tour, the speed of the picture varies about three times less.",
   'v813.export.title': "Fast films no longer crawl at export",
   'v813.export.text': "A film that flies fast and low could take several seconds per frame to export, above all with the imagery detail on \"Fine\" or \"Very fine\". The app now asks only for the photos the screen can show, and always gets the next frames ready. On a long raid it is up to six times faster, for the same picture.",
   'v812.labels.title': "Labels you can read on a phone",

@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Novedades',
   hint: 'Lo que ha cambiado en OpenFlyover, versión tras versión.',
   version: 'Versión {version}',
+  'v82.camera.title': "La cámara se desliza sobre el relieve",
+  'v82.camera.text': "La cámara ya no sube y baja con cada bache de la ruta: sigue el relieve suavizado durante unos segundos, como un dron que mantiene su altitud. Ya no sube por una cresta que oculta el marcador un momento, solo si quedaría oculto más de un segundo y medio, y entonces empieza a subir mucho antes. En una ruta de alta montaña, la velocidad de la imagen varía unas tres veces menos.",
   'v813.export.title': "Las películas rápidas ya no se arrastran al exportar",
   'v813.export.text': "Una película que vuela rápido y cerca del suelo podía tardar varios segundos por imagen al exportar, sobre todo con el detalle de las imágenes en «Fino» o «Muy fino». La aplicación ya solo pide las fotos que la pantalla puede mostrar y siempre prepara las imágenes siguientes. En una ruta larga es hasta seis veces más rápido, con la misma imagen.",
   'v812.labels.title': "Etiquetas que se leen en el móvil",

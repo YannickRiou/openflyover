@@ -2,6 +2,8 @@ export default {
   title: 'Nouveautés',
   hint: 'Ce qui a changé dans OpenFlyover, version après version.',
   version: 'Version {version}',
+  'v82.camera.title': "La caméra glisse au-dessus du relief",
+  'v82.camera.text': "La caméra ne monte et ne descend plus à chaque bosse de la trace : elle suit le relief lissé sur quelques secondes, comme un drone qui garde son altitude. Elle ne monte plus pour une crête qui cache le marqueur un instant, seulement s’il resterait caché plus d’une seconde et demie, et commence alors à monter bien avant. Sur un tour en haute montagne, la vitesse de l’image varie environ trois fois moins.",
   'v813.export.title': "Les films rapides ne rampent plus à l’export",
   'v813.export.text': "Un film qui vole vite et près du sol pouvait mettre plusieurs secondes par image à l’export, surtout avec un détail de l’imagerie « Fin » ou « Très fin ». L’application ne demande plus que les photos que l’écran peut montrer, et prépare toujours les images suivantes. Sur un long raid, c’est jusqu’à six fois plus rapide, pour la même image.",
   'v812.labels.title': "Des étiquettes lisibles sur un téléphone",
