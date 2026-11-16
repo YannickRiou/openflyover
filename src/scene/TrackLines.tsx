@@ -40,6 +40,7 @@ import {
   type TrackLineSet,
 } from './trackLineSet'
 import { applyTrackRibbon } from './trackRibbon'
+import { LABO, updateLabo } from './laboTrace'
 
 // ---------------------------------------------------------------------------
 // Component
@@ -163,7 +164,7 @@ export function TrackLines() {
     wakeScene()
   }, [tracks, frame, smoothingM, ribbon])
 
-  useFrame(({ gl, camera, size: canvas }) => {
+  useFrame(({ gl, camera, size: canvas, scene, invalidate }) => {
     // the share of the image the video gives them (`exportRenderScale`): the preview shows them as the film will
     const renderScale = exportRenderScale(canvas.width, canvas.height)
     const style = useAppStore.getState().settings.trackStyle
@@ -179,6 +180,7 @@ export function TrackLines() {
     applyFlightDepth(setsRef.current.values(), viewDistance(camera, controls?.target ?? null))
     // after a rebuild or a re-drape (the subscription covers the progress and settings, once per change)
     if (drawOnStale.current) refreshDrawOn()
+    if (LABO) updateLabo(setsRef.current.values(), { gl, scene, camera, engine, exaggeration, invalidate })
     if (gl.toneMappingExposure === exposureRef.current) return
     exposureRef.current = gl.toneMappingExposure
     applyExposure(setsRef.current.values(), gl.toneMappingExposure, style.glowColor)

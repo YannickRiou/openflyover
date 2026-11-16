@@ -38,6 +38,7 @@ import { densify } from '../import/stats'
 import { DEFAULT_TRACK_STYLE, TRACK_CURTAIN_RANGE } from './markerSettings'
 import type { TrackStyle } from './markerSettings'
 import { drapeRibbon } from './trackRibbon'
+import { LABO, buildLabo, disposeLabo, drapeLabo } from './laboTrace'
 import type { RibbonLayer } from './trackRibbon'
 import { cumulativeDistances } from '../geo/lonLat'
 import {
@@ -497,7 +498,7 @@ export function buildTrackLineSet(
     segments.push({ index, source, points, buffer, positions, dist, shortened: -1, geometry, solid, glow, comet, flights })
   }
 
-  return {
+  const set: TrackLineSet = {
     track,
     frame,
     smoothingM,
@@ -512,6 +513,8 @@ export function buildTrackLineSet(
     drawnM: Number.NaN,
     dim: 1,
   }
+  if (LABO) buildLabo(set, width, height)
+  return set
 }
 
 function materialsOf(set: TrackLineSet): LineMaterial[] {
@@ -519,6 +522,7 @@ function materialsOf(set: TrackLineSet): LineMaterial[] {
 }
 
 export function disposeTrackLineSet(set: TrackLineSet): void {
+  if (LABO) disposeLabo(set)
   set.object.removeFromParent()
   for (const segment of set.segments) {
     segment.geometry.dispose()
@@ -549,6 +553,7 @@ export function drapeTrackLineSet(set: TrackLineSet, engine: TerrainEngine | nul
     drapeRibbon(segment)
   }
   set.drawnM = Number.NaN
+  if (LABO) drapeLabo(set)
 }
 
 /**

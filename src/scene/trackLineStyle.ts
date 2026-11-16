@@ -364,29 +364,54 @@ export function addTrailCut(material: LineMaterial, cacheKey: string): void {
   material.uniforms.trailStartM = { value: NO_TRAIL }
   material.uniforms.trailFadeM = { value: 0 }
   material.uniforms.flightDepthM = { value: 0 }
+  // prototypes of `laboTrace.ts`, neutral by default: end of the line, width bounds, shade, veil, pulses
+  material.uniforms.trackEndM = { value: 1e9 }
+  material.uniforms.widthMin = { value: FLIGHT_WIDTH_MIN }
+  material.uniforms.widthMax = { value: FLIGHT_WIDTH_MAX }
+  material.uniforms.shadeOn = { value: 0 }
+  material.uniforms.veilAmount = { value: 0 }
+  material.uniforms.veilScaleM = { value: 6000 }
+  material.uniforms.pulseStrength = { value: 0 }
+  material.uniforms.pulsePhaseM = { value: 0 }
+  material.uniforms.pulseSpacingM = { value: 160 }
   const patch = material.onBeforeCompile.bind(material)
   material.onBeforeCompile = (shader, renderer) => {
     patch(shader, renderer)
-    shader.vertexShader = `attribute float instanceTrackStart;\nattribute float instanceTrackEnd;\nattribute float instanceFlightStart;\nattribute float instanceFlightEnd;\nuniform float trailStartM;\nuniform float trailFadeM;\nuniform float flightDepthM;\nvarying float vTrackM;\n${shader.vertexShader
+    shader.vertexShader = `attribute float instanceTrackStart;\nattribute float instanceTrackEnd;\nattribute float instanceFlightStart;\nattribute float instanceFlightEnd;\nattribute float instanceShadeStart;\nattribute float instanceShadeEnd;\nuniform float trailStartM;\nuniform float trailFadeM;\nuniform float flightDepthM;\nuniform float widthMin;\nuniform float widthMax;\nvarying float vTrackM;\nvarying float vShade;\nvarying float vDepth;\n${shader.vertexShader
       .replace(
         'void main() {',
-        'void main() {\n  vTrackM = ( position.y < 0.5 ) ? instanceTrackStart : instanceTrackEnd;\n  float trailWidth = trailFadeM > 0.0 ? smoothstep( trailStartM, trailStartM + trailFadeM, vTrackM ) : 1.0;',
+        'void main() {\n  vTrackM = ( position.y < 0.5 ) ? instanceTrackStart : instanceTrackEnd;\n  vShade = ( position.y < 0.5 ) ? instanceShadeStart : instanceShadeEnd;\n  float trailWidth = trailFadeM > 0.0 ? smoothstep( trailStartM, trailStartM + trailFadeM, vTrackM ) : 1.0;',
       )
       // `flightWidthFactor` in GLSL: weight 0 (the ground, and every track without the attribute) leaves the width alone
       .replace(
         'offset *= linewidth;',
         `float flightWeight = ( position.y < 0.5 ) ? instanceFlightStart : instanceFlightEnd;
   float flightDepth = ( position.y < 0.5 ) ? clipStart.w : clipEnd.w;
-  float flightWidth = ( flightDepthM > 0.0 && flightWeight > 0.0 ) ? mix( 1.0, clamp( flightDepthM / flightDepth, ${FLIGHT_WIDTH_MIN.toFixed(1)}, ${FLIGHT_WIDTH_MAX.toFixed(1)} ), flightWeight ) : 1.0;
+  float flightWidth = ( flightDepthM > 0.0 && flightWeight > 0.0 ) ? mix( 1.0, clamp( flightDepthM / flightDepth, widthMin, widthMax ), flightWeight ) : 1.0;
+  vDepth = flightDepth;
   offset *= linewidth * trailWidth * flightWidth;`,
       )}`
-    shader.fragmentShader = `uniform float trailStartM;\nvarying float vTrackM;\n${shader.fragmentShader.replace(
-      'void main() {',
-      'void main() {\n  if ( vTrackM < trailStartM ) discard;',
-    )}`
+    shader.fragmentShader = `uniform float trailStartM;\nuniform float trackEndM;\nuniform float shadeOn;\nuniform float veilAmount;\nuniform float veilScaleM;\nuniform float pulseStrength;\nuniform float pulsePhaseM;\nuniform float pulseSpacingM;\nvarying float vTrackM;\nvarying float vShade;\nvarying float vDepth;\n${LABO_COLOR}${shader.fragmentShader
+      .replace('void main() {', 'void main() {\n  if ( vTrackM < trailStartM || vTrackM > trackEndM ) discard;')
+      .replace('gl_FragColor = vec4( diffuseColor.rgb', 'gl_FragColor = vec4( laboColor( diffuseColor.rgb )')}`
   }
   material.customProgramCacheKey = () => cacheKey
 }
+
+/**
+ * Colour of the prototypes (`laboTrace.ts`): darker where the ground under the line is in the shade of the relief
+ * (`vShade`, 0..1, when `shadeOn`), greyed and lightened with the distance like the far landscape (`veilAmount`), light
+ * pulses running along the track (`pulseStrength`). Every term is neutral at its default.
+ */
+const LABO_COLOR = `vec3 laboColor( vec3 c ) {
+  c *= mix( 1.0, clamp( vShade, 0.0, 1.0 ), shadeOn );
+  float veil = veilAmount * ( 1.0 - exp( -max( vDepth, 0.0 ) / veilScaleM ) );
+  c = mix( c, vec3( dot( c, vec3( 0.3, 0.59, 0.11 ) ) * 1.25 + 0.04 ), veil );
+  float phase = fract( ( vTrackM - pulsePhaseM ) / pulseSpacingM );
+  float pulse = exp( -pow( ( phase - 0.5 ) * 9.0, 2.0 ) );
+  return mix( c, vec3( 1.0 ), pulseStrength * pulse );
+}
+`
 
 /**
  * Hide what lies before `startM` along the track (NO_TRAIL: nothing) on a material patched by `addTrailCut`, and thin
