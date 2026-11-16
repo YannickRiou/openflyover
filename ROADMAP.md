@@ -10,6 +10,8 @@ it serves and how it will be checked. The [changelog](CHANGELOG.md) says what ea
 - **8.0.1**: a ridge hides the marker no longer than before 8.0; the « Nouveautés » are in plainer French.
 - **8.1** (November 2026): the export holds on long films and bad networks: tiles that stall give up and are tried again, a
   graphics card reset is recovered, « Annuler » always works, a failed export can resume from the kept frames.
+- **8.2.0**: the camera glides over the relief: the camera and its aim follow the ground smoothed over 4 s of film, and the camera climbs only where the marker would stay hidden 1.5 s or more.
+- **8.1.4**: dependencies of the app updated; the end-to-end scenarios follow the French typography of the interface.
 - **8.1.3**: a film flown fast and low no longer crawls at export: the imagery detail follows the screen, the look-ahead never stops, one request queue per server.
 - **8.1.2**: the 3D labels grow on their own in a vertical film (×1.5 in 9:16) and « Taille des étiquettes » goes up to ×3; new screenshots in the user guide.
 - **8.1.1**: a « situation » opening or closing no longer stalls the export, even on a modest computer; the « Nouveautés » are rewritten in plain words.
