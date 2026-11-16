@@ -58,6 +58,12 @@ const ALLOWED_ERRORS = [
 
 const log = (...args) => console.log(...args)
 const seconds = (ms) => `${(ms / 1000).toFixed(1)} s`
+/**
+ * The French typography of the app (`frenchTypography`, src/i18n/index.ts): a no-break space before `:` and inside « »,
+ * a narrow one before `;` `?` `!`. A label written here with ordinary spaces, as the interface shows it.
+ */
+const fr = (text) =>
+  text.replace(/ (?=:)/g, '\u00A0').replace(/ (?=[;?!])/g, '\u202F').replace(/ (?=»)/g, '\u00A0').replace(/(?<=«) /g, '\u00A0')
 
 // ---------------------------------------------------------------------------------------------------- helpers
 
@@ -423,7 +429,7 @@ const SCENARIOS = [
     async run({ page }) {
       await showTab(page, 'reglages')
       // a preset: one tap, the choice announced as selected
-      const indigo = await page.waitForSelector('[role="option"][aria-label="Couleur d\'accentuation : Indigo"]', { visible: true, timeout: STEP_MS })
+      const indigo = await page.waitForSelector(`[role="option"][aria-label="${fr("Couleur d'accentuation : Indigo")}"]`, { visible: true, timeout: STEP_MS })
       await indigo.click()
       await until(page, () => document.documentElement.style.getPropertyValue('--color-accent') === '#4a55b8')
       assert(await indigo.evaluate((el) => el.getAttribute('aria-selected') === 'true'), 'le préréglage choisi n’est pas annoncé comme sélectionné')
@@ -477,7 +483,7 @@ const SCENARIOS = [
       await page.keyboard.press('Home')
       await until(page, () => document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]')?.textContent.startsWith('−2,0'))
       // the section's ↺ button puts it back
-      await page.click('[data-testid="tab-panel-lumiere"] button[aria-label="Rétablir les réglages par défaut : Couleurs"]')
+      await page.click(`[data-testid="tab-panel-lumiere"] button[aria-label="${fr('Rétablir les réglages par défaut : Couleurs')}"]`)
       await until(page, () => !document.querySelector('[data-testid="tab-panel-lumiere"] [data-testid="setting-row-value"][data-modified]'))
       // Enter on the row folds it again
       await page.evaluate(() =>
@@ -506,7 +512,7 @@ const SCENARIOS = [
         await showTab(page, 'meteo')
         await page.waitForSelector('[data-testid="tab-panel-meteo"] [data-testid="setting-row-label"] [data-testid="render-weight"][data-tier="3"]', { timeout: STEP_MS })
         const name = await page.$eval('[data-testid="tab-panel-meteo"] [data-testid="setting-row-label"] [data-testid="render-weight"]', (el) => el.textContent)
-        assert(name === 'Poids de rendu : lourd', `nom accessible du pictogramme : ${name}`)
+        assert(name === fr('Poids de rendu : lourd'), `nom accessible du pictogramme : ${name}`)
         await until(page, () => !!document.querySelector('[data-testid="tab-decor"] [data-testid="tab-weight"]'))
         // « Aucun »: no pictogram, no dot
         await set('clouds', { mode: 'aucun' })
@@ -560,7 +566,7 @@ const SCENARIOS = [
         await until(page, () => document.querySelector('[data-testid="tab-panel-meteo"] [data-testid="preset-badge-clouds"]')?.textContent === 'Personnalisé')
         // the way back: the row's button
         await page.click('[data-testid="tab-panel-meteo"] [data-testid="setting-row-head"]:has([data-testid="preset-badge-clouds"])')
-        await clickButton(page, 'Revenir à « Selon la qualité de l’export »')
+        await clickButton(page, fr('Revenir à « Selon la qualité de l’export »'))
         await until(page, () => window.__e2e.appStore.getState().settings.clouds.quality === 'auto')
         assert((await badge('meteo', 'clouds')) === 'Imposé par Maximale', `pastille après le retour : ${await badge('meteo', 'clouds')}`)
         // motion blur: only a quality that lowers the 8 sub-frames is badged
@@ -896,7 +902,7 @@ const SCENARIOS = [
       await showTab(page, 'habillage')
       const lane = '[role="group"][aria-label="Étiquettes"]'
       assert(!(await page.$(lane)), 'la piste Étiquettes existe sans clé')
-      await page.click('button[aria-label="Étiquettes : ajouter une clé"]')
+      await page.click(`button[aria-label="${fr('Étiquettes : ajouter une image clé')}"]`)
       await page.waitForSelector(`${lane} [data-testid="timeline-key"]`, { visible: true, timeout: STEP_MS })
       await page.click(`${lane} [data-testid="timeline-key"]`)
       await page.keyboard.press('Delete')
@@ -911,7 +917,7 @@ const SCENARIOS = [
       await showTab(page, 'carte')
       const stops = await stopCount(page)
       await clickButton(page, "Point d'intérêt au marqueur")
-      const box = '[data-testid="tab-panel-carte"] [data-testid="place"] input[aria-label^="Arrêt dans le film à « Point d"]'
+      const box = `[data-testid="tab-panel-carte"] [data-testid="place"] input[aria-label^="${fr('Arrêt dans le film à « Point d')}"]`
       await page.waitForSelector(box, { timeout: STEP_MS })
       await page.click(box)
       await until(page, ([n]) => document.querySelectorAll('[role="group"][aria-label="Plans"] [data-testid="timeline-block"]:not([data-item="opening"]):not([data-item="closing"])').length === n + 1, [stops])
@@ -1151,7 +1157,7 @@ const SCENARIOS = [
       assert(names.join() === 'Film B,Film A', `ordre de l’historique : ${names.join()}`)
       const meta = await page.$eval(`${H} [data-testid="history-item"]:last-child [data-testid="history-meta"]`, (e) => e.textContent)
       assert(meta.includes('réussi') && meta.includes('1:32') && meta.includes('0,3\u00a0s\u00a0/\u00a0image'), `ligne de l’historique : ${meta}`)
-      assert((await page.$eval(`${H} [data-testid="history-item"]:first-child [data-testid="history-meta"]`, (e) => e.textContent)).includes('échoué : WebGL perdu'), 'erreur absente de la ligne')
+      assert((await page.$eval(`${H} [data-testid="history-item"]:first-child [data-testid="history-meta"]`, (e) => e.textContent)).includes(fr('échoué : WebGL perdu')), 'erreur absente de la ligne')
       // detail of the old render, then its settings put back as one step
       await page.click(`${H} [data-testid="history-item"]:last-child [data-testid="history-head"]`)
       await page.waitForSelector(`${H} [data-testid="history-item"]:last-child [data-testid="history-rows"]`, { visible: true })
@@ -1253,7 +1259,7 @@ const SCENARIOS = [
             const [m, s] = document.querySelector('[data-testid="timeline-time"]').textContent.split(':')
             return Number(m) * 60 + Number(s.replace(',', '.'))
           })
-        // the tool row holds three named buttons, all on screen and at least 36 px (the floor of a touch target since the proportional scale of 5.4.0): « Clés », « Ajouter » and the film options
+        // the tool row holds three named buttons, all on screen and at least 36 px (the floor of a touch target since the proportional scale of 5.4.0): « Images clés », « Ajouter » and the film options
         const tools = await page.$$eval('[data-testid="timeline-tools"] button', (buttons) =>
           buttons.map((b) => {
             const r = b.getBoundingClientRect()
@@ -1261,9 +1267,9 @@ const SCENARIOS = [
           }),
         )
         assert(tools.length === 3 && tools.every((t) => t.ok), `boutons de la barre de la timeline : ${JSON.stringify(tools)}`)
-        assert(tools[0].name === 'Clés' && tools[1].name === 'Ajouter', `noms des boutons de la barre de la timeline : ${tools.map((t) => t.name).join()}`)
-        // « Clés » opens a sheet with the previous / add / next buttons of the camera keys, on screen and at least 36 px wide
-        await tap('[data-testid="timeline-tools"] button::-p-text(Clés)')
+        assert(tools[0].name === 'Images clés' && tools[1].name === 'Ajouter', `noms des boutons de la barre de la timeline : ${tools.map((t) => t.name).join()}`)
+        // « Images clés » opens a sheet with the previous / add / next buttons of the camera keys, on screen and at least 36 px wide
+        await tap('[data-testid="timeline-tools"] button::-p-text(Images clés)')
         // the group of the desktop row stays in the DOM with no width: only the one that shows counts
         await until(page, () => [...document.querySelectorAll('[role="group"][aria-label="Images clés"]')].some((g) => g.getBoundingClientRect().width > 0))
         const keyNav = await page.evaluate(() =>
