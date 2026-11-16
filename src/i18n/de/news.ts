@@ -4,6 +4,8 @@ const messages: Messages['news'] = {
   title: 'Neuheiten',
   hint: 'Was sich in OpenFlyover geändert hat, Version für Version.',
   version: 'Version {version}',
+  'v82.camera.title': "Die Kamera gleitet über das Gelände",
+  'v82.camera.text': "Die Kamera steigt und sinkt nicht mehr mit jeder Bodenwelle der Spur: Sie folgt dem über einige Sekunden geglätteten Gelände, wie eine Drohne, die ihre Höhe hält. Für einen Grat, der den Marker kurz verdeckt, steigt sie nicht mehr, nur wenn er länger als anderthalb Sekunden verdeckt bliebe, und dann beginnt sie lange vorher zu steigen. Auf einer Hochgebirgstour schwankt die Geschwindigkeit des Bildes etwa dreimal weniger.",
   'v813.export.title': "Schnelle Filme kriechen beim Export nicht mehr",
   'v813.export.text': "Ein Film, der schnell und tief fliegt, konnte beim Export mehrere Sekunden pro Bild brauchen, vor allem mit dem Bilddetail „Fein“ oder „Sehr fein“. Die App fordert jetzt nur noch die Fotos an, die der Bildschirm zeigen kann, und bereitet immer die nächsten Bilder vor. Bei einer langen Tour ist das bis zu sechsmal schneller, bei gleichem Bild.",
   'v812.labels.title': "Beschriftungen, die man auf dem Handy lesen kann",

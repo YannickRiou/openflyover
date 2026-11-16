@@ -21,6 +21,12 @@ export interface NewsVersion {
 
 export const WHATS_NEW: readonly NewsVersion[] = [
   {
+    version: '8.2',
+    items: [
+      { icon: 'video', get title() { return t('news.v82.camera.title') }, get text() { return t('news.v82.camera.text') } },
+    ],
+  },
+  {
     version: '8.1.3',
     items: [
       { icon: 'gauge', get title() { return t('news.v813.export.title') }, get text() { return t('news.v813.export.text') } },
