@@ -65,7 +65,7 @@ Do the same on every device, in this order.
 | `référence` | Milliseconds per image of the project as it is: this is the figure to keep. |
 | `référence refaite à la fin` | The same measure again after all the layers. A gap with the first one means the device slowed down on the way (heat): the run is not comparable, let the device cool down and start again. |
 | each layer (« sans nuages », « sans ombres »…) | Milliseconds per image without that layer, and what it saves: where the time goes. |
-| `nuages en WebGPU, marche seule (essai …)` | The same noise slices as an exported frame, marched by the WebGPU compute shader at the film's size, on its own (no shadow map, no haze, no relief in front). Compare it with what « sans nuages » saves: that is the WebGL clouds' time. « WebGPU indisponible … » when the browser has none (Safari before WebGPU, an old Android). |
+| `nuages en WebGPU (essai), la même fenêtre juste après en WebGL` | The same window exported twice in a row, with the WebGL clouds then with the WebGPU ones (« Nuages calculés en WebGPU à l’export (essai) »): both times per frame, the gain, and the WebGPU work of the clouds alone with its read back. Back to back because the reference of the section drifts with the heat of the device. « restés en WebGL : … » says why the WebGPU clouds did not draw (no WebGPU, the export quality « Maximale », a failure). |
 
 **The wait for the graphics card.** A phone or a tablet waits for the graphics card before composing each frame, a
 computer does not. To compare both settings on a phone (it has no console), add `?export-gpu-wait=off` (or `=on`) to

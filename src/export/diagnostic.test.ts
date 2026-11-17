@@ -1,3 +1,4 @@
+import { forceWebgpuClouds, setWebgpuCloudsWanted, webgpuCloudsWanted } from '../scene/webgpuClouds/preference'
 import { describe, expect, it, vi } from 'vitest'
 import { DESKTOP_BUDGET, budgetFor } from '../core/deviceBudget'
 import type { FilmMedia, FilmText } from '../film/model'
@@ -123,6 +124,23 @@ describe('diagnostic report', () => {
     setNoEncodingTest(false, storage)
     expect(noEncodingTest(storage)).toBe(false)
     expect(noEncodingTest(undefined)).toBe(false)
+  })
+
+  it('says when « Nuages calculés en WebGPU à l’export (essai) » is on, a switch of the tab only', () => {
+    expect(rowsOf(privateInput({ webgpuClouds: true }), 'Export').Nuages).toBe('calculés en WebGPU quand c’est possible (essai)')
+    expect(rowsOf(privateInput({}), 'Export').Nuages).toBeUndefined()
+    const map = new Map<string, string>()
+    const storage = { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => void map.set(k, v), removeItem: (k: string) => void map.delete(k) }
+    expect(webgpuCloudsWanted(storage)).toBe(false)
+    setWebgpuCloudsWanted(true, storage)
+    expect(webgpuCloudsWanted(storage)).toBe(true)
+    // the layer measure forces it for its two exports, then gives the switch back
+    forceWebgpuClouds(false)
+    expect(webgpuCloudsWanted(storage)).toBe(false)
+    forceWebgpuClouds(null)
+    expect(webgpuCloudsWanted(storage)).toBe(true)
+    setWebgpuCloudsWanted(false, storage)
+    expect(webgpuCloudsWanted(storage)).toBe(false)
   })
 
   it('tells whether the GPU time can be measured and what the terrain workers did, for a phone without a console', () => {

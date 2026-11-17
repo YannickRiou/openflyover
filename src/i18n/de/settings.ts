@@ -6,6 +6,7 @@ const messages: Messages['settings'] = {
   'diagnostic.hint': 'Gerät, Einstellungen und letzter Export, einer Fehlermeldung beizufügen. Ohne Position und Namen.',
   'diagnostic.show': 'Bericht anzeigen',
   'diagnostic.noEncoding': 'Testexport ohne Kodierung',
+  'diagnostic.webgpuClouds': 'Wolken beim Export in WebGPU berechnen (Test)',
   'diagnostic.layerCost': 'Kosten der Ebenen messen',
   'diagnostic.layerCostHint': 'Rendert einige Bilder, wobei jede Ebene der Reihe nach abgeschaltet wird (Wolken, Schatten, Wald …), und zeigt die gesparte Zeit pro Bild. Einige Minuten, auf einem Telefon länger; das Projekt bleibt unverändert und der Verlauf bekommt keinen Eintrag.',
   'diagnostic.layerCostRunning': 'Messung {index} / {total}: {label}',

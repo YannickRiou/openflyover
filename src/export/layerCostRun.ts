@@ -11,13 +11,10 @@ import { getSettingsHistory } from '../project/history'
 import { getFilmSource } from '../scene/usePacing'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
-import { EXPORT_SAMPLES } from '../weather/sceneClouds'
 import { useBatchStore } from './batch'
 import { collectDiagnostic, formatReport, noEncodingTest, setNoEncodingTest } from './diagnostic'
 import { layerCostSection, measureLayerCost } from './layerCost'
-import { effectiveRender } from './qualityTier'
 import { videoSize } from './schedule'
-import type { VideoQuality } from './schedule'
 import { isExportBusy, useExportStore } from './store'
 import { loadTrackData, shownFilm } from './trackFilms'
 
@@ -107,7 +104,7 @@ export async function runLayerCost(canceled: () => boolean, progress: (label: st
     const completed = !canceled()
     const detail = `${even(full.width)} × ${even(full.height)}, ${WINDOW_FRAMES} images au milieu du vol après ${WARM_FRAMES} de chauffe, sans encodage`
     const section = layerCostSection(results, detail, !completed)
-    if (completed) section.rows.push(await webgpuCloudsRow(base, film.quality, even(full.width), even(full.height)))
+    if (completed) section.rows.push(await webgpuCloudsRow(base, measure))
     const report = collectDiagnostic()
     return { text: formatReport({ ...report, sections: [...report.sections, section] }), completed }
   } finally {
@@ -120,22 +117,27 @@ export async function runLayerCost(canceled: () => boolean, progress: (label: st
 }
 
 /**
- * The trial of the clouds marched in WebGPU (`scene/webgpuClouds`, step 1): the export's slices at the film's size, timed
- * on the device, to set beside « sans nuages ». A failure is a line of the report, never a failed measure.
+ * The trial of the clouds marched in WebGPU (`scene/webgpuClouds`): the same window exported with the WebGL clouds, then
+ * with the WebGPU ones, back to back (the reference of the section drifts with the heat of the device). A failure is a
+ * line of the report, never a failed measure.
  */
-async function webgpuCloudsRow(settings: Settings, quality: VideoQuality, width: number, height: number): Promise<[string, string]> {
-  const { benchWebgpuClouds, cloudBenchRow, UNAVAILABLE } = await import('../scene/webgpuClouds/bench')
+async function webgpuCloudsRow(settings: Settings, measure: (scale: number) => Promise<number>): Promise<[string, string]> {
+  const { UNAVAILABLE, cloudTrialRow, unavailableText } = await import('../scene/webgpuClouds/bench')
+  if (!settings.atmosphere || settings.clouds.mode === 'aucun') return cloudTrialRow({ unavailable: UNAVAILABLE['no-clouds'] })
+  const { forceWebgpuClouds } = await import('../scene/webgpuClouds/preference')
+  const { lastWebgpuBlocker, webgpuAdapter, webgpuTimings } = await import('../scene/webgpuClouds/bridge')
   try {
-    const { liveCloudsEffect } = await import('../scene/liveClouds')
-    const effect = liveCloudsEffect()
-    if (settings.clouds.mode === 'aucun' || !effect) return cloudBenchRow({ unavailable: UNAVAILABLE['no-clouds'] })
-    const { CLOUD_MARCH } = await import('../scene/webgpuClouds/layout')
-    const { cloudParamsFrom, uniformsOf } = await import('../scene/webgpuClouds/fromEffect')
-    const { cloudsQuality } = effectiveRender(quality, settings.clouds)
-    const params = cloudParamsFrom(uniformsOf(effect), effect.mainCamera, width, height, CLOUD_MARCH[cloudsQuality])
-    const result = await benchWebgpuClouds(params, EXPORT_SAMPLES[cloudsQuality], WARM_FRAMES, WINDOW_FRAMES, `${import.meta.env.BASE_URL}clouds/`)
-    return cloudBenchRow(result)
+    forceWebgpuClouds(false)
+    const webglMs = await measure(1)
+    forceWebgpuClouds(true)
+    const before = { ...webgpuTimings }
+    const webgpuMs = await measure(1)
+    const frames = webgpuTimings.frames - before.frames
+    if (frames === 0) return cloudTrialRow({ unavailable: unavailableText(lastWebgpuBlocker() ?? 'aucune image') })
+    return cloudTrialRow({ webglMs, webgpuMs, adapter: webgpuAdapter() ?? '?', gpuMsPerFrame: (webgpuTimings.gpuMs - before.gpuMs) / frames })
   } catch (error) {
-    return cloudBenchRow({ unavailable: `échec : ${error instanceof Error ? error.message.split('\n')[0] : String(error)}` })
+    return cloudTrialRow({ unavailable: `échec : ${error instanceof Error ? error.message.split('\n')[0] : String(error)}` })
+  } finally {
+    forceWebgpuClouds(null)
   }
 }

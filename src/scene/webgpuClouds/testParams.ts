@@ -1,4 +1,4 @@
-/** A set of parameters for the tests of the WebGPU march: the library's default layers, a medium export. */
+/** A set of parameters for the tests of the WebGPU clouds: the library's default layers, a medium export. */
 import type { CloudParamsInput } from './layout'
 import { CLOUD_MARCH } from './layout'
 
@@ -7,6 +7,10 @@ const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
 export const PARAMS: CloudParamsInput = {
   inverseProjection: identity,
   viewToEcef: identity.map((v, i) => (i === 12 ? 7 : v)),
+  view: identity,
+  worldToEcef: identity,
+  ecefToWorld: identity,
+  altitudeCorrection: [0, 0, 0],
   cameraEcef: [1, 2, 3],
   cameraHeight: 500,
   cameraNear: 0.5,
@@ -14,6 +18,7 @@ export const PARAMS: CloudParamsInput = {
   width: 1080,
   height: 1920,
   frame: 5,
+  firstSlice: true,
   bottomRadius: 6_360_000,
   minHeight: 750,
   maxHeight: 8000,
@@ -21,9 +26,14 @@ export const PARAMS: CloudParamsInput = {
   scatteringCoefficient: 1,
   absorptionCoefficient: 0.02,
   skyLightScale: 1,
+  groundBounceScale: 1,
+  powder: true,
+  groundBounce: true,
   powderScale: 0.8,
   powderExponent: 150,
   turbulenceDisplacement: 350,
+  mipLevelScale: 1,
+  scatterAnisotropy: [0.7, -0.2, 0.5],
   localWeatherRepeat: [100, 100],
   localWeatherOffset: [0.25, 0.5],
   shapeRepeat: [3e-4, 3e-4, 3e-4],
@@ -49,5 +59,26 @@ export const PARAMS: CloudParamsInput = {
   sunIrradianceMax: [1, 1, 1],
   skyIrradianceMin: [0.3, 0.3, 0.4],
   skyIrradianceMax: [0.3, 0.3, 0.4],
+  groundSunIrradiance: [0.9, 0.9, 0.9],
+  groundSkyIrradiance: [0.2, 0.25, 0.3],
+  nightIrradiance: [0, 0, 0],
+  regionalFrame: [0, 0, 0],
+  regionalAmount: 0,
+  cascadeCount: 3,
+  shadowSize: 256,
+  shadowMatrices: [identity, identity, identity],
+  inverseShadowMatrices: [identity, identity, identity],
+  shadowIntervals: [
+    [0, 0.1],
+    [0.1, 0.4],
+    [0.4, 1],
+  ],
+  shadowFar: 5e4,
+  shadowTopHeight: 8000,
+  shadowBottomHeight: 750,
+  shadowLayerMask: [1, 1, 0, 0],
+  maxShadowFilterRadius: 6,
+  shadowSampleCount: 8,
   march: CLOUD_MARCH.medium,
+  shadowMarch: { maxIterationCount: 50, minStepSize: 100, maxStepSize: 1000, minDensity: 1e-4, minExtinction: 1e-4, minTransmittance: 1e-4, opticalDepthTailScale: 2 },
 }

@@ -17,6 +17,7 @@ import { getPlatform } from '../platform'
 import { withLanguage } from '../i18n'
 import type { VideoEncoderKind } from '../platform'
 import { isIdentityGrading } from '../scene/grading'
+import { webgpuCloudsWanted } from '../scene/webgpuClouds/preference'
 import { useAppStore } from '../state/store'
 import type { Settings } from '../state/store'
 import { tileWorkerStatus } from '../terrain/tileWorkerStatus'
@@ -158,6 +159,8 @@ export interface DiagnosticInput {
   request?: ReportRequest
   /** « Export de test sans encodage » is on */
   noEncoding?: boolean
+  /** « Nuages calculés en WebGPU (essai) » is on in this tab */
+  webgpuClouds?: boolean
   /** the terrain workers (`tileWorkerStatus`) */
   tileWorkers?: TileWorkerStatus
   /** what this tab asks for the wait for the GPU (`gpuWaitSetting`) */
@@ -207,7 +210,7 @@ function deviceRows(input: DiagnosticInput): ReportRow[] {
   return rows
 }
 
-function exportRows({ request, settings, budget, canStreamToDisk, noEncoding, gpuWait, previewRung }: DiagnosticInput): ReportRow[] {
+function exportRows({ request, settings, budget, canStreamToDisk, noEncoding, webgpuClouds, gpuWait, previewRung }: DiagnosticInput): ReportRow[] {
   const size = request ?? videoSize(settings.video.aspect, settings.video.resolution, budget.maxExportShortSide)
   const fps = request?.fps ?? settings.video.fps
   const quality = request?.quality ?? settings.video.quality
@@ -248,6 +251,7 @@ function exportRows({ request, settings, budget, canStreamToDisk, noEncoding, gp
   }
   rows.push(['Destination', request ? (request.destination ? 'fichier sur le disque' : 'mémoire') : canStreamToDisk ? 'disque (au choix)' : 'mémoire'])
   if (noEncoding) rows.push(['Encodage', 'désactivé (test)'])
+  if (webgpuClouds) rows.push(['Nuages', 'calculés en WebGPU quand c’est possible (essai)'])
   const waits = waitsForGpuFor(budget.kind, gpuWait ?? null)
   rows.push([
     'Attente de la carte graphique',
@@ -471,6 +475,7 @@ export function collectDiagnostic(request?: ReportRequest, now = Date.now()): Di
     media: useMediaStore.getState().table,
     request,
     noEncoding: noEncodingTest(),
+    webgpuClouds: webgpuCloudsWanted(),
     tileWorkers: tileWorkerStatus(),
     gpuWait: gpuWaitSetting(),
     previewRung: currentPreviewRung(),

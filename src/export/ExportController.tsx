@@ -36,6 +36,8 @@ import { markerKeysMoveWithTime } from '../film/markerKeys'
 import { lastShadowPass, resetShadowPass } from '../scene/terrainShadow'
 import { whenMarkerModelsLoaded } from '../scene/markerGlbKit'
 import { useTerrainContext } from '../scene/terrainContext'
+import { dropComposerRender, finishComposerRender, prepareWebgpuClouds, splitComposerRender } from '../scene/webgpuClouds/bridge'
+import { webgpuCloudsWanted } from '../scene/webgpuClouds/preference'
 import type { HeightSampler } from '../scene/trackLineSet'
 import { useFilmClock } from '../scene/usePacing'
 import { holdRegion } from '../osm/region'
@@ -417,6 +419,8 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   }
 
   let clock = 0
+  /** the frames' clouds are marched in WebGPU (webgpuClouds/bridge.ts): each drawn frame is split around them */
+  let splitClouds = false
   const advance = (final: boolean) => {
     const t0 = performance.now()
     const app = useAppStore.getState()
@@ -433,9 +437,17 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     readGpuTimer()
     gpuTimer?.begin()
     resetShadowPass()
+    const composerRender = EffectComposer.prototype.render
+    if (splitClouds) {
+      // the passes before the clouds now, the rest once their WebGPU march is done (`finishDraw`)
+      EffectComposer.prototype.render = function (this: EffectComposer, delta?: number) {
+        if (!splitComposerRender(this, delta, composerRender)) composerRender.call(this, delta)
+      }
+    }
     try {
       deps.get().advance(clock)
     } finally {
+      EffectComposer.prototype.render = composerRender
       gpuTimer?.end()
     }
     timings.renders++
@@ -520,6 +532,11 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
   let drapes = 0
   const frameDeps = {
     advance,
+    finishDraw: async () => {
+      const t0 = performance.now()
+      await finishComposerRender()
+      timings.renderMs += performance.now() - t0
+    },
     // what TerrainLayer does in a render (the only data requested per view), for the camera of the last render
     updateTiles: () => {
       const camera = deps.get().camera as PerspectiveCamera
@@ -593,6 +610,12 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     if (!ctx) throw new Error(t('export.controller.noCompositor'))
     // a canvas never downloads web fonts by itself: the overlay faces must be ready before the first frame
     if (deps.overlay()) await within(loadOverlayFonts(), STEP_LIMIT_MS.assets, () => t('export.controller.stalledFonts'), isCanceled)
+    if (webgpuCloudsWanted()) {
+      // the trial of the clouds marched in WebGPU (Réglages › Diagnostic): the WebGL clouds when anything is missing
+      const blocker = await within(prepareWebgpuClouds(), STEP_LIMIT_MS.assets, () => 'WebGPU', isCanceled).catch((error: unknown) => errorMessage(error))
+      splitClouds = blocker === null
+      writeBreadcrumb(`export : nuages ${blocker === null ? 'en WebGPU' : `en WebGL (${blocker})`}`)
+    }
 
     if (request.still) {
       const { progress, compose } = request.still
@@ -991,6 +1014,7 @@ export async function runExport(request: ExportRequest, deps: RunDeps): Promise<
     const resumeFrom = kept && resumeRun ? await storedResumeFrame().catch(() => null) : null
     await abandon(error, request, session, isCanceled(), resumeFrom)
   } finally {
+    dropComposerRender()
     // the tiles still being fetched ahead are no longer needed (their requests in flight end by themselves)
     filmDone = true
     void preloadRun?.catch(() => undefined)

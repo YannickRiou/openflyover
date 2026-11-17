@@ -8,12 +8,13 @@ it serves and how it will be checked. The [changelog](CHANGELOG.md) says what ea
 Promise 3. The volumetric clouds take up to 96 % of the time of an exported frame on an iPhone, and their library has no
 WebGPU build. The march is written again as a WebGPU compute shader, in steps, each measured on the iPhone before the next.
 
-1. **The march alone, measured** (done in the first pull request): the same work as the WebGL clouds (same textures,
-   settings and slices), timed by « Mesurer le coût des couches » beside « sans nuages ».
-2. **The picture**: the cloud shadow map, the sun and sky light of the atmosphere, the blue-noise jitter, the texture
-   mips, the regional cover, compared side by side with the WebGL clouds on a still frame.
-3. **In the film**: the depth of the relief in front, the aerial perspective, the composition with the WebGL scene (or
-   the scene moved to the WebGPU renderer of three.js, whose atmosphere the library already has), behind a switch.
+1. **The march alone, measured** (done): the same work as the WebGL clouds, timed by « Mesurer le coût des couches »:
+   33 ms a frame on an iPhone where the WebGL clouds cost about 226.
+2. **The picture** (done): the cloud shadow map, the sun and sky light of the atmosphere, the blue-noise jitter, the
+   texture mips, the regional cover; the same still as the WebGL clouds within the noise of the march.
+3. **In the film** (done, behind « Nuages calculés en WebGPU à l’export (essai) », Réglages › Diagnostic): the march
+   stops at the relief, the library's WebGL pass keeps the aerial perspective and the composition. To measure on the
+   iPhone: the last line of « Mesurer le coût des couches » (the same window with the WebGL clouds, then the WebGPU ones).
 4. **The default** where it is faster and looks the same, WebGL kept where WebGPU is missing.
 
 

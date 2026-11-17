@@ -6,6 +6,7 @@ const messages: Messages['settings'] = {
   'diagnostic.hint': 'Dispositivo, impostazioni e ultima esportazione, da allegare a una segnalazione. Senza posizione né nomi.',
   'diagnostic.show': 'Mostra il rapporto',
   'diagnostic.noEncoding': 'Esportazione di prova senza codifica',
+  'diagnostic.webgpuClouds': 'Nuvole calcolate in WebGPU all’esportazione (prova)',
   'diagnostic.layerCost': 'Misura il costo dei livelli',
   'diagnostic.layerCostHint': 'Renderizza alcune immagini disattivando a turno ogni livello (nuvole, ombre, bosco…) e mostra il tempo risparmiato per immagine. Alcuni minuti, di più su un telefono; il progetto non viene modificato e nulla viene aggiunto alla cronologia.',
   'diagnostic.layerCostRunning': 'Misura {index} / {total}: {label}',

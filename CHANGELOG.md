@@ -5,7 +5,7 @@ Notable changes to OpenFlyover. The desktop installers of each version are on th
 
 ## Unreleased
 
-- **Clouds marched in WebGPU, step 1 (a trial)**: the march of the volumetric clouds, written again as a WebGPU compute shader from the library's own (`scene/webgpuClouds`), with the same textures and settings. It does not draw the film yet: « Mesurer le coût des couches » adds a line that times it on the device with the slices of an export, to set beside « sans nuages ». Not in it yet: the cloud shadow map, the haze, the light shafts, the relief in front of the clouds, the aerial perspective.
+- **Clouds computed in WebGPU on export, a trial** (Réglages › Diagnostic, « Nuages calculés en WebGPU à l’export (essai) », off by default): the heavy part of the volumetric clouds (their march, their shadow map, the mix of the noise slices of a frame) runs in WebGPU compute shaders ported from the library's own (`scene/webgpuClouds`); the rest of the picture is unchanged WebGL code, which reads the result. Each exported frame is drawn in two halves around the clouds. The same picture within the noise of the march on the sample (mean gap of two stills 0.6 to 2.8 over 255, by day, with a low sun, in the flight, in « Standard »). WebGL keeps the clouds without WebGPU, in the preview, with the export quality « Maximale » (light shafts and accurate light are not ported), and after a failure. « Mesurer le coût des couches » now ends with the same window exported both ways, back to back, in place of the march alone. Not measured yet on a phone.
 
 ## 8.2.0 (November 2026)
 

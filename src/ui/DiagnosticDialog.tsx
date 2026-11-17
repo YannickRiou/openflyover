@@ -5,6 +5,7 @@ import { closeDiagnostic, copyText, noEncodingTest, setNoEncodingTest, showDiagn
 import { currentReport } from '../export/guard'
 import { isExportBusy, useExportStore } from '../export/store'
 import { useT } from '../i18n'
+import { setWebgpuCloudsWanted, webgpuCloudsWanted } from '../scene/webgpuClouds/preference'
 import { useAppStore } from '../state/store'
 import { SettingRow } from './PanelSection'
 import { Button, Checkbox, Modal } from './primitives'
@@ -19,6 +20,7 @@ export function DiagnosticRow() {
   const t = useT()
   // debug only: kept in the tab's sessionStorage, never in the project
   const [noEncoding, setNoEncoding] = useState(noEncodingTest)
+  const [webgpuClouds, setWebgpuClouds] = useState(() => webgpuCloudsWanted())
   // « Mesurer le coût des couches »: the run is loaded when asked for (export/layerCostRun.ts), nothing of it at start-up
   const [cost, setCost] = useState<{ label: string; index: number; total: number } | null>(null)
   const canceled = useRef(false)
@@ -57,6 +59,15 @@ export function DiagnosticRow() {
             }}
         >
           {t('settings.diagnostic.noEncoding')}
+        </Checkbox>
+        <Checkbox
+          checked={webgpuClouds}
+          onChange={(on) => {
+            setWebgpuCloudsWanted(on)
+            setWebgpuClouds(on)
+          }}
+        >
+          {t('settings.diagnostic.webgpuClouds')}
         </Checkbox>
         <p className="type-hint">{t('settings.diagnostic.layerCostHint')}</p>
         {cost ? (
