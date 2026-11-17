@@ -3187,6 +3187,25 @@ exports) gets it from the terrain source of the settings.
   suspends the undo history, and puts the same `settings` object, the flag and the export store back whatever happens (a
   cancel keeps what was measured, a failure throws after that). Nothing runs at start-up and nothing changes on a computer
   unless the button is pressed.
+- **Clouds marched in WebGPU, step 1** (`scene/webgpuClouds/`, ROADMAP « 9 »): the volumetric clouds take up to 96 % of
+  the time of an exported frame on an iPhone, and the clouds library (`@takram/three-clouds` 0.7.6) has no WebGPU build.
+  `shader.ts` ports its march to a WGSL compute shader (one invocation per texel, workgroups of 8 × 8): `marchClouds`,
+  `sampleWeather`, `sampleMedia` (shape, detail, turbulence), `marchOpticalDepth` towards the sun, the multiple
+  scattering octaves and the two-lobe phase function, the ray's near and far from the cloud shells. `layout.ts` packs the
+  parameters: one list of fields (`PARAM_FIELDS`) gives both the WGSL struct and the offsets, every field 16-byte aligned;
+  `CLOUD_MARCH` holds the library's « low », « medium », « high » march settings (not exported by the package).
+  `fromEffect.ts` reads the uniforms the scene's clouds left (layers, cover, drift, sun, ECEF frame; `liveClouds.ts`
+  holds the mounted `CloudsEffect`) and the camera. `gpu.ts` (loaded on demand) requests the device, uploads the same
+  four textures from /clouds/ and dispatches one slice; the usage flags are the specification's numbers (TypeScript's DOM
+  types have no `GPUTextureUsage`). Step 1 only measures: `layerCostRun.ts` adds a « Coût des couches » line, the export's
+  `EXPORT_SAMPLES` slices per frame at the film's size, `WARM_FRAMES` then `WINDOW_FRAMES` timed with
+  `onSubmittedWorkDone`. Not ported yet: the cloud shadow map (BSM) and ground bounce, the haze, the light shafts, the
+  scene depth (the clouds behind the relief are marched too, so the trial is an upper bound), the texture mips (level 0
+  only), the blue-noise jitter (interleaved gradient noise instead), the regional cover of the weather stations, and the
+  sun and sky irradiance (constants: they change the picture, not the work). Tests: `layout.test.ts` (layout, packing,
+  every `P.field` the WGSL reads exists, bindings), `bench.test.ts`, `fromEffect.test.ts` (a real `CloudsEffect`), and the
+  e2e scenario « Nuages en WebGPU » that compiles the shader and marches one slice in headless Chrome
+  (`--enable-unsafe-webgpu --use-webgpu-adapter=swiftshader`): clouds over the horizon, none on the ground, every texel finite.
 - **What the report tells a phone, which has no console** (`diagnostic.ts`, « Appareil » and « Export » sections): the
   terrain workers (`terrain/tileWorkerStatus.ts`, noted by `tileWorker.ts`: `untried`, `active` with the number of
   workers and of tiles they built, `unsupported`, `dropped`; the status module is apart so that reading it loads no worker),

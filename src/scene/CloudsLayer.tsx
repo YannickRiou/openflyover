@@ -55,6 +55,7 @@ import type { MarkerTrack } from './AtmosphereLayer'
 import { patchRegionalCoverage } from './cloudShaders'
 import { shutterSubFrame, subFrameSlices } from './lens'
 import { usePreviewBudget } from './previewQuality'
+import { setLiveCloudsEffect } from './liveClouds'
 import { previewCloudPass } from './renderOnDemand'
 import { useFilmClock } from './usePacing'
 import { useTerrainContext } from './terrainContext'
@@ -203,11 +204,16 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
 
   useLayoutEffect(() => {
     if (!ref.current) return
-    guardResolve(ref.current)
-    nightIrradiance.current = addNightFill(ref.current)
-    const added = addRegionalCoverage(ref.current)
+    const effect = ref.current
+    guardResolve(effect)
+    nightIrradiance.current = addNightFill(effect)
+    const added = addRegionalCoverage(effect)
     regional.current = added
-    return () => added.texture.dispose()
+    setLiveCloudsEffect(effect)
+    return () => {
+      added.texture.dispose()
+      setLiveCloudsEffect(null, effect)
+    }
   }, [])
 
   // Preview: cheap, upscaled until the view is still (useFrame); export: chosen quality, averaged noise slices.

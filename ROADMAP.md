@@ -3,7 +3,19 @@
 What comes next, in the order it will be done, and what waits. Each item names the promise of [VISION.md](VISION.md)
 it serves and how it will be checked. The [changelog](CHANGELOG.md) says what each version brought.
 
-## 8.x: a film that looks like a pro shot, and an export that holds
+## 9: clouds marched in WebGPU
+
+Promise 3. The volumetric clouds take up to 96 % of the time of an exported frame on an iPhone, and their library has no
+WebGPU build. The march is written again as a WebGPU compute shader, in steps, each measured on the iPhone before the next.
+
+1. **The march alone, measured** (done in the first pull request): the same work as the WebGL clouds (same textures,
+   settings and slices), timed by « Mesurer le coût des couches » beside « sans nuages ».
+2. **The picture**: the cloud shadow map, the sun and sky light of the atmosphere, the blue-noise jitter, the texture
+   mips, the regional cover, compared side by side with the WebGL clouds on a still frame.
+3. **In the film**: the depth of the relief in front, the aerial perspective, the composition with the WebGL scene (or
+   the scene moved to the WebGPU renderer of three.js, whose atmosphere the library already has), behind a switch.
+4. **The default** where it is faster and looks the same, WebGL kept where WebGPU is missing.
+
 
 - **8.0** (November 2026): the camera keeps the tilt you ask for in the mountains, relief shadows are sharp when the
   camera flies low, a new project starts graded, one lens for every film.
