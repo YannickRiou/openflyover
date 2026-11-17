@@ -983,8 +983,23 @@ The interface and the texts drawn into the films and posters exist in **French**
   50° · tanh(0.8 · T / 50°), T = sum of turn angles weighted by a tent over ±2w, continuous and calm), `orbit` (`orbitTurns`
   full turns around the marker over the flight at speed x1, 1 by default, whatever its duration, from the start heading), `top` (≥ 70°, distance × 2.5, north or heading up), `cinematic` (distance × 1.6,
   pitch / 2, lateral sweep ±35° with a 40 s period), `free` (follows nothing: `computeFilmView` takes `freeView` instead of
-  the flight camera, below). All flight styles keep 80 m above the ground and a clear line of sight
-  (`LINE_OF_SIGHT_SAMPLES`, 48 samples); the tests check continuity in progress.
+  the flight camera, below). All flight styles keep 40 m above the ground (the dome, see "Gliding") and climb for the line of sight only where
+  the marker would stay hidden 1.5 s or more (`LINE_OF_SIGHT_SAMPLES`, 48 samples); the tests check continuity in progress.
+  **Gliding** (8.2): the camera and its aim stand on the ground averaged over ± `GROUND_SMOOTHING_S` = 4 s of film
+  (`trackGround`, samples at most 150 m apart), so the camera no longer rises and falls with each climb of the track;
+  the aim keeps a slack (`AIM_SLACK_SHARE`, 12 % of the half-frame, `softClamp`: aim = own ground − softClamp(own ground −
+  smoothed ground, slack)), beyond which it follows the marker's own ground again. Under the camera, a dome over the
+  terrain (`terrainDomeY`: centre and two rings of 12 samples at R / 2 and R, R = 1 s of track and at least 1 km, each
+  sample counted 0.6 · d² / 2R lower, joined by a smooth maximum over 200 m) keeps it 40 m above the ground: it rises
+  before a peak instead of riding it, and a sharper tile moves it little (a narrower dome rode the hills of the tests).
+  The sight line is measured, not taken (`sightNeedY`, `FlightView.raiseM`, 20 m of clearance all along); `flightAt`
+  keeps the need of an instant only inside a run of hidden instants (need over 20 m) of `SIGHT_HOLD_S` = 1.5 s or more,
+  then anticipates it (`anticipatedRaise`), and a sharper tile moves the kept raise a little each frame
+  (`RaiseTable.lasting`, `RAISE_REFRESH_SHARE`). Shots blending with the flight view start from its 40 m
+  (`keepAboveGround` eased from `MIN_TERRAIN_CLEARANCE_M` at the ends of the blend, the shots' ground clearance grown from
+  it with the distance stood back). Measured on a 58 km glacier tour flown in 130 s, real exports at 30 fps: the speed of
+  the picture over 2 s varies by 3 to 13 % instead of 9 to 39 %. On the steep massif of `markerVisible.test.ts`: never
+  more than 1.3 s hidden in a row, 2 % of the switchback flights.
   **Marker kept visible**: the aim is the marker (the time smoothing only averages the progress), so it never leaves the
   frame (`markerVisible.test.ts`: at most 0.15 of the half-frame from its centre over every preset, with stops and speed
   portions); what hides it is the relief. The sight line is checked from the camera to the marker itself (at its
@@ -1010,14 +1025,11 @@ The interface and the texts drawn into the films and posters exist in **French**
   150 m (37.5 m below a 7.5 km track at smoothing 1: scaled with the track, so with the marker's step per frame), and
   at least 0.25 s × v, at most 500 m (`GROUND_SPEED_S`: a fast film no longer rides the relief at a few frames a cell).
   The camera looks at the aim point, not the marker (`marker`, on the draped track): the aim's x / z at
-  the smooth maximum (over 40 m, `AIM_GROUND_EASE_M`) of `trackGround` and the grid ground there + lift;
-  `trackGround` = mean of the terrain at fixed track distances (multiples of r / 4, ≤ 8 samples) over ±r, weighted
-  as above; the grid ground at the aim is a cubic B-spline over the 4 × 4 corners around it (exact on a plane, no
-  slope break at a cell edge, 16 samples). Clearance rules (80 m under the camera, the sight line to the
-  aim) read the grid ground: bilinear between the terrain at the corners of a fixed r grid of the local frame (exact
-  on a plane, cliffs softened over a cell); the floor is eased in (smooth maximum over 80 m, at most 20 m above),
-  then the camera is kept `MIN_TERRAIN_CLEARANCE_M` (40 m) above the actual terrain below it (a bump narrower than a
-  cell). About 130 terrain samples per frame. On ±15 m bumps 30 m wide, the frame-to-frame height change drops from
+  the smoothed ground with its slack (see "Gliding") + lift;
+  `trackGround` = mean of the terrain at fixed track distances (at least 4 a side, at most 150 m apart) over ±r,
+  weighted as above. The sight-line measure reads the grid ground: bilinear between the terrain at
+  the corners of a fixed r grid of the local frame (exact on a plane, cliffs softened over a cell); the camera is kept
+  `MIN_TERRAIN_CLEARANCE_M` (40 m) above the dome over the terrain (see "Gliding"). About 130 terrain samples per frame. On ±15 m bumps 30 m wide, the frame-to-frame height change drops from
   3–35 m to 0.16 m on flat ground, the change of vertical speed from 1–70 m to under 2.5 m on hills.
   **Sharper tiles** (#186): the sampler reads the sharpest tile loaded, so a sharper tile arriving changes the ground
   by a few metres. The camera's own height follows it 1:1 (the aim's mean); the sight-line lift multiplied it by up to

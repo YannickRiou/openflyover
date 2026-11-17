@@ -578,7 +578,7 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - loose-envify 1.4.0: MIT
 - loose-envify/node_modules/js-tokens 4.0.0: MIT
 - maath 0.10.8: MIT (no license file in the package; standard text below)
-- mediabunny 1.65.1: MPL-2.0
+- mediabunny 1.65.2: MPL-2.0
 - meshline 3.3.1: MIT
 - meshoptimizer 1.1.1: MIT
 - n8ao 2.0.1: ISC
@@ -607,7 +607,7 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - suspend-react 0.1.3: MIT
 - tagged-tag 1.0.0: MIT
 - tailwind-variants 3.3.1: MIT
-- tailwindcss 4.3.4: MIT
+- tailwindcss 4.3.5: MIT
 - three 0.187.0: MIT
 - three-mesh-bvh 0.8.3: MIT
 - three-stdlib 2.36.1: MIT
@@ -627,7 +627,7 @@ Production dependencies of `package.json` and their transitive dependencies (som
 - webgl-constants 1.1.1: MIT
 - webgl-sdf-generator 1.1.1: MIT
 - which 2.0.2: ISC
-- zustand 5.0.16: MIT
+- zustand 5.1.0: MIT
 
 ### License texts of the npm packages
 
@@ -1488,7 +1488,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-#### tunnel-rat/node_modules/zustand 4.5.7, zustand 5.0.16
+#### tunnel-rat/node_modules/zustand 4.5.7, zustand 5.1.0
 
 ```text
 MIT License
@@ -2770,7 +2770,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-#### mediabunny 1.65.1
+#### mediabunny 1.65.2
 
 ```text
 Mozilla Public License Version 2.0
@@ -3899,7 +3899,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### tailwindcss 4.3.4
+#### tailwindcss 4.3.5
 
 ```text
 MIT License
@@ -4709,7 +4709,7 @@ Every registry crate of `src-tauri/Cargo.lock`, including those used only on one
 - tauri-plugin-dialog 2.8.4: Apache-2.0 OR MIT
 - tauri-plugin-fs 2.7.1: Apache-2.0 OR MIT
 - tauri-plugin-oauth 2.1.0: MIT OR Apache-2.0
-- tauri-plugin-opener 2.7.2: Apache-2.0 OR MIT
+- tauri-plugin-opener 2.7.3: Apache-2.0 OR MIT
 - tauri-plugin-process 2.4.0: Apache-2.0 OR MIT
 - tauri-plugin-updater 2.14.1: Apache-2.0 OR MIT
 - tauri-runtime 2.12.2: Apache-2.0 OR MIT

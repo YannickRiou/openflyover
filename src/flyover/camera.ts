@@ -3,9 +3,9 @@
  * time, the camera settings and the terrain sampler. No frame-to-frame state, so the video export can render any frame
  * on its own. Styles and the steady-heights scheme: ARCHITECTURE.md "Flyover".
  *
- * Each style places the camera on a sphere around the aim point, then raises it to keep MIN_GROUND_CLEARANCE_M above the
- * smoothed ground and the sight line above the relief. The heights are read from terrain samples that stay put while
- * the marker moves, so the camera follows the relief without riding each bump. The time-based motions (orbit, cinematic
+ * Each style places the camera on a sphere around the aim point, both on the ground smoothed over seconds of film
+ * (GROUND_SMOOTHING_S), and keeps it MIN_TERRAIN_CLEARANCE_M above the terrain right under it. The heights are read from
+ * terrain samples that stay put while the marker moves, so the camera glides over the relief without riding each bump. The time-based motions (orbit, cinematic
  * swing) follow the film time, so they keep moving while the pacing holds the progress.
  */
 import { Vector3 } from 'three'
@@ -31,27 +31,11 @@ export const PITCH_MAX_DEG = 88
 export const MIN_GROUND_CLEARANCE_M = 80
 /** Whatever the smoothing, the camera never goes closer than this to the actual (exaggerated) terrain below it. */
 export const MIN_TERRAIN_CLEARANCE_M = 40
-/** The clearance floor takes over from the free height over this band (smooth maximum, at most a quarter above). */
-export const CLEARANCE_EASE_M = 80
 /**
- * Ground smoothing radius = this fraction of the heading window, at most GROUND_WINDOW_MAX_M:
- * the aim height is the tent-weighted mean of the terrain along the track over ± this radius, and the clearance
- * rules read the terrain on a grid of this cell size. Scaled like the heading window, so with the track length and
- * the marker's step per frame: a frame slides the weights by the same small share (37.5 m for a track under
- * 7.5 km at smoothing 1). Capped so a valley or a ridge narrower than a cell does not shift the ground much; the
- * tracks that reach the cap (over 30 km) are seen from 1.2 km or more, where a few metres of bobbing no longer show.
- */
-export const GROUND_WINDOW_FRACTION = 0.25
-export const GROUND_WINDOW_MAX_M = 150
-/** Aim height: terrain samples on each side of the marker, at multiples of radius / this along the track. */
-export const GROUND_SAMPLES_PER_SIDE = 4
-/**
- * Terrain samples along the sight line camera → marker (at its steady height, not its own: that rides each bump). The
- * clearance tapers from MIN_GROUND_CLEARANCE_M under the camera to LINE_OF_SIGHT_MIN_CLEARANCE_M (a safety margin: the
- * relief cuts the marker where it passes in front, `pullMarkerForward`), as the square of the share of the line left:
- * a lift is the shortfall divided by that share, so a linear taper asked as much for a bump halfway as for the ground
- * under the camera, and the camera rose for relief the line cleared by far more than it needs. A rise just before the
- * marker no longer hides it. The ground is the grid's raised by the relief its cells miss (`reliefGround`). The line is checked
+ * Terrain samples along the sight line camera → marker (at its steady height, not its own: that rides each bump), for
+ * the height the camera would need to see the marker (`sightNeedY`, FlightView.raiseM): the film climbs only where that
+ * need lasts (`filmCamera.ts`, SIGHT_HOLD_S). The line must clear the relief by LINE_OF_SIGHT_MIN_CLEARANCE_M (a safety
+ * margin: the relief cuts the marker where it passes in front, `pullMarkerForward`). The ground is the grid's raised by the relief its cells miss (`reliefGround`). The line is checked
  * up to LINE_OF_SIGHT_END_M
  * short of the marker (`lineOfSightClearance` leaves the slope under it out) and at most LINE_OF_SIGHT_MAX_GAIN × the
  * camera's distance short of it: a raise is the clearance gap divided by the share of the line left, so near the marker
@@ -72,6 +56,19 @@ export const LINE_OF_SIGHT_MAX_GAIN = 20
 export const LINE_OF_SIGHT_FINE_GAIN = 3
 export const LINE_OF_SIGHT_COARSE_CELL_M = 150
 export const LINE_OF_SIGHT_COARSE_SAMPLES = 2
+/** The clearance floor takes over from the free height over this band (smooth maximum, at most a quarter above). */
+export const CLEARANCE_EASE_M = 80
+/**
+ * Ground smoothing radius = this fraction of the heading window, at most GROUND_WINDOW_MAX_M:
+ * the least radius of the ground the aim and the camera stand on (GROUND_SMOOTHING_S). Scaled like the heading window, so with the track length and
+ * the marker's step per frame: a frame slides the weights by the same small share (37.5 m for a track under
+ * 7.5 km at smoothing 1). Capped so a valley or a ridge narrower than a cell does not shift the ground much; the
+ * tracks that reach the cap (over 30 km) are seen from 1.2 km or more, where a few metres of bobbing no longer show.
+ */
+export const GROUND_WINDOW_FRACTION = 0.25
+export const GROUND_WINDOW_MAX_M = 150
+/** Aim height: terrain samples on each side of the marker, at multiples of radius / this along the track. */
+export const GROUND_SAMPLES_PER_SIDE = 4
 
 /**
  * Smoothing scaled with the ground speed of the film (track length / flyover duration, metres per film second), so a
@@ -105,8 +102,56 @@ export const RUN_SMOOTHING_S = 0.7
 const RUN_TAPS = 9
 export const GROUND_SPEED_S = 0.25
 export const GROUND_SPEED_MAX_M = 500
-/** The aim's height eases between the track's ground and the grid's over this band (smooth maximum). */
-export const AIM_GROUND_EASE_M = 40
+/**
+ * The aim and the camera stand on the ground along the track averaged over ± this many film seconds of track (at least
+ * the ground cell): the camera glides over the relief instead of rising and falling with each climb of the track, and
+ * the view does not tilt up and down with each bump. It does not climb for the relief between it and the marker either:
+ * the marker may pass behind a ridge for a moment, as in a drone shot. Only the terrain right under it keeps it up
+ * (MIN_TERRAIN_CLEARANCE_M). On the Arolla tour (58 km, 130 s), the speed of the image over 2 s varies by 3 to 4 %
+ * instead of 9 to 39 %.
+ */
+export const GROUND_SMOOTHING_S = 4
+/**
+ * The camera stays MIN_TERRAIN_CLEARANCE_M above a dome laid over the terrain around it: each sample at distance d of
+ * it counts DOME_SLOPE · d² / (2 R) lower (the dome's slope is DOME_SLOPE at R), R being DOME_RADIUS_S film seconds of
+ * track, at least DOME_RADIUS_MIN_M. Above a sharp peak the camera rises before it and comes down after it, along a
+ * curve, instead of following the rock 40 m above it.
+ */
+export const DOME_RADIUS_S = 1
+export const DOME_RADIUS_MIN_M = 1000
+export const DOME_SLOPE = 0.6
+/** Samples of the dome: its centre, and this many directions on each of its rings (at R/2 and R), joined by a smooth maximum over DOME_SOFT_M. */
+const DOME_DIRECTIONS = 12
+const DOME_SOFT_M = 200
+
+/** Lowest camera height (local y) over the terrain dome around `position` (`DOME_*`), undefined where the terrain is unknown. */
+function terrainDomeY(position: Vector3, radiusM: number, frame: LocalFrame, sample: HeightSampler, exaggeration: number): number | undefined {
+  let floorY: number | undefined
+  const at = (dx: number, dz: number) => {
+    const ll = frame.toLonLat(_below.set(position.x + dx, position.y, position.z + dz))
+    const ground = sample(ll.lon, ll.lat)
+    if (ground === undefined) return
+    const d2 = dx * dx + dz * dz
+    const y = frame.toLocal(ll.lon, ll.lat, ground * exaggeration + MIN_TERRAIN_CLEARANCE_M, _below).y - (DOME_SLOPE * d2) / (2 * radiusM)
+    floorY = floorY === undefined ? y : smoothMax(floorY, y, DOME_SOFT_M)
+  }
+  at(0, 0)
+  for (const ring of [0.5, 1]) {
+    for (let k = 0; k < DOME_DIRECTIONS; k++) {
+      const angle = (2 * Math.PI * (k + ring)) / DOME_DIRECTIONS
+      at(Math.cos(angle) * ring * radiusM, Math.sin(angle) * ring * radiusM)
+    }
+  }
+  return floorY
+}
+
+/** How far (share of the half-frame, vertically) the marker may drift from the middle before the aim follows its ground again. */
+export const AIM_SLACK_SHARE = 0.12
+
+/** `x` while it is small, then easing towards ± `k` (k > 0). */
+function softClamp(x: number, k: number): number {
+  return k * Math.tanh(x / k)
+}
 /** Fixed samples on each side of a smoothing window (weights sliding over them). */
 export const SMOOTHING_SAMPLES_PER_SIDE = 8
 
@@ -160,8 +205,9 @@ const NORTH = new Vector3(0, 0, -1)
 /** Scratch vectors of the per-frame helpers (never returned). */
 const _behind = new Vector3()
 const _ahead = new Vector3()
-const _sight = new Vector3()
 const _corner = new Vector3()
+const _below = new Vector3()
+const _sight = new Vector3()
 const _sightEnd = new Vector3()
 
 // ---------------------------------------------------------------------------
@@ -482,7 +528,7 @@ export interface CameraView {
 export interface FlightView extends CameraView {
   /** marker position on the draped track, local frame */
   marker: Vector3
-  /** how far the clearance rules raised the camera (metres; 0 without terrain) */
+  /** how much higher the camera would have to be to see the marker over the relief (metres; 0 without terrain): not applied here, the film climbs only where it lasts */
   raiseM: number
   /** the aim point before « Espace devant » moved it ahead (`target` = this + the lead room): what the camera keys are placed around */
   aim: Vector3
@@ -627,29 +673,28 @@ export function computeCameraView(
     Math.min(headingWindowM(path, camera) * GROUND_WINDOW_FRACTION, GROUND_WINDOW_MAX_M),
     Math.min(speedMps * GROUND_SPEED_S, GROUND_SPEED_MAX_M),
   )
-  // steady ground height (exaggerated) at the point `p` of the track at `dist`
-  const steadyGround = (dist: number, p: Vector3) => {
-    const alongTrack = trackGround(path, dist, cellM, sample)
-    const grid = sample ? smoothGridGround(p.x, p.z, cellM, frame, sample) : undefined
-    return (grid === undefined ? alongTrack : smoothMax(alongTrack, grid, AIM_GROUND_EASE_M)) * exaggeration
-  }
-  const aimGround = steadyGround(dAim, aim)
+  const place = placement(path, dCamera, timeS, frame, camera, durationS, taps)
+  // the aim stands on the ground smoothed over seconds of film, with a slack: the marker's own ground never strays from
+  // it by much more than AIM_SLACK_SHARE of the half-frame (beyond that the aim follows it again, smoothly: `softClamp`)
+  const groundRadiusM = Math.max(cellM, speedMps * GROUND_SMOOTHING_S)
+  const glideGround = trackGround(path, dAim, groundRadiusM, sample) * exaggeration
+  const slackM = (place.distance * Math.tan((CAMERA_FOV_DEG / 2) * DEG) * AIM_SLACK_SHARE) / Math.cos(clamp(place.pitchDeg, PITCH_MIN_DEG, PITCH_MAX_DEG) * DEG)
+  const ownGround = trackGround(path, dAim, cellM, sample) * exaggeration
+  const aimGround = ownGround - softClamp(ownGround - glideGround, slackM)
   const aimAt = frame.toLonLat(aim)
   const target = frame.toLocal(aimAt.lon, aimAt.lat, aimGround + liftM)
 
-  const place = placement(path, dCamera, timeS, frame, camera, durationS, taps)
   place.viewAngle += options.orbitRad ?? 0
   if (sample) {
     const slopeRadiusM = Math.max(speedMps * Math.max(camera.cameraSmoothingS, HEADING_MIN_SMOOTHING_S) * HEADING_SMOOTHING_FACTOR, headingWindowM(path, camera))
     const baselineM = Math.max(SWING_SLOPE_BASELINE_M, (place.distance * Math.cos(clamp(place.pitchDeg, PITCH_MIN_DEG, PITCH_MAX_DEG) * DEG)) / 2)
     place.viewAngle += swingAngle(place, trackSlope(path, d, slopeRadiusM, baselineM, frame, sample, exaggeration))
   }
-  // placed around its own point of the track, at the aim's height
+  // placed around its own point of the track, at the height of the ground smoothed over seconds of film
+  const cameraGround = dCamera === dAim ? glideGround : trackGround(path, dCamera, groundRadiusM, sample) * exaggeration
   const from = smoothLine
-    ? cameraLineAt(path, dCamera, lineSigmaM, aimGround + liftM, frame)
-    : dCamera === dAim
-      ? target
-      : smoothPointAt(path, dCamera, pointRadiusM, aimGround + liftM, frame)
+    ? cameraLineAt(path, dCamera, lineSigmaM, cameraGround + liftM, frame)
+    : smoothPointAt(path, dCamera, pointRadiusM, cameraGround + liftM, frame)
   // the aim moves ahead (and the camera with it, as far as `leadRoom` says): the marker falls back in the frame; the
   // clearance rules below place the camera where it ends up
   const motion = options.motion ?? { marker: 1, camera: 1 }
@@ -657,16 +702,18 @@ export function computeCameraView(
   const position = positionAround(from, place)
   const lead = leadRoom(target.clone().sub(position), travel, camera, motion.marker)
   position.add(lead.camera)
-  const freeY = position.y
   if (sample) {
-    // the sight line ends at the marker, at its steady height (its own rides each bump)
-    const endGround = dAim === d && !smoothLine ? aimGround : steadyGround(d, marker)
-    position.y = lowestClearY(position, frame.toLocal(at.lon, at.lat, endGround + liftM, _sightEnd), frame, sample, exaggeration, cellM, liftM)
+    // only the terrain around the camera keeps it up, through a smooth dome over it (`terrainDomeY`)
+    const floorY = terrainDomeY(position, Math.max(DOME_RADIUS_MIN_M, speedMps * DOME_RADIUS_S), frame, sample, exaggeration)
+    if (floorY !== undefined) position.y = smoothMax(position.y, floorY, CLEARANCE_EASE_M)
   }
+  // the height from which the marker would be seen over the relief, measured, not taken: the film climbs only where it
+  // lasts (`filmCamera.ts`)
+  const sightM = sample ? sightNeedY(position, frame.toLocal(at.lon, at.lat, ownGround + liftM, _sightEnd), frame, sample, exaggeration, cellM, liftM) - position.y : 0
   // the aim moves by what the camera needs where it stands (the film moves it again once it has set its height)
   const leadTarget = (at: Vector3) => target.clone().add(leadRoom(target.clone().sub(at).add(lead.camera), travel, camera, motion.marker).target)
   const rollRad = bankRad(path, dCamera, timeS, frame, camera, durationS, motion.camera)
-  return { target: leadTarget(position), aim: target, leadTarget, position, marker, raiseM: position.y - freeY, rollRad }
+  return { target: leadTarget(position), aim: target, leadTarget, position, marker, raiseM: sightM, rollRad }
 }
 
 /**
@@ -750,7 +797,9 @@ function tapped(f: (offsetM: number) => number, taps: Taps): number {
  * elevation, else 0 (the recorded one in a flight).
  */
 function trackGround(path: TrackPath, d: number, radiusM: number, sample: HeightSampler | null): number {
-  const step = radiusM / GROUND_SAMPLES_PER_SIDE
+  // at least GROUND_SAMPLES_PER_SIDE samples on each side, at most GROUND_WINDOW_MAX_M apart (a wide window read at a
+  // few points would depend on where they fall)
+  const step = radiusM / Math.max(GROUND_SAMPLES_PER_SIDE, Math.ceil(radiusM / GROUND_WINDOW_MAX_M))
   let sum = 0
   let weight = 0
   for (let k = Math.floor((d - radiusM) / step) + 1; k * step < d + radiusM; k++) {
@@ -866,34 +915,53 @@ function reliefGround(x: number, z: number, grid: TerrainGrid): number | undefin
   return base + excess
 }
 
-/** Uniform cubic B-spline weights of the four corners around a cell fraction `t`. */
-function splineWeights(t: number): [number, number, number, number] {
-  const u = 1 - t
-  return [(u * u * u) / 6, (3 * t * t * t - 6 * t * t + 4) / 6, (-3 * t * t * t + 3 * t * t + 3 * t + 1) / 6, (t * t * t) / 6]
-}
-
 /**
- * `gridGround` as a cubic B-spline over the 4 × 4 corners around the cell: still exact on a plane, with a continuous
- * slope and curvature, so the aim's height does not jolt at each cell edge (16 terrain samples).
+ * Lowest camera height (local y, at least `position.y`) from which the sight line to `target` (the marker) clears the
+ * (exaggerated) grid ground with the relief its cells miss (`reliefGround`) by LINE_OF_SIGHT_MIN_CLEARANCE_M: the line at
+ * fraction f (0 = camera) has height y + (target.y - y) · f, checked up to the end of the line (LINE_OF_SIGHT_END_M,
+ * LINE_OF_SIGHT_MAX_GAIN) at LINE_OF_SIGHT_SAMPLES points. Where the lift per metre of ground passes
+ * LINE_OF_SIGHT_FINE_GAIN, the line is checked against the coarse grid instead (LINE_OF_SIGHT_COARSE_CELL_M). Eased in
+ * (`smoothMax`). A measure: the flight camera is not moved by it (FlightView.raiseM).
  */
-function smoothGridGround(x: number, z: number, cellM: number, frame: LocalFrame, sample: HeightSampler): number | undefined {
-  const i = Math.floor(x / cellM)
-  const j = Math.floor(z / cellM)
-  const wx = splineWeights(x / cellM - i)
-  const wz = splineWeights(z / cellM - j)
-  let sum = 0
-  let weight = 0
-  for (let ci = 0; ci < 4; ci++) {
-    for (let cj = 0; cj < 4; cj++) {
-      const w = wx[ci] * wz[cj]
-      const at = frame.toLonLat(_corner.set((i + ci - 1) * cellM, 0, (j + cj - 1) * cellM))
-      const h = sample(at.lon, at.lat)
-      if (h === undefined) continue
-      sum += w * h
-      weight += w
-    }
+function sightNeedY(
+  position: Vector3,
+  target: Vector3,
+  frame: LocalFrame,
+  sample: HeightSampler,
+  exaggeration: number,
+  cellM: number,
+  liftM: number,
+): number {
+  const samples = LINE_OF_SIGHT_SAMPLES
+  let floor = -Infinity
+  const grid = terrainGrid(cellM, frame, sample)
+  const coarseM = Math.max(cellM, LINE_OF_SIGHT_COARSE_CELL_M)
+  const coarse = coarseM === cellM ? grid : terrainGrid(coarseM, frame, sample, LINE_OF_SIGHT_COARSE_SAMPLES)
+  // the coarse line ends on the coarse ground at the marker, never above the steady height
+  const endAt = frame.toLonLat(target)
+  const endGround = reliefGround(target.x, target.z, coarse)
+  const end = endGround === undefined ? target : frame.toLocal(endAt.lon, endAt.lat, endGround * exaggeration + liftM)
+  if (end.y > target.y) end.copy(target)
+  // lowest camera height for the line to `to` to clear `ground` + `clearance` at f, `share` of its lift kept
+  const floorAt = (to: Vector3, f: number, g: TerrainGrid, clearance: number, share: number) => {
+    _sight.lerpVectors(position, to, f).setY(to.y)
+    const ground = reliefGround(_sight.x, _sight.z, g)
+    if (ground === undefined) return -Infinity
+    const at = frame.toLonLat(_sight)
+    const floorY = frame.toLocal(at.lon, at.lat, ground * exaggeration + clearance, _sight).y
+    return to.y + ((floorY - to.y) * share) / (1 - f)
   }
-  return weight > 0 ? sum / weight : undefined
+  const left = Math.max(LINE_OF_SIGHT_END_M / Math.max(1, position.distanceTo(target)), 1 / LINE_OF_SIGHT_MAX_GAIN)
+  for (let i = 0; i <= samples; i++) {
+    const f = (i / samples) * (1 - Math.min(0.5, left))
+    const clearance = LINE_OF_SIGHT_MIN_CLEARANCE_M
+    // the fine grid's lift eased out between LINE_OF_SIGHT_FINE_GAIN and twice that
+    const t = clamp(2 - 1 / ((1 - f) * LINE_OF_SIGHT_FINE_GAIN), 0, 1)
+    const share = t * t * (3 - 2 * t)
+    if (share > 0) floor = Math.max(floor, floorAt(target, f, grid, clearance, share))
+    floor = Math.max(floor, floorAt(end, f, coarse, clearance, 1))
+  }
+  return smoothMax(position.y, floor, CLEARANCE_EASE_M)
 }
 
 /** Point of the track at `d` (local frame), `heightM` above the ellipsoid. */
@@ -977,61 +1045,4 @@ function positionAround(target: Vector3, place: Placement): Vector3 {
     .clone()
     .addScaledVector(look, -distance * Math.cos(pitch))
     .setY(target.y + distance * Math.sin(pitch))
-}
-
-/**
- * Lowest camera height (local y, at least `position.y`) that keeps the sight line to `target` (the marker) above the
- * (exaggerated) grid ground with the relief its cells miss (`reliefGround`): the line at fraction f (0 = camera) has
- * height y + (target.y - y) · f
- * and must clear the ground there by MIN_GROUND_CLEARANCE_M · (1 - f)², at least LINE_OF_SIGHT_MIN_CLEARANCE_M, up to
- * the end of the checked line (LINE_OF_SIGHT_END_M, LINE_OF_SIGHT_MAX_GAIN), at LINE_OF_SIGHT_SAMPLES points. Where the lift per metre of ground passes
- * LINE_OF_SIGHT_FINE_GAIN, the line is checked against the coarse grid instead (LINE_OF_SIGHT_COARSE_CELL_M). The floor
- * is eased in (`smoothMax`), then the camera is kept MIN_TERRAIN_CLEARANCE_M above the actual terrain below it.
- */
-function lowestClearY(
-  position: Vector3,
-  target: Vector3,
-  frame: LocalFrame,
-  sample: HeightSampler,
-  exaggeration: number,
-  cellM: number,
-  liftM: number,
-): number {
-  const samples = LINE_OF_SIGHT_SAMPLES
-  let floor = -Infinity
-  const grid = terrainGrid(cellM, frame, sample)
-  const coarseM = Math.max(cellM, LINE_OF_SIGHT_COARSE_CELL_M)
-  const coarse = coarseM === cellM ? grid : terrainGrid(coarseM, frame, sample, LINE_OF_SIGHT_COARSE_SAMPLES)
-  // the coarse line ends on the coarse ground at the marker, never above the steady height
-  const endAt = frame.toLonLat(target)
-  const endGround = reliefGround(target.x, target.z, coarse)
-  const end = endGround === undefined ? target : frame.toLocal(endAt.lon, endAt.lat, endGround * exaggeration + liftM)
-  if (end.y > target.y) end.copy(target)
-  // lowest camera height for the line to `to` to clear `ground` + `clearance` at f, `share` of its lift kept
-  const floorAt = (to: Vector3, f: number, g: TerrainGrid, clearance: number, share: number) => {
-    _sight.lerpVectors(position, to, f).setY(to.y)
-    const ground = reliefGround(_sight.x, _sight.z, g)
-    if (ground === undefined) return -Infinity
-    const at = frame.toLonLat(_sight)
-    const floorY = frame.toLocal(at.lon, at.lat, ground * exaggeration + clearance, _sight).y
-    return to.y + ((floorY - to.y) * share) / (1 - f)
-  }
-  const left = Math.max(LINE_OF_SIGHT_END_M / Math.max(1, position.distanceTo(target)), 1 / LINE_OF_SIGHT_MAX_GAIN)
-  for (let i = 0; i <= samples; i++) {
-    const f = (i / samples) * (1 - Math.min(0.5, left))
-    const clearance = Math.max(MIN_GROUND_CLEARANCE_M * (1 - f) ** 2, LINE_OF_SIGHT_MIN_CLEARANCE_M)
-    // the fine grid's lift eased out between LINE_OF_SIGHT_FINE_GAIN and twice that
-    const t = clamp(2 - 1 / ((1 - f) * LINE_OF_SIGHT_FINE_GAIN), 0, 1)
-    const share = t * t * (3 - 2 * t)
-    if (share > 0) floor = Math.max(floor, floorAt(target, f, grid, clearance, share))
-    floor = Math.max(floor, floorAt(end, f, coarse, clearance, 1))
-  }
-  let y = smoothMax(position.y, floor, CLEARANCE_EASE_M)
-  // a bump narrower than the grid cell
-  const below = frame.toLonLat(_sight.set(position.x, y, position.z))
-  const ground = sample(below.lon, below.lat)
-  if (ground !== undefined) {
-    y = Math.max(y, frame.toLocal(below.lon, below.lat, ground * exaggeration + MIN_TERRAIN_CLEARANCE_M, _sight).y)
-  }
-  return y
 }
