@@ -4,7 +4,6 @@ export default {
   'diagnostic.hint': 'Appareil, réglages et dernier export, à joindre à un signalement. Sans position ni nom.',
   'diagnostic.show': 'Afficher le rapport',
   'diagnostic.noEncoding': 'Export de test sans encodage',
-  'diagnostic.webgpuClouds': 'Nuages calculés en WebGPU à l’export (essai)',
   'diagnostic.layerCost': 'Mesurer le coût des couches',
   'diagnostic.layerCostHint': 'Rend quelques images avec chaque couche désactivée à tour de rôle (nuages, ombres, forêt…) et affiche le temps gagné par image. Quelques minutes, plus sur un téléphone ; le projet n’est pas modifié et rien n’est ajouté à l’historique.',
   'diagnostic.layerCostRunning': 'Mesure {index} / {total} : {label}',

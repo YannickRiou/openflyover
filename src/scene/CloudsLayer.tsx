@@ -55,8 +55,6 @@ import type { MarkerTrack } from './AtmosphereLayer'
 import { patchRegionalCoverage } from './cloudShaders'
 import { shutterSubFrame, subFrameSlices } from './lens'
 import { usePreviewBudget } from './previewQuality'
-import { setLiveCloudsEffect } from './liveClouds'
-import { setExportPlan, webgpuFrameIn } from './webgpuClouds/bridge'
 import { previewCloudPass } from './renderOnDemand'
 import { useFilmClock } from './usePacing'
 import { useTerrainContext } from './terrainContext'
@@ -205,16 +203,11 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
 
   useLayoutEffect(() => {
     if (!ref.current) return
-    const effect = ref.current
-    guardResolve(effect)
-    nightIrradiance.current = addNightFill(effect)
-    const added = addRegionalCoverage(effect)
+    guardResolve(ref.current)
+    nightIrradiance.current = addNightFill(ref.current)
+    const added = addRegionalCoverage(ref.current)
     regional.current = added
-    setLiveCloudsEffect(effect)
-    return () => {
-      added.texture.dispose()
-      setLiveCloudsEffect(null, effect)
-    }
+    return () => added.texture.dispose()
   }, [])
 
   // Preview: cheap, upscaled until the view is still (useFrame); export: chosen quality, averaged noise slices.
@@ -234,21 +227,9 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
     if (!exporting) return
     const update = effect.update
     const samples = EXPORT_SAMPLES[quality]
-    // the WebGPU clouds march the same slices (webgpuClouds/bridge.ts), when the export splits its frames for them
-    setExportPlan(effect, { slices: () => subFrameSlices(samples, shutterSubFrame()), shadowEvery })
     effect.update = function (renderer, inputBuffer) {
       const alpha = this.cloudsPass.resolveMaterial.uniforms.temporalAlpha
       const previous = alpha.value
-      if (webgpuFrameIn(this)) {
-        // the slices are already averaged: one pass reads them (and the shadow map) and does the rest of the library's work
-        alpha.value = 1
-        try {
-          update.call(this, renderer, inputBuffer, 0)
-        } finally {
-          alpha.value = previous
-        }
-        return
-      }
       // motion blur: this sub-frame's share of the slices, the other sub-frames average the rest
       const slices = subFrameSlices(samples, shutterSubFrame())
       const shadow = this.shadowPass
@@ -269,7 +250,6 @@ export function CloudsLayer({ date, marker, nightFill, noise }: CloudsLayerProps
     }
     return () => {
       effect.update = update
-      setExportPlan(effect, null)
     }
   }, [exporting, quality, cloudResolutionScale, exportScale, shadowEvery])
 

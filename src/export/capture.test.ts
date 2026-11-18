@@ -128,19 +128,6 @@ describe('renderSettledFrame', () => {
     expect(progress).toEqual([0.25, 0.25 + REPLACE_EPSILON])
   })
 
-  it('waits for the end of a frame drawn in two halves (the clouds marched in WebGPU) after each drawn pass', async () => {
-    const { deps } = fakeScene({ loadedAt: 100 })
-    const order: string[] = []
-    const advance = deps.advance
-    deps.advance = (final) => {
-      if (final) order.push('draw')
-      advance(final)
-    }
-    deps.finishDraw = async () => void order.push('finish')
-    expect(await renderSettledFrame(0.25, deps)).toBe('complete')
-    expect(order).toEqual(['draw', 'finish'])
-  })
-
   it('does not place the camera again after a timeout', async () => {
     const { deps, progress } = fakeScene({ loadedAt: 60_000, drift: 5 })
     expect(await renderSettledFrame(0.25, deps, { ...DEFAULT_SETTLE, timeoutMs: 500 })).toBe('timeout')

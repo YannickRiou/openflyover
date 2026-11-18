@@ -6,7 +6,6 @@ const messages: Messages['settings'] = {
   'diagnostic.hint': 'Device, settings and last export, to attach to a bug report. No location or name.',
   'diagnostic.show': 'Show the report',
   'diagnostic.noEncoding': 'Test export without encoding',
-  'diagnostic.webgpuClouds': 'Clouds computed in WebGPU on export (trial)',
   'diagnostic.layerCost': 'Measure the cost of the layers',
   'diagnostic.layerCostHint': 'Renders a few frames with each layer switched off in turn (clouds, shadows, forest…) and shows the time saved per frame. A few minutes, longer on a phone; the project is not changed and nothing is added to the history.',
   'diagnostic.layerCostRunning': 'Measure {index} / {total}: {label}',

@@ -3,11 +3,6 @@
 Notable changes to OpenFlyover. The desktop installers of each version are on the
 [Releases](https://github.com/YannickRiou/openflyover/releases) page (`docs/installers.md`).
 
-## Unreleased
-
-- **« Mesurer le coût des couches » says where the WebGPU clouds spend their time**: measured on an iPhone, the trial of the clouds computed in WebGPU is slower than the WebGL clouds (769 ms a frame against 391). The measure now ends with a second line that shares the time of a WebGPU frame between its stages (shadow map, march, mix of the slices, final image, read back, upload, the two WebGL read backs, the rest of the passes), each stage waited for, to find what to fix. Nothing changes in an export.
-- **Clouds computed in WebGPU on export, a trial** (Réglages › Diagnostic, « Nuages calculés en WebGPU à l’export (essai) », off by default): the heavy part of the volumetric clouds (their march, their shadow map, the mix of the noise slices of a frame) runs in WebGPU compute shaders ported from the library's own (`scene/webgpuClouds`); the rest of the picture is unchanged WebGL code, which reads the result. Each exported frame is drawn in two halves around the clouds. The same picture within the noise of the march on the sample (mean gap of two stills 0.6 to 2.8 over 255, by day, with a low sun, in the flight, in « Standard »). WebGL keeps the clouds without WebGPU, in the preview, with the export quality « Maximale » (light shafts and accurate light are not ported), and after a failure. « Mesurer le coût des couches » now ends with the same window exported both ways, back to back, in place of the march alone. Not measured yet on a phone.
-
 ## 8.2.0 (November 2026)
 
 - **« Nouveautés 8.2 »**: the camera glides over the relief.
