@@ -144,7 +144,23 @@ export interface CloudFrameInput {
   slices: number
   /** the shadow map is marched again every `shadowEvery` slices (a phone: 4), kept in between */
   shadowEvery: number
+  /** wait for the GPU after each stage and time it (`CloudStageMs`): slower than a frame, for the layer measure only */
+  profile?: boolean
 }
+
+/** Where the time of a profiled frame goes, ms: each stage submitted alone and waited for. */
+export interface CloudStageMs {
+  upload: number
+  shadow: number
+  march: number
+  resolve: number
+  finish: number
+  readback: number
+  /** what one wait costs with nothing to wait for, times the waits of the frame: the share of the others that is only waiting */
+  waits: number
+}
+
+export const NO_STAGES: CloudStageMs = { upload: 0, shadow: 0, march: 0, resolve: 0, finish: 0, readback: 0, waits: 0 }
 
 /** The frame, in the layouts WebGL uploads (`webglSide.ts`). */
 export interface CloudFrameOutput {
@@ -160,6 +176,8 @@ export interface CloudFrameOutput {
   cascades: number
   /** wall time of the GPU work and the read back, ms */
   gpuMs: number
+  /** only for a profiled frame */
+  stages?: CloudStageMs
 }
 
 export interface CloudRenderer {
@@ -207,6 +225,22 @@ export async function createCloudRenderer(device: GPUDevice, textures: CloudText
     device.createSampler({ magFilter: 'linear', minFilter: 'linear', mipmapFilter: 'linear', addressModeU: address, addressModeV: address, addressModeW: address })
   const linearRepeat = sampler('repeat')
   const linearClamp = sampler('clamp-to-edge')
+  // a wait for everything submitted so far: a copy into a mappable buffer is ordered after it, and `mapAsync` resolves when
+  // the copy has run (`onSubmittedWorkDone` is not trusted to wait on every browser)
+  const fenceSource = device.createBuffer({ size: 16, usage: BUFFER_USAGE.COPY_SRC | BUFFER_USAGE.COPY_DST })
+  const fenceRead = device.createBuffer({ size: 16, usage: BUFFER_USAGE.MAP_READ | BUFFER_USAGE.COPY_DST })
+  const fence = async () => {
+    const encoder = device.createCommandEncoder()
+    encoder.copyBufferToBuffer(fenceSource, 0, fenceRead, 0, 16)
+    device.queue.submit([encoder.finish()])
+    await fenceRead.mapAsync(MAP_MODE_READ)
+    fenceRead.unmap()
+  }
+  const submitOne = (build: (encoder: GPUCommandEncoder) => void) => {
+    const encoder = device.createCommandEncoder()
+    build(encoder)
+    device.queue.submit([encoder.finish()])
+  }
   let regionalTexture: GPUTexture | null = null
   let regionalData: Uint8Array | null = null
   const invalid = await device.popErrorScope()
@@ -320,7 +354,18 @@ export async function createCloudRenderer(device: GPUDevice, textures: CloudText
       if (cascadeCount < 1 || cascadeCount > MAX_CASCADES) throw new Error(`${cascadeCount} cascades`)
       if (input.sceneDistance.length !== width * height) throw new Error('profondeur de la scène : taille')
       const s = sizeFor(width, height, shadowSize, regionalOf(input.regional))
-      device.queue.writeBuffer(s.sceneDistance, 0, input.sceneDistance as Float32Array<ArrayBuffer>)
+      const stages: CloudStageMs | null = input.profile ? { ...NO_STAGES } : null
+      let waited = 0
+      /** run `work` (submits), then, when profiling, wait for the GPU and add the time to `stage` */
+      const stage = async (name: keyof CloudStageMs, work: () => void) => {
+        if (!stages) return work()
+        const t = performance.now()
+        work()
+        await fence()
+        waited++
+        stages[name] += performance.now() - t
+      }
+      await stage('upload', () => device.queue.writeBuffer(s.sceneDistance, 0, input.sceneDistance as Float32Array<ArrayBuffer>))
       const [cx, cy] = workgroupCount(width, height)
       const [sx, sy] = workgroupCount(shadowSize, shadowSize)
       if (input.slices < 1 || input.slices > MAX_SLICES) throw new Error(`${input.slices} tranches`)
@@ -330,57 +375,74 @@ export async function createCloudRenderer(device: GPUDevice, textures: CloudText
         new Float32Array(weights, k * 256 + 8, 1)[0] = 1 / (k + 1)
       }
       device.queue.writeBuffer(resolveUniforms, 0, weights)
+      /** one pass of `pipeline` in its own submit when profiling, else all the passes of a slice in one */
+      const dispatch = (encoder: GPUCommandEncoder, pipeline: GPUComputePipeline, group: GPUBindGroup, x: number, y: number, z = 1) => {
+        const pass = encoder.beginComputePass()
+        pass.setPipeline(pipeline)
+        pass.setBindGroup(0, group)
+        pass.dispatchWorkgroups(x, y, z)
+        pass.end()
+      }
       for (let k = 0; k < input.slices; k++) {
         device.queue.writeBuffer(uniforms, 0, packParams({ ...params, frame: input.firstSlice + k, firstSlice: k === 0 }))
-        const encoder = device.createCommandEncoder()
-        if (k % Math.max(1, input.shadowEvery) === 0) {
-          const pass = encoder.beginComputePass()
-          pass.setPipeline(shadowPipeline)
-          pass.setBindGroup(0, s.shadowBindGroup)
-          pass.dispatchWorkgroups(sx, sy, cascadeCount)
-          pass.end()
+        const shadowDue = k % Math.max(1, input.shadowEvery) === 0
+        if (stages) {
+          if (shadowDue) await stage('shadow', () => submitOne((e) => dispatch(e, shadowPipeline, s.shadowBindGroup, sx, sy, cascadeCount)))
+          await stage('march', () => submitOne((e) => dispatch(e, cloudsPipeline, s.cloudsBindGroup, cx, cy)))
+          await stage('resolve', () => submitOne((e) => dispatch(e, resolvePipeline, s.resolveBindGroups[k], cx, cy)))
+        } else {
+          const encoder = device.createCommandEncoder()
+          if (shadowDue) dispatch(encoder, shadowPipeline, s.shadowBindGroup, sx, sy, cascadeCount)
+          dispatch(encoder, cloudsPipeline, s.cloudsBindGroup, cx, cy)
+          dispatch(encoder, resolvePipeline, s.resolveBindGroups[k], cx, cy)
+          device.queue.submit([encoder.finish()])
         }
-        const pass = encoder.beginComputePass()
-        pass.setPipeline(cloudsPipeline)
-        pass.setBindGroup(0, s.cloudsBindGroup)
-        pass.dispatchWorkgroups(cx, cy)
-        pass.end()
-        const resolve = encoder.beginComputePass()
-        resolve.setPipeline(resolvePipeline)
-        resolve.setBindGroup(0, s.resolveBindGroups[k])
-        resolve.dispatchWorkgroups(cx, cy)
-        resolve.end()
-        device.queue.submit([encoder.finish()])
       }
       device.queue.writeBuffer(finishUniforms, 0, new Uint32Array([width, height, 0, 0]))
-      const encoder = device.createCommandEncoder()
-      const pass = encoder.beginComputePass()
-      pass.setPipeline(finishPipeline)
-      pass.setBindGroup(0, s.finishBindGroup)
-      pass.dispatchWorkgroups(cx, cy)
-      pass.end()
-      encoder.copyBufferToBuffer(s.color, 0, s.colorRead, 0, width * height * 8)
-      encoder.copyBufferToBuffer(s.depth, 0, s.depthRead, 0, width * height * 4)
-      encoder.copyTextureToBuffer(
-        { texture: s.shadow },
-        { buffer: s.shadowRead, bytesPerRow: shadowSize * 8, rowsPerImage: shadowSize },
-        [shadowSize, shadowSize, cascadeCount],
-      )
-      device.queue.submit([encoder.finish()])
-      await Promise.all([s.colorRead.mapAsync(MAP_MODE_READ), s.depthRead.mapAsync(MAP_MODE_READ), s.shadowRead.mapAsync(MAP_MODE_READ)])
+      const copyOut = (encoder: GPUCommandEncoder) => {
+        encoder.copyBufferToBuffer(s.color, 0, s.colorRead, 0, width * height * 8)
+        encoder.copyBufferToBuffer(s.depth, 0, s.depthRead, 0, width * height * 4)
+        encoder.copyTextureToBuffer(
+          { texture: s.shadow },
+          { buffer: s.shadowRead, bytesPerRow: shadowSize * 8, rowsPerImage: shadowSize },
+          [shadowSize, shadowSize, cascadeCount],
+        )
+      }
+      const readback = async () => {
+        await Promise.all([s.colorRead.mapAsync(MAP_MODE_READ), s.depthRead.mapAsync(MAP_MODE_READ), s.shadowRead.mapAsync(MAP_MODE_READ)])
+      }
+      if (stages) {
+        await stage('finish', () => submitOne((e) => dispatch(e, finishPipeline, s.finishBindGroup, cx, cy)))
+        const t = performance.now()
+        submitOne(copyOut)
+        await readback()
+        stages.readback += performance.now() - t
+        // what a wait costs on its own, to take off the stages above
+        const idle = performance.now()
+        for (let n = 0; n < 8; n++) await fence()
+        stages.waits = ((performance.now() - idle) / 8) * waited
+      } else {
+        const encoder = device.createCommandEncoder()
+        dispatch(encoder, finishPipeline, s.finishBindGroup, cx, cy)
+        copyOut(encoder)
+        device.queue.submit([encoder.finish()])
+        await readback()
+      }
       const color = new Uint16Array(s.colorRead.getMappedRange().slice(0))
       const frontDepth = new Float32Array(s.depthRead.getMappedRange().slice(0))
       const shadow = new Uint16Array(s.shadowRead.getMappedRange(0, shadowSize * shadowSize * 8 * cascadeCount).slice(0))
       s.colorRead.unmap()
       s.depthRead.unmap()
       s.shadowRead.unmap()
-      return { width, height, color, frontDepth, shadow, shadowSize, cascades: cascadeCount, gpuMs: performance.now() - start }
+      return { width, height, color, frontDepth, shadow, shadowSize, cascades: cascadeCount, gpuMs: performance.now() - start, ...(stages ? { stages } : {}) }
     },
     destroy() {
       if (sized) destroySized(sized)
       sized = null
       regionalTexture?.destroy()
       uniforms.destroy()
+      fenceSource.destroy()
+      fenceRead.destroy()
       finishUniforms.destroy()
       resolveUniforms.destroy()
     },

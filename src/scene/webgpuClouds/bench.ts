@@ -42,3 +42,40 @@ export function cloudTrialRow(result: CloudTrialResult): [string, string] {
     `${comma(webgpuMs)} ms par image contre ${comma(webglMs)} ms, ${sign}${comma(Math.abs(saved))} ms (${sign}${comma((Math.abs(saved) / webglMs) * 100)} %) ; nuages seuls ${comma(result.gpuMsPerFrame)} ms (${result.adapter})`,
   ]
 }
+
+export const CLOUD_STAGES_LABEL = 'nuages en WebGPU, où passe le temps d’une image (chaque étape attendue)'
+
+/** What a profiled run measured, per frame, ms. */
+export interface CloudStagesResult {
+  upload: number
+  shadow: number
+  march: number
+  resolve: number
+  finish: number
+  readback: number
+  /** the cost of the waits themselves, already inside the stages above */
+  waits: number
+  readDistance: number
+  readIrradiance: number
+  /** the rest of the WebGL passes of the frame, with the upload of the result */
+  rest: number
+  /** the frame in WebGPU as WebGL waited for it, without the waits between stages */
+  wait: number
+}
+
+/** The second line of the report: the stages of a frame, and what only waiting costs. */
+export function cloudStagesRow(r: CloudStagesResult | { unavailable: string }): [string, string] {
+  if ('unavailable' in r) return [CLOUD_STAGES_LABEL, r.unavailable]
+  const parts = [
+    `ombre ${comma(r.shadow)}`,
+    `marche ${comma(r.march)}`,
+    `mélange ${comma(r.resolve)}`,
+    `image finale ${comma(r.finish)}`,
+    `lecture du résultat ${comma(r.readback)}`,
+    `envoi de la profondeur ${comma(r.upload)}`,
+  ]
+  return [
+    CLOUD_STAGES_LABEL,
+    `${parts.join(', ')} ms ; dont ${comma(r.waits)} ms d’attente seule entre les étapes ; côté WebGL : lecture de la profondeur ${comma(r.readDistance)}, de l’éclairement ${comma(r.readIrradiance)}, reste des passes ${comma(r.rest)} ms ; sans les attentes, WebGL attend le résultat ${comma(r.wait)} ms`,
+  ]
+}

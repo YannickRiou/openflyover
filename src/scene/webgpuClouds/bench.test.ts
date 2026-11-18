@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CLOUD_TRIAL_LABEL, UNAVAILABLE, cloudTrialRow, unavailableText } from './bench'
+import { CLOUD_STAGES_LABEL, CLOUD_TRIAL_LABEL, UNAVAILABLE, cloudStagesRow, cloudTrialRow, unavailableText } from './bench'
 import { requestCloudGpu } from './gpu'
 
 describe('the WebGPU clouds trial', () => {
@@ -14,6 +14,18 @@ describe('the WebGPU clouds trial', () => {
   it('says why the clouds stayed WebGL', () => {
     expect(cloudTrialRow({ unavailable: unavailableText('no-webgpu') })).toEqual([CLOUD_TRIAL_LABEL, UNAVAILABLE['no-webgpu']])
     expect(unavailableText('SHADOW_LENGTH')).toBe('restés en WebGL : SHADOW_LENGTH')
+  })
+})
+
+describe('the stages of a WebGPU frame', () => {
+  it('writes one line: the stages, the waits that are only waiting, the WebGL side', () => {
+    expect(
+      cloudStagesRow({ upload: 4.2, shadow: 30, march: 310.4, resolve: 55, finish: 12, readback: 40.6, waits: 18, readDistance: 25, readIrradiance: 3, rest: 90, wait: 2 }),
+    ).toEqual([
+      CLOUD_STAGES_LABEL,
+      'ombre 30, marche 310, mélange 55, image finale 12, lecture du résultat 41, envoi de la profondeur 4 ms ; dont 18 ms d’attente seule entre les étapes ; côté WebGL : lecture de la profondeur 25, de l’éclairement 3, reste des passes 90 ms ; sans les attentes, WebGL attend le résultat 2 ms',
+    ])
+    expect(cloudStagesRow({ unavailable: 'x' })).toEqual([CLOUD_STAGES_LABEL, 'x'])
   })
 })
 

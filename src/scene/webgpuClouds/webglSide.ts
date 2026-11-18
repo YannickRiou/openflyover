@@ -236,6 +236,8 @@ const copyDefines = (defines: Record<string, unknown>) => ({ ...defines }) as Re
 export interface WebglInputs {
   sceneDistance: Float32Array
   irradiances: Irradiances
+  /** time of the two read backs, ms (`readPixels` waits for the GPU work queued before it) */
+  ms: { distance: number; irradiance: number }
 }
 
 const _camera = new Vector3()
@@ -317,7 +319,9 @@ export class WebglInputPasses {
     }
     ;(this.distanceUniforms.resolution.value as Vector2).set(width, height)
     const packedWidth = Math.ceil(width / 4)
+    const t0 = performance.now()
     const packed = this.distance.read(renderer, packedWidth, height)
+    const t1 = performance.now()
     const sceneDistance = new Float32Array(width * height)
     for (let y = 0; y < height; y++) sceneDistance.set(packed.subarray(y * packedWidth * 4, y * packedWidth * 4 + width), y * width)
 
@@ -325,11 +329,14 @@ export class WebglInputPasses {
     const camera = effect.mainCamera
     _camera.setFromMatrixPosition(camera.matrixWorld).applyMatrix4(u.worldToECEFMatrix.value).add(u.altitudeCorrection.value)
     ;(this.irradianceUniforms.cameraPositionECEF.value as Vector3).copy(_camera)
+    const t2 = performance.now()
     const p = this.irradiance.read(renderer, 6, 1)
+    const t3 = performance.now()
     const at = (i: number) => [p[i * 4], p[i * 4 + 1], p[i * 4 + 2]] as const
     return {
       sceneDistance,
       irradiances: { groundSun: at(0), groundSky: at(1), minSun: at(2), minSky: at(3), maxSun: at(4), maxSky: at(5) },
+      ms: { distance: t1 - t0, irradiance: t3 - t2 },
     }
   }
 

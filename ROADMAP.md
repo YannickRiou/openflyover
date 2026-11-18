@@ -14,7 +14,10 @@ WebGPU build. The march is written again as a WebGPU compute shader, in steps, e
    texture mips, the regional cover; the same still as the WebGL clouds within the noise of the march.
 3. **In the film** (done, behind « Nuages calculés en WebGPU à l’export (essai) », Réglages › Diagnostic): the march
    stops at the relief, the library's WebGL pass keeps the aerial perspective and the composition. To measure on the
-   iPhone: the last line of « Mesurer le coût des couches » (the same window with the WebGL clouds, then the WebGPU ones).
+   iPhone: the last lines of « Mesurer le coût des couches » (the same window with the WebGL clouds, then the WebGPU ones,
+   then where the time of a WebGPU frame goes). **Measured on 2026-11-18: slower** (769 ms a frame against 391; the WebGPU
+   clouds alone 453 ms). The first measure of the march alone (33 ms) was not the real cost. Step 4 waits for the stage
+   timing to say what to fix; WebGL stays the default.
 4. **The default** where it is faster and looks the same, WebGL kept where WebGPU is missing.
 
 
