@@ -20,7 +20,6 @@ import { join } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import { fileURLToPath } from 'node:url'
 import puppeteer from 'puppeteer-core'
-import { PerspectiveCamera } from 'three'
 import { createServer } from 'vite'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
@@ -426,74 +425,57 @@ const SCENARIOS = [
   },
   {
     id: 'nuages-webgpu',
-    title: 'Nuages en WebGPU (essai) : le shader compile, une tranche marchée avec les textures des nuages, des nuages sur le ciel',
-    async run({ page, url }) {
-      // run alone (OPENFLYOVER_E2E_ONLY), the page has not opened the app yet: its modules are served by it
-      if (!page.url().startsWith(url)) await page.goto(url, { waitUntil: 'domcontentloaded', timeout: STEP_MS })
-      // a camera 500 m above the bottom of the atmosphere, looking at the horizon: clouds over the upper half, none on the ground
-      const radius = 6_360_000
-      const camera = new PerspectiveCamera(60, 1, 1, 1e7)
-      camera.position.set(0, 0, radius + 500)
-      camera.up.set(0, 0, 1)
-      camera.lookAt(1e6, 0, radius + 2000)
-      camera.updateMatrixWorld()
-      const view = { inverseProjection: [...camera.projectionMatrixInverse.elements], viewToEcef: [...camera.matrixWorld.elements], radius }
-      const result = await page.evaluate(async ({ inverseProjection, viewToEcef, radius }) => {
-        const { requestCloudGpu, loadCloudTextures, createCloudMarcher } = await import('/src/scene/webgpuClouds/gpu.ts')
-        const { CLOUD_MARCH, packParams } = await import('/src/scene/webgpuClouds/layout.ts')
-        const requested = await requestCloudGpu()
-        if ('unavailable' in requested) return { unavailable: requested.unavailable }
-        const { device } = requested.gpu
-        const size = 64
-        const marcher = await createCloudMarcher(device, await loadCloudTextures(device, '/clouds/'), size, size)
-        const quad = (x) => [x, x, x, x]
-        marcher.march(
-          packParams({
-            inverseProjection, viewToEcef, cameraEcef: [0, 0, radius + 500], cameraHeight: 500, cameraNear: 1, sunDirection: [0.31, 0.31, 0.9],
-            width: size, height: size, frame: 0, bottomRadius: radius, minHeight: 750, maxHeight: 8000, coverage: 0.45,
-            scatteringCoefficient: 1, absorptionCoefficient: 0, skyLightScale: 1, powderScale: 0.8, powderExponent: 150, turbulenceDisplacement: 350,
-            localWeatherRepeat: [100, 100], localWeatherOffset: [0, 0], shapeRepeat: [3e-4, 3e-4, 3e-4], shapeOffset: [0, 0, 0],
-            shapeDetailRepeat: [6e-3, 6e-3, 6e-3], shapeDetailOffset: [0, 0, 0], turbulenceRepeat: [20, 20],
-            minLayerHeights: [750, 1000, 7500, 0], maxLayerHeights: [1400, 2200, 8000, 0], minIntervalHeights: [1e9, 1e9, 1e9], maxIntervalHeights: [-1e9, -1e9, -1e9],
-            densityScales: [0.2, 0.2, 0.003, 0], shapeAmounts: [1, 1, 0.4, 0], shapeDetailAmounts: [1, 1, 0, 0], weatherExponents: quad(1),
-            shapeAlteringBiases: quad(0.35), coverageFilterWidths: quad(0.6), densityExpTerms: quad(0), densityExponents: quad(0),
-            densityLinearTerms: quad(0.75), densityConstantTerms: quad(0.25),
-            sunIrradianceMin: [1, 1, 1], sunIrradianceMax: [1, 1, 1], skyIrradianceMin: [0.3, 0.3, 0.4], skyIrradianceMax: [0.3, 0.3, 0.4],
-            march: CLOUD_MARCH.medium,
-          }),
-        )
-        // read the output back: rgba16float, rows padded to 256 bytes
-        const rowBytes = 512
-        const buffer = device.createBuffer({ size: rowBytes * size, usage: 0x01 | 0x08 })
-        const encoder = device.createCommandEncoder()
-        encoder.copyTextureToBuffer({ texture: marcher.output }, { buffer, bytesPerRow: rowBytes }, [size, size])
-        device.queue.submit([encoder.finish()])
-        await buffer.mapAsync(1)
-        const halves = new Uint16Array(buffer.getMappedRange())
-        const half = (h) => {
-          const e = (h >> 10) & 31
-          const f = h & 1023
-          return (h >> 15 ? -1 : 1) * (e === 0 ? (f / 1024) * 2 ** -14 : e === 31 ? (f ? NaN : Infinity) : (1 + f / 1024) * 2 ** (e - 15))
+    title: 'Nuages en WebGPU (essai) : une image exportée avec, les nuages y sont, sans repli sur WebGL',
+    async run({ page }) {
+      await exposeStores(page)
+      // the same small picture twice, the whole track seen from above: without clouds, then with the WebGPU ones
+      const shots = await page.evaluate(async () => {
+        const { exportStore, appStore } = window.__e2e
+        const preference = await import('/src/scene/webgpuClouds/preference.ts')
+        const bridge = await import('/src/scene/webgpuClouds/bridge.ts')
+        const before = appStore.getState().settings.clouds
+        const still = async (clouds, webgpu) => {
+          appStore.getState().setSetting('clouds', { ...before, ...clouds })
+          // the clouds mount, then their textures load
+          await new Promise((resolve) => setTimeout(resolve, 4000))
+          preference.forceWebgpuClouds(webgpu)
+          const frames = bridge.webgpuTimings.frames
+          exportStore.getState().reset()
+          exportStore.getState().start({ width: 96, height: 160, fps: 10, quality: 'standard', durationS: 2, holdStartS: 0, holdEndS: 0, baseName: 'e2e-nuages', still: { progress: 0.5, type: 'image/png', overview: true } })
+          const state = await new Promise((resolve) => {
+            const check = () => (['done', 'error', 'canceled'].includes(exportStore.getState().phase) ? resolve(exportStore.getState()) : setTimeout(check, 200))
+            check()
+          })
+          preference.forceWebgpuClouds(null)
+          if (state.phase !== 'done') return { error: `${state.phase} ${state.error ?? ''}` }
+          const bitmap = await createImageBitmap(await (await fetch(state.result.url)).blob())
+          const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(bitmap, 0, 0)
+          return { pixels: Array.from(ctx.getImageData(0, 0, bitmap.width, bitmap.height).data), frames: bridge.webgpuTimings.frames - frames, blocker: bridge.lastWebgpuBlocker() }
         }
-        let invalid = 0
-        let top = 0
-        let bottom = 0
-        for (let y = 0; y < size; y++) {
-          for (let x = 0; x < size; x++) {
-            const texel = [0, 1, 2, 3].map((k) => half(halves[(y * rowBytes) / 2 + x * 4 + k]))
-            if (!texel.every(Number.isFinite)) invalid++
-            // the horizon is a little under the middle (the Earth's curve): the lowest quarter only sees the ground
-            if (texel[3] > 0.05 && y < size / 2) top++
-            if (texel[3] > 0.05 && y >= (size * 3) / 4) bottom++
-          }
+        try {
+          const bare = await still({ mode: 'aucun' }, false)
+          const clouded = await still({ mode: 'manuel', coverage: 0.8, seaRender: 'volume' }, true)
+          return { bare, clouded }
+        } finally {
+          appStore.getState().setSetting('clouds', before)
+          exportStore.getState().reset()
         }
-        device.destroy()
-        return { invalid, top, bottom, half: (size * size) / 2 }
-      }, view)
-      if ('unavailable' in result) throw new Error(`WebGPU absent du navigateur de test (${result.unavailable})`)
-      assert(result.invalid === 0, `${result.invalid} texels non finis`)
-      assert(result.top > result.half * 0.3, `trop peu de nuages au-dessus de l'horizon : ${result.top} / ${result.half}`)
-      assert(result.bottom === 0, `des nuages dans le quart bas, sous l'horizon : ${result.bottom}`)
+      })
+      for (const shot of [shots.bare, shots.clouded]) assert(!shot.error, `image fixe : ${shot.error}`)
+      const { bare, clouded } = shots
+      assert(clouded.frames >= 1, `aucune image en WebGPU (${clouded.blocker ?? 'raison inconnue'})`)
+      assert(clouded.blocker === null, `repli sur WebGL : ${clouded.blocker}`)
+      // clouds lighten the picture where they are: a share of its pixels differs clearly from the bare one
+      let changed = 0
+      for (let k = 0; k < bare.pixels.length; k += 4) {
+        const gap = Math.abs(bare.pixels[k] - clouded.pixels[k]) + Math.abs(bare.pixels[k + 1] - clouded.pixels[k + 1]) + Math.abs(bare.pixels[k + 2] - clouded.pixels[k + 2])
+        if (gap > 60) changed++
+      }
+      const share = changed / (bare.pixels.length / 4)
+      assert(share > 0.1, `trop peu de nuages dans l'image : ${(share * 100).toFixed(1)} % des pixels changés`)
+      log(`    nuages WebGPU : ${clouded.frames} image(s), ${(share * 100).toFixed(0)} % des pixels changés par les nuages`)
     },
   },
   {

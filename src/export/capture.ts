@@ -60,6 +60,11 @@ export interface SettleDeps {
   pendingTiles(): number
   /** tiles of the view that will not get any better (`stats.missingVisibleTiles`): given up on, or without all their imagery */
   missingTiles?(): number
+  /**
+   * After a drawn pass (`advance(true)`): the end of a frame drawn in two halves (the clouds marched in WebGPU,
+   * webgpuClouds/bridge.ts); the frame is in the drawing buffer once it resolves.
+   */
+  finishDraw?(): Promise<void>
   /** run the debounced re-drapes of the track and labels now; true when one ran */
   flushDrapes(): boolean
   now(): number
@@ -129,9 +134,11 @@ export async function renderSettledFrame(
     complete = await settle(deps, left())
   }
   deps.advance(true)
+  await deps.finishDraw?.()
   while (complete && deps.pendingTiles() > 0) {
     complete = await settle(deps, left())
     deps.advance(true)
+    await deps.finishDraw?.()
   }
   return outcome(complete)
 }

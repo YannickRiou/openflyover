@@ -1,37 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { CLOUD_BENCH_LABEL, UNAVAILABLE, benchWebgpuClouds, cloudBenchRow, timeFrames } from './bench'
+import { CLOUD_TRIAL_LABEL, UNAVAILABLE, cloudTrialRow, unavailableText } from './bench'
 import { requestCloudGpu } from './gpu'
-import { PARAMS } from './testParams'
 
 describe('the WebGPU clouds trial', () => {
-  it('times only the frames after the warm-up, and averages them', async () => {
-    let clock = 0
-    const ran: number[] = []
-    const ms = await timeFrames(
-      async (frame) => {
-        ran.push(frame)
-        clock += frame < 2 ? 1000 : 40
-      },
-      2,
-      3,
-      () => clock,
-    )
-    expect(ran).toEqual([0, 1, 2, 3, 4])
-    expect(ms).toBe(40)
-    await expect(timeFrames(async () => {}, 0, 0)).rejects.toThrow()
-  })
-
-  it('writes one line of the report, with the size, the slices and the card, or why it did not run', () => {
-    expect(cloudBenchRow({ msPerFrame: 412.6, slices: 24, width: 1080, height: 1920, adapter: 'apple common-3' })).toEqual([
-      CLOUD_BENCH_LABEL,
-      '413 ms par image (1080 × 1920, 24 tranches, apple common-3)',
+  it('writes one line of the report: both times, the gain, the clouds alone and the card', () => {
+    expect(cloudTrialRow({ webglMs: 361.2, webgpuMs: 180.4, adapter: 'apple common-3', gpuMsPerFrame: 41.6 })).toEqual([
+      CLOUD_TRIAL_LABEL,
+      '180 ms par image contre 361 ms, −181 ms (−50 %) ; nuages seuls 42 ms (apple common-3)',
     ])
-    expect(cloudBenchRow({ unavailable: UNAVAILABLE['no-webgpu'] })).toEqual([CLOUD_BENCH_LABEL, 'WebGPU indisponible dans ce navigateur'])
+    expect(cloudTrialRow({ webglMs: 100, webgpuMs: 120, adapter: 'x', gpuMsPerFrame: 50 })[1]).toMatch(/^120 ms par image contre 100 ms, \+20 ms \(\+20 %\)/)
   })
 
-  it('says that WebGPU is missing rather than failing (Node has no navigator.gpu)', async () => {
-    const { frame: _frame, ...params } = PARAMS
-    await expect(benchWebgpuClouds(params, 24, 1, 2, '/clouds/')).resolves.toEqual({ unavailable: UNAVAILABLE['no-webgpu'] })
+  it('says why the clouds stayed WebGL', () => {
+    expect(cloudTrialRow({ unavailable: unavailableText('no-webgpu') })).toEqual([CLOUD_TRIAL_LABEL, UNAVAILABLE['no-webgpu']])
+    expect(unavailableText('SHADOW_LENGTH')).toBe('restés en WebGL : SHADOW_LENGTH')
   })
 })
 
