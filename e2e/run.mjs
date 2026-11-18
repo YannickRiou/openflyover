@@ -424,61 +424,6 @@ const SCENARIOS = [
     },
   },
   {
-    id: 'nuages-webgpu',
-    title: 'Nuages en WebGPU (essai) : une image exportée avec, les nuages y sont, sans repli sur WebGL',
-    async run({ page }) {
-      await exposeStores(page)
-      // the same small picture twice, the whole track seen from above: without clouds, then with the WebGPU ones
-      const shots = await page.evaluate(async () => {
-        const { exportStore, appStore } = window.__e2e
-        const preference = await import('/src/scene/webgpuClouds/preference.ts')
-        const bridge = await import('/src/scene/webgpuClouds/bridge.ts')
-        const before = appStore.getState().settings.clouds
-        const still = async (clouds, webgpu) => {
-          appStore.getState().setSetting('clouds', { ...before, ...clouds })
-          // the clouds mount, then their textures load
-          await new Promise((resolve) => setTimeout(resolve, 4000))
-          preference.forceWebgpuClouds(webgpu)
-          const frames = bridge.webgpuTimings.frames
-          exportStore.getState().reset()
-          exportStore.getState().start({ width: 96, height: 160, fps: 10, quality: 'standard', durationS: 2, holdStartS: 0, holdEndS: 0, baseName: 'e2e-nuages', still: { progress: 0.5, type: 'image/png', overview: true } })
-          const state = await new Promise((resolve) => {
-            const check = () => (['done', 'error', 'canceled'].includes(exportStore.getState().phase) ? resolve(exportStore.getState()) : setTimeout(check, 200))
-            check()
-          })
-          preference.forceWebgpuClouds(null)
-          if (state.phase !== 'done') return { error: `${state.phase} ${state.error ?? ''}` }
-          const bitmap = await createImageBitmap(await (await fetch(state.result.url)).blob())
-          const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
-          const ctx = canvas.getContext('2d')
-          ctx.drawImage(bitmap, 0, 0)
-          return { pixels: Array.from(ctx.getImageData(0, 0, bitmap.width, bitmap.height).data), frames: bridge.webgpuTimings.frames - frames, blocker: bridge.lastWebgpuBlocker() }
-        }
-        try {
-          const bare = await still({ mode: 'aucun' }, false)
-          const clouded = await still({ mode: 'manuel', coverage: 0.8, seaRender: 'volume' }, true)
-          return { bare, clouded }
-        } finally {
-          appStore.getState().setSetting('clouds', before)
-          exportStore.getState().reset()
-        }
-      })
-      for (const shot of [shots.bare, shots.clouded]) assert(!shot.error, `image fixe : ${shot.error}`)
-      const { bare, clouded } = shots
-      assert(clouded.frames >= 1, `aucune image en WebGPU (${clouded.blocker ?? 'raison inconnue'})`)
-      assert(clouded.blocker === null, `repli sur WebGL : ${clouded.blocker}`)
-      // clouds lighten the picture where they are: a share of its pixels differs clearly from the bare one
-      let changed = 0
-      for (let k = 0; k < bare.pixels.length; k += 4) {
-        const gap = Math.abs(bare.pixels[k] - clouded.pixels[k]) + Math.abs(bare.pixels[k + 1] - clouded.pixels[k + 1]) + Math.abs(bare.pixels[k + 2] - clouded.pixels[k + 2])
-        if (gap > 60) changed++
-      }
-      const share = changed / (bare.pixels.length / 4)
-      assert(share > 0.1, `trop peu de nuages dans l'image : ${(share * 100).toFixed(1)} % des pixels changés`)
-      log(`    nuages WebGPU : ${clouded.frames} image(s), ${(share * 100).toFixed(0)} % des pixels changés par les nuages`)
-    },
-  },
-  {
     id: 'couleur',
     title: 'Couleur (onglet Réglages) : préréglage en un geste, panneau pour une couleur libre, Échap rend le focus',
     async run({ page }) {
@@ -1437,7 +1382,7 @@ async function main() {
     puppeteer.launch({
       executablePath: CHROME,
       headless: 'shell',
-      args: [...(GPU ? ['--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=gl'] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']), '--no-sandbox', '--lang=fr', '--window-size=1440,900', '--enable-unsafe-webgpu', '--use-webgpu-adapter=swiftshader'],
+      args: [...(GPU ? ['--ignore-gpu-blocklist', '--use-gl=angle', '--use-angle=gl'] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']), '--no-sandbox', '--lang=fr', '--window-size=1440,900'],
       defaultViewport: { width: 1440, height: 900 },
       protocolTimeout: EXPORT_MS,
       // a busy CI runner once took more than the default 30 s to start Chrome

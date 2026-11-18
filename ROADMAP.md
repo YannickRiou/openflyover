@@ -3,23 +3,7 @@
 What comes next, in the order it will be done, and what waits. Each item names the promise of [VISION.md](VISION.md)
 it serves and how it will be checked. The [changelog](CHANGELOG.md) says what each version brought.
 
-## 9: clouds marched in WebGPU
-
-Promise 3. The volumetric clouds take up to 96 % of the time of an exported frame on an iPhone, and their library has no
-WebGPU build. The march is written again as a WebGPU compute shader, in steps, each measured on the iPhone before the next.
-
-1. **The march alone, measured** (done): the same work as the WebGL clouds, timed by « Mesurer le coût des couches »:
-   33 ms a frame on an iPhone where the WebGL clouds cost about 226.
-2. **The picture** (done): the cloud shadow map, the sun and sky light of the atmosphere, the blue-noise jitter, the
-   texture mips, the regional cover; the same still as the WebGL clouds within the noise of the march.
-3. **In the film** (done, behind « Nuages calculés en WebGPU à l’export (essai) », Réglages › Diagnostic): the march
-   stops at the relief, the library's WebGL pass keeps the aerial perspective and the composition. To measure on the
-   iPhone: the last lines of « Mesurer le coût des couches » (the same window with the WebGL clouds, then the WebGPU ones,
-   then where the time of a WebGPU frame goes). **Measured on 2026-11-18: slower** (769 ms a frame against 391; the WebGPU
-   clouds alone 453 ms). The first measure of the march alone (33 ms) was not the real cost. Step 4 waits for the stage
-   timing to say what to fix; WebGL stays the default.
-4. **The default** where it is faster and looks the same, WebGL kept where WebGPU is missing.
-
+## 8.x: a film that looks like a pro shot, and an export that holds
 
 - **8.0** (November 2026): the camera keeps the tilt you ask for in the mountains, relief shadows are sharp when the
   camera flies low, a new project starts graded, one lens for every film.
@@ -107,3 +91,9 @@ described in [`docs/project-format.md`](docs/project-format.md).
 - **Haptic feedback on a phone.** Only Android supports it in the browser; it does not serve a promise of 7.0.
 - **« Celle de la trace » in « À la suite »** and **« Enchaîner en un seul parcours » in « Bilan »**: waiting for a
   decision on how they are used.
+- **The volumetric clouds computed in WebGPU** (tried in November 2026, removed). Compute shaders ported from the clouds
+  library's march, shadow map and mix of slices, behind a switch, measured on an iPhone: 793 ms an image against 422 with
+  the WebGL clouds. The hand-over between the two (read backs, uploads) cost under 50 ms; the compute itself took about
+  550 ms where the whole WebGL clouds cost about 130, and the clouds are about 37 % of an iPhone frame, so even free
+  clouds would save no more than that. Worth another try only if a WebGPU renderer replaces WebGL for the whole scene.
+  The code is in the history: pull requests 556, 561, 562.
