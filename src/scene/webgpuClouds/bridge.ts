@@ -12,7 +12,7 @@ import { EffectPass, type EffectComposer, type Pass } from 'postprocessing'
 import type { Data3DTexture, DataTexture, WebGLRenderer } from 'three'
 import { liveCloudsEffect } from '../liveClouds'
 import { cloudDefinesOf, cloudParamsFrom, cloudUniformsOf, shadowDefinesOf } from './fromEffect'
-import type { CloudFrameOutput, CloudGpu, CloudRenderer } from './gpu'
+import { NO_STAGES, type CloudFrameOutput, type CloudGpu, type CloudRenderer, type CloudStageMs } from './gpu'
 import { unsupportedReason } from './support'
 import type { WebglInputPasses, WebgpuReads, WebgpuUploads } from './webglSide'
 
@@ -144,7 +144,22 @@ export const webgpuFrameIn = (effect: CloudsEffect): boolean => drawing === effe
 const effectsOf = (pass: Pass): unknown[] => (pass instanceof EffectPass ? ((pass as unknown as { effects: unknown[] }).effects ?? []) : [])
 
 /** What the last frames cost, for the report: WebGPU work and read back, WebGL read backs and uploads. */
-export const webgpuTimings = { frames: 0, gpuMs: 0, webglMs: 0 }
+export const webgpuTimings = {
+  frames: 0,
+  gpuMs: 0,
+  webglMs: 0,
+  /** the WebGL read backs (the relief's distances, the irradiances), the wait for the WebGPU frame, the rest of the passes */
+  readDistanceMs: 0,
+  readIrradianceMs: 0,
+  waitMs: 0,
+  restMs: 0,
+  /** the frames profiled and their stages (`profileStages`) */
+  profiled: 0,
+  stages: { ...NO_STAGES } as CloudStageMs,
+}
+
+/** On for the stage timing of the layer measure: each stage of a frame is waited for (`CloudFrameInput.profile`). */
+export const profileStages = { on: false }
 
 /**
  * Draw the first half of the frame and start its WebGPU clouds. False when the frame cannot be split: `render` (the
@@ -185,7 +200,10 @@ export function splitComposerRender(composer: EffectComposer, delta: number | un
     const plan = plans.get(effect)!
     const slices = plan.slices()
     webgpuTimings.webglMs += performance.now() - start
+    webgpuTimings.readDistanceMs += inputs.ms.distance
+    webgpuTimings.readIrradianceMs += inputs.ms.irradiance
     job = gpuState.renderer.render({
+      profile: profileStages.on,
       params,
       sceneDistance: inputs.sceneDistance,
       regional: { data: (regional?.image.data as Uint8Array | undefined) ?? new Uint8Array(4), size: regional?.image.width ?? 1 },
@@ -223,6 +241,7 @@ export async function finishComposerRender(): Promise<void> {
   pending = null
   const state = effects.get(p.effect)
   let output: CloudFrameOutput | null = null
+  const waitStart = performance.now()
   try {
     output = await p.job
   } catch (error) {
@@ -230,12 +249,17 @@ export async function finishComposerRender(): Promise<void> {
     lastBlocker = gpuState.reason
   }
   const start = performance.now()
+  webgpuTimings.waitMs += start - waitStart
   if (output && state) {
     state.uploads.apply(output, state.reads)
     state.reads.mode.value = 1
     drawing = p.effect
     webgpuTimings.frames++
     webgpuTimings.gpuMs += output.gpuMs
+    if (output.stages) {
+      webgpuTimings.profiled++
+      for (const key of Object.keys(NO_STAGES) as (keyof CloudStageMs)[]) webgpuTimings.stages[key] += output.stages[key]
+    }
   }
   const passes = p.composer.passes
   passes.forEach((pass, i) => (pass.enabled = p.enabled[i] && i >= p.index))
@@ -246,6 +270,7 @@ export async function finishComposerRender(): Promise<void> {
     if (state) state.reads.mode.value = 0
     drawing = null
     webgpuTimings.webglMs += performance.now() - start
+    webgpuTimings.restMs += performance.now() - start
   }
 }
 

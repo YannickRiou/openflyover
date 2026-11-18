@@ -104,7 +104,7 @@ export async function runLayerCost(canceled: () => boolean, progress: (label: st
     const completed = !canceled()
     const detail = `${even(full.width)} × ${even(full.height)}, ${WINDOW_FRAMES} images au milieu du vol après ${WARM_FRAMES} de chauffe, sans encodage`
     const section = layerCostSection(results, detail, !completed)
-    if (completed) section.rows.push(await webgpuCloudsRow(base, measure))
+    if (completed) section.rows.push(...(await webgpuCloudsRows(base, measure)))
     const report = collectDiagnostic()
     return { text: formatReport({ ...report, sections: [...report.sections, section] }), completed }
   } finally {
@@ -118,14 +118,15 @@ export async function runLayerCost(canceled: () => boolean, progress: (label: st
 
 /**
  * The trial of the clouds marched in WebGPU (`scene/webgpuClouds`): the same window exported with the WebGL clouds, then
- * with the WebGPU ones, back to back (the reference of the section drifts with the heat of the device). A failure is a
- * line of the report, never a failed measure.
+ * with the WebGPU ones, back to back (the reference of the section drifts with the heat of the device), then once more
+ * with each stage of the WebGPU frame waited for, to say where its time goes. A failure is a line of the report, never a
+ * failed measure.
  */
-async function webgpuCloudsRow(settings: Settings, measure: (scale: number) => Promise<number>): Promise<[string, string]> {
-  const { UNAVAILABLE, cloudTrialRow, unavailableText } = await import('../scene/webgpuClouds/bench')
-  if (!settings.atmosphere || settings.clouds.mode === 'aucun') return cloudTrialRow({ unavailable: UNAVAILABLE['no-clouds'] })
+async function webgpuCloudsRows(settings: Settings, measure: (scale: number) => Promise<number>): Promise<[string, string][]> {
+  const { UNAVAILABLE, cloudStagesRow, cloudTrialRow, unavailableText } = await import('../scene/webgpuClouds/bench')
+  if (!settings.atmosphere || settings.clouds.mode === 'aucun') return [cloudTrialRow({ unavailable: UNAVAILABLE['no-clouds'] })]
   const { forceWebgpuClouds } = await import('../scene/webgpuClouds/preference')
-  const { lastWebgpuBlocker, webgpuAdapter, webgpuTimings } = await import('../scene/webgpuClouds/bridge')
+  const { lastWebgpuBlocker, profileStages, webgpuAdapter, webgpuTimings } = await import('../scene/webgpuClouds/bridge')
   try {
     forceWebgpuClouds(false)
     const webglMs = await measure(1)
@@ -133,11 +134,34 @@ async function webgpuCloudsRow(settings: Settings, measure: (scale: number) => P
     const before = { ...webgpuTimings }
     const webgpuMs = await measure(1)
     const frames = webgpuTimings.frames - before.frames
-    if (frames === 0) return cloudTrialRow({ unavailable: unavailableText(lastWebgpuBlocker() ?? 'aucune image') })
-    return cloudTrialRow({ webglMs, webgpuMs, adapter: webgpuAdapter() ?? '?', gpuMsPerFrame: (webgpuTimings.gpuMs - before.gpuMs) / frames })
+    if (frames === 0) return [cloudTrialRow({ unavailable: unavailableText(lastWebgpuBlocker() ?? 'aucune image') })]
+    const trial = cloudTrialRow({ webglMs, webgpuMs, adapter: webgpuAdapter() ?? '?', gpuMsPerFrame: (webgpuTimings.gpuMs - before.gpuMs) / frames })
+    // each stage of the frame waited for: slower than the run above, only to share its time out
+    profileStages.on = true
+    const mid = { ...webgpuTimings, stages: { ...webgpuTimings.stages } }
+    await measure(1)
+    const n = Math.max(1, webgpuTimings.profiled - mid.profiled)
+    const per = (key: keyof typeof webgpuTimings.stages) => (webgpuTimings.stages[key] - mid.stages[key]) / n
+    const frames2 = Math.max(1, webgpuTimings.frames - mid.frames)
+    const stages = cloudStagesRow({
+      upload: per('upload'),
+      shadow: per('shadow'),
+      march: per('march'),
+      resolve: per('resolve'),
+      finish: per('finish'),
+      readback: per('readback'),
+      waits: per('waits'),
+      readDistance: (webgpuTimings.readDistanceMs - mid.readDistanceMs) / frames2,
+      readIrradiance: (webgpuTimings.readIrradianceMs - mid.readIrradianceMs) / frames2,
+      rest: (webgpuTimings.restMs - mid.restMs) / frames2,
+      wait: (webgpuTimings.waitMs - mid.waitMs) / frames2,
+    })
+    return [trial, stages]
   } catch (error) {
-    return cloudTrialRow({ unavailable: `échec : ${error instanceof Error ? error.message.split('\n')[0] : String(error)}` })
+    return [cloudTrialRow({ unavailable: `échec : ${error instanceof Error ? error.message.split('\n')[0] : String(error)}` })]
   } finally {
     forceWebgpuClouds(null)
+    const { profileStages } = await import('../scene/webgpuClouds/bridge')
+    profileStages.on = false
   }
 }

@@ -3219,9 +3219,14 @@ exports) gets it from the terrain source of the settings.
   GTX 1060 against WebGPU on SwiftShader, mean gap of the two stills over 255: 2.2 by day (two WebGPU stills with
   different noise: 3.0), 0.6 with a low sun (19 h 20 on the sample), 1.4 in the flight (cloud shadows on the relief), 2.8 in
   « Standard »; mean luminance within 0.5 %. **The measure**: « Mesurer le coût des couches » ends with the same window
-  exported with the WebGL clouds then with the WebGPU ones, back to back (`layerCostRun.ts`, `bench.ts`). Not measured
-  yet on a device with a WebGPU graphics card: the read backs and uploads (16 bytes per texel of the cloud pass per
-  frame) are part of that time. Tests: `layout.test.ts` (layout, packing, every `P.field` the WGSL reads exists,
+  exported with the WebGL clouds then with the WebGPU ones, back to back (`layerCostRun.ts`, `bench.ts`). **Measured on an iPhone (2026-11-18, the first version)**: 769 ms a frame with the
+  WebGPU clouds against 391 with the WebGL ones, the WebGPU clouds alone 453 ms (the WebGL ones cost about 160 to 200);
+  the 33 ms of the march alone in the first pull request was not the real cost. The measure therefore ends with a second
+  line, where the time goes: a third export of the window with each stage of the frame submitted alone and waited for
+  (`CloudFrameInput.profile`, a copy into a mappable buffer as the wait, `fence` in `gpu.ts`): the shadow map, the march,
+  the mix of the slices, the final image, the read back, the upload of the relief's distances, what a wait costs on its
+  own (to take off the stages), and on the WebGL side the two `readPixels` (`WebglInputs.ms`), the rest of the passes
+  and the wait for the result (`webgpuTimings`, `profileStages`). Tests: `layout.test.ts` (layout, packing, every `P.field` the WGSL reads exists,
   bindings), `support.test.ts` (what is left to WebGL; the patches apply to the installed library, once),
   `fromEffect.test.ts` (a real `CloudsEffect`), `bench.test.ts`, and the e2e scenario « Nuages en WebGPU »: a still
   exported with the switch in headless Chrome (`--enable-unsafe-webgpu --use-webgpu-adapter=swiftshader`), a WebGPU
